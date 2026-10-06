@@ -1,0 +1,7 @@
+{
+  "name": "@acme/utils",
+  "version": "0.0.0",
+  "exports": {
+    "./*": "./src/*.ts"
+  }
+}

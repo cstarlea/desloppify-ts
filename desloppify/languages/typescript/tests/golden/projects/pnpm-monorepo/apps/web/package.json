@@ -1,0 +1,8 @@
+{
+  "name": "web",
+  "private": true,
+  "dependencies": {
+    "@acme/ui": "workspace:*",
+    "@acme/utils": "workspace:*"
+  }
+}

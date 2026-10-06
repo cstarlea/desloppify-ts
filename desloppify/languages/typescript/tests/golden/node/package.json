@@ -1,0 +1,9 @@
+{
+  "name": "desloppify-golden-node-tools",
+  "private": true,
+  "description": "Pinned Node tools for the opt-in golden scans (npm ci in this directory).",
+  "devDependencies": {
+    "knip": "6.39.0",
+    "typescript": "5.8.3"
+  }
+}

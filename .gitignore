@@ -48,3 +48,6 @@ cotton-desloppify/
 dev/review/__pycache__/
 dev/website/
 dev/release/release-notes-drafts/
+
+# Pinned Node tools for opt-in golden scans (npm ci in that directory)
+desloppify/languages/typescript/tests/golden/node/node_modules/

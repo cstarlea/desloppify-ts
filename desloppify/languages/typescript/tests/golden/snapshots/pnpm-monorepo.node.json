@@ -1,0 +1,47 @@
+{
+  "issues": [
+    {
+      "id": "cycles::apps/web/src/cart.ts::apps/web/src/cart.ts::apps/web/src/checkout.tsx",
+      "tier": 3,
+      "confidence": "high",
+      "zone": "production",
+      "summary": "Import cycle (2 files): apps/web/src/cart.ts -> apps/web/src/checkout.tsx"
+    },
+    {
+      "id": "facade::packages/ui/src/index.ts",
+      "tier": 2,
+      "confidence": "high",
+      "zone": "production",
+      "summary": "Re-export facade (2 LOC): imports from ./button, ./card (0 importers)"
+    },
+    {
+      "id": "test_coverage::apps/web/src/main.tsx",
+      "tier": 3,
+      "confidence": "high",
+      "zone": "production",
+      "summary": "Untested module (12 LOC, 0 importers) — no test files found"
+    }
+  ],
+  "potentials": {
+    "coupling": 0,
+    "cycles": 8,
+    "deprecated": 0,
+    "dupes": 6,
+    "exports": 9,
+    "facade": 8,
+    "flat_dirs": 8,
+    "logs": 8,
+    "naming": 3,
+    "orphaned": 8,
+    "patterns": 0,
+    "props": 0,
+    "react": 0,
+    "security": 8,
+    "single_use": 5,
+    "smells": 8,
+    "structural": 8,
+    "test_coverage": 3,
+    "unused": 8
+  },
+  "reduced_coverage": []
+}

@@ -52,6 +52,7 @@ def test_ci_workflow_jobs_are_bound_to_make_targets() -> None:
         "ci-contracts": "make ci-contracts",
         "tests-core": "make tests PYTEST_XML=pytest-core.xml",
         "tests-full": "make tests-full PYTEST_XML=pytest-full.xml",
+        "tests-golden-node": "make tests-golden-node",
         "package-smoke": "make package-smoke",
     }
 
@@ -115,6 +116,7 @@ def test_makefile_contains_ci_gate_targets() -> None:
         "integration-roslyn",
         "tests",
         "tests-full",
+        "tests-golden-node",
         "package-smoke",
         "ci-fast",
         "ci",
@@ -169,6 +171,7 @@ def test_ci_plan_required_checks_match_ci_workflow() -> None:
             "ci-contracts",
             "tests-core",
             "tests-full",
+            "tests-golden-node",
             "package-smoke",
         )
     ]

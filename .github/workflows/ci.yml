@@ -103,6 +103,24 @@ jobs:
           name: pytest-full-report
           path: pytest-full.xml
 
+  tests-golden-node:
+    name: tests-golden-node
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: desloppify/languages/typescript/tests/golden/node/package-lock.json
+      - name: Run TypeScript golden scans with real tsc/knip
+        run: make tests-golden-node
+
   package-smoke:
     name: package-smoke
     runs-on: ubuntu-latest

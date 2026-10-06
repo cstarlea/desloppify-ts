@@ -1,0 +1,109 @@
+{
+  "_doc": "Intent checks layered on top of the snapshots. Entries are issue-id prefixes. must_find / must_not_find must always hold. known_false_positives are wrong findings we still produce, and known_false_negatives are real problems we still miss: both are strict, so fixing one fails the test until the entry is moved to must_not_find / must_find. An optional \"node\" block holds the same checks for the opt-in scan with real tsc/knip.",
+  "vite-react": {
+    "must_find": [
+      "orphaned::src/components/LegacyBanner.tsx",
+      "orphaned::src/lib/constants.ts",
+      "cycles::src/lib/notifications.ts::src/lib/notifications.ts::src/lib/store.ts",
+      "logs::src/hooks/useTodos.ts::TODOS",
+      "smells::src/lib/storage.ts::as_any_cast",
+      "deprecated::src/lib/format.ts::formatTitle",
+      "unused::src/components/Header.tsx::useMemo"
+    ],
+    "must_not_find": [
+      "orphaned::src/main.tsx",
+      "orphaned::vite.config.ts",
+      "orphaned::src/components/Header.tsx",
+      "orphaned::src/types.ts",
+      "test_coverage::src/lib/format.ts"
+    ],
+    "known_false_positives": {},
+    "known_false_negatives": {},
+    "node": {
+      "must_find": [
+        "unused::src/components/Header.tsx::useMemo",
+        "exports::src/lib/notifications.ts::subscribe"
+      ],
+      "must_not_find": [
+        "exports::src/lib/format.ts"
+      ],
+      "known_false_positives": {},
+      "known_false_negatives": {}
+    }
+  },
+  "next-app": {
+    "must_find": [
+      "orphaned::components/old-hero.tsx",
+      "security::components/product-grid.tsx::security::dangerously_set_inner_html"
+    ],
+    "must_not_find": [
+      "orphaned::proxy.ts",
+      "orphaned::mdx-components.tsx",
+      "orphaned::app/",
+      "orphaned::components/product-grid.tsx",
+      "orphaned::components/site-nav.tsx",
+      "orphaned::lib/",
+      "smells::lib/products.ts::hardcoded_url"
+    ],
+    "known_false_positives": {},
+    "known_false_negatives": {},
+    "node": {
+      "must_find": [],
+      "must_not_find": [
+        "exports::lib/types.ts"
+      ],
+      "known_false_positives": {
+        "exports::lib/products.ts::saveProduct": "environment: Next.js isn't installed in the pinned golden toolchain, so Knip's Next plugin doesn't treat app/actions.ts as an entry"
+      },
+      "known_false_negatives": {}
+    }
+  },
+  "node-lib": {
+    "must_find": [
+      "deprecated::src/errors.ts::isClientError"
+    ],
+    "must_not_find": [
+      "security::src/title.ts",
+      "orphaned::src/title.ts",
+      "test_coverage::src/retry.ts"
+    ],
+    "known_false_positives": {
+      "orphaned::src/cli.ts": "package.json bin entry; entry points from package.json (roadmap M1 1.5)",
+      "facade::src/index.ts": "package.json exports/main entry is meant to re-export (roadmap M1 1.5, M2 2.5)"
+    },
+    "known_false_negatives": {
+      "unused::src/retry.ts::startedAt": "without tsc the source-based fallback misses unused locals (reported as reduced coverage)"
+    },
+    "node": {
+      "must_find": [
+        "unused::src/retry.ts::startedAt"
+      ],
+      "must_not_find": [
+        "exports::src/errors.ts::isClientError",
+        "exports::src/index.ts"
+      ],
+      "known_false_positives": {},
+      "known_false_negatives": {}
+    }
+  },
+  "pnpm-monorepo": {
+    "must_find": [],
+    "must_not_find": [
+      "orphaned::packages/utils/src/",
+      "orphaned::apps/web/src/checkout.tsx"
+    ],
+    "known_false_positives": {
+      "cycles::apps/web/src/cart.ts": "cart.ts -> checkout.tsx is `import type` only; no runtime cycle (roadmap M1 1.3)",
+      "facade::packages/ui/src/index.ts": "workspace import '@acme/ui' is not resolved, so the package entry looks unused (roadmap M1 1.2)"
+    },
+    "known_false_negatives": {},
+    "node": {
+      "must_find": [],
+      "must_not_find": [
+        "exports::packages/ui/src/"
+      ],
+      "known_false_positives": {},
+      "known_false_negatives": {}
+    }
+  }
+}

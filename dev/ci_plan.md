@@ -29,6 +29,9 @@ Required jobs:
   - `make tests PYTEST_XML=pytest-core.xml`
 - `tests-full`:
   - `make tests-full PYTEST_XML=pytest-full.xml`
+- `tests-golden-node`:
+  - `make tests-golden-node` (TypeScript golden scans with pinned tsc/knip from
+    `desloppify/languages/typescript/tests/golden/node`)
 - `package-smoke`:
   - `make package-smoke`
 
@@ -73,6 +76,7 @@ Required status checks:
 - `CI / ci-contracts`
 - `CI / tests-core`
 - `CI / tests-full`
+- `CI / tests-golden-node`
 - `CI / package-smoke`
 
 Pull request policy:
