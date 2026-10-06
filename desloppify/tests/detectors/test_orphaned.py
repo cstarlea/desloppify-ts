@@ -625,6 +625,17 @@ class TestIsNextjsConventionEntry:
     def test_global_error(self):
         assert _is_nextjs_convention_entry("app/global-error.tsx") is True
 
+    def test_nextjs16_proxy_and_mdx_components(self):
+        assert _is_nextjs_convention_entry("proxy.ts") is True
+        assert _is_nextjs_convention_entry("src/proxy.ts") is True
+        assert _is_nextjs_convention_entry("mdx-components.tsx") is True
+
+    def test_nextjs_auth_interrupt_and_manifest_files(self):
+        assert _is_nextjs_convention_entry("app/forbidden.tsx") is True
+        assert _is_nextjs_convention_entry("app/unauthorized.tsx") is True
+        assert _is_nextjs_convention_entry("app/manifest.ts") is True
+        assert _is_nextjs_convention_entry("app/global-not-found.tsx") is True
+
     def test_template(self):
         assert _is_nextjs_convention_entry("app/template.tsx") is True
 

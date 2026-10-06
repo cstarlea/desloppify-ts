@@ -7,9 +7,14 @@ import re
 from desloppify.base.signal_patterns import AUTH_GUARD_TOKEN_RE
 
 _CREATE_CLIENT_RE = re.compile(r"\bcreateClient\s*\(", re.IGNORECASE)
-_EVAL_PATTERNS = re.compile(r"\b(?:eval|new\s+Function)\s*\(")
+# Bare or global eval only: page.$eval(), redis.eval() and similar methods are
+# unrelated APIs.
+_EVAL_PATTERNS = re.compile(
+    r"(?:(?<![\w$.])|\b(?:window|globalThis|self)\.)(?:eval|new\s+Function)\s*\("
+)
 _DANGEROUS_HTML_RE = re.compile(r"dangerouslySetInnerHTML")
-_INNER_HTML_RE = re.compile(r"\.innerHTML\s*=")
+# Clearing with an empty string is safe; comparisons (==, ===) are not writes.
+_INNER_HTML_RE = re.compile(r"\.innerHTML\s*=(?!=)(?!\s*(?:''|\"\"|``)\s*;?\s*$)")
 _DEV_CRED_RE = re.compile(r"VITE_\w*(?:PASSWORD|SECRET|TOKEN|API_KEY|APIKEY)\b", re.IGNORECASE)
 _OPEN_REDIRECT_RE = re.compile(
     r"window\.location(?:\.href)?\s*=\s*(?:data\.|response\.|params\.|query\.|\w+\[)"

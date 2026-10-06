@@ -465,6 +465,23 @@ class TestTsEvalInjection:
             os.unlink(path)
 
 
+    def test_unrelated_eval_methods_and_doc_comments_are_ignored(self):
+        content = (
+            "const title = await page.$eval('h1', el => el.textContent);\n"
+            "await redis.eval(script, 0);\n"
+            "/**\n"
+            " * Never do: eval(userInput)\n"
+            " */\n"
+            "const ok = retrieval(x);\n"
+        )
+        path = _write_temp_file(content, suffix=".ts")
+        try:
+            entries, _ = _detect_ts_security([path], None)
+            assert not [e for e in entries if e["detail"]["kind"] == "eval_injection"]
+        finally:
+            os.unlink(path)
+
+
 class TestTsDangerousHtml:
     def test_dangerously_set_inner_html(self):
         content = "<div dangerouslySetInnerHTML={{__html: data}} />"
@@ -487,6 +504,15 @@ class TestTsDangerousHtml:
             entries, _ = _detect_ts_security([path], None)
             xss = [e for e in entries if e["detail"]["kind"] == "innerHTML_assignment"]
             assert len(xss) >= 1
+        finally:
+            os.unlink(path)
+
+    def test_innerHTML_clear_and_comparison_are_ignored(self):
+        content = "element.innerHTML = '';\nif (element.innerHTML === prev) {}\n"
+        path = _write_temp_file(content, suffix=".ts")
+        try:
+            entries, _ = _detect_ts_security([path], None)
+            assert not [e for e in entries if e["detail"]["kind"] == "innerHTML_assignment"]
         finally:
             os.unlink(path)
 

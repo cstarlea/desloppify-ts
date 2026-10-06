@@ -33,11 +33,17 @@ _NEXTJS_APP_DIR_CONVENTIONS: set[str] = {
     "robots",
     "icon",
     "apple-icon",
+    "forbidden",
+    "unauthorized",
+    "global-not-found",
+    "manifest",
 }
 
 # Files that are entry points at the project root (or src/)
 _NEXTJS_ROOT_CONVENTIONS: set[str] = {
     "middleware",
+    "proxy",  # Next.js 16 renamed middleware to proxy
+    "mdx-components",
     "instrumentation",
     "instrumentation-client",
 }

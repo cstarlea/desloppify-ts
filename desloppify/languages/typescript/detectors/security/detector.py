@@ -62,7 +62,8 @@ def detect_ts_security(
 
         for line_num, line in enumerate(lines, 1):
             stripped = line.lstrip()
-            if stripped.startswith("//"):
+            # Skip line comments and JSDoc/block-comment bodies (examples in docs).
+            if stripped.startswith(("//", "/*", "*")):
                 continue
             entries.extend(
                 _line_security_issues(
