@@ -6,6 +6,8 @@ on:
 
 jobs:
   tweet:
+    # Fork: posts to an account the fork doesn't own; opt in with TWEET_RELEASES.
+    if: vars.TWEET_RELEASES == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

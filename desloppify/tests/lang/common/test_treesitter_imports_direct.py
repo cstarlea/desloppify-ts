@@ -8,12 +8,19 @@ import builtins
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
+
 import desloppify.languages._framework.treesitter.imports.graph as graph_mod
 import desloppify.languages._framework.treesitter.imports.normalize as normalize_mod
 import desloppify.languages._framework.treesitter.imports.resolver_cache as resolver_cache_mod
 import desloppify.languages._framework.treesitter.imports.resolvers_backend as backend_mod
 import desloppify.languages._framework.treesitter.imports.resolvers_functional as functional_mod
 import desloppify.languages._framework.treesitter.imports.resolvers_scripts as scripts_mod
+from desloppify.languages._framework.treesitter import is_available
+
+_needs_treesitter = pytest.mark.skipif(
+    not is_available(), reason="tree-sitter-language-pack not installed"
+)
 
 
 class FakeNode:
@@ -369,6 +376,7 @@ def test_graph_edges_survive_a_relative_file_list(monkeypatch, tmp_path: Path) -
     assert graph["src/support.js"]["importer_count"] == 1
 
 
+@_needs_treesitter
 def test_js_dep_graph_records_commonjs_require_edges(tmp_path: Path) -> None:
     """CommonJS ``require()`` must create graph edges, not just ESM ``import``.
 
@@ -399,6 +407,7 @@ def test_js_dep_graph_records_commonjs_require_edges(tmp_path: Path) -> None:
     assert graph[str(tmp_path / "app.js")]["importer_count"] == 0
 
 
+@_needs_treesitter
 def test_js_dep_graph_resolves_edges_for_relative_file_lists(tmp_path: Path, monkeypatch) -> None:
     """Edges must resolve when ``file_list`` holds paths relative to the cwd.
 
