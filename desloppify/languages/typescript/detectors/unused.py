@@ -285,8 +285,10 @@ def _categorize_unused(filepath: str, lineno: int) -> str:
                     break
     except (OSError, UnicodeDecodeError) as exc:
         logger.debug("Unable to read %s for unused categorization: %s", filepath, exc)
-        return "imports"
-    return "imports"
+        return "vars"
+    # Anything not provably part of an import (parameters, destructured
+    # bindings, class members) must not be routed to the import fixer.
+    return "vars"
 
 
 def cmd_unused(args: argparse.Namespace) -> None:

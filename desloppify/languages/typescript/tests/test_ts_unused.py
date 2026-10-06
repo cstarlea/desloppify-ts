@@ -121,11 +121,19 @@ class TestCategorizeUnused:
         result = _categorize_unused(str(tmp_path / "app.ts"), 3)
         assert result == "imports"
 
-    def test_nonexistent_file_defaults_imports(self, tmp_path):
-        """Nonexistent file defaults to 'imports' for safety."""
+    def test_nonexistent_file_defaults_vars(self, tmp_path):
+        """Unknown context must not be routed to the import fixer."""
 
         result = _categorize_unused(str(tmp_path / "nonexistent.ts"), 1)
-        assert result == "imports"
+        assert result == "vars"
+
+    def test_parameter_is_not_an_import(self, tmp_path):
+        _write(tmp_path, "fn.ts", "function handler(req, res) {\n  return req;\n}\n")
+        assert _categorize_unused(str(tmp_path / "fn.ts"), 1) == "vars"
+
+    def test_multiline_import_member_is_import(self, tmp_path):
+        _write(tmp_path, "m.ts", "import {\n  used,\n  unused,\n} from './x';\n")
+        assert _categorize_unused(str(tmp_path / "m.ts"), 3) == "imports"
 
     def test_export_const_is_vars(self, tmp_path):
         """Lines starting with 'export const' are categorized as vars."""
