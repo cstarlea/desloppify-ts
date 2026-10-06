@@ -1,0 +1,78 @@
+{
+  "issues": [
+    {
+      "id": "deprecated::src/errors.ts::isClientError",
+      "tier": 3,
+      "confidence": "high",
+      "zone": "production",
+      "summary": "Deprecated: isClientError (1 importers)"
+    },
+    {
+      "id": "facade::src/index.ts",
+      "tier": 2,
+      "confidence": "medium",
+      "zone": "production",
+      "summary": "Re-export facade (4 LOC): imports from ./client.js, ./errors.js, ./title.js, +1 (1 importers)"
+    },
+    {
+      "id": "orphaned::src/cli.ts",
+      "tier": 3,
+      "confidence": "medium",
+      "zone": "production",
+      "summary": "Orphaned file (11 LOC): zero importers, not an entry point"
+    },
+    {
+      "id": "smells::src/title.ts::async_no_await",
+      "tier": 3,
+      "confidence": "medium",
+      "zone": "production",
+      "summary": "1x Async functions without await"
+    },
+    {
+      "id": "test_coverage::src/cli.ts::untested_module",
+      "tier": 3,
+      "confidence": "high",
+      "zone": "production",
+      "summary": "Untested module (11 LOC, 0 importers)"
+    },
+    {
+      "id": "test_coverage::src/client.ts::untested_module",
+      "tier": 3,
+      "confidence": "high",
+      "zone": "production",
+      "summary": "Untested module (12 LOC, 1 importers)"
+    },
+    {
+      "id": "test_coverage::src/errors.ts::untested_module",
+      "tier": 3,
+      "confidence": "high",
+      "zone": "production",
+      "summary": "Untested module (13 LOC, 2 importers)"
+    }
+  ],
+  "potentials": {
+    "coupling": 0,
+    "cycles": 6,
+    "deprecated": 1,
+    "dupes": 1,
+    "exports": 0,
+    "facade": 6,
+    "flat_dirs": 2,
+    "logs": 6,
+    "naming": 2,
+    "orphaned": 6,
+    "patterns": 0,
+    "props": 0,
+    "react": 0,
+    "security": 6,
+    "single_use": 1,
+    "smells": 6,
+    "structural": 6,
+    "test_coverage": 15,
+    "unused": 6
+  },
+  "reduced_coverage": [
+    "exports: knip_not_installed",
+    "unused: tsc_missing"
+  ]
+}

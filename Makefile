@@ -8,6 +8,7 @@
 	integration-roslyn \
 	tests \
 	tests-full \
+	tests-golden-node \
 	sync-docs \
 	package-smoke \
 	install-hooks \
@@ -65,6 +66,12 @@ tests: install-ci-tools
 tests-full: install-full-tools
 	pytest -q $(PYTEST_XML_FLAG)
 
+GOLDEN_NODE_DIR := desloppify/languages/typescript/tests/golden/node
+
+tests-golden-node: install-full-tools
+	npm ci --prefix $(GOLDEN_NODE_DIR) --no-audit --no-fund
+	DESLOPPIFY_REQUIRE_NODE_GOLDEN=1 pytest -q -rs desloppify/languages/typescript/tests/test_ts_golden.py
+
 package-smoke: install-ci-tools
 	rm -rf dist .pkg-smoke
 	python -m build
@@ -81,4 +88,4 @@ package-smoke: install-ci-tools
 
 ci-fast: lint typecheck arch ci-contracts tests
 
-ci: ci-fast tests-full package-smoke
+ci: ci-fast tests-full tests-golden-node package-smoke

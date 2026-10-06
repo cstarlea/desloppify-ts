@@ -1,0 +1,155 @@
+{
+  "issues": [
+    {
+      "id": "cycles::src/lib/notifications.ts::src/lib/notifications.ts::src/lib/store.ts",
+      "tier": 3,
+      "confidence": "high",
+      "zone": "production",
+      "summary": "Import cycle (2 files): src/lib/notifications.ts -> src/lib/store.ts"
+    },
+    {
+      "id": "deprecated::src/lib/format.ts::formatTitle",
+      "tier": 3,
+      "confidence": "high",
+      "zone": "production",
+      "summary": "Deprecated: formatTitle (2 importers)"
+    },
+    {
+      "id": "logs::src/hooks/useTodos.ts::TODOS",
+      "tier": 1,
+      "confidence": "high",
+      "zone": "production",
+      "summary": "1 tagged logs [TODOS]"
+    },
+    {
+      "id": "orphaned::src/components/LegacyBanner.tsx",
+      "tier": 3,
+      "confidence": "medium",
+      "zone": "production",
+      "summary": "Orphaned file (12 LOC): zero importers, not an entry point"
+    },
+    {
+      "id": "orphaned::src/lib/constants.ts",
+      "tier": 3,
+      "confidence": "medium",
+      "zone": "production",
+      "summary": "Orphaned file (11 LOC): zero importers, not an entry point"
+    },
+    {
+      "id": "security::src/lib/storage.ts::security::json_parse_unguarded::src/lib/storage.ts::5",
+      "tier": 2,
+      "confidence": "low",
+      "zone": "production",
+      "summary": "JSON.parse() without try/catch - may throw on malformed input"
+    },
+    {
+      "id": "smells::src/hooks/useTodos.ts::debug_tag",
+      "tier": 3,
+      "confidence": "low",
+      "zone": "production",
+      "summary": "1x Vestigial debug tag in log/print"
+    },
+    {
+      "id": "smells::src/lib/storage.ts::as_any_cast",
+      "tier": 3,
+      "confidence": "medium",
+      "zone": "production",
+      "summary": "1x `as any` type casts"
+    },
+    {
+      "id": "smells::src/lib/storage.ts::async_no_await",
+      "tier": 3,
+      "confidence": "medium",
+      "zone": "production",
+      "summary": "1x Async functions without await"
+    },
+    {
+      "id": "test_coverage::src/App.tsx::untested_module",
+      "tier": 3,
+      "confidence": "high",
+      "zone": "production",
+      "summary": "Untested module (16 LOC, 1 importers)"
+    },
+    {
+      "id": "test_coverage::src/components/Header.tsx::untested_module",
+      "tier": 3,
+      "confidence": "high",
+      "zone": "production",
+      "summary": "Untested module (16 LOC, 1 importers)"
+    },
+    {
+      "id": "test_coverage::src/components/LegacyBanner.tsx::untested_module",
+      "tier": 3,
+      "confidence": "high",
+      "zone": "production",
+      "summary": "Untested module (12 LOC, 0 importers)"
+    },
+    {
+      "id": "test_coverage::src/components/TodoList.tsx::untested_module",
+      "tier": 3,
+      "confidence": "high",
+      "zone": "production",
+      "summary": "Untested module (14 LOC, 1 importers)"
+    },
+    {
+      "id": "test_coverage::src/hooks/useTodos.ts::untested_module",
+      "tier": 3,
+      "confidence": "high",
+      "zone": "production",
+      "summary": "Untested module (16 LOC, 1 importers)"
+    },
+    {
+      "id": "test_coverage::src/lib/constants.ts::untested_module",
+      "tier": 3,
+      "confidence": "high",
+      "zone": "production",
+      "summary": "Untested module (11 LOC, 0 importers)"
+    },
+    {
+      "id": "test_coverage::src/lib/notifications.ts::untested_module",
+      "tier": 3,
+      "confidence": "high",
+      "zone": "production",
+      "summary": "Untested module (11 LOC, 1 importers)"
+    },
+    {
+      "id": "test_coverage::src/lib/store.ts::untested_module",
+      "tier": 3,
+      "confidence": "high",
+      "zone": "production",
+      "summary": "Untested module (12 LOC, 2 importers)"
+    },
+    {
+      "id": "unused::src/components/Header.tsx::useMemo:1",
+      "tier": 1,
+      "confidence": "high",
+      "zone": "production",
+      "summary": "Unused imports: useMemo"
+    }
+  ],
+  "potentials": {
+    "coupling": 0,
+    "cycles": 12,
+    "deprecated": 1,
+    "dupes": 10,
+    "exports": 0,
+    "facade": 12,
+    "flat_dirs": 5,
+    "logs": 12,
+    "naming": 4,
+    "orphaned": 12,
+    "patterns": 0,
+    "props": 2,
+    "react": 0,
+    "security": 12,
+    "single_use": 4,
+    "smells": 12,
+    "structural": 12,
+    "test_coverage": 29,
+    "unused": 12
+  },
+  "reduced_coverage": [
+    "exports: knip_not_installed",
+    "unused: tsc_missing"
+  ]
+}

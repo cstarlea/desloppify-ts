@@ -1,0 +1,13 @@
+{
+  // Vite template layout: paths live in the app config, not the root.
+  "compilerOptions": {
+    "target": "ES2022",
+    "jsx": "react-jsx",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noEmit": true,
+    "paths": { "@/*": ["./src/*"] },
+  },
+  "include": ["src"]
+}

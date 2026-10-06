@@ -1,0 +1,10 @@
+{
+  "name": "acme",
+  "private": true,
+  "scripts": {
+    "build": "turbo build"
+  },
+  "devDependencies": {
+    "typescript": "5.8.3"
+  }
+}
