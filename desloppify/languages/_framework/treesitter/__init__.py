@@ -34,6 +34,19 @@ def is_available() -> bool:
     return _AVAILABLE
 
 
+def grammar_load_failures() -> dict[str, str]:
+    """Grammars that failed to load (e.g. offline download) since the last reset."""
+    from .analysis.extractors import grammar_load_failures as _failures
+
+    return _failures()
+
+
+def reset_grammar_load_failures() -> None:
+    from .analysis.extractors import reset_grammar_load_failures as _reset
+
+    _reset()
+
+
 def enable_parse_cache() -> None:
     """Enable scan-scoped parse tree cache."""
     from .imports.cache import enable_parse_cache as _enable
@@ -143,6 +156,8 @@ __all__ = [
     "NIM_SPEC",
     "OCAML_SPEC",
     "PARSE_INIT_ERRORS",
+    "grammar_load_failures",
+    "reset_grammar_load_failures",
     "PERL_SPEC",
     "PHP_SPEC",
     "POWERSHELL_SPEC",

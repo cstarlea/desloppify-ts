@@ -62,6 +62,8 @@ from desloppify.languages.framework import (
     disable_parse_cache,
     enable_parse_cache,
     make_lang_run,
+    record_grammar_load_failures,
+    reset_grammar_load_failures,
     reset_script_import_caches,
 )
 from desloppify.state_io import StateModel, ensure_state_defaults, save_state, utc_now
@@ -391,6 +393,7 @@ def run_scan_generation(
     """Run detector pipeline and return issues, potentials, and codebase metrics."""
     enable_file_cache()
     enable_parse_cache()
+    reset_grammar_load_failures()
     try:
         issues, potentials = generate_plan_issues(
             runtime.path,
@@ -401,6 +404,8 @@ def run_scan_generation(
                 profile=runtime.profile,
             ),
         )
+        if runtime.lang is not None:
+            record_grammar_load_failures(runtime.lang)
         scanned_files = _resolve_scanned_files(runtime)
         codebase_metrics = collect_codebase_metrics(
             runtime.lang,
