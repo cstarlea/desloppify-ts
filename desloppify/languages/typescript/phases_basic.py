@@ -8,6 +8,7 @@ from pathlib import Path
 from desloppify.base.output.terminal import log
 from desloppify.engine._state.filtering import make_issue
 from desloppify.engine.policy.zones import adjust_potential
+from desloppify.languages._framework.base.shared_phases_helpers import record_reduced_coverage
 from desloppify.languages._framework.base.types import LangRuntimeContract
 from desloppify.languages._framework.issue_factories import make_unused_issues
 import desloppify.languages.typescript.detectors.deprecated as deprecated_detector_mod
@@ -46,7 +47,8 @@ def phase_logs(path: Path, lang: LangRuntimeContract) -> tuple[list[Issue], dict
 
 
 def phase_unused(path: Path, lang: LangRuntimeContract) -> tuple[list[Issue], dict[str, int]]:
-    entries, total_files = unused_detector_mod.detect_unused(path)
+    entries, total_files, coverage = unused_detector_mod.detect_unused_result(path)
+    record_reduced_coverage(lang, coverage)
     return make_unused_issues(entries, log), {
         "unused": adjust_potential(lang.zone_map, total_files),
     }

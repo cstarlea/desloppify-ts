@@ -125,7 +125,11 @@ def test_phases_basic_cover_logs_unused_exports_and_deprecated(monkeypatch) -> N
     assert len(issues) == 2
     assert potentials == {"logs": 5}
 
-    monkeypatch.setattr(phases_basic_mod.unused_detector_mod, "detect_unused", lambda _path: ([{"file": "src/a.ts"}], 7))
+    monkeypatch.setattr(
+        phases_basic_mod.unused_detector_mod,
+        "detect_unused_result",
+        lambda _path: ([{"file": "src/a.ts"}], 7, None),
+    )
     monkeypatch.setattr(phases_basic_mod, "make_unused_issues", lambda entries, _log: [{"entries": entries}])
     issues, potentials = phases_basic_mod.phase_unused(Path("."), lang)
     assert len(issues) == 1

@@ -1,4 +1,4 @@
-"""Unused declarations detection via tsc TS6133/TS6192.
+"""Unused declarations detection via tsc's noUnusedLocals/noUnusedParameters.
 
 Includes a Deno/edge-functions fallback where `tsc` cannot model URL-based imports.
 """
@@ -8,6 +8,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import os
 import re
 import shutil
 import subprocess  # nosec B404
@@ -15,10 +16,11 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
-from desloppify.base.discovery.file_paths import rel, resolve_path, safe_write_text
+from desloppify.base.discovery.file_paths import rel, resolve_path
 from desloppify.base.discovery.paths import get_project_root
 from desloppify.base.discovery.source import find_ts_and_tsx_files
 from desloppify.base.output.terminal import colorize, print_table
+from desloppify.languages._framework.base.types import DetectorCoverageStatus
 from desloppify.languages.typescript.detectors.unused_fallback import (
     _contains_deno_markers,
     _extract_import_names,
@@ -34,6 +36,22 @@ TS6133_RE = re.compile(
 TS6192_RE = re.compile(
     r"^(.+)\((\d+),(\d+)\): error TS6192: All imports in import declaration are unused\."
 )
+# Every diagnostic tsc emits for noUnusedLocals / noUnusedParameters.
+_TS_UNUSED_RE = re.compile(
+    r"^(.+)\((\d+),(\d+)\): error (TS6133|TS6138|TS6192|TS6196|TS6198|TS6199|TS6205): (.*)$"
+)
+_QUOTED_NAME_RE = re.compile(r"'([^']+)'")
+_AGGREGATE_NAMES = {
+    "TS6192": "(entire import)",
+    "TS6198": "(all destructured elements)",
+    "TS6199": "(all variables)",
+    "TS6205": "(all type parameters)",
+}
+_TS_DIAGNOSTIC_RE = re.compile(r"error TS(\d+):")
+# TS5xxx are compiler-option/config errors; TS18003 is "no inputs were found".
+_TS_CONFIG_ERROR_RE = re.compile(r"error TS(5\d{3}|18003):")
+# Printed by the unrelated `tsc` npm package that npx can fetch by mistake.
+_BOGUS_TSC_MARKER = "This is not the tsc command you are looking for"
 logger = logging.getLogger(__name__)
 _proc_runtime = subprocess
 
@@ -42,37 +60,47 @@ _detect_unused_fallback = detect_unused_fallback
 _should_use_deno_fallback = should_use_deno_fallback
 
 
+def _resolve_tsc_command(*start_dirs: Path) -> list[str]:
+    """Find a real TypeScript compiler without downloading anything.
+
+    Walks up from each start directory looking for ``node_modules/.bin/tsc``
+    (which covers hoisted monorepo installs), then falls back to a global
+    ``tsc``. ``npx tsc`` is deliberately avoided: without a local install it
+    fetches an unrelated npm package named ``tsc``.
+    """
+    names = ("tsc.cmd", "tsc") if os.name == "nt" else ("tsc",)
+    for start in start_dirs:
+        for directory in (start, *start.parents):
+            for name in names:
+                candidate = directory / "node_modules" / ".bin" / name
+                if candidate.is_file():
+                    return [str(candidate)]
+    tsc_path = shutil.which("tsc")
+    if tsc_path:
+        return [tsc_path]
+    raise OSError("TypeScript compiler not found (install `typescript` in the project)")
+
+
 def _run_tsc_unused_check(
     project_root: Path,
     tsconfig_path: Path,
 ) -> subprocess.CompletedProcess[str]:
-    """Run the unused-symbol check for one project root.
-
-    Prefers `npx tsc` (project-local), then `node_modules/.bin/tsc`, then `tsc`.
-    """
-    npx_path = shutil.which("npx")
-    if npx_path:
-        cmd = [npx_path, "tsc"]
-    else:
-        local_tsc = project_root / "node_modules" / ".bin" / "tsc"
-        if local_tsc.is_file():
-            cmd = [str(local_tsc)]
-        else:
-            tsc_path = shutil.which("tsc")
-            if tsc_path:
-                cmd = [tsc_path]
-            else:
-                raise OSError("TypeScript compiler not found (npx/tsc)")
-
+    """Run tsc with the unused-symbol checks enabled on top of ``tsconfig_path``."""
+    cmd = _resolve_tsc_command(tsconfig_path.parent, project_root)
     return _proc_runtime.run(  # nosec B603
         [
             *cmd,
             "--project",
             str(tsconfig_path),
             "--noEmit",
+            "--noUnusedLocals",
+            "--noUnusedParameters",
+            "--pretty",
+            "false",
         ],
         capture_output=True,
         text=True,
+        stdin=subprocess.DEVNULL,
         cwd=project_root,
         timeout=120,
     )
@@ -98,52 +126,102 @@ def _find_nearest_tsconfig(path: Path) -> Path | None:
     return None
 
 
-def detect_unused(path: Path, category: str = "all") -> tuple[list[dict], int]:
+def _reduced(summary: str, *, reason: str, confidence: float) -> DetectorCoverageStatus:
+    return DetectorCoverageStatus(
+        detector="unused",
+        status="reduced",
+        confidence=confidence,
+        summary=summary,
+        impact="Unused imports/declarations may be under-reported for this scan.",
+        remediation="Install `typescript` in the project (npm i -D typescript) and rerun scan.",
+        tool="tsc",
+        reason=reason,
+    )
+
+
+def _tsc_failure_reason(result: subprocess.CompletedProcess[str]) -> str | None:
+    """Return why a tsc run produced no usable results, or None if it is usable."""
+    output = f"{result.stdout}\n{result.stderr}"
+    if _BOGUS_TSC_MARKER in output:
+        return "wrong_tsc_package"
+    if result.returncode not in (0, 1, 2) or (
+        result.returncode != 0 and not _TS_DIAGNOSTIC_RE.search(output)
+    ):
+        return "tsc_failed"
+    return None
+
+
+def _parse_tsc_unused(line: str) -> tuple[str, int, int, str] | None:
+    match = _TS_UNUSED_RE.match(line)
+    if not match:
+        return None
+    filepath, lineno, col, code, message = match.groups()
+    if code in _AGGREGATE_NAMES:
+        return filepath, int(lineno), int(col), _AGGREGATE_NAMES[code]
+    name_match = _QUOTED_NAME_RE.search(message)
+    if not name_match:
+        return None
+    return filepath, int(lineno), int(col), name_match.group(1)
+
+
+def detect_unused_result(
+    path: Path, category: str = "all"
+) -> tuple[list[dict], int, DetectorCoverageStatus | None]:
+    """Detect unused symbols; also report reduced coverage when tsc is unusable."""
     ts_files = find_ts_and_tsx_files(path)
     total_files = len(ts_files)
     if _should_use_deno_fallback(path, ts_files):
-        return _detect_unused_fallback(path, category)
+        entries, total = _detect_unused_fallback(path, category)
+        return entries, total, None
 
     base_tsconfig = _find_nearest_tsconfig(path)
     if base_tsconfig is None:
-        return _detect_unused_fallback(path, category)
+        entries, total = _detect_unused_fallback(path, category)
+        return entries, total, _reduced(
+            "No tsconfig.json found; used source-based unused heuristic",
+            reason="no_tsconfig",
+            confidence=0.5,
+        )
 
-    tmp_tsconfig = {
-        "extends": f"./{base_tsconfig.name}",
-        "compilerOptions": {
-            "noUnusedLocals": True,
-            "noUnusedParameters": True,
-        },
-    }
-    tmp_path = base_tsconfig.parent / "tsconfig.desloppify.json"
     try:
-        safe_write_text(tmp_path, json.dumps(tmp_tsconfig, indent=2))
-        try:
-            result = _run_tsc_unused_check(get_project_root(), tmp_path)
-        except (_proc_runtime.SubprocessError, OSError) as exc:
-            logger.debug("Falling back to source-based unused detection: %s", exc)
-            return _detect_unused_fallback(path, category)
-    finally:
-        tmp_path.unlink(missing_ok=True)
+        result = _run_tsc_unused_check(get_project_root(), base_tsconfig)
+    except (_proc_runtime.SubprocessError, OSError) as exc:
+        logger.debug("Falling back to source-based unused detection: %s", exc)
+        entries, total = _detect_unused_fallback(path, category)
+        return entries, total, _reduced(
+            f"tsc unavailable ({exc}); used source-based unused heuristic",
+            reason="tsc_missing",
+            confidence=0.5,
+        )
+
+    failure = _tsc_failure_reason(result)
+    if failure is not None:
+        logger.debug("tsc produced no usable output (%s): %s", failure, result.stderr[-500:])
+        entries, total = _detect_unused_fallback(path, category)
+        return entries, total, _reduced(
+            f"tsc did not run correctly ({failure}); used source-based unused heuristic",
+            reason=failure,
+            confidence=0.5,
+        )
+
+    output_lines = result.stdout.splitlines() + result.stderr.splitlines()
+    coverage = None
+    config_errors = [line for line in output_lines if _TS_CONFIG_ERROR_RE.search(line)]
+    if config_errors:
+        coverage = _reduced(
+            f"tsc reported config errors for {base_tsconfig.name}: {config_errors[0].strip()[:160]}",
+            reason="tsconfig_error",
+            confidence=0.7,
+        )
 
     entries = []
-    for line in result.stdout.splitlines() + result.stderr.splitlines():
-        m = TS6133_RE.match(line)
-        m2 = TS6192_RE.match(line) if not m else None
-        if not m and not m2:
+    for line in output_lines:
+        parsed = _parse_tsc_unused(line)
+        if parsed is None:
             continue
-        if m:
-            filepath, lineno, col, name = (
-                m.group(1),
-                int(m.group(2)),
-                int(m.group(3)),
-                m.group(4),
-            )
-            if name.startswith("_"):
-                continue
-        else:
-            filepath, lineno, col = m2.group(1), int(m2.group(2)), int(m2.group(3))
-            name = "(entire import)"
+        filepath, lineno, col, name = parsed
+        if name.startswith("_"):
+            continue
 
         try:
             full = Path(resolve_path(filepath))
@@ -165,6 +243,11 @@ def detect_unused(path: Path, category: str = "all") -> tuple[list[dict], int]:
                 "category": cat,
             }
         )
+    return entries, total_files, coverage
+
+
+def detect_unused(path: Path, category: str = "all") -> tuple[list[dict], int]:
+    entries, total_files, _coverage = detect_unused_result(path, category)
     return entries, total_files
 
 
@@ -271,4 +354,5 @@ __all__ = [
     "_should_use_deno_fallback",
     "cmd_unused",
     "detect_unused",
+    "detect_unused_result",
 ]
