@@ -2,22 +2,62 @@
 
 import argparse
 import json
+import re
 import sys
 from collections import defaultdict
 from pathlib import Path
 
-from desloppify.base.discovery.file_paths import rel
+from desloppify.base.discovery.file_paths import rel, resolve_path
+from desloppify.base.discovery.source import find_ts_and_tsx_files
 from desloppify.base.output.terminal import colorize, print_table
-from desloppify.languages.typescript.detectors.knip_adapter import detect_with_knip
+from desloppify.languages._framework.base.types import DetectorCoverageStatus
+from desloppify.languages.typescript.detectors.knip_adapter import detect_with_knip_result
+
+_EXPORT_STATEMENT_RE = re.compile(r"^\s*export\b", re.MULTILINE)
+_KNIP_REMEDIATION = {
+    "knip_not_installed": "Install Knip in the project (npm i -D knip) and rerun scan.",
+    "no_package_json": "Scan a directory inside a Node package (with package.json).",
+}
+
+
+def _count_exports(path: Path) -> int:
+    """Approximate the export population so dead-export scores are proportional."""
+    total = 0
+    for filepath in find_ts_and_tsx_files(path):
+        try:
+            text = Path(resolve_path(filepath)).read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        total += len(_EXPORT_STATEMENT_RE.findall(text))
+    return total
+
+
+def detect_dead_exports_result(
+    path: Path,
+) -> tuple[list[dict], int, DetectorCoverageStatus | None]:
+    """Return (dead_export_entries, total_exports, coverage) using Knip."""
+    entries, reason = detect_with_knip_result(path)
+    if entries is None:
+        coverage = DetectorCoverageStatus(
+            detector="exports",
+            status="reduced",
+            confidence=0.0,
+            summary=f"Dead-export detection skipped: Knip did not run ({reason})",
+            impact="Unused exports are not reported for this scan.",
+            remediation=_KNIP_REMEDIATION.get(
+                reason or "", "Check that `npx knip` runs in this project and rerun scan."
+            ),
+            tool="knip",
+            reason=reason or "knip_failed",
+        )
+        return [], 0, coverage
+    return entries, max(len(entries), _count_exports(path)), None
 
 
 def detect_dead_exports(path: Path) -> tuple[list[dict], int]:
     """Return (dead_export_entries, total_exports) using Knip."""
-    result = detect_with_knip(path)
-    if result is None:
-        return [], 0
-    entries = result
-    return entries, len(entries)
+    entries, total, _coverage = detect_dead_exports_result(path)
+    return entries, total
 
 
 def cmd_exports(args: argparse.Namespace) -> None:

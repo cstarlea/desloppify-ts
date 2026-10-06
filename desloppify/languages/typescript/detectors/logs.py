@@ -9,15 +9,12 @@ Catches:
 import argparse
 import json
 import logging
-import os
 import re
-import sys
 from collections import defaultdict
 from pathlib import Path
 
-from desloppify.base.discovery.file_paths import rel, resolve_path
+from desloppify.base.discovery.file_paths import rel
 from desloppify.base.discovery.source import find_ts_and_tsx_files
-from desloppify.base.output.fallbacks import log_best_effort_failure
 from desloppify.base.output.terminal import colorize, print_table
 from desloppify.base.search.grep import grep_files
 from desloppify.languages.typescript.detectors.contracts import DetectorResult
@@ -96,41 +93,12 @@ def cmd_logs(args: argparse.Namespace) -> None:
     print_table(["File", "Count"], rows, [70, 6])
 
     if args.fix:
-        print(colorize(f"\n--fix: Will remove {len(entries)} tagged log lines.", "yellow"))
-        confirm = input("Proceed? [y/N] ").strip().lower()
-        if confirm == "y":
-            _fix_logs(by_file)
-        else:
-            print("Aborted.")
-
-
-def _fix_logs(by_file: dict[str, list]):
-    removed = 0
-    failed = 0
-    for filepath, file_entries in by_file.items():
-        lines_to_remove = {e["line"] for e in file_entries}
-        p = Path(filepath) if Path(filepath).is_absolute() else Path(resolve_path(filepath))
-        try:
-            original = p.read_text()
-            new_lines = []
-            for i, line in enumerate(original.splitlines(keepends=True), start=1):
-                if i not in lines_to_remove:
-                    new_lines.append(line)
-                else:
-                    removed += 1
-            tmp = p.with_suffix(p.suffix + ".tmp")
-            tmp.write_text("".join(new_lines))
-            os.replace(str(tmp), str(p))
-        except OSError as e:
-            failed += 1
-            print(colorize(f"  Failed to fix {filepath}: {e}", "red"), file=sys.stderr)
-            try:
-                tmp.unlink(missing_ok=True)
-            except OSError as cleanup_exc:
-                log_best_effort_failure(
-                    logger, f"clean temporary log fixer file {tmp}", cleanup_exc
-                )
-    msg = f"Removed {removed} lines across {len(by_file)} files."
-    if failed:
-        msg += f" ({failed} files failed.)"
-    print(colorize(msg, "green"))
+        # The old line-deleting fixer here removed only the first line of
+        # multi-line calls; all log removal goes through the autofix gate now.
+        print(
+            colorize(
+                "\n--fix is no longer supported here. Preview with "
+                "`desloppify autofix debug-logs --dry-run`.",
+                "yellow",
+            )
+        )

@@ -62,4 +62,13 @@ def test_treesitter_language_pack_is_capped_below_incompatible_release() -> None
         if str(spec).startswith("tree-sitter-language-pack")
     ]
 
-    assert language_pack_specs == ["tree-sitter-language-pack>=0.3,<1.8"]
+    # 1.6.3 shipped without an importable ``tree_sitter_language_pack`` module.
+    assert language_pack_specs == ["tree-sitter-language-pack>=1.6.2,!=1.6.3,<1.8"]
+
+
+def test_tree_sitter_floor_supports_query_cursor() -> None:
+    """``QueryCursor`` (used by the extractors) only exists in tree-sitter>=0.25."""
+    optional = _optional_dependencies()
+    for extra in ("treesitter", "full"):
+        specs = [str(s) for s in optional[extra] if re.match(r"tree-sitter[<>=!~]", str(s))]
+        assert specs == ["tree-sitter>=0.25"], extra

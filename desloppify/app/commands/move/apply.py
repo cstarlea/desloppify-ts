@@ -13,6 +13,7 @@ from desloppify.base.discovery.file_paths import (
     safe_write_text,
 
 )
+from desloppify.app.commands.move.planning import apply_replacements
 from desloppify.base.output.fallbacks import restore_files_best_effort, warn_best_effort
 from desloppify.base.output.terminal import colorize
 
@@ -47,14 +48,12 @@ def apply_file_move(
     new_contents: dict[str, str] = {}
     if self_changes:
         content = Path(source_abs).read_text()
-        for old_str, new_str in self_changes:
-            content = content.replace(old_str, new_str)
+        content = apply_replacements(content, self_changes)
         new_contents[dest_abs] = content
 
     for filepath, replacements in importer_changes.items():
         content = Path(filepath).read_text()
-        for old_str, new_str in replacements:
-            content = content.replace(old_str, new_str)
+        content = apply_replacements(content, replacements)
         new_contents[filepath] = content
 
     Path(dest_abs).parent.mkdir(parents=True, exist_ok=True)
@@ -98,17 +97,13 @@ def apply_directory_move(
             rel_in_dir = Path(src_file).relative_to(source_path)
             dest_file = Path(dest_abs) / rel_in_dir
             original = dest_file.read_text()
-            content = original
-            for old_str, new_str in changes:
-                content = content.replace(old_str, new_str)
+            content = apply_replacements(original, changes)
             written_files[str(dest_file)] = original
             safe_write_text(dest_file, content)
 
         for filepath, replacements in external_changes.items():
             original = Path(filepath).read_text()
-            content = original
-            for old_str, new_str in replacements:
-                content = content.replace(old_str, new_str)
+            content = apply_replacements(original, replacements)
             written_files[filepath] = original
             safe_write_text(filepath, content)
 

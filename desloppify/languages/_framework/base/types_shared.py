@@ -89,6 +89,9 @@ class FixerConfig:
     dry_verb: str = "Would fix"
     # Signature: (path, state, prev_score, dry_run, *, lang=None) -> None
     post_fix: Callable[..., None] | None = None
+    # Known to produce broken or behavior-changing edits on some inputs.
+    # Unsafe fixers only write with ``--unsafe`` and are never suggested.
+    unsafe: bool = False
 
 
 @dataclass

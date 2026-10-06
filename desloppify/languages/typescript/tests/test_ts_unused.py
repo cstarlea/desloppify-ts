@@ -5,6 +5,7 @@ so we test what is feasible: the helper function _categorize_unused and module i
 """
 
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -120,11 +121,19 @@ class TestCategorizeUnused:
         result = _categorize_unused(str(tmp_path / "app.ts"), 3)
         assert result == "imports"
 
-    def test_nonexistent_file_defaults_imports(self, tmp_path):
-        """Nonexistent file defaults to 'imports' for safety."""
+    def test_nonexistent_file_defaults_vars(self, tmp_path):
+        """Unknown context must not be routed to the import fixer."""
 
         result = _categorize_unused(str(tmp_path / "nonexistent.ts"), 1)
-        assert result == "imports"
+        assert result == "vars"
+
+    def test_parameter_is_not_an_import(self, tmp_path):
+        _write(tmp_path, "fn.ts", "function handler(req, res) {\n  return req;\n}\n")
+        assert _categorize_unused(str(tmp_path / "fn.ts"), 1) == "vars"
+
+    def test_multiline_import_member_is_import(self, tmp_path):
+        _write(tmp_path, "m.ts", "import {\n  used,\n  unused,\n} from './x';\n")
+        assert _categorize_unused(str(tmp_path / "m.ts"), 3) == "imports"
 
     def test_export_const_is_vars(self, tmp_path):
         """Lines starting with 'export const' are categorized as vars."""
@@ -135,38 +144,51 @@ class TestCategorizeUnused:
 
 
 class TestDenoFallback:
-    def test_run_tsc_unused_check_uses_fixed_command(self, tmp_path, monkeypatch):
+    def test_run_tsc_unused_check_prefers_local_compiler(self, tmp_path, monkeypatch):
         class _Result:
             stdout = ""
             stderr = ""
+            returncode = 0
 
         recorded: dict[str, object] = {}
-        npx_path = "/opt/homebrew/bin/npx"
 
         def _fake_run(*args, **kwargs):
             recorded["args"] = args[0]
             recorded["cwd"] = kwargs["cwd"]
             recorded["timeout"] = kwargs["timeout"]
+            recorded["stdin"] = kwargs.get("stdin")
             return _Result()
 
-        monkeypatch.setattr(ts_unused_mod.shutil, "which", lambda _name: npx_path)
+        local_tsc = _write(tmp_path, "node_modules/.bin/tsc", "#!/bin/sh\n")
+        _write(tmp_path, "packages/app/tsconfig.json", "{}\n")
+        monkeypatch.setattr(ts_unused_mod.os, "name", "posix")
+        monkeypatch.setattr(ts_unused_mod.shutil, "which", lambda _name: "/usr/bin/tsc")
         monkeypatch.setattr(ts_unused_mod._proc_runtime, "run", _fake_run)
-        tsconfig = tmp_path / "tsconfig.desloppify.json"
+        tsconfig = tmp_path / "packages/app/tsconfig.json"
         result = ts_unused_mod._run_tsc_unused_check(tmp_path, tsconfig)
 
         assert result.stdout == ""
+        # Hoisted monorepo install is found by walking up; no npx, no temp config.
         assert recorded["args"] == [
-            npx_path,
-            "tsc",
+            str(local_tsc),
             "--project",
             str(tsconfig),
             "--noEmit",
-            ]
+            "--noUnusedLocals",
+            "--noUnusedParameters",
+            "--pretty",
+            "false",
+        ]
         assert recorded["cwd"] == tmp_path
         assert recorded["timeout"] == 120
+        assert recorded["stdin"] == ts_unused_mod.subprocess.DEVNULL
 
-    def test_run_tsc_unused_check_raises_without_npx(self, tmp_path, monkeypatch):
-        monkeypatch.setattr(ts_unused_mod.shutil, "which", lambda _name: None)
+    def test_run_tsc_unused_check_never_uses_npx(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(
+            ts_unused_mod.shutil,
+            "which",
+            lambda name: "/usr/bin/npx" if name == "npx" else None,
+        )
 
         with pytest.raises(OSError, match="TypeScript compiler not found"):
             ts_unused_mod._run_tsc_unused_check(tmp_path, tmp_path / "tsconfig.json")
@@ -224,6 +246,7 @@ class TestDenoFallback:
 
     def test_detect_unused_non_deno_keeps_tsc_path(self, tmp_path, monkeypatch):
         """Regular TypeScript projects should still parse TS6133/TS6192 from tsc."""
+        _write(tmp_path, "tsconfig.json", "{}\n")
         _write(tmp_path, "src/app.ts", "const x = 1;\n")
 
         class _Result:
@@ -231,6 +254,7 @@ class TestDenoFallback:
                 "src/app.ts(1,7): error TS6133: 'x' is declared but its value is never read.\n"
             )
             stderr = ""
+            returncode = 2
 
         calls = {"count": 0}
 
@@ -238,11 +262,8 @@ class TestDenoFallback:
             calls["count"] += 1
             return _Result()
 
-        monkeypatch.setattr(
-            ts_unused_mod.shutil,
-            "which",
-            lambda name: "/opt/homebrew/bin/npx" if name == "npx" else None,
-        )
+        _write(tmp_path, "node_modules/.bin/tsc", "#!/bin/sh\n")
+        monkeypatch.setattr(ts_unused_mod.shutil, "which", lambda _name: None)
         monkeypatch.setattr(ts_unused_mod._proc_runtime, "run", _fake_run)
         entries, total = detect_unused(tmp_path / "src")
         assert calls["count"] == 1
@@ -254,6 +275,7 @@ class TestDenoFallback:
     ):
         """A repo-level deno.lock alone should not disable tsc-based unused detection."""
         _write(tmp_path, "deno.lock", "{}\n")
+        _write(tmp_path, "tsconfig.json", "{}\n")
         _write(tmp_path, "src/app.ts", "const x = 1;\n")
 
         class _Result:
@@ -261,6 +283,7 @@ class TestDenoFallback:
                 "src/app.ts(1,7): error TS6133: 'x' is declared but its value is never read.\n"
             )
             stderr = ""
+            returncode = 2
 
         calls = {"count": 0}
 
@@ -268,13 +291,142 @@ class TestDenoFallback:
             calls["count"] += 1
             return _Result()
 
-        monkeypatch.setattr(
-            ts_unused_mod.shutil,
-            "which",
-            lambda name: "/opt/homebrew/bin/npx" if name == "npx" else None,
-        )
+        _write(tmp_path, "node_modules/.bin/tsc", "#!/bin/sh\n")
+        monkeypatch.setattr(ts_unused_mod.shutil, "which", lambda _name: None)
         monkeypatch.setattr(ts_unused_mod._proc_runtime, "run", _fake_run)
         entries, total = detect_unused(tmp_path / "src")
         assert calls["count"] == 1
         assert total == 1
         assert entries and entries[0]["name"] == "x"
+
+    def test_detect_unused_uses_nearest_monorepo_tsconfig(self, tmp_path, monkeypatch):
+        """A nested project must not inherit an unrelated root app config."""
+        _write(tmp_path, "tsconfig.app.json", "{}\n")
+        _write(tmp_path, "libs/contracts/tsconfig.json", "{}\n")
+        _write(tmp_path, "libs/contracts/src/index.ts", "const x = 1;\n")
+
+        recorded: dict[str, object] = {}
+
+        class _Result:
+            stdout = ""
+            stderr = ""
+            returncode = 0
+
+        def _fake_run(project_root, tsconfig_path):
+            recorded["tsconfig_path"] = tsconfig_path
+            return _Result()
+
+        monkeypatch.setattr(ts_unused_mod, "_run_tsc_unused_check", _fake_run)
+
+        entries, total, coverage = ts_unused_mod.detect_unused_result(
+            tmp_path / "libs/contracts"
+        )
+
+        assert entries == []
+        assert total == 1
+        assert coverage is None
+        assert recorded["tsconfig_path"] == tmp_path / "libs/contracts/tsconfig.json"
+        # Nothing is written into the user's project.
+        assert not (tmp_path / "libs/contracts/tsconfig.desloppify.json").exists()
+
+
+class TestTscFailureModes:
+    """tsc failures must surface as reduced coverage, never as a clean result."""
+
+    def _project(self, tmp_path):
+        _write(tmp_path, "tsconfig.json", "{}\n")
+        _write(tmp_path, "src/app.ts", "const unusedLocal = 1;\n")
+
+    def _fake_result(self, monkeypatch, *, stdout="", stderr="", returncode=0):
+        result = SimpleNamespace(stdout=stdout, stderr=stderr, returncode=returncode)
+        monkeypatch.setattr(ts_unused_mod, "_run_tsc_unused_check", lambda *_a: result)
+
+    def test_missing_compiler_falls_back_with_reduced_coverage(self, tmp_path, monkeypatch):
+        self._project(tmp_path)
+
+        def _missing(*_a):
+            raise OSError("TypeScript compiler not found")
+
+        monkeypatch.setattr(ts_unused_mod, "_run_tsc_unused_check", _missing)
+        entries, _total, coverage = ts_unused_mod.detect_unused_result(tmp_path / "src")
+
+        assert coverage is not None and coverage.status == "reduced"
+        assert coverage.reason == "tsc_missing"
+        assert any(entry["name"] == "unusedLocal" for entry in entries)
+
+    def test_bogus_npm_tsc_package_is_not_treated_as_clean(self, tmp_path, monkeypatch):
+        self._project(tmp_path)
+        self._fake_result(
+            monkeypatch,
+            stdout="This is not the tsc command you are looking for\n",
+            returncode=1,
+        )
+        _entries, _total, coverage = ts_unused_mod.detect_unused_result(tmp_path / "src")
+        assert coverage is not None and coverage.reason == "wrong_tsc_package"
+
+    def test_nonzero_exit_without_diagnostics_is_a_failure(self, tmp_path, monkeypatch):
+        self._project(tmp_path)
+        self._fake_result(monkeypatch, stderr="node: command crashed\n", returncode=1)
+        _entries, _total, coverage = ts_unused_mod.detect_unused_result(tmp_path / "src")
+        assert coverage is not None and coverage.reason == "tsc_failed"
+
+    def test_config_errors_keep_results_but_reduce_coverage(self, tmp_path, monkeypatch):
+        self._project(tmp_path)
+        self._fake_result(
+            monkeypatch,
+            stdout=(
+                "tsconfig.json(3,5): error TS5083: Cannot read file 'tsconfig.base.json'.\n"
+                "src/app.ts(1,7): error TS6133: 'unusedLocal' is declared but its value is never read.\n"
+            ),
+            returncode=2,
+        )
+        entries, _total, coverage = ts_unused_mod.detect_unused_result(tmp_path / "src")
+        assert [entry["name"] for entry in entries] == ["unusedLocal"]
+        assert coverage is not None and coverage.reason == "tsconfig_error"
+
+    def test_all_unused_diagnostic_codes_are_parsed(self, tmp_path, monkeypatch):
+        _write(tmp_path, "tsconfig.json", "{}\n")
+        _write(
+            tmp_path,
+            "src/app.ts",
+            "type Unused = string;\nclass A { private p = 1; }\n"
+            "const { a, b } = obj;\nlet c, d;\nfunction f<T>() {}\n",
+        )
+        self._fake_result(
+            monkeypatch,
+            stdout=(
+                "src/app.ts(1,6): error TS6196: 'Unused' is declared but never used.\n"
+                "src/app.ts(2,19): error TS6138: Property 'p' is declared but its value is never read.\n"
+                "src/app.ts(3,7): error TS6198: All destructured elements are unused.\n"
+                "src/app.ts(4,1): error TS6199: All variables are unused.\n"
+                "src/app.ts(5,12): error TS6205: All type parameters are unused.\n"
+            ),
+            returncode=2,
+        )
+        entries, _total, coverage = ts_unused_mod.detect_unused_result(tmp_path / "src")
+        assert coverage is None
+        assert [entry["name"] for entry in entries] == [
+            "Unused",
+            "p",
+            "(all destructured elements)",
+            "(all variables)",
+            "(all type parameters)",
+        ]
+
+    def test_phase_records_reduced_coverage_warning(self, tmp_path, monkeypatch):
+        import desloppify.languages.typescript.phases_basic as phases_basic_mod
+        from desloppify.languages._framework.base.types import DetectorCoverageStatus
+
+        coverage = DetectorCoverageStatus(
+            detector="unused", status="reduced", confidence=0.5, reason="tsc_missing"
+        )
+        monkeypatch.setattr(
+            phases_basic_mod.unused_detector_mod,
+            "detect_unused_result",
+            lambda _path: ([], 0, coverage),
+        )
+        lang = SimpleNamespace(zone_map=None, detector_coverage={}, coverage_warnings=[])
+        phases_basic_mod.phase_unused(tmp_path, lang)
+
+        assert lang.detector_coverage["unused"]["status"] == "reduced"
+        assert [w["reason"] for w in lang.coverage_warnings] == ["tsc_missing"]

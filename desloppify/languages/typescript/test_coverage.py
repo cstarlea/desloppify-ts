@@ -23,6 +23,16 @@ ASSERT_PATTERNS = [
     re.compile(p)
     for p in [
         r"expect\(",
+        # Playwright/Vitest variants: expect.soft(...), expect.poll(...)
+        r"\bexpect\.(?:soft|poll)\(",
+        # Type-level tests (vitest/tsd/expect-type)
+        r"\bexpectTypeOf\b",
+        r"\bassertType\b",
+        # AVA, tap and node:test use an assertion context: t.is(...), t.deepEqual(...)
+        r"\bt\.(?:is|not|deepEqual|notDeepEqual|like|true|false|truthy|falsy|"
+        r"throws|throwsAsync|notThrows|notThrowsAsync|regex|notRegex|snapshot|"
+        r"pass|fail|equal|not[A-Z]\w*|same|strictSame|match|ok|rejects|resolves|"
+        r"has\w*|assert\.\w+)\(",
         r"assert\.",
         r"\bassert(?:[A-Z]\w*)?\(",
         r"\.should\.",
@@ -51,7 +61,11 @@ SNAPSHOT_PATTERNS = [
         r"toMatchInlineSnapshot",
     ]
 ]
-TEST_FUNCTION_RE = re.compile(r"""(?:it|test)\s*\(\s*['\"]""")
+# it("..."), test.only(`...`), test.concurrent("..."), test.serial(...) (AVA),
+# plus parameterized it.each / test.each tables.
+TEST_FUNCTION_RE = re.compile(
+    r"""\b(?:it|test)(?:\.(?!each\b)\w+)*\s*\(\s*['\"`]|\b(?:it|test|describe)\.each\b"""
+)
 PLACEHOLDER_LABEL_PATTERNS = [
     re.compile(p, re.IGNORECASE)
     for p in [

@@ -23,7 +23,7 @@ def _add_detect_parser(sub, detector_names: list[str]) -> None:
     p_detect.add_argument(
         "--fix",
         action="store_true",
-        help="Auto-fix detected issues (logs detector only)",
+        help="Deprecated: use `desloppify autofix` instead",
     )
     p_detect.add_argument(
         "--category",
@@ -59,6 +59,11 @@ def _add_move_parser(sub) -> None:
     p_move.add_argument("dest", type=str, help="Destination path (file or directory)")
     p_move.add_argument(
         "--dry-run", action="store_true", help="Show changes without modifying files"
+    )
+    p_move.add_argument(
+        "--force",
+        action="store_true",
+        help="Move even when some importers cannot be rewritten (they will break)",
     )
 
 
@@ -130,6 +135,11 @@ def _add_autofix_parser(sub, langs: list[str]) -> None:
         "--dry-run",
         action="store_true",
         help="Show what would change without modifying files",
+    )
+    p_autofix.add_argument(
+        "--unsafe",
+        action="store_true",
+        help="Allow fixers marked unsafe (their edits can break code; review the diff)",
     )
 
 

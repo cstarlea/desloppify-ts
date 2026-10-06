@@ -101,7 +101,7 @@ def detect_smells(path: Path) -> tuple[list[dict], int]:
                 "severity": check["severity"],
                 "count": len(matches),
                 "files": len({m["file"] for m in matches}),
-                "matches": matches[:50],
+                "matches": matches,
             }
         )
     entries.sort(

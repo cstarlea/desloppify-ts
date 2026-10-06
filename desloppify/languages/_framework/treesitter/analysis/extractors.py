@@ -97,13 +97,32 @@ def _run_query(query, root_node) -> list[tuple[int, dict]]:
     return cursor.matches(root_node)
 
 
+# Grammars that failed to load this process, e.g. because the language pack
+# could not download them offline. Phases swallow these errors, so the scan
+# reports them as reduced coverage instead (see record_grammar_failures).
+_GRAMMAR_FAILURES: dict[str, str] = {}
+
+
 def _get_parser(grammar: str):
     """Get a tree-sitter parser and language for the given grammar."""
     from tree_sitter_language_pack import get_language, get_parser
 
-    parser = get_parser(grammar)
-    language = get_language(grammar)
+    try:
+        parser = get_parser(grammar)
+        language = get_language(grammar)
+    except Exception as exc:
+        _GRAMMAR_FAILURES.setdefault(grammar, f"{type(exc).__name__}: {exc}")
+        raise
     return parser, language
+
+
+def grammar_load_failures() -> dict[str, str]:
+    """Return grammars that failed to load since the last reset."""
+    return dict(_GRAMMAR_FAILURES)
+
+
+def reset_grammar_load_failures() -> None:
+    _GRAMMAR_FAILURES.clear()
 
 
 def _unwrap_node(node):

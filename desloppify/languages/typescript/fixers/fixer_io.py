@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import logging
+import os
+import stat
 import sys
+import tempfile
 from pathlib import Path
 
 from desloppify.base.output.fallbacks import log_best_effort_failure
-from desloppify.base.discovery.file_paths import rel, safe_write_text
+from desloppify.base.discovery.file_paths import rel
 from desloppify.base.output.terminal import colorize
 from desloppify.base.discovery.paths import get_project_root
 
@@ -57,6 +60,9 @@ def apply_fixer(
     return results
 
 
+_UTF8_BOM = "\ufeff"
+
+
 def _process_fixer_file(
     filepath: str,
     file_entries: list[dict],
@@ -65,7 +71,11 @@ def _process_fixer_file(
     dry_run: bool,
 ) -> dict[str, object] | None:
     path = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
-    original = path.read_text()
+    raw = path.read_bytes().decode("utf-8")  # undecodable files are skipped
+    has_bom = raw.startswith(_UTF8_BOM)
+    uses_crlf = "\r\n" in raw
+    # Transforms see plain "\n" text with no BOM, so line-1 imports match.
+    original = raw.removeprefix(_UTF8_BOM).replace("\r\n", "\n")
     lines = original.splitlines(keepends=True)
 
     new_lines, removed_names = transform_fn(lines, file_entries)
@@ -74,7 +84,8 @@ def _process_fixer_file(
         return None
 
     if not dry_run:
-        _write_fixer_content(path, new_content)
+        restored = new_content.replace("\n", "\r\n") if uses_crlf else new_content
+        _write_fixer_content(path, (_UTF8_BOM if has_bom else "") + restored)
 
     lines_removed = len(original.splitlines()) - len(new_content.splitlines())
     return {
@@ -85,8 +96,20 @@ def _process_fixer_file(
 
 
 def _write_fixer_content(path: Path, content: str) -> None:
+    """Atomically replace a source file, keeping its target, mode and bytes as given."""
+    target = path.resolve()  # write through symlinks instead of replacing them
     try:
-        safe_write_text(path, content)
+        mode = stat.S_IMODE(target.stat().st_mode)
+        fd, tmp = tempfile.mkstemp(dir=target.parent, suffix=".tmp")
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8", newline="") as handle:
+                handle.write(content)
+            os.chmod(tmp, mode)
+            os.replace(tmp, target)
+        except OSError:
+            if os.path.exists(tmp):
+                os.unlink(tmp)
+            raise
     except OSError as exc:
         log_best_effort_failure(logger, f"write TypeScript fixer output {path}", exc)
         raise

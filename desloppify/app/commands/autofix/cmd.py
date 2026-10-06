@@ -6,6 +6,7 @@ import argparse
 from pathlib import Path
 
 from desloppify.app.commands.autofix.preview import show_fix_dry_run_samples
+from desloppify.base.exception_sets import CommandError
 from desloppify.base.output.terminal import colorize
 
 from .apply_flow import (
@@ -26,6 +27,13 @@ def cmd_autofix(args: argparse.Namespace) -> None:
     path = Path(args.path)
 
     lang, fixer = resolve_fixer_config(args, fixer_name)
+    if fixer.unsafe and not dry_run and not getattr(args, "unsafe", False):
+        raise CommandError(
+            f"The {fixer_name} fixer is marked unsafe: its edits can break code "
+            "or change behavior on some inputs.\n"
+            f"  Preview with: desloppify autofix {fixer_name} --dry-run\n"
+            "  Apply anyway with --unsafe and review the diff, or fix these by hand."
+        )
 
     if not dry_run:
         _warn_uncommitted_changes()

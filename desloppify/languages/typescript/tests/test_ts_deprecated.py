@@ -221,3 +221,40 @@ class TestDetectDeprecated:
         entries, _ = _detect(tmp_path)
         symbols = {e["symbol"] for e in entries}
         assert "oldFunc" in symbols
+
+
+class TestDeprecatedMarkersAndExports:
+    def test_prose_and_identifiers_are_not_markers(self, tmp_path):
+        _write(
+            tmp_path,
+            "flags.ts",
+            (
+                "export const STATUS_DEPRECATED = 'deprecated';\n"
+                "// this module is not deprecated\n"
+                "export function isDeprecated(x: string) { return x === 'DEPRECATED'; }\n"
+            ),
+        )
+        entries, _ = _detect(tmp_path)
+        assert entries == []
+
+    def test_export_and_local_use_are_recorded(self, tmp_path):
+        _write(
+            tmp_path,
+            "api.ts",
+            (
+                "/** @deprecated use v2 */\n"
+                "export function legacyApi() {}\n"
+                "/** @deprecated */\n"
+                "function helper() {}\n"
+                "export function v2() { return helper(); }\n"
+                "/** @deprecated */\n"
+                "function dead() {}\n"
+            ),
+        )
+        entries, _ = _detect(tmp_path)
+        by_symbol = {entry["symbol"]: entry for entry in entries}
+        assert by_symbol["legacyApi"]["exported"] is True
+        assert by_symbol["helper"]["exported"] is False
+        assert by_symbol["helper"]["same_file_uses"] == 1
+        assert by_symbol["dead"]["exported"] is False
+        assert by_symbol["dead"]["same_file_uses"] == 0

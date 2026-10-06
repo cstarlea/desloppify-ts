@@ -101,7 +101,7 @@ git push -u origin desloppify/code-health
 ```
 
 Score may temporarily drop after fixes — cascade effects are normal, keep going.
-If `next` suggests an auto-fixer, run `desloppify autofix <fixer> --dry-run` to preview, then apply.
+If `next` suggests an auto-fixer, run `desloppify autofix <fixer> --dry-run` to preview, then apply. If a fixer says it is marked unsafe, fix those issues by hand rather than passing `--unsafe`.
 
 **When the queue is clear, go back to Phase 1.** New issues will surface, cascades will have resolved, priorities will have shifted. This is the cycle.
 

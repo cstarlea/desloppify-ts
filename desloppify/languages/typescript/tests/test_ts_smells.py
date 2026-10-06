@@ -508,3 +508,14 @@ def test_entries_sorted_by_severity_then_count(tmp_path):
                 assert entries[i]["count"] >= entries[i + 1]["count"]
             else:
                 assert cur_sev <= next_sev
+
+
+def test_smell_matches_are_not_truncated(tmp_path):
+    """Every match must survive; a global cap hid most files in large repos."""
+    for i in range(30):
+        _write(tmp_path, f"f{i:02d}.ts", "const a: any = 1;\nconst b: any = 2;\nconst c: any = 3;\n")
+    entries, _ = detect_smells(tmp_path)
+    any_type = next(e for e in entries if e["id"] == "any_type")
+    assert any_type["count"] == 90
+    assert len(any_type["matches"]) == 90
+    assert len({m["file"] for m in any_type["matches"]}) == 30

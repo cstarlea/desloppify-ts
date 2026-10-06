@@ -47,9 +47,10 @@ def ts_alias_resolver(
 ) -> str:
     """Resolve TS path aliases using tsconfig.json paths."""
     paths = load_paths_fn(project_root)
-    for prefix, target_dir in paths.items():
+    # Longest prefix first, matching resolve_alias (the baseUrl "" entry is last).
+    for prefix in sorted(paths, key=len, reverse=True):
         if target.startswith(prefix):
-            return target_dir + target[len(prefix) :]
+            return paths[prefix] + target[len(prefix) :]
     return target
 
 

@@ -15,7 +15,9 @@ from desloppify.app.commands.move.language import (
     supported_ext_hint,
 )
 from desloppify.app.commands.move.planning import (
+    check_unrewritable_importers,
     compute_replacements,
+    move_graph_root,
     resolve_dest,
 )
 from desloppify.app.commands.move.reporting import print_file_move_plan
@@ -23,6 +25,7 @@ from desloppify.base.discovery.file_paths import (
     rel,
     resolve_path,
 )
+from desloppify.base.discovery.paths import get_project_root
 from desloppify.base.exception_sets import CommandError
 from desloppify.base.output.terminal import colorize
 
@@ -55,15 +58,28 @@ def cmd_move(args: argparse.Namespace) -> None:
     lang = lang_mod.get_lang(lang_name)
     move_mod = load_lang_move_module(lang_name)
 
-    scan_path = Path(resolve_path(lang.default_src))
+    scan_path = move_graph_root(
+        move_mod, Path(resolve_path(lang.default_src)), get_project_root()
+    )
+    graph = lang.build_dep_graph(scan_path)
     importer_changes, self_changes = compute_replacements(
         move_mod,
         source_abs,
         dest_abs,
-        lang.build_dep_graph(scan_path),
+        graph,
     )
 
     print_file_move_plan(source_abs, dest_abs, importer_changes, self_changes)
+    check_unrewritable_importers(
+        move_mod,
+        graph,
+        {source_abs},
+        set(importer_changes),
+        dry_run=dry_run,
+        force=getattr(args, "force", False),
+        rel_fn=rel,
+        warn_fn=lambda msg: print(colorize(f"  ⚠ {msg}", "yellow")),
+    )
     if dry_run:
         print(colorize("  Dry run — no files modified.", "yellow"))
         return

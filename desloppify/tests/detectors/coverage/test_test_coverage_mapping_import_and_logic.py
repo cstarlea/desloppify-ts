@@ -910,3 +910,35 @@ class TestHasTestableLogic:
         entries, _ = detect_test_coverage(graph, zone_map, "typescript")
         assert len(entries) == 1
         assert entries[0]["detail"]["kind"] == "runtime_entrypoint_no_direct_tests"
+
+
+class TestTypeScriptAssertionRecognition:
+    """Non-Jest runners must not be reported as assertion-free."""
+
+    @pytest.mark.parametrize(
+        "line",
+        [
+            "t.is(response.status, 200);",  # AVA
+            "t.deepEqual(result, expected);",
+            "await t.throwsAsync(() => ky(url));",
+            "t.assert.strictEqual(a, b);",  # node:test context
+            "expect.soft(page.getByText('x')).toBeVisible();",  # Playwright
+            "expectTypeOf(fn).returns.toEqualTypeOf<string>();",  # type tests
+            "assertType<number>(value);",
+        ],
+    )
+    def test_assertion_styles(self, line):
+        assert any(pattern.search(line) for pattern in ts_cov.ASSERT_PATTERNS)
+
+    @pytest.mark.parametrize("line", ["t.context.server = server;", "item.is(x)", "const t = 1;"])
+    def test_non_assertions(self, line):
+        assert not any(pattern.search(line) for pattern in ts_cov.ASSERT_PATTERNS)
+
+    def test_test_function_forms(self):
+        source = (
+            "test('a', t => {});\n"
+            'test.serial("b", t => {});\n'
+            "it.only(`c`, () => {});\n"
+            "test.each([[1, 2]])('d %i', () => {});\n"
+        )
+        assert len(ts_cov.TEST_FUNCTION_RE.findall(source)) == 4

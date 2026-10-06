@@ -12,6 +12,7 @@ from desloppify.languages._framework.base.types import FixResult
 
 class _FakeFixer:
     detector = "unused"
+    unsafe = False
 
     def __init__(self, entries: list[dict], results: list[dict] | FixResult):
         self._entries = entries

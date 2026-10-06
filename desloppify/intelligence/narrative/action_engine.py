@@ -32,7 +32,8 @@ def supported_fixers(state: StateModel, lang: str | None) -> set[str] | None:
         return {fixer for fixer in fixers if isinstance(fixer, str)}
 
     try:
-        return set(get_lang(lang).fixers.keys())
+        fixers_by_name = get_lang(lang).fixers
+        return {name for name, fixer in fixers_by_name.items() if not fixer.unsafe}
     except (ImportError, ValueError):
         return None
 

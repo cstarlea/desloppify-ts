@@ -10,6 +10,12 @@ from desloppify.base.output.fallbacks import log_best_effort_failure
 from desloppify.base.discovery.paths import get_src_path
 
 VERIFY_HINT = "npx tsc --noEmit"
+# Every importer of a moved TS file must have its specifier rewritten; an
+# importer with no rewrite would be left broken, so the move aborts instead.
+# This also makes the move command build its graph from the project root.
+REQUIRES_ALL_IMPORTERS_REWRITTEN = True
+# ESM/NodeNext code imports TS files with runtime extensions ("./x.js").
+_SPECIFIER_SUFFIXES = ("", ".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx")
 logger = logging.getLogger(__name__)
 
 
@@ -94,10 +100,7 @@ def find_replacements(
         ]:
             if old_spec is None or new_spec is None or old_spec == new_spec:
                 continue
-            for quote in ("'", '"'):
-                target = f"{quote}{old_spec}{quote}"
-                if target in content:
-                    replacements.append((target, f"{quote}{new_spec}{quote}"))
+            replacements.extend(_quoted_replacements(content, old_spec, new_spec))
 
         if replacements:
             changes[importer] = _dedup(replacements)
@@ -129,12 +132,34 @@ def find_self_replacements(
         _, new_relative = _compute_ts_specifiers(dest_abs, imported_file)
         if old_relative == new_relative:
             continue
-        for quote in ("'", '"'):
-            target = f"{quote}{old_relative}{quote}"
-            if target in content:
-                replacements.append((target, f"{quote}{new_relative}{quote}"))
+        replacements.extend(_quoted_replacements(content, old_relative, new_relative))
 
     return _dedup(replacements)
+
+
+def _quoted_replacements(content: str, old_spec: str, new_spec: str) -> list[tuple[str, str]]:
+    """Replacements for every quoted form of ``old_spec`` present in ``content``."""
+    found = []
+    for suffix in _SPECIFIER_SUFFIXES:
+        for quote in ("'", '"', "`"):
+            target = f"{quote}{old_spec}{suffix}{quote}"
+            if target in content:
+                found.append((target, f"{quote}{new_spec}{suffix}{quote}"))
+    return found
+
+
+def _is_relative_replacement(replacement: tuple[str, str]) -> bool:
+    return replacement[0][1:2] == "."
+
+
+def _relative_target_base(source_file: str, quoted_spec: str) -> str:
+    """Absolute path (extension stripped) that a quoted relative specifier names."""
+    spec = quoted_spec[1:-1]
+    for suffix in _SPECIFIER_SUFFIXES[1:]:
+        if spec.endswith(suffix):
+            spec = spec[: -len(suffix)]
+            break
+    return os.path.normpath(os.path.join(os.path.dirname(source_file), spec))
 
 
 def filter_intra_package_importer_changes(
@@ -142,9 +167,13 @@ def filter_intra_package_importer_changes(
     replacements: list[tuple[str, str]],
     moving_files: set[str],
 ) -> list[tuple[str, str]]:
-    """TypeScript intra-package importer changes are valid as-is."""
+    """Drop relative rewrites between files that move together.
+
+    Their relative layout is unchanged, so "./sibling" stays correct; only
+    location-independent alias specifiers ("@/feature/x") need rewriting.
+    """
     del source_file, moving_files
-    return replacements
+    return [r for r in replacements if not _is_relative_replacement(r)]
 
 
 def filter_directory_self_changes(
@@ -152,6 +181,18 @@ def filter_directory_self_changes(
     self_changes: list[tuple[str, str]],
     moving_files: set[str],
 ) -> list[tuple[str, str]]:
-    """TypeScript self-import changes remain valid when moving directories."""
-    del source_file, moving_files
-    return self_changes
+    """Keep self-import rewrites only for targets that are not moving too."""
+    moving_bases = set()
+    for moving in moving_files:
+        base = _strip_ts_ext(moving)
+        moving_bases.add(base)
+        if base.endswith(f"{os.sep}index"):
+            moving_bases.add(base[: -len("/index")])
+    return [
+        r
+        for r in self_changes
+        if not (
+            _is_relative_replacement(r)
+            and _relative_target_base(source_file, r[0]) in moving_bases
+        )
+    ]

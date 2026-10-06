@@ -78,6 +78,15 @@ def _cascade_unused_import_cleanup(
         return
 
     fixer = lang.fixers["unused-imports"]
+    if fixer.unsafe:
+        print(
+            colorize(
+                "  Cascade: skipped; the unused-imports fixer is marked unsafe. "
+                "Remove now-unused imports by hand.",
+                "dim",
+            )
+        )
+        return
     print(colorize("\n  Running cascading import cleanup...", "dim"), file=sys.stderr)
     entries = fixer.detect(path)
     if not entries:

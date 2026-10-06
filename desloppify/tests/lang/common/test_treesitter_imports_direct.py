@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import builtins
 from pathlib import Path
 from types import SimpleNamespace
@@ -317,3 +318,107 @@ def test_script_import_cache_reset_invalidates_php_lookup_state(tmp_path: Path) 
     scripts_mod.reset_script_import_caches(str(tmp_path))
 
     assert scripts_mod.resolve_php_import("User", "", str(tmp_path)) == str(second_file)
+
+
+def test_graph_edges_survive_a_relative_file_list(monkeypatch, tmp_path: Path) -> None:
+    """Regression: edges were dropped when ``file_list`` held relative paths.
+
+    ``resolve_import`` returns a path in the same space as the ``source_file``
+    it was handed, so a relative ``file_list`` yields relative results. The
+    builder then joined those onto the absolute ``scan_path`` and tested
+    membership against the relative ``file_set``, so every edge was discarded
+    and every file looked orphaned.
+    """
+    source_file = tmp_path / "src" / "main.js"
+    dep_file = tmp_path / "src" / "support.js"
+    source_file.parent.mkdir(parents=True)
+    source_file.write_text("import './support.js';\n", encoding="utf-8")
+    dep_file.write_text("export const x = 1;\n", encoding="utf-8")
+
+    monkeypatch.chdir(tmp_path)
+    file_list = ["src/main.js", "src/support.js"]
+
+    monkeypatch.setattr(graph_mod, "_get_parser", lambda _grammar: ("parser", "language"))
+    monkeypatch.setattr(graph_mod, "_make_query", lambda _language, source: source)
+    monkeypatch.setattr(
+        graph_mod,
+        "get_or_parse_tree",
+        lambda filepath, *_a, **_k: (b"", SimpleNamespace(root_node=filepath)),
+    )
+    matches = {
+        "src/main.js": [(0, {"path": FakeNode("string", text="'./support.js'")})],
+        "src/support.js": [],
+    }
+    monkeypatch.setattr(graph_mod, "_run_query", lambda _query, root: matches[root])
+    monkeypatch.setattr(graph_mod, "_unwrap_node", lambda node: node)
+
+    spec = SimpleNamespace(
+        grammar="javascript",
+        import_query="imports",
+        # What resolve_js_import actually does: join onto the source file's
+        # directory, in whatever space the source file was given in.
+        resolve_import=lambda text, source, _scan: os.path.normpath(
+            os.path.join(os.path.dirname(source), text)
+        ),
+    )
+
+    graph = graph_mod.ts_build_dep_graph(tmp_path, spec, file_list)
+
+    assert graph["src/main.js"]["imports"] == {"src/support.js"}
+    assert graph["src/support.js"]["importers"] == {"src/main.js"}
+    assert graph["src/support.js"]["importer_count"] == 1
+
+
+def test_js_dep_graph_records_commonjs_require_edges(tmp_path: Path) -> None:
+    """CommonJS ``require()`` must create graph edges, not just ESM ``import``.
+
+    Regression: the JS/TS import queries matched only ``import_statement``, so a
+    CommonJS codebase produced an empty graph and every file looked orphaned.
+    """
+    from desloppify.languages._framework.treesitter import JS_SPEC
+
+    (tmp_path / "logger.js").write_text("module.exports = {};\n", encoding="utf-8")
+    (tmp_path / "esm.js").write_text("export default 1;\n", encoding="utf-8")
+    (tmp_path / "lazy.js").write_text("module.exports = {};\n", encoding="utf-8")
+    (tmp_path / "app.js").write_text(
+        "const logger = require('./logger');\n"
+        "import esm from './esm';\n"
+        "const lazy = () => import('./lazy');\n"
+        "function notrequire(x) { return x; }\n"
+        "notrequire('./logger');\n",
+        encoding="utf-8",
+    )
+
+    files = [str(tmp_path / n) for n in ("app.js", "logger.js", "esm.js", "lazy.js")]
+    graph = graph_mod.ts_build_dep_graph(tmp_path, JS_SPEC, files)
+
+    assert graph[str(tmp_path / "logger.js")]["importer_count"] == 1
+    assert graph[str(tmp_path / "esm.js")]["importer_count"] == 1
+    assert graph[str(tmp_path / "lazy.js")]["importer_count"] == 1
+    assert graph[str(tmp_path / "app.js")]["import_count"] == 3
+    assert graph[str(tmp_path / "app.js")]["importer_count"] == 0
+
+
+def test_js_dep_graph_resolves_edges_for_relative_file_lists(tmp_path: Path, monkeypatch) -> None:
+    """Edges must resolve when ``file_list`` holds paths relative to the cwd.
+
+    Regression: resolved imports were normalized with
+    ``join(path.resolve(), resolved)``. When the resolver had already returned a
+    cwd-relative path that produced a doubled path which never matched the file
+    set, so every edge was dropped and all files looked orphaned.
+    """
+    from desloppify.languages._framework.treesitter import JS_SPEC
+
+    pkg = tmp_path / "pkg"
+    (pkg / "src").mkdir(parents=True)
+    (pkg / "src" / "logger.js").write_text("module.exports = {};\n", encoding="utf-8")
+    (pkg / "src" / "app.js").write_text(
+        "const logger = require('./logger');\nmodule.exports = logger;\n", encoding="utf-8"
+    )
+
+    monkeypatch.chdir(tmp_path)
+    rel_files = ["pkg/src/app.js", "pkg/src/logger.js"]
+    graph = graph_mod.ts_build_dep_graph(Path("pkg"), JS_SPEC, rel_files)
+
+    assert graph["pkg/src/logger.js"]["importer_count"] == 1
+    assert graph["pkg/src/app.js"]["imports"] == {"pkg/src/logger.js"}

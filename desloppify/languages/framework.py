@@ -11,6 +11,7 @@ from desloppify.languages._framework.registry import state as registry_state
 from desloppify.languages._framework.base.types import (
     BoundaryRule,
     DetectorCoverageRecord,
+    DetectorCoverageStatus,
     DetectorPhase,
     FixerConfig,
     FixResult,
@@ -66,6 +67,50 @@ def disable_parse_cache() -> None:
     _disable_parse_cache()
 
 
+def reset_grammar_load_failures() -> None:
+    """Forget tree-sitter grammar load failures from earlier scans."""
+    from desloppify.languages._framework.treesitter import (
+        reset_grammar_load_failures as _reset,
+    )
+
+    _reset()
+
+
+def record_grammar_load_failures(lang) -> None:
+    """Report grammars that failed to load as reduced scan coverage.
+
+    Tree-sitter phases skip a language whose grammar can't load (for example
+    when the language pack can't download it offline). Without this the
+    skipped detectors would read as clean.
+    """
+    from desloppify.languages._framework.base.shared_phases_helpers import (
+        record_reduced_coverage,
+    )
+    from desloppify.languages._framework.treesitter import grammar_load_failures
+
+    failures = grammar_load_failures()
+    if not failures:
+        return
+    grammars = ", ".join(sorted(failures))
+    first_error = next(iter(failures.values()))
+    record_reduced_coverage(
+        lang,
+        DetectorCoverageStatus(
+            detector="treesitter",
+            status="reduced",
+            confidence=0.5,
+            summary=f"tree-sitter grammar(s) failed to load: {grammars} ({first_error[:160]})",
+            impact="AST-based detectors (imports, complexity, cohesion, smells) were skipped for these languages.",
+            remediation=(
+                "Run `python -c \"import tree_sitter_language_pack as t; "
+                f"t.download({sorted(failures)!r})\"` with network access, then rerun scan."
+            ),
+            tool="tree-sitter-language-pack",
+            reason="grammar_unavailable",
+        ),
+    )
+
+
 def reset_script_import_caches(scan_path: str | None = None) -> None:
     """Reset script import resolver caches via the public framework boundary."""
     from desloppify.languages._framework.treesitter import (
@@ -116,6 +161,8 @@ __all__ = [
     "make_lang_run",
     "make_lang_config",
     "prewarm_review_phase_detectors",
+    "record_grammar_load_failures",
+    "reset_grammar_load_failures",
     "reset_script_import_caches",
     "registry_state",
     "shared_phase_labels",

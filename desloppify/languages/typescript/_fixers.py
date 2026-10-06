@@ -71,6 +71,7 @@ def get_ts_fixers() -> dict[str, FixerConfig]:
             "unused",
             removed,
             would_remove,
+            unsafe=True,
         ),
         "debug-logs": FixerConfig(
             "tagged debug logs",
@@ -79,6 +80,7 @@ def get_ts_fixers() -> dict[str, FixerConfig]:
             "logs",
             removed,
             would_remove,
+            unsafe=True,
         ),
         "unused-vars": FixerConfig(
             "unused vars",
@@ -87,6 +89,7 @@ def get_ts_fixers() -> dict[str, FixerConfig]:
             "unused",
             removed,
             would_remove,
+            unsafe=True,
         ),
         "unused-params": FixerConfig(
             "unused params",
@@ -95,6 +98,7 @@ def get_ts_fixers() -> dict[str, FixerConfig]:
             "unused",
             "Prefixed",
             "Would prefix",
+            unsafe=True,
         ),
         "dead-useeffect": FixerConfig(
             "dead useEffect calls",
@@ -111,6 +115,7 @@ def get_ts_fixers() -> dict[str, FixerConfig]:
             "smells",
             removed,
             would_remove,
+            unsafe=True,
         ),
     }
 

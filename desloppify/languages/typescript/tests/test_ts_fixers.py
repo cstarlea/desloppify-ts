@@ -846,3 +846,50 @@ class TestFixUnusedParams:
         ]
         _ = fix_unused_params(entries, dry_run=True)
         assert ts_file.read_text() == original
+
+
+# =====================================================================
+# fixer_io — writes must preserve file bytes the transform didn't touch
+# =====================================================================
+
+
+class TestFixerWritePreservation:
+    @staticmethod
+    def _drop_marked(lines, _entries):
+        return [line for line in lines if "DROP" not in line], ["DROP"]
+
+    def test_crlf_bom_and_mode_are_preserved(self, tmp_path):
+        import os
+        import stat
+
+        target = tmp_path / "a.ts"
+        target.write_bytes(b"\xef\xbb\xbfimport { a } from './a';\r\nconst DROP = 1;\r\nexport {};\r\n")
+        os.chmod(target, 0o644)
+
+        results = apply_fixer([{"file": str(target)}], self._drop_marked)
+
+        assert results and results[0]["removed"] == ["DROP"]
+        assert target.read_bytes() == b"\xef\xbb\xbfimport { a } from './a';\r\nexport {};\r\n"
+        assert stat.S_IMODE(target.stat().st_mode) == 0o644
+
+    def test_symlinked_file_is_written_through(self, tmp_path):
+        real = tmp_path / "real.ts"
+        real.write_text("const DROP = 1;\nconst keep = 2;\n")
+        link = tmp_path / "link.ts"
+        link.symlink_to(real)
+
+        apply_fixer([{"file": str(link)}], self._drop_marked)
+
+        assert link.is_symlink()
+        assert real.read_text() == "const keep = 2;\n"
+
+    def test_bom_does_not_hide_first_line_from_transform(self, tmp_path):
+        target = tmp_path / "b.ts"
+        target.write_bytes(b"\xef\xbb\xbfconst DROP = 1;\nconst keep = 2;\n")
+
+        def _first_line_only(lines, _entries):
+            assert lines[0] == "const DROP = 1;\n"
+            return lines[1:], ["DROP"]
+
+        apply_fixer([{"file": str(target)}], _first_line_only)
+        assert target.read_bytes() == b"\xef\xbb\xbfconst keep = 2;\n"

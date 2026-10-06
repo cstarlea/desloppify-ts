@@ -187,6 +187,26 @@ def _record_detector_coverage(
         lang.detector_coverage[detector] = normalized
 
 
+def record_reduced_coverage(
+    lang: LangRuntimeContract,
+    coverage: DetectorCoverageStatus | None,
+) -> None:
+    """Record a detector's degraded coverage and surface it as a scan warning.
+
+    Use this when a detector could not run as intended (missing tool, config
+    error) so the gap shows up in scan output instead of reading as clean.
+    """
+    if coverage is None or coverage.status != "reduced":
+        return
+    _record_detector_coverage(lang, coverage)
+    warnings = getattr(lang, "coverage_warnings", None)
+    if isinstance(warnings, list) and not any(
+        isinstance(entry, dict) and entry.get("detector") == coverage.detector
+        for entry in warnings
+    ):
+        warnings.append(_coverage_to_dict(coverage))
+
+
 __all__ = [
     "_coverage_to_dict",
     "_entries_to_issues",
@@ -195,4 +215,5 @@ __all__ = [
     "_log_phase_summary",
     "_merge_detector_coverage",
     "_record_detector_coverage",
+    "record_reduced_coverage",
 ]

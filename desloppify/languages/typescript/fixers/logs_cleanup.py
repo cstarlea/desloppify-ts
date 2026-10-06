@@ -13,7 +13,18 @@ _DEBUG_COMMENT_RE = re.compile(
     r"(?:DEBUG|TEMP|LOG|TRACE|TODO\s*.*debug|HACK\s*.*log)", re.IGNORECASE
 )
 
-_VAR_DECL_RE = re.compile(r"^\s*(?:const|let|var)\s+(\w+)\s*=")
+# A complete one-line declaration whose initializer cannot have side effects:
+# a literal, or a plain identifier / property chain. Anything else (calls,
+# awaits, ``new``, multi-line object literals) must survive log removal.
+_PURE_VAR_DECL_RE = re.compile(
+    r"^\s*(?:const|let|var)\s+(\w+)\s*(?::[^=]+)?=\s*"
+    r"(?:-?\d[\w.]*"
+    r"|'(?:[^'\\\n]|\\.)*'"
+    r'|"(?:[^"\\\n]|\\.)*"'
+    r"|`[^`$\n]*`"
+    r"|[A-Za-z_$][\w$]*(?:\??\.[A-Za-z_$][\w$]*)*)"
+    r"\s*;?\s*(?://.*)?$"
+)
 _IDENT_RE = re.compile(r"\b([a-zA-Z_$]\w*)\b")
 
 _IGNORE_IDENTS = frozenset(
@@ -99,7 +110,11 @@ def mark_orphaned_comments(lines: list[str], log_start: int, lines_to_remove: se
 
 
 def find_dead_log_variables(lines: list[str], removed_indices: set[int]) -> set[int]:
-    """Find variable declarations that were only used in removed log lines."""
+    """Find variable declarations that were only used in removed log lines.
+
+    Only side-effect-free single-line declarations qualify, so removing a log
+    never deletes work such as ``const result = await saveUser(user)``.
+    """
     referenced_in_logs: set[str] = set()
     for idx in removed_indices:
         if idx < len(lines):
@@ -115,7 +130,7 @@ def find_dead_log_variables(lines: list[str], removed_indices: set[int]) -> set[
     for idx, line in enumerate(lines):
         if idx in removed_indices:
             continue
-        match = _VAR_DECL_RE.match(line)
+        match = _PURE_VAR_DECL_RE.match(line)
         if match and match.group(1) in referenced_in_logs:
             decl_lines[match.group(1)] = idx
 
