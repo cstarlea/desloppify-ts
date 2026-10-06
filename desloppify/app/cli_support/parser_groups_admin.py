@@ -60,6 +60,11 @@ def _add_move_parser(sub) -> None:
     p_move.add_argument(
         "--dry-run", action="store_true", help="Show changes without modifying files"
     )
+    p_move.add_argument(
+        "--force",
+        action="store_true",
+        help="Move even when some importers cannot be rewritten (they will break)",
+    )
 
 
 def _add_zone_parser(sub) -> None:

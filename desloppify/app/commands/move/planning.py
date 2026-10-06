@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -20,6 +21,77 @@ def dedup_replacements(replacements: ReplacementList) -> ReplacementList:
             seen.add(pair)
             result.append(pair)
     return result
+
+
+def find_unrewritable_importers(
+    graph: dict,
+    moving_files: set[str],
+    rewritten_files: set[str],
+) -> dict[str, list[str]]:
+    """Return importers of moving files that got no rewrite: importer -> moved files."""
+    missing: dict[str, list[str]] = {}
+    for moved in sorted(moving_files):
+        entry = graph.get(moved) or {}
+        for importer in sorted(entry.get("importers", set())):
+            if importer in moving_files or importer in rewritten_files:
+                continue
+            missing.setdefault(importer, []).append(moved)
+    return missing
+
+
+def requires_all_importers_rewritten(move_mod) -> bool:
+    return bool(getattr(move_mod, "REQUIRES_ALL_IMPORTERS_REWRITTEN", False))
+
+
+def move_graph_root(move_mod, default_src: Path, project_root: Path) -> Path:
+    """Strict languages see importers anywhere in the project, not just src/."""
+    return project_root if requires_all_importers_rewritten(move_mod) else default_src
+
+
+def check_unrewritable_importers(
+    move_mod,
+    graph: dict,
+    moving_files: set[str],
+    rewritten_files: set[str],
+    *,
+    dry_run: bool,
+    force: bool,
+    rel_fn,
+    warn_fn,
+) -> None:
+    """Abort (or warn on dry run / --force) when importers would be left broken."""
+    if not requires_all_importers_rewritten(move_mod):
+        return
+    missing = find_unrewritable_importers(graph, moving_files, rewritten_files)
+    if not missing:
+        return
+    lines = [
+        f"    {rel_fn(importer)} (imports {', '.join(rel_fn(m) for m in moved)})"
+        for importer, moved in sorted(missing.items())
+    ]
+    message = (
+        f"{len(missing)} importer(s) could not be rewritten and would break:\n"
+        + "\n".join(lines[:20])
+        + (f"\n    ... and {len(lines) - 20} more" if len(lines) > 20 else "")
+    )
+    if dry_run or force:
+        warn_fn(message)
+        return
+    from desloppify.base.exception_sets import CommandError
+
+    raise CommandError(
+        message
+        + "\n  Update these imports by hand after moving, or rerun with --force to move anyway."
+    )
+
+
+def apply_replacements(content: str, replacements: ReplacementList) -> str:
+    """Apply all replacements in one pass so one rewrite can't feed another."""
+    mapping = dict(replacements)
+    if not mapping:
+        return content
+    pattern = re.compile("|".join(re.escape(old) for old in sorted(mapping, key=len, reverse=True)))
+    return pattern.sub(lambda match: mapping[match.group(0)], content)
 
 
 def resolve_dest(source: str, dest_raw: str, resolve_path_fn) -> str:
@@ -169,6 +241,11 @@ def summarize_directory_plan(plan: DirectoryMovePlan) -> tuple[int, int]:
 
 __all__ = [
     "DirectoryMovePlan",
+    "apply_replacements",
+    "check_unrewritable_importers",
+    "move_graph_root",
+    "requires_all_importers_rewritten",
+    "find_unrewritable_importers",
     "build_directory_move_plan",
     "build_internal_directory_changes",
     "collect_source_files",

@@ -16,10 +16,13 @@ from desloppify.app.commands.move.language import (
 from desloppify.app.commands.move.planning import (
     build_directory_move_plan,
     build_internal_directory_changes,
+    check_unrewritable_importers,
     collect_source_files,
+    move_graph_root,
 )
 from desloppify.app.commands.move.reporting import print_directory_move_plan
 from desloppify.base.discovery.file_paths import rel
+from desloppify.base.discovery.paths import get_project_root
 from desloppify.base.exception_sets import CommandError
 from desloppify.base.output.terminal import colorize
 
@@ -58,7 +61,9 @@ def run_directory_move(args, source_abs: str, resolve_path_fn) -> None:
     if not source_files:
         raise CommandError(f"No {lang_name} files found in {rel(source_abs)}")
 
-    scan_path = Path(resolve_path_fn(lang.default_src))
+    scan_path = move_graph_root(
+        move_mod, Path(resolve_path_fn(lang.default_src)), get_project_root()
+    )
     graph = lang.build_dep_graph(scan_path)
     plan = build_directory_move_plan(
         source_abs=source_abs,
@@ -70,6 +75,16 @@ def run_directory_move(args, source_abs: str, resolve_path_fn) -> None:
     )
 
     print_directory_move_plan(source_abs, dest_abs, plan)
+    check_unrewritable_importers(
+        move_mod,
+        graph,
+        set(source_files),
+        set(plan.external_changes),
+        dry_run=dry_run,
+        force=getattr(args, "force", False),
+        rel_fn=rel,
+        warn_fn=lambda msg: print(colorize(f"  ⚠ {msg}", "yellow")),
+    )
     if dry_run:
         print(colorize("  Dry run — no files modified.", "yellow"))
         return
