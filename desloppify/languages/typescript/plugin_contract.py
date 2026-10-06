@@ -6,8 +6,8 @@ both the language config surface and command wiring.
 
 from __future__ import annotations
 
-TS_EXTENSIONS = [".ts", ".tsx"]
-TS_EXCLUSIONS = ["node_modules", ".d.ts"]
+TS_EXTENSIONS = [".ts", ".tsx", ".mts", ".cts"]
+TS_EXCLUSIONS = ["node_modules", ".d.ts", ".d.mts", ".d.cts"]
 TS_DEFAULT_SRC = "src"
 TS_ENTRY_PATTERNS = [
     "/pages/",

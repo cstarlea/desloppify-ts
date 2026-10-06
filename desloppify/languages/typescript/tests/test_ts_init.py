@@ -12,9 +12,9 @@ def test_config_name():
 
 
 def test_config_extensions():
-    """TypeScriptConfig.extensions contains .ts and .tsx."""
+    """TypeScriptConfig.extensions covers .ts, .tsx and the ESM/CJS variants."""
     cfg = TypeScriptConfig()
-    assert cfg.extensions == [".ts", ".tsx"]
+    assert cfg.extensions == [".ts", ".tsx", ".mts", ".cts"]
 
 
 def test_config_exclusions():

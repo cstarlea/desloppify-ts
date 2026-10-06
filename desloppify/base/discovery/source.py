@@ -262,6 +262,10 @@ def find_source_files(
     )
 
 
+TS_SOURCE_EXTENSIONS = (".ts", ".tsx", ".mts", ".cts")
+TS_DECLARATION_SUFFIXES = (".d.ts", ".d.mts", ".d.cts")
+
+
 def find_ts_files(path: str | Path, *, runtime: RuntimeContext | None = None) -> list[str]:
     """Find TypeScript ``.ts`` source files (excluding ``.tsx``)."""
     if runtime is None:
@@ -274,10 +278,16 @@ def find_ts_and_tsx_files(
     *,
     runtime: RuntimeContext | None = None,
 ) -> list[str]:
-    """Find TypeScript source files across ``.ts`` and ``.tsx`` extensions."""
+    """Find TypeScript sources (``.ts``, ``.tsx``, ``.mts``, ``.cts``).
+
+    Ambient declaration files (``.d.ts``, ``.d.mts``, ``.d.cts``) are not
+    sources and are left out.
+    """
     if runtime is None:
-        return find_source_files(path, [".ts", ".tsx"])
-    return find_source_files(path, [".ts", ".tsx"], runtime=runtime)
+        files = find_source_files(path, list(TS_SOURCE_EXTENSIONS))
+    else:
+        files = find_source_files(path, list(TS_SOURCE_EXTENSIONS), runtime=runtime)
+    return [f for f in files if not f.endswith(TS_DECLARATION_SUFFIXES)]
 
 
 def find_tsx_files(path: str | Path, *, runtime: RuntimeContext | None = None) -> list[str]:

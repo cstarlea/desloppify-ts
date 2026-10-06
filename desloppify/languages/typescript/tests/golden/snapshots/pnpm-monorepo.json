@@ -1,13 +1,6 @@
 {
   "issues": [
     {
-      "id": "cycles::apps/web/src/cart.ts::apps/web/src/cart.ts::apps/web/src/checkout.tsx",
-      "tier": 3,
-      "confidence": "high",
-      "zone": "production",
-      "summary": "Import cycle (2 files): apps/web/src/cart.ts -> apps/web/src/checkout.tsx"
-    },
-    {
       "id": "facade::packages/ui/src/index.ts",
       "tier": 2,
       "confidence": "high",

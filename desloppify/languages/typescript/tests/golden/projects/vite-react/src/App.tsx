@@ -3,6 +3,7 @@ import { Header } from '@/components/Header';
 import { TodoList } from '@/components/TodoList';
 import { useTodos } from '@/hooks/useTodos';
 import { increment } from '@/lib/store';
+// import { LegacyBanner } from '@/components/LegacyBanner';
 
 export function App() {
   const [filter, setFilter] = useState<'all' | 'done'>('all');
