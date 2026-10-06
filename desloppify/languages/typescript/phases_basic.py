@@ -84,17 +84,31 @@ def phase_deprecated(
     for entry in dep_entries:
         if entry["kind"] == "property":
             continue
-        tier = 1 if entry["importers"] == 0 else 3
+        exported = entry.get("exported", True)
+        unused = (
+            entry["importers"] == 0 and not exported and not entry.get("same_file_uses")
+        )
+        if unused:
+            note = " → unused, remove it"
+        elif exported and entry["importers"] == 0:
+            # Zero importers inside the scan does not mean zero callers: an
+            # exported symbol may be public API used by other packages.
+            note = " → exported; may still be public API"
+        else:
+            note = ""
         results.append(
             make_issue(
                 "deprecated",
                 entry["file"],
                 entry["symbol"],
-                tier=tier,
+                tier=1 if unused else 3,
                 confidence="high",
-                summary=f"Deprecated: {entry['symbol']} ({entry['importers']} importers)"
-                + (" → safe to delete" if entry["importers"] == 0 else ""),
-                detail={"importers": entry["importers"], "line": entry["line"]},
+                summary=f"Deprecated: {entry['symbol']} ({entry['importers']} importers){note}",
+                detail={
+                    "importers": entry["importers"],
+                    "line": entry["line"],
+                    "exported": exported,
+                },
             )
         )
     log(

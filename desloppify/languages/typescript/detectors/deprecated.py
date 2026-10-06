@@ -13,7 +13,6 @@ from desloppify.base.discovery.source import find_ts_and_tsx_files
 from desloppify.base.output.terminal import colorize, print_table
 from desloppify.base.output.fallbacks import log_best_effort_failure
 from desloppify.base.search.grep import grep_count_files, grep_files
-from desloppify.base.signal_patterns import DEPRECATION_MARKER_RE
 from desloppify.languages.typescript.detectors.contracts import DetectorResult
 
 logger = logging.getLogger(__name__)
@@ -27,12 +26,15 @@ _DECLARATION_LINE_RE = re.compile(
 )
 _PROPERTY_LINE_RE = re.compile(r"(\w+)\s*[?:]")
 _DEPRECATED_TAG_RE = re.compile(r"@deprecated", re.IGNORECASE)
+# The JSDoc tag TypeScript understands. Bare words like "deprecated" in
+# strings, identifiers or prose are not deprecation markers.
+_JSDOC_DEPRECATED_RE = r"@deprecated\b"
 
 
 def detect_deprecated_result(path: Path) -> DetectorResult[dict[str, Any]]:
     """Find deprecated symbols with explicit population semantics."""
     ts_files = find_ts_and_tsx_files(path)
-    hits = grep_files(DEPRECATION_MARKER_RE.pattern, ts_files, flags=re.IGNORECASE)
+    hits = grep_files(_JSDOC_DEPRECATED_RE, ts_files, flags=re.IGNORECASE)
 
     entries = []
     seen_symbols = set()  # Deduplicate by file+symbol
@@ -55,6 +57,11 @@ def detect_deprecated_result(path: Path) -> DetectorResult[dict[str, Any]]:
             if kind == "top-level"
             else -1
         )
+        exported, same_file_uses = (
+            _export_and_local_uses(symbol, filepath, scan_root=path)
+            if kind == "top-level"
+            else (False, 0)
+        )
         entries.append(
             {
                 "file": filepath,
@@ -62,6 +69,8 @@ def detect_deprecated_result(path: Path) -> DetectorResult[dict[str, Any]]:
                 "symbol": symbol,
                 "kind": kind,
                 "importers": importers,
+                "exported": exported,
+                "same_file_uses": same_file_uses,
             }
         )
     sorted_entries = sorted(entries, key=lambda e: e["importers"])
@@ -161,6 +170,30 @@ def _resolve_source_file(filepath: str, *, scan_root: Path | None) -> Path:
     return Path(resolve_path(filepath))
 
 
+def _export_and_local_uses(
+    name: str, declaring_file: str, *, scan_root: Path
+) -> tuple[bool, int]:
+    """Return (is exported, uses in the declaring file besides the declaration)."""
+    try:
+        text = _resolve_source_file(declaring_file, scan_root=scan_root).read_text(
+            errors="replace"
+        )
+    except OSError:
+        return True, 0  # unknown: assume it may be public
+    escaped = re.escape(name)
+    exported = bool(
+        re.search(
+            r"\bexport\s+(?:default\s+)?(?:declare\s+)?(?:abstract\s+)?(?:async\s+)?"
+            rf"(?:const|let|var|function\*?|class|type|interface|enum|namespace)\s+{escaped}\b",
+            text,
+        )
+        or re.search(rf"\bexport\s*(?:type\s*)?\{{[^}}]*\b{escaped}\b", text)
+        or re.search(rf"\bexport\s+default\s+{escaped}\b", text)
+    )
+    occurrences = len(re.findall(rf"(?<![\w$]){escaped}(?![\w$])", text))
+    return exported, max(0, occurrences - 1)
+
+
 def _count_importers(
     name: str, declaring_file: str, *, ts_files: list[str], scan_root: Path
 ) -> int:
@@ -214,11 +247,12 @@ def cmd_deprecated(args: Any) -> None:
         rows = []
         for e in top_level[: args.top]:
             imp = str(e["importers"]) if e["importers"] >= 0 else "?"
-            status = (
-                colorize("safe to remove", "green")
-                if e["importers"] == 0
-                else f"{imp} importers"
-            )
+            if e.get("exported") and e["importers"] == 0:
+                status = "exported, no local importers"
+            elif e["importers"] == 0 and not e.get("same_file_uses"):
+                status = colorize("unused", "green")
+            else:
+                status = f"{imp} importers"
             rows.append([e["symbol"], rel(e["file"]), status])
         print_table(["Symbol", "File", "Status"], rows, [30, 55, 20])
         print()

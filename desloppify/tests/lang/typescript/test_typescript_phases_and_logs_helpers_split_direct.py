@@ -154,15 +154,24 @@ def test_phases_basic_cover_logs_unused_exports_and_deprecated(monkeypatch) -> N
         lambda _path: SimpleNamespace(
             entries=[
                 {"kind": "property", "file": "src/a.ts", "symbol": "x", "importers": 0, "line": 1},
-                {"kind": "function", "file": "src/a.ts", "symbol": "oldA", "importers": 0, "line": 2},
-                {"kind": "function", "file": "src/b.ts", "symbol": "oldB", "importers": 2, "line": 5},
+                {"kind": "function", "file": "src/a.ts", "symbol": "oldA", "importers": 0, "line": 2,
+                 "exported": False, "same_file_uses": 0},
+                {"kind": "function", "file": "src/b.ts", "symbol": "oldB", "importers": 2, "line": 5,
+                 "exported": True, "same_file_uses": 0},
+                {"kind": "function", "file": "src/c.ts", "symbol": "publicApi", "importers": 0, "line": 9,
+                 "exported": True, "same_file_uses": 0},
             ],
             population_size=6,
         ),
     )
     issues, potentials = phases_basic_mod.phase_deprecated(Path("."), lang)
-    assert len(issues) == 2
-    assert {issue["tier"] for issue in issues} == {1, 3}
+    by_symbol = {issue["summary"].split(":")[1].split()[0]: issue for issue in issues}
+    assert by_symbol["oldA"]["tier"] == 1
+    assert by_symbol["oldB"]["tier"] == 3
+    # Exported symbols with no importers in the scan may still be public API.
+    assert by_symbol["publicApi"]["tier"] == 3
+    assert "public API" in by_symbol["publicApi"]["summary"]
+    assert not any("safe to delete" in issue["summary"] for issue in issues)
     assert potentials == {"deprecated": 6}
 
 
