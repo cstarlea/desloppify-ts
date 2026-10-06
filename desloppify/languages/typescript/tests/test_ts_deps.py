@@ -45,6 +45,20 @@ class TestBuildDepGraph:
         assert utils_key in graph[main_key]["imports"]
         assert main_key in graph[utils_key]["importers"]
 
+    def test_leaf_files_without_imports_are_in_graph(self, tmp_path):
+        """A dead constants module with no imports of its own must be a node."""
+
+        _write(tmp_path, "main.ts", "console.log('hi');\n")
+        _write(tmp_path, "dead_constants.ts", "export const LIMIT = 10;\n")
+        _write(tmp_path, "env.d.ts", "declare const __APP__: string;\n")
+
+        graph = deps_detector_mod.build_dep_graph(tmp_path)
+        dead_key = str((tmp_path / "dead_constants.ts").resolve())
+
+        assert dead_key in graph
+        assert graph[dead_key]["importer_count"] == 0
+        assert str((tmp_path / "env.d.ts").resolve()) not in graph
+
     def test_import_with_extension(self, tmp_path):
         """Graph resolves imports where the file has a .ts extension match."""
 

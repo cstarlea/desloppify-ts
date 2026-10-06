@@ -414,7 +414,7 @@ def _build_sorted_entries(
                 "severity": check["severity"],
                 "count": len(matches),
                 "files": len(set(match["file"] for match in matches)),
-                "matches": matches[:50],
+                "matches": matches,
             }
         )
     entries.sort(

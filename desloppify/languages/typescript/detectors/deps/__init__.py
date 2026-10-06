@@ -66,6 +66,12 @@ def build_dep_graph(
     tsconfig_paths = _load_tsconfig_paths(tsconfig_root)
 
     ts_files = find_ts_and_tsx_files(path)
+    # Seed every module so files with no imports of their own (constants,
+    # types, leaf utilities) can still be found orphaned. Ambient
+    # declaration files are never imported, so they stay out of the graph.
+    for filepath in ts_files:
+        if not filepath.endswith((".d.ts", ".d.mts", ".d.cts")):
+            graph[resolve_path(filepath)]
     hits = grep_files(r"""(?:\bfrom\s+['"]|\bimport\s+['"])""", ts_files)
 
     for filepath, _lineno, content in hits:
