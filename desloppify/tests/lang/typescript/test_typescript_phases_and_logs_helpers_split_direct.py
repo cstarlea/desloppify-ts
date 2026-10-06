@@ -137,10 +137,11 @@ def test_phases_basic_cover_logs_unused_exports_and_deprecated(monkeypatch) -> N
 
     monkeypatch.setattr(
         phases_basic_mod.exports_detector_mod,
-        "detect_dead_exports",
+        "detect_dead_exports_result",
         lambda _path: (
             [{"file": "src/a.ts", "name": "deadExport", "line": 3, "kind": "function"}],
             4,
+            None,
         ),
     )
     issues, potentials = phases_basic_mod.phase_exports(Path("."), lang)

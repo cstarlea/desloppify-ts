@@ -55,7 +55,8 @@ def phase_unused(path: Path, lang: LangRuntimeContract) -> tuple[list[Issue], di
 
 
 def phase_exports(path: Path, lang: LangRuntimeContract) -> tuple[list[Issue], dict[str, int]]:
-    export_entries, total_exports = exports_detector_mod.detect_dead_exports(path)
+    export_entries, total_exports, coverage = exports_detector_mod.detect_dead_exports_result(path)
+    record_reduced_coverage(lang, coverage)
     results = []
     for entry in export_entries:
         results.append(

@@ -12,31 +12,35 @@ import desloppify.languages.typescript.detectors.exports as exports_mod
 # ── detect_dead_exports ─────────────────────────────────────────────
 
 
-def test_detect_dead_exports_returns_empty_when_knip_unavailable():
-    """Returns ([], 0) when Knip is not installed / returns None."""
-    with patch.object(exports_mod, "detect_with_knip", return_value=None):
-        entries, total = exports_mod.detect_dead_exports(Path("/tmp/fake"))
+def test_detect_dead_exports_reports_reduced_coverage_when_knip_unavailable():
+    """Knip not running is a coverage gap, not a clean result."""
+    with patch.object(
+        exports_mod, "detect_with_knip_result", return_value=(None, "knip_not_installed")
+    ):
+        entries, total, coverage = exports_mod.detect_dead_exports_result(Path("/tmp/fake"))
     assert entries == []
     assert total == 0
+    assert coverage is not None
+    assert coverage.status == "reduced"
+    assert coverage.reason == "knip_not_installed"
+    assert "npm i -D knip" in coverage.remediation
 
 
-def test_detect_dead_exports_returns_knip_results():
-    """Returns entries and correct count when Knip finds dead exports."""
-    fake_entries = [
-        {"file": "src/utils.ts", "name": "unused1", "line": 10, "kind": "export"},
-        {"file": "src/utils.ts", "name": "unused2", "line": 20, "kind": "export"},
-        {"file": "src/api.ts", "name": "oldFetch", "line": 5, "kind": "export"},
-    ]
-    with patch.object(exports_mod, "detect_with_knip", return_value=fake_entries):
-        entries, total = exports_mod.detect_dead_exports(Path("/tmp/fake"))
+def test_detect_dead_exports_potential_counts_all_exports(tmp_path, set_project_root):
+    """The potential is the export population, not the failure count."""
+    (tmp_path / "a.ts").write_text("export const a = 1;\nexport function b() {}\n")
+    (tmp_path / "c.ts").write_text("export type C = string;\nconst internal = 1;\n")
+    fake_entries = [{"file": "a.ts", "name": "a", "line": 1, "kind": "export"}]
+    with patch.object(exports_mod, "detect_with_knip_result", return_value=(fake_entries, None)):
+        entries, total, coverage = exports_mod.detect_dead_exports_result(tmp_path)
     assert entries == fake_entries
     assert total == 3
+    assert coverage is None
 
 
-def test_detect_dead_exports_empty_results():
-    """Returns ([], 0) when Knip finds no dead exports."""
-    with patch.object(exports_mod, "detect_with_knip", return_value=[]):
-        entries, total = exports_mod.detect_dead_exports(Path("/tmp/fake"))
+def test_detect_dead_exports_compat_wrapper():
+    with patch.object(exports_mod, "detect_with_knip_result", return_value=([], None)):
+        entries, total = exports_mod.detect_dead_exports(Path("/tmp/fake-nonexistent"))
     assert entries == []
     assert total == 0
 
