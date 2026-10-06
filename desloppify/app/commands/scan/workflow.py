@@ -220,7 +220,9 @@ def _configure_lang_runtime(
 
     lang_capabilities = _ensure_state_lang_capabilities(state)
     lang_capabilities[runtime_lang.name] = {
-        "fixers": sorted(runtime_lang.fixers.keys()),
+        "fixers": sorted(
+            name for name, fixer in runtime_lang.fixers.items() if not fixer.unsafe
+        ),
         "typecheck_cmd": runtime_lang.typecheck_cmd,
     }
     return runtime_lang
