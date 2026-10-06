@@ -36,6 +36,20 @@ def test_logs_cleanup_helpers_cover_comment_marking_dead_vars_and_block_cleanup(
     )
     assert dead_lines == {0}
 
+    # Declarations with side effects or spanning lines must never cascade.
+    effectful = logs_cleanup_mod.find_dead_log_variables(
+        [
+            "const result = await saveUser(user);\n",
+            "const conn = connect();\n",
+            "const cfg = {\n",
+            "  a: 1,\n",
+            "};\n",
+            "console.log(result, conn, cfg);\n",
+        ],
+        removed_indices={5},
+    )
+    assert effectful == set()
+
     cleaned = logs_cleanup_mod.remove_empty_blocks(
         [
             "if (ok) {}\n",
