@@ -61,11 +61,26 @@ def detect_ts_security(
         lines = content.splitlines()
         has_dev_guard = "__IS_DEV_ENV__" in content or "isDev" in content
 
+        in_block_comment = False
         for line_num, line in enumerate(lines, 1):
             stripped = line.lstrip()
-            # Skip line comments and JSDoc/block-comment bodies (examples in docs).
-            if stripped.startswith(("//", "/*", "*")):
+            # Whole-line comments are prose, not code: skip `//` lines and the
+            # lines of a `/* ... */` or JSDoc block, so wording like
+            # "allow eval (HMR)" in a doc comment isn't reported as a call.
+            # Code after a block comment closes on the same line is scanned.
+            if in_block_comment:
+                if "*/" not in line:
+                    continue
+                in_block_comment = False
+                if not line.split("*/", 1)[1].strip():
+                    continue
+            elif stripped.startswith("//"):
                 continue
+            elif stripped.startswith("/*"):
+                _comment, closer, rest = stripped[2:].partition("*/")
+                in_block_comment = not closer
+                if in_block_comment or not rest.strip():
+                    continue
             entries.extend(
                 _line_security_issues(
                     filepath=filepath,

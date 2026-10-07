@@ -464,6 +464,45 @@ class TestTsEvalInjection:
         finally:
             os.unlink(path)
 
+    def test_eval_mentioned_in_block_and_jsdoc_comments_not_flagged(self):
+        content = textwrap.dedent(
+            """\
+            /**
+             * In development we relax script-src to allow eval (React Refresh)
+             */
+            /* single-line block: eval(x) */
+            /*
+              eval(fromABlock)
+            */
+            export const csp = "script-src 'self'"
+            const result = eval(userInput);
+            """
+        )
+        path = _write_temp_file(content, suffix=".ts")
+        try:
+            entries, _ = _detect_ts_security([path], None)
+            evals = [e for e in entries if e["detail"]["kind"] == "eval_injection"]
+            assert [e["detail"]["line"] for e in evals] == [9]
+        finally:
+            os.unlink(path)
+
+    def test_code_after_a_block_comment_on_the_same_line_is_scanned(self):
+        content = textwrap.dedent(
+            """\
+            /* inline note */ eval(first);
+            /*
+              multi-line note
+            */ eval(second);
+            """
+        )
+        path = _write_temp_file(content, suffix=".ts")
+        try:
+            entries, _ = _detect_ts_security([path], None)
+            evals = [e for e in entries if e["detail"]["kind"] == "eval_injection"]
+            assert [e["detail"]["line"] for e in evals] == [1, 4]
+        finally:
+            os.unlink(path)
+
 
     def test_unrelated_eval_methods_and_doc_comments_are_ignored(self):
         content = (
