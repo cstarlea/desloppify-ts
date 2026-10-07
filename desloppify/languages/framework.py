@@ -35,24 +35,6 @@ from desloppify.languages._framework.registry.resolution import (
 load_all = _discovery_mod.load_all
 
 
-def shared_phase_labels() -> set[str]:
-    """Return generic shared phase labels lazily to avoid import cycles."""
-    from desloppify.languages._framework.generic_support.capabilities import (
-        SHARED_PHASE_LABELS,
-    )
-
-    return SHARED_PHASE_LABELS
-
-
-def capability_report(cfg: LangRun) -> tuple[list[str], list[str]] | None:
-    """Return capability report lazily without importing generic internals eagerly."""
-    from desloppify.languages._framework.generic_support.capabilities import (
-        capability_report as _capability_report,
-    )
-
-    return _capability_report(cfg)
-
-
 def enable_parse_cache() -> None:
     """Enable tree-sitter parse cache via facade boundary."""
     from desloppify.languages._framework.treesitter import enable_parse_cache as _enable_parse_cache
@@ -111,15 +93,6 @@ def record_grammar_load_failures(lang) -> None:
     )
 
 
-def reset_script_import_caches(scan_path: str | None = None) -> None:
-    """Reset script import resolver caches via the public framework boundary."""
-    from desloppify.languages._framework.treesitter import (
-        reset_script_import_caches as _reset_script_import_caches,
-    )
-
-    _reset_script_import_caches(scan_path)
-
-
 def prewarm_review_phase_detectors(path, lang, phases) -> None:
     """Prime expensive shared review detectors for overlap during scan."""
     from desloppify.languages._framework.base.shared_phases_review import (
@@ -152,7 +125,6 @@ __all__ = [
     "ScanCoverageRecord",
     "auto_detect_lang",
     "available_langs",
-    "capability_report",
     "clear_review_phase_prefetch",
     "disable_parse_cache",
     "enable_parse_cache",
@@ -163,7 +135,5 @@ __all__ = [
     "prewarm_review_phase_detectors",
     "record_grammar_load_failures",
     "reset_grammar_load_failures",
-    "reset_script_import_caches",
     "registry_state",
-    "shared_phase_labels",
 ]

@@ -26,7 +26,6 @@ from desloppify.languages.framework import (
     make_lang_run,
     record_grammar_load_failures,
     reset_grammar_load_failures,
-    reset_script_import_caches,
 )
 from desloppify.languages.typescript.detectors.deps.resolve import (
     load_tsconfig_paths_cached,
@@ -87,7 +86,6 @@ def scan_project(
     try:
         with runtime_scope(RuntimeContext(project_root=project)):
             clear_source_file_cache_for_tests()
-            reset_script_import_caches(str(project))
             enable_parse_cache()
             try:
                 lang = make_lang_run(get_lang("typescript"))

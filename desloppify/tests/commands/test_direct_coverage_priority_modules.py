@@ -41,7 +41,6 @@ import desloppify.engine.hook_registry as hook_registry_mod
 import desloppify.intelligence.narrative.signals as narrative_signals_mod
 import desloppify.intelligence.review.context_holistic.selection.contexts as selection_contexts_mod
 import desloppify.intelligence.review.selection_cache as review_selection_cache_mod
-import desloppify.languages._framework.scoped_store as scoped_store_mod
 import desloppify.languages.typescript.detectors.deps.resolve as ts_deps_resolve_mod
 import desloppify.languages.typescript.fixers.fixer_io as ts_fixer_io_mod
 import desloppify.languages.typescript.fixers.import_rewrite as ts_import_rewrite_mod
@@ -87,7 +86,6 @@ def test_direct_coverage_priority_modules_smoke():
     assert callable(narrative_signals_mod.compute_risk_flags)
     assert callable(selection_contexts_mod.architecture_context)
     assert callable(review_selection_cache_mod.get_file_issues)
-    assert callable(scoped_store_mod.resolve_effective_scope)
     assert callable(ts_deps_resolve_mod.resolve_module)
 
     assert callable(ts_scanner_mod.scan_code)

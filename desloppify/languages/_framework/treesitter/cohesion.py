@@ -15,14 +15,28 @@ from __future__ import annotations
 import logging
 import re
 from collections import defaultdict
+from pathlib import Path
 from typing import TYPE_CHECKING
 
-from .. import PARSE_INIT_ERRORS
-from ..imports.cache import get_or_parse_tree
-from .extractors import _get_parser, _make_query, _node_text, _run_query, _unwrap_node
+from desloppify.base.output.terminal import log
+from desloppify.engine._state.filtering import make_issue
+from desloppify.languages._framework.base.types import DetectorPhase
+from desloppify.state_io import Issue
+
+from .cache import get_or_parse_tree
+from .parsing import (
+    PARSE_INIT_ERRORS,
+    _get_parser,
+    _make_query,
+    _node_text,
+    _run_query,
+    _unwrap_node,
+)
 
 if TYPE_CHECKING:
-    from desloppify.languages._framework.treesitter import TreeSitterLangSpec
+    from desloppify.languages._framework.base.types import LangRuntimeContract
+
+    from .spec import TreeSitterLangSpec
 
 logger = logging.getLogger(__name__)
 
@@ -141,4 +155,38 @@ def detect_responsibility_cohesion(
     return entries, checked
 
 
-__all__ = ["detect_responsibility_cohesion"]
+def make_cohesion_phase(spec: TreeSitterLangSpec) -> DetectorPhase:
+    """Create a responsibility cohesion phase."""
+
+    def run(path: Path, lang: LangRuntimeContract) -> tuple[list[Issue], dict[str, int]]:
+        file_list = lang.file_finder(path)
+        issues: list[Issue] = []
+        potentials: dict[str, int] = {}
+
+        entries, _checked = detect_responsibility_cohesion(file_list, spec)
+        for e in entries:
+            families = ", ".join(e["families"][:4])
+            issues.append(make_issue(
+                "responsibility_cohesion", e["file"],
+                f"cohesion::{e['file']}",
+                tier=3, confidence="medium",
+                summary=(
+                    f"{e['component_count']} disconnected function clusters "
+                    f"({e['function_count']} functions) — likely mixed responsibilities"
+                ),
+                detail={
+                    "cluster_count": e["component_count"],
+                    "family": families,
+                    "families": e["families"],
+                },
+            ))
+        if entries:
+            potentials["responsibility_cohesion"] = len(entries)
+            log(f"         low-cohesion files: {len(entries)}")
+
+        return issues, potentials
+
+    return DetectorPhase("Responsibility cohesion", run)
+
+
+__all__ = ["detect_responsibility_cohesion", "make_cohesion_phase"]

@@ -55,7 +55,7 @@ def test_source_file_cache_is_scoped():
 
 
 def test_treesitter_parse_cache_is_scoped():
-    from desloppify.languages._framework.treesitter.imports.cache import (
+    from desloppify.languages._framework.treesitter.cache import (
         current_parse_tree_cache,
     )
 

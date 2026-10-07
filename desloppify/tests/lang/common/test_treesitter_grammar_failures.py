@@ -7,7 +7,7 @@ from types import ModuleType, SimpleNamespace
 
 import pytest
 
-import desloppify.languages._framework.treesitter.analysis.extractors as extractors_mod
+import desloppify.languages._framework.treesitter.parsing as parsing_mod
 from desloppify.languages.framework import (
     record_grammar_load_failures,
     reset_grammar_load_failures,
@@ -37,22 +37,22 @@ def _fake_language_pack(monkeypatch, *, fail: bool) -> None:
 def test_failed_grammar_is_recorded_and_reraised(monkeypatch):
     _fake_language_pack(monkeypatch, fail=True)
     with pytest.raises(ValueError):
-        extractors_mod._get_parser("tsx")
-    failures = extractors_mod.grammar_load_failures()
+        parsing_mod._get_parser("tsx")
+    failures = parsing_mod.grammar_load_failures()
     assert list(failures) == ["tsx"]
     assert "Failed to fetch manifest" in failures["tsx"]
 
 
 def test_successful_load_records_nothing(monkeypatch):
     _fake_language_pack(monkeypatch, fail=False)
-    assert extractors_mod._get_parser("tsx") == ("parser", "language")
-    assert extractors_mod.grammar_load_failures() == {}
+    assert parsing_mod._get_parser("tsx") == ("parser", "language")
+    assert parsing_mod.grammar_load_failures() == {}
 
 
 def test_failures_become_reduced_coverage_warning(monkeypatch):
     _fake_language_pack(monkeypatch, fail=True)
     with pytest.raises(ValueError):
-        extractors_mod._get_parser("tsx")
+        parsing_mod._get_parser("tsx")
     lang = SimpleNamespace(detector_coverage={}, coverage_warnings=[])
 
     record_grammar_load_failures(lang)

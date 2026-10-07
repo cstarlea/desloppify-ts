@@ -1,7 +1,4 @@
-"""Framework horizontal layer (spec-driven, like tree-sitter/tool specs).
-
-Framework support is intentionally spec-driven so it can be enabled from both
-deep language plugins (LangConfig classes) and shallow generic_lang plugins.
+"""Spec-driven framework support (currently Next.js).
 
 Public entrypoints:
 - framework_phases(lang_name): build DetectorPhase objects

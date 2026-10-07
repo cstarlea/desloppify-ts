@@ -213,7 +213,7 @@ def _parser():
     """The tsx parser, or None when tree-sitter or the grammar is unavailable."""
     try:
         from desloppify.languages._framework.treesitter import is_available
-        from desloppify.languages._framework.treesitter.analysis.extractors import (
+        from desloppify.languages._framework.treesitter.parsing import (
             _get_parser,
         )
     except ImportError:
@@ -228,7 +228,7 @@ def _parser():
 
 
 def extract_imports_treesitter(filepath: str, parser) -> list[ImportRef] | None:
-    from desloppify.languages._framework.treesitter.imports.cache import (
+    from desloppify.languages._framework.treesitter.cache import (
         get_or_parse_tree,
     )
 

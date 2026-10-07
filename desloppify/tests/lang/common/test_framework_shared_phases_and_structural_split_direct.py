@@ -8,7 +8,6 @@ from types import SimpleNamespace
 
 import desloppify.languages._framework.base.shared_phases_review as review_mod
 import desloppify.languages._framework.base.shared_phases_structural as structural_mod
-import desloppify.languages._framework.generic_support.structural as generic_structural_mod
 from desloppify.engine.policy.zones import Zone
 from desloppify.languages._framework.base.types import LangSecurityResult
 
@@ -619,87 +618,3 @@ def test_make_structural_coupling_phase_pair_delegates_to_runners(monkeypatch) -
     assert structural_potentials == {"structural": 1}
     assert coupling_issues[0]["phase"] == "coupling"
     assert coupling_potentials == {"cycles": 1}
-
-
-def test_generic_structural_phase_and_coupling_delegate(monkeypatch) -> None:
-    calls: dict[str, object] = {}
-
-    def _fake_run_structural_phase(path, lang, **kwargs):
-        calls["structural"] = {
-            "path": path,
-            "lang": lang,
-            "signals": kwargs["complexity_signals"],
-            "min_loc": kwargs["min_loc"],
-            "god_rules": kwargs["god_rules"],
-        }
-        return ([{"ok": True}], {"structural": 2})
-
-    def _fake_run_coupling_phase(path, lang, **kwargs):
-        calls["coupling"] = {
-            "path": path,
-            "lang": lang,
-            "builder": kwargs["build_dep_graph_fn"],
-        }
-        return ([{"ok": True}], {"cycles": 2})
-
-    monkeypatch.setattr(
-        "desloppify.languages._framework.base.shared_phases.run_structural_phase",
-        _fake_run_structural_phase,
-    )
-    monkeypatch.setattr(
-        "desloppify.languages._framework.base.shared_phases.run_coupling_phase",
-        _fake_run_coupling_phase,
-    )
-
-    structural_phase = generic_structural_mod._make_structural_phase()
-    coupling_builder = lambda _path: {"graph": True}
-    coupling_phase = generic_structural_mod._make_coupling_phase(coupling_builder)
-
-    structural_issues, structural_potentials = structural_phase.run(Path("."), SimpleNamespace(file_finder=lambda _p: []))
-    coupling_issues, coupling_potentials = coupling_phase.run(Path("."), SimpleNamespace())
-
-    assert structural_phase.label == "Structural analysis"
-    assert structural_issues == [{"ok": True}]
-    assert structural_potentials == {"structural": 2}
-    assert calls["structural"]["min_loc"] == 40
-    assert calls["structural"]["signals"]
-    assert coupling_phase.label == "Coupling + cycles + orphaned"
-    assert coupling_issues == [{"ok": True}]
-    assert coupling_potentials == {"cycles": 2}
-    assert calls["coupling"]["builder"] is coupling_builder
-
-
-def test_extract_ts_classes_populates_methods_and_handles_errors(monkeypatch) -> None:
-    fake_class = SimpleNamespace(file="src/a.py", line=10, loc=10, methods=[])
-    in_class_fn = SimpleNamespace(file="src/a.py", line=15)
-    out_of_class_fn = SimpleNamespace(file="src/a.py", line=40)
-
-    monkeypatch.setattr(
-        "desloppify.languages._framework.treesitter.analysis.extractors.ts_extract_classes",
-        lambda _path, _spec, _files: [fake_class],
-    )
-    monkeypatch.setattr(
-        "desloppify.languages._framework.treesitter.analysis.extractors.ts_extract_functions",
-        lambda _path, _spec, _files: [in_class_fn, out_of_class_fn],
-    )
-
-    classes = generic_structural_mod._extract_ts_classes(
-        Path("."),
-        treesitter_spec=SimpleNamespace(),
-        file_finder=lambda _path: ["src/a.py"],
-    )
-    assert classes == [fake_class]
-    assert fake_class.methods == [in_class_fn]
-
-    monkeypatch.setattr(
-        "desloppify.languages._framework.treesitter.analysis.extractors.ts_extract_classes",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(ImportError("missing tree-sitter")),
-    )
-    assert (
-        generic_structural_mod._extract_ts_classes(
-            Path("."),
-            treesitter_spec=SimpleNamespace(),
-            file_finder=lambda _path: ["src/a.py"],
-        )
-        == []
-    )

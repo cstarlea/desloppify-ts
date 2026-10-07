@@ -66,8 +66,8 @@ These files are part of the same feature boundary and should be considered toget
 - `desloppify/languages/_framework/frameworks/specs/nextjs.py`
 - `desloppify/languages/typescript/__init__.py`
 - `desloppify/languages/javascript/__init__.py`
-- `desloppify/languages/_framework/generic_parts/parsers.py` (parser: `parse_next_lint`)
-- `desloppify/languages/_framework/generic_parts/tool_factories.py` (tool phase: `make_tool_phase`)
+- `desloppify/languages/_framework/tools/parsers.py` (parser: `parse_next_lint`)
+- `desloppify/languages/_framework/tools/phase.py` (tool phase: `make_tool_phase`)
 - `desloppify/base/discovery/source.py`
 
 ### Responsibility split
