@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "desloppify"
 version = "1.0"
-description = "Multi-language codebase health scanner and technical debt tracker"
+description = "TypeScript codebase health scanner and technical debt tracker"
 readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "OSNL-0.2"}
@@ -38,15 +38,11 @@ treesitter = [
   "tree-sitter>=0.25",
   "tree-sitter-language-pack>=1.6.2,!=1.6.3,<1.8",
 ]
-csharp-xml = ["defusedxml>=0.7.0"]
-python-security = ["bandit>=1.7.8"]
 scorecard = ["Pillow>=9.0.0"]
 plan-yaml = ["PyYAML>=6.0"]
 full = [
-  "defusedxml>=0.7.0",
   "tree-sitter>=0.25",
   "tree-sitter-language-pack>=1.6.2,!=1.6.3,<1.8",
-  "bandit>=1.7.8",
   "Pillow>=9.0.0",
   "PyYAML>=6.0",
 ]
@@ -65,18 +61,11 @@ include-package-data = false
 "desloppify.app.output" = ["_viz_template.html"]
 "desloppify.data.global" = ["*.md"]
 "desloppify.languages._framework" = ["review_data/*.json"]
-"desloppify.languages.python" = ["review_data/*.json"]
 "desloppify.languages.typescript" = ["review_data/*.json"]
-"desloppify.languages.csharp" = ["review_data/*.json"]
-"desloppify.languages.cxx" = ["review_data/*.json"]
-"desloppify.languages.dart" = ["review_data/*.json"]
-"desloppify.languages.gdscript" = ["review_data/*.json"]
-"desloppify.languages.go" = ["review_data/*.json"]
-"desloppify.languages.rust" = ["review_data/*.json"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
-testpaths = ['desloppify/tests', 'desloppify/languages/python/tests', 'desloppify/languages/typescript/tests', 'desloppify/languages/csharp/tests', 'desloppify/languages/cxx/tests', 'desloppify/languages/dart/tests', 'desloppify/languages/gdscript/tests', 'desloppify/languages/go/tests', 'desloppify/languages/rust/tests', 'desloppify/languages/javascript/tests']
+testpaths = ['desloppify/tests', 'desloppify/languages/typescript/tests', 'desloppify/languages/javascript/tests']
 norecursedirs = ["desloppify/tests/fixtures"]
 
 [tool.ruff]

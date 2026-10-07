@@ -1,4 +1,4 @@
-"""Direct coverage smoke tests for remaining plan/review/scan/go split modules."""
+"""Direct coverage smoke tests for remaining plan/review/scan split modules."""
 
 from __future__ import annotations
 
@@ -26,14 +26,9 @@ import desloppify.base.search.query_paths as query_paths_mod
 import desloppify.engine.planning.scorecard_policy as scorecard_policy_mod
 import desloppify.engine._plan.triage.core as planning_triage_mod
 import desloppify.languages._framework.scaffold_move as scaffold_move_mod
-import desloppify.languages.go.commands as go_commands_mod
-import desloppify.languages.go.detectors.deps as go_deps_mod
-import desloppify.languages.go.move as go_move_mod
-import desloppify.languages.go.phases as go_phases_mod
-import desloppify.languages.go.review as go_review_mod
 
 
-def test_direct_coverage_scan_plan_go_modules_smoke():
+def test_direct_coverage_scan_plan_modules_smoke():
     assert callable(review_merge_mod.do_merge)
     assert callable(exclude_cmd_mod.cmd_exclude)
     assert callable(plan_cluster_membership_mod.cluster_issue_ids)
@@ -54,11 +49,6 @@ def test_direct_coverage_scan_plan_go_modules_smoke():
     assert callable(scorecard_policy_mod._compose_scorecard_dimensions)
     assert callable(planning_triage_mod.collect_triage_input)
     assert callable(scaffold_move_mod.find_replacements)
-    assert callable(go_commands_mod.get_detect_commands)
-    assert callable(go_deps_mod.build_dep_graph)
-    assert callable(go_move_mod.find_replacements)
-    assert callable(go_phases_mod.phase_structural)
-    assert callable(go_review_mod.api_surface)
     assert callable(resolve_apply_mod._resolve_all_patterns)
     assert callable(resolve_cmd_mod.cmd_resolve)
     assert callable(resolve_selection_mod._validate_resolve_inputs)

@@ -29,9 +29,6 @@ import desloppify.languages._framework.treesitter._specs as treesitter_specs_leg
 import desloppify.languages._framework.treesitter.analysis.cohesion as treesitter_cohesion_mod
 import desloppify.languages._framework.treesitter.imports.cache as treesitter_cache_mod
 import desloppify.languages._framework.treesitter.specs.specs as treesitter_specs_mod
-import desloppify.languages.dart.commands as dart_commands_mod
-import desloppify.languages.go.commands as go_commands_mod
-import desloppify.languages.python.commands as python_commands_mod
 import desloppify.languages.typescript.commands as ts_commands_mod
 import desloppify.languages.typescript.commands as ts_detector_cli_mod
 from desloppify.languages._framework.base.types import DetectorPhase
@@ -150,34 +147,7 @@ def test_treesitter_grouped_modules_avoid_legacy_module_path_imports() -> None:
             assert "desloppify.languages._framework.treesitter._" not in source
 
 
-def test_dart_go_commands_use_one_factory_composition_pattern() -> None:
-    for module in (dart_commands_mod, go_commands_mod):
-        source = inspect.getsource(module)
-        assert "_cmd_large_impl" not in source
-        assert "_cmd_complexity_impl" not in source
-        assert "_cmd_deps_impl" not in source
-        assert "_cmd_cycles_impl" not in source
-        assert "_cmd_orphaned_impl" not in source
-        assert "_cmd_dupes_impl" not in source
-        for cmd_name in (
-            "cmd_large",
-            "cmd_complexity",
-            "cmd_deps",
-            "cmd_cycles",
-            "cmd_orphaned",
-            "cmd_dupes",
-        ):
-            cmd = getattr(module, cmd_name)
-            assert callable(cmd)
-            assert cmd.__module__ == module.__name__
-
-
-def test_major_language_command_registries_share_base_composition_pattern() -> None:
-    for module in (go_commands_mod, python_commands_mod):
-        source = inspect.getsource(module)
-        assert "build_standard_detect_registry(" in source
-        assert "compose_detect_registry(" in source
-
+def test_typescript_command_registry_uses_base_composition_pattern() -> None:
     ts_source = inspect.getsource(ts_detector_cli_mod)
     assert "build_standard_detect_registry(" in ts_source
     assert "compose_detect_registry(" in ts_source

@@ -12,7 +12,7 @@ from desloppify.engine.hook_registry import clear_lang_hooks_for_tests, get_lang
 def test_get_lang_hook_lazy_loads_language_hooks() -> None:
     clear_lang_hooks_for_tests()
 
-    hook = get_lang_hook("python", "test_coverage")
+    hook = get_lang_hook("typescript", "test_coverage")
 
     assert hook is not None
     assert hasattr(hook, "has_testable_logic")
@@ -20,7 +20,7 @@ def test_get_lang_hook_lazy_loads_language_hooks() -> None:
 
 def test_get_lang_hook_bootstraps_after_test_clear_without_reload(monkeypatch) -> None:
     # Ensure module is imported at least once.
-    importlib.import_module("desloppify.languages.python")
+    importlib.import_module("desloppify.languages.typescript")
 
     clear_lang_hooks_for_tests()
     monkeypatch.setattr(
@@ -28,7 +28,7 @@ def test_get_lang_hook_bootstraps_after_test_clear_without_reload(monkeypatch) -
         "reload",
         lambda _module: (_ for _ in ()).throw(AssertionError("reload should not be used")),
     )
-    hook = get_lang_hook("python", "test_coverage")
+    hook = get_lang_hook("typescript", "test_coverage")
 
     assert hook is not None
     assert hasattr(hook, "parse_test_import_specs")

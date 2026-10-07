@@ -23,11 +23,22 @@ from desloppify.cli import (
     create_parser,
     state_path,
 )
-from desloppify.languages.csharp import CSharpConfig
+from desloppify.languages._framework.base.types_shared import LangValueSpec
+from desloppify.languages.typescript import TypeScriptConfig
 
 # ===========================================================================
 # Module import
 # ===========================================================================
+
+
+def _lang_with_specs() -> TypeScriptConfig:
+    lang = TypeScriptConfig()
+    lang.runtime_option_specs = {"tsc_cmd": LangValueSpec(str, "")}
+    lang.setting_specs = {
+        "corroboration_min_signals": LangValueSpec(int, 2),
+        "high_fanout_threshold": LangValueSpec(int, 5),
+    }
+    return lang
 
 
 class TestModuleImport:
@@ -341,23 +352,23 @@ class TestCreateParser:
         with pytest.raises(SystemExit):
             parser.parse_args(["detect", "deps", "--roslyn-cmd", "legacy"])
 
-    def test_lang_opt_parsed_for_csharp(self):
-        args = SimpleNamespace(lang_opt=["roslyn_cmd=fake-roslyn --json"])
-        options = resolve_lang_runtime_options(args, CSharpConfig())
-        assert options["roslyn_cmd"] == "fake-roslyn --json"
+    def test_lang_opt_parsed_against_runtime_option_specs(self):
+        args = SimpleNamespace(lang_opt=["tsc_cmd=fake-tsc --json"])
+        options = resolve_lang_runtime_options(args, _lang_with_specs())
+        assert options["tsc_cmd"] == "fake-tsc --json"
 
     def test_lang_opt_rejects_invalid_key_value_pair(self):
         args = SimpleNamespace(lang_opt=["not_a_pair"])
         with pytest.raises(LangRuntimeOptionsError) as exc:
-            resolve_lang_runtime_options(args, CSharpConfig())
+            resolve_lang_runtime_options(args, _lang_with_specs())
         assert "Invalid --lang-opt" in str(exc.value)
         assert "Expected KEY=VALUE" in str(exc.value)
 
     def test_language_settings_loaded_from_config_namespace(self):
-        lang = CSharpConfig()
+        lang = _lang_with_specs()
         config = {
             "languages": {
-                "csharp": {
+                "typescript": {
                     "corroboration_min_signals": 3,
                     "high_fanout_threshold": 8,
                 }
@@ -777,21 +788,21 @@ class TestResolveDefaultPath:
 
 class TestResolveLang:
     def test_prefers_explicit_lang(self):
-        args = SimpleNamespace(lang="python", path="/tmp/somewhere")
+        args = SimpleNamespace(lang="javascript", path="/tmp/somewhere")
         lang = resolve_lang(args)
         assert lang is not None
-        assert lang.name == "python"
+        assert lang.name == "javascript"
 
     def test_auto_detect_uses_path_when_it_looks_like_project_root(
         self, tmp_path, monkeypatch
     ):
-        # CWD-style project root is python.
+        # CWD-style project root is javascript.
         cwd_root = tmp_path / "cwd_project"
         cwd_root.mkdir()
-        (cwd_root / "pyproject.toml").write_text("[tool.pytest]\n")
-        py_src = cwd_root / "src"
-        py_src.mkdir()
-        (py_src / "main.py").write_text("print('x')\n")
+        (cwd_root / "package.json").write_text('{"name": "cwd"}\n')
+        js_src = cwd_root / "src"
+        js_src.mkdir()
+        (js_src / "main.js").write_text("console.log('x')\n")
 
         # Target --path root is typescript.
         target_root = tmp_path / "target_project"
@@ -812,25 +823,25 @@ class TestResolveLang:
     ):
         root = tmp_path / "project"
         root.mkdir()
-        (root / "pyproject.toml").write_text("[tool.pytest]\n")
+        (root / "package.json").write_text('{"name": "project"}\n')
         src = root / "src"
         src.mkdir()
-        (src / "main.py").write_text("print('x')\n")
+        (src / "main.js").write_text("console.log('x')\n")
 
         monkeypatch.setattr(lang_helpers_mod, "get_project_root", lambda: root)
         args = SimpleNamespace(lang=None, path=str(src))
         lang = resolve_lang(args)
         assert lang is not None
-        assert lang.name == "python"
+        assert lang.name == "javascript"
 
     def test_auto_detect_walks_up_from_external_subdir_path(
         self, tmp_path, monkeypatch
     ):
-        # CWD-style project root is python.
+        # CWD-style project root is javascript.
         cwd_root = tmp_path / "cwd_project"
         cwd_root.mkdir()
-        (cwd_root / "pyproject.toml").write_text("[tool.pytest]\n")
-        (cwd_root / "local.py").write_text("print('local')\n")
+        (cwd_root / "package.json").write_text('{"name": "cwd"}\n')
+        (cwd_root / "local.js").write_text("console.log('local')\n")
 
         # External target is typescript, and --path points to target/src.
         target_root = tmp_path / "target_project"
@@ -858,19 +869,19 @@ class TestResolveLang:
         for i in range(3):
             (ts_dir / f"view_{i}.ts").write_text("export const x = 1\n")
 
-        py_dir = root / "scripts"
-        py_dir.mkdir()
+        js_dir = root / "scripts"
+        js_dir.mkdir()
         for i in range(2):
-            (py_dir / f"job_{i}.py").write_text("print('x')\n")
+            (js_dir / f"job_{i}.js").write_text("console.log('x')\n")
 
         monkeypatch.setattr(lang_helpers_mod, "get_project_root", lambda: root)
 
-        # Path points to python subtree; detection should use this subtree first,
-        # not the entire repo where TypeScript files are more numerous.
-        args = SimpleNamespace(lang=None, path=str(py_dir))
+        # Path points to javascript subtree; detection should use this subtree
+        # first, not the entire repo where TypeScript files are more numerous.
+        args = SimpleNamespace(lang=None, path=str(js_dir))
         lang = resolve_lang(args)
         assert lang is not None
-        assert lang.name == "python"
+        assert lang.name == "javascript"
 
     def test_lang_config_markers_include_plugin_markers(self, monkeypatch):
         class DummyCfg:

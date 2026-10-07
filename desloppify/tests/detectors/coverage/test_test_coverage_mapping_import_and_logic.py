@@ -21,7 +21,6 @@ from desloppify.engine.detectors.test_coverage.io import (
     clear_coverage_read_warning_cache_for_tests,
 )
 from desloppify.engine.policy.zones import FileZoneMap, Zone, ZoneRule
-from desloppify.languages.python.test_coverage import _strip_py_comment
 from desloppify.languages.typescript.test_coverage import (
     has_testable_logic as ts_has_testable_logic,
 )
@@ -54,17 +53,6 @@ def _reset_read_warning_cache():
 
 
 class TestNamingBasedMapping:
-    def test_python_test_prefix(self):
-        test_files = {"src/test_utils.py"}
-        production_files = {"src/utils.py"}
-        result = naming_based_mapping(test_files, production_files, "python")
-        assert result == {"src/utils.py"}
-
-    def test_python_test_suffix(self):
-        test_files = {"src/utils_test.py"}
-        production_files = {"src/utils.py"}
-        result = naming_based_mapping(test_files, production_files, "python")
-        assert result == {"src/utils.py"}
 
     def test_typescript_test_marker(self):
         test_files = {"src/utils.test.ts"}
@@ -105,12 +93,12 @@ class TestNamingBasedMapping:
 
     def test_fuzzy_basename_fallback(self):
         """Fuzzy basename matching when _map_test_to_source fails (different dir)."""
-        test_files = {"completely/different/test_utils.py"}
-        production_files = {"src/deep/utils.py"}
-        result = naming_based_mapping(test_files, production_files, "python")
-        # _strip_test_markers("test_utils.py") → "utils.py"
-        # prod_by_basename["utils.py"] → "src/deep/utils.py"
-        assert result == {"src/deep/utils.py"}
+        test_files = {"completely/different/utils.test.ts"}
+        production_files = {"src/deep/utils.ts"}
+        result = naming_based_mapping(test_files, production_files, "typescript")
+        # _strip_test_markers("utils.test.ts") → "utils.ts"
+        # prod_by_basename["utils.ts"] → "src/deep/utils.ts"
+        assert result == {"src/deep/utils.ts"}
 
     def test_go_non_test_file_does_not_map(self):
         test_files = {"tests/helpers.go"}
@@ -311,28 +299,6 @@ class TestCommentStripping:
         tf = _write_file(tmp_path, "bar.test.ts", content)
         result = analyze_test_quality({tf}, "typescript")
         assert result[tf]["assertions"] == 1
-
-    def test_py_comment_not_counted(self, tmp_path):
-        """Assertions in Python # comments should not be counted."""
-        content = (
-            "def test_a():\n"
-            "    # assert False\n"
-            "    assert True\n"
-            "    assert True\n"
-            "    assert True\n"
-        )
-        tf = _write_file(tmp_path, "test_commented.py", content)
-        result = analyze_test_quality({tf}, "python")
-        assert result[tf]["assertions"] == 3
-
-    def test_py_comment_in_string_not_stripped(self):
-        """# inside strings should NOT be treated as comments."""
-        assert _strip_py_comment('x = "has # in string"') == 'x = "has # in string"'
-        assert _strip_py_comment("x = 'has # in string'") == "x = 'has # in string'"
-
-    def test_py_comment_strips_after_code(self):
-        """# after code should be stripped."""
-        assert _strip_py_comment("x = 1  # comment").rstrip() == "x = 1"
 
 
 # ── RTL assertion patterns ───────────────────────────────
@@ -764,41 +730,6 @@ class TestHasTestableLogic:
         f = _write_file(tmp_path, "async_utils.py", content)
         assert _has_testable_logic(f, "python") is True
 
-    def test_py_file_constants_only(self, tmp_path):
-        """Python file with only imports and constants — not testable."""
-        content = (
-            "from enum import Enum\n"
-            "\n"
-            "MAX_RETRIES = 3\n"
-            "TIMEOUT = 30\n"
-            "API_URL = 'https://example.com'\n"
-            "\n"
-            "# Status codes\n"
-            "SUCCESS = 200\n"
-            "NOT_FOUND = 404\n"
-            "SERVER_ERROR = 500\n"
-            "EXTRA_LINE = 'padding'\n"
-        )
-        f = _write_file(tmp_path, "constants.py", content)
-        assert _has_testable_logic(f, "python") is False
-
-    def test_py_init_barrel(self, tmp_path):
-        """Python __init__.py barrel with only imports — not testable."""
-        content = (
-            "from .foo import Foo\n"
-            "from .bar import Bar, Baz\n"
-            "from .utils import helper\n"
-            "\n"
-            "__all__ = ['Foo', 'Bar', 'Baz', 'helper']\n"
-            "\n"
-            "# Re-exports\n"
-            "# More padding lines\n"
-            "# Even more padding\n"
-            "# And more\n"
-        )
-        f = _write_file(tmp_path, "__init__.py", content)
-        assert _has_testable_logic(f, "python") is False
-
     def test_py_class_with_methods(self, tmp_path):
         """Python file with a class that has methods is testable."""
         content = (
@@ -860,21 +791,6 @@ class TestHasTestableLogic:
         zone_map = _make_zone_map([barrel])
         graph = {barrel: {"imports": set(), "importer_count": 0}}
         entries, potential = detect_test_coverage(graph, zone_map, "typescript")
-        assert entries == []
-        assert potential == 0
-
-    def test_py_constants_excluded_from_issues(self, tmp_path):
-        """Python constants-only file produces no test_coverage issues."""
-        const_file = _write_file(
-            tmp_path,
-            "constants.py",
-            "MAX_RETRIES = 3\nTIMEOUT = 30\nAPI_URL = 'https://example.com'\n"
-            "SUCCESS = 200\nNOT_FOUND = 404\nSERVER_ERROR = 500\n"
-            "EXTRA_1 = 'a'\nEXTRA_2 = 'b'\nEXTRA_3 = 'c'\nEXTRA_4 = 'd'\n",
-        )
-        zone_map = _make_zone_map([const_file])
-        graph = {const_file: {"imports": set(), "importer_count": 0}}
-        entries, potential = detect_test_coverage(graph, zone_map, "python")
         assert entries == []
         assert potential == 0
 

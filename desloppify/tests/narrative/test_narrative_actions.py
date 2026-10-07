@@ -52,21 +52,6 @@ class TestComputeActions:
         assert len(result) >= 1
         assert any(a["detector"] == "unused" for a in result)
 
-    def test_python_gets_manual_fix(self, empty_state):
-        result = _compute_actions(
-            ActionContext(
-                by_detector={"unused": 5},
-                dimension_scores={},
-                state=empty_state,
-                debt={},
-                lang="python",
-            )
-        )
-        if result:
-            unused_actions = [a for a in result if a.get("detector") == "unused"]
-            for action in unused_actions:
-                assert action["type"] == "manual_fix"
-
     def test_debt_review_action(self, empty_state):
         result = _compute_actions(
             ActionContext(

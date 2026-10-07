@@ -461,62 +461,60 @@ class TestGatherMigrationSignals:
     def test_deprecated_markers_counted(self):
         """@deprecated, @Deprecated, and DEPRECATED should be counted."""
         content = textwrap.dedent("""\
-            @deprecated
-            def old_func():
-                pass
+            /** @deprecated */
+            export function oldFunc() {}
 
             @Deprecated
-            class OldClass:
-                pass
+            export class OldClass {}
 
-            # DEPRECATED: don't use this
-            x = 1
+            // DEPRECATED: don't use this
+            export const x = 1;
         """)
-        result = _gather_migration_signals({"/src/old.py": content}, "python")
+        result = _gather_migration_signals({"/src/old.ts": content}, "typescript")
         assert "deprecated_markers" in result
         dm = result["deprecated_markers"]
         assert dm["total"] == 3
-        assert dm["files"]["old.py"] == 3
+        assert dm["files"]["old.ts"] == 3
 
     def test_deprecated_across_files(self):
         """Deprecated counts should aggregate across files."""
         files = {
-            "/src/a.py": "@deprecated\ndef f(): pass\n",
-            "/src/b.py": "DEPRECATED\nDEPRECATED\n",
+            "/src/a.ts": "/** @deprecated */\nfunction f() {}\n",
+            "/src/b.ts": "// DEPRECATED\n// DEPRECATED\n",
         }
-        result = _gather_migration_signals(files, "python")
+        result = _gather_migration_signals(files, "typescript")
         dm = result["deprecated_markers"]
         assert dm["total"] == 3
-        assert dm["files"]["a.py"] == 1
-        assert dm["files"]["b.py"] == 2
+        assert dm["files"]["a.ts"] == 1
+        assert dm["files"]["b.ts"] == 2
 
     def test_migration_todos_detected(self):
         """TODO/FIXME/HACK with migration keywords should be detected."""
         content = textwrap.dedent("""\
-            # FIXME legacy code needs removal
-            # TODO remove after v2 cleanup
-            # HACK old api workaround
-            # TODO: migrate endpoint naming
-            # TODO: regular todo - cleanup docs
+            // FIXME legacy code needs removal
+            // TODO remove after v2 cleanup
+            // HACK old api workaround
+            // TODO: migrate endpoint naming
+            // TODO: regular todo - cleanup docs
         """)
-        result = _gather_migration_signals({"/src/migrate.py": content}, "python")
+        result = _gather_migration_signals({"/src/migrate.ts": content}, "typescript")
         assert "migration_todos" in result
         todos = result["migration_todos"]
         assert len(todos) == 4
-        assert all(t["file"] == "migrate.py" for t in todos)
+        assert all(t["file"] == "migrate.ts" for t in todos)
 
     def test_migration_todo_text_truncated(self):
         """Migration TODO text should be truncated to 120 chars."""
         long_text = "TODO: migrate " + "x" * 200
-        result = _gather_migration_signals({"/src/long.py": long_text}, "python")
+        result = _gather_migration_signals({"/src/long.ts": long_text}, "typescript")
         if result.get("migration_todos"):
             for todo in result["migration_todos"]:
                 assert len(todo["text"]) <= 120
 
     def test_migration_todos_capped_at_30(self):
         """At most 30 migration TODOs should be returned."""
-        lines = "\n".join(f"# TODO: migrate item {i}" for i in range(40))
-        result = _gather_migration_signals({"/src/many.py": lines}, "python")
+        lines = "\n".join(f"// TODO: migrate item {i}" for i in range(40))
+        result = _gather_migration_signals({"/src/many.ts": lines}, "typescript")
         assert len(result.get("migration_todos", [])) <= 30
 
     def test_pattern_pairs_ts(self):
@@ -536,17 +534,6 @@ class TestGatherMigrationSignals:
         pair_names = [p["name"] for p in result["pattern_pairs"]]
         assert "require\u2192import" in pair_names
         assert "var\u2192let/const" in pair_names
-
-    def test_pattern_pairs_py(self):
-        """Python pattern pairs should detect old+new coexistence."""
-        files = {
-            "/src/old.py": "import os\nresult = os.path.join('a', 'b')\n",
-            "/src/new.py": "from pathlib import Path\np = Path('a') / 'b'\n",
-        }
-        result = _gather_migration_signals(files, "python")
-        assert "pattern_pairs" in result
-        pair_names = [p["name"] for p in result["pattern_pairs"]]
-        assert "os.path\u2192pathlib" in pair_names
 
     def test_pattern_pairs_not_detected_when_only_old(self):
         """Pattern pairs should NOT be detected when only old pattern exists."""
@@ -614,19 +601,19 @@ class TestGatherMigrationSignals:
 
     def test_empty_input(self):
         """Empty file_contents should return empty dict."""
-        result = _gather_migration_signals({}, "python")
+        result = _gather_migration_signals({}, "typescript")
         assert result == {}
 
     def test_no_deprecated_no_key(self):
         """If no deprecated markers found, key should be absent."""
-        content = "def foo():\n    return 1\n"
-        result = _gather_migration_signals({"/src/clean.py": content}, "python")
+        content = "export function foo() {\n  return 1;\n}\n"
+        result = _gather_migration_signals({"/src/clean.ts": content}, "typescript")
         assert "deprecated_markers" not in result
 
     def test_hack_with_migration_keyword(self):
         """HACK comments with migration keywords should be captured."""
-        content = "# HACK old api workaround needs cleanup\n"
-        result = _gather_migration_signals({"/src/hack.py": content}, "python")
+        content = "// HACK old api workaround needs cleanup\n"
+        result = _gather_migration_signals({"/src/hack.ts": content}, "typescript")
         assert "migration_todos" in result
         assert len(result["migration_todos"]) == 1
 

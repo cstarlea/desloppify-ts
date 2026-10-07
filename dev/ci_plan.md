@@ -40,22 +40,7 @@ Artifacts uploaded:
 - `pytest-full-report`
 - `dist-packages`
 
-### 2) Integration (`.github/workflows/integration.yml`)
-
-Triggers:
-- Nightly schedule (`17 04:00 UTC`)
-- Manual (`workflow_dispatch`)
-
-Job:
-- `roslyn-integration`
-  - Runs `make integration-roslyn`
-  - Uses `.github/scripts/roslyn_stub.py` for deterministic CI payloads.
-
-Notes:
-- Integration workflow is intentionally separate from required PR checks.
-- Failures should be triaged, but do not block normal merges by policy.
-
-### 3) Publish (`.github/workflows/python-publish.yml`)
+### 2) Publish (`.github/workflows/python-publish.yml`)
 
 Triggers:
 - `release.published`
@@ -95,7 +80,6 @@ Use the `Makefile` targets:
 - `make ci-fast`: lint + typecheck + import contracts + tests
 - `make ci`: `ci-fast` + full tests + package smoke
 - `make ci-contracts`: verify CI/workflow/docs contracts
-- `make integration-roslyn`: run Roslyn-path integration parity tests
 
 ## Rollout
 
@@ -104,9 +88,7 @@ Phase 1 (immediate):
 - Enable branch protection with required CI checks
 
 Phase 2 (stabilization):
-- Monitor integration lane failures and tighten test selection as needed
 - Expand mypy coverage gradually by directory
 
 Phase 3 (hardening):
 - Enable admin enforcement for branch protection if desired
-- Add additional integration lanes (for example, real Roslyn emitter) when infra is available
