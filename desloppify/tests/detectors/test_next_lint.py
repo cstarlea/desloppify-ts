@@ -9,12 +9,12 @@ from types import SimpleNamespace
 
 import pytest
 
-from desloppify.languages._framework.generic_parts.parsers import (
+from desloppify.languages._framework.tools import runner as tool_runner_mod
+from desloppify.languages._framework.tools.parsers import (
     ToolParserError,
     parse_next_lint,
 )
-from desloppify.languages._framework.generic_support.core import make_tool_phase
-from desloppify.languages._framework.generic_parts import tool_runner as tool_runner_mod
+from desloppify.languages._framework.tools.phase import make_tool_phase
 
 
 def test_parse_next_lint_aggregates_per_file_and_relativizes_paths(monkeypatch, tmp_path):

@@ -33,7 +33,7 @@ from desloppify.languages.typescript.tests.golden import harness
 def _tsx_grammar_loads() -> bool:
     if not is_available():
         return False
-    from desloppify.languages._framework.treesitter.analysis.extractors import _get_parser
+    from desloppify.languages._framework.treesitter.parsing import _get_parser
 
     try:
         _get_parser("tsx")

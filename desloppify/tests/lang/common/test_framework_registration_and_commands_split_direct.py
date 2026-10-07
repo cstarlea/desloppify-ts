@@ -21,17 +21,10 @@ import desloppify.languages.framework as public_framework_mod
 import desloppify.languages._framework as framework_root_mod
 import desloppify.languages._framework.commands.registry as registry_cmd_mod
 import desloppify.languages._framework.commands.scaffold as scaffold_mod
-import desloppify.languages._framework.generic_support.capabilities as capabilities_mod
-import desloppify.languages._framework.generic_support.registration as registration_mod
 import desloppify.languages._framework.registry.registration as framework_registration_mod
 import desloppify.languages._framework.runtime_support.accessors as accessors_mod
-import desloppify.languages._framework.treesitter._specs as treesitter_specs_legacy_mod
-import desloppify.languages._framework.treesitter.analysis.cohesion as treesitter_cohesion_mod
-import desloppify.languages._framework.treesitter.imports.cache as treesitter_cache_mod
-import desloppify.languages._framework.treesitter.specs.specs as treesitter_specs_mod
 import desloppify.languages.typescript.commands as ts_commands_mod
 import desloppify.languages.typescript.commands as ts_detector_cli_mod
-from desloppify.languages._framework.base.types import DetectorPhase
 
 
 def test_scaffold_defaults_and_registry_builder() -> None:
@@ -78,7 +71,7 @@ def test_public_framework_facade_exposes_operational_accessors() -> None:
     assert "Public framework facade" in source
     assert callable(public_framework_mod.load_all)
     assert callable(public_framework_mod.make_lang_config)
-    assert callable(public_framework_mod.reset_script_import_caches)
+    assert callable(public_framework_mod.enable_parse_cache)
     assert hasattr(public_framework_mod, "registry_state")
 
 
@@ -119,32 +112,6 @@ def test_languages_readme_documents_current_runtime_boundary() -> None:
     source = readme_path.read_text(encoding="utf-8")
     assert "register_full_plugin(...)" in source
     assert "`desloppify.languages.framework`" in source
-
-
-def test_treesitter_grouped_namespaces_are_canonical() -> None:
-    for module in (treesitter_cohesion_mod, treesitter_cache_mod, treesitter_specs_mod):
-        source = inspect.getsource(module)
-        assert "Compatibility bridge" not in source
-        assert "__getattr__" not in source
-
-    source = inspect.getsource(treesitter_specs_legacy_mod)
-    assert "Compatibility bridge to grouped tree-sitter namespace module." in source
-    assert "load_compat_exports" in source
-
-    package_root = Path(__file__).resolve().parents[3] / "languages/_framework/treesitter"
-    assert not (package_root / "_cache.py").exists()
-    assert not (package_root / "_cohesion.py").exists()
-    assert not (package_root / "compat").exists()
-
-
-def test_treesitter_grouped_modules_avoid_legacy_module_path_imports() -> None:
-    package_root = Path(__file__).resolve().parents[3] / "languages/_framework/treesitter"
-    for group in ("analysis", "imports", "specs"):
-        for module_path in (package_root / group).rglob("*.py"):
-            source = module_path.read_text(encoding="utf-8")
-            assert "from .._" not in source
-            assert "from ._" not in source
-            assert "desloppify.languages._framework.treesitter._" not in source
 
 
 def test_typescript_command_registry_uses_base_composition_pattern() -> None:
@@ -264,180 +231,6 @@ def test_make_cmd_cycles_orphaned_and_dupes(monkeypatch, tmp_path) -> None:
     cmd_dupes(SimpleNamespace(path=str(tmp_path), json=False, top=5, threshold=0.8))
     assert any("Duplicate functions:" in line for line in printed)
     assert "TABLE" in printed
-
-
-def test_generic_capabilities_helpers_and_report(monkeypatch) -> None:
-    monkeypatch.setattr(
-        capabilities_mod,
-        "find_source_files",
-        lambda path, exts, excl: [f"{Path(path)}/main{exts[0]}", f"{Path(path)}/util{exts[0]}"] if excl else [],
-    )
-
-    finder = capabilities_mod.make_file_finder([".py"], exclusions=["vendor"])
-    assert len(finder(Path("/tmp/project"))) == 2
-
-    assert capabilities_mod.empty_dep_graph(Path(".")) == {}
-    assert capabilities_mod.noop_extract_functions(Path(".")) == []
-
-    rules = capabilities_mod.generic_zone_rules([".py"])
-    assert rules[0].zone.value == "vendor"
-    assert any(rule.zone.value == "test" for rule in rules)
-
-    full_cfg = SimpleNamespace(integration_depth="full")
-    assert capabilities_mod.capability_report(full_cfg) is None
-
-    shallow_cfg = SimpleNamespace(
-        integration_depth="shallow",
-        phases=[DetectorPhase("Custom lint", lambda *_args: ([], {})), DetectorPhase("Security", lambda *_args: ([], {}))],
-        fixers={"lint-fix": object()},
-        build_dep_graph=lambda _path: {"a": {}},
-        extract_functions=lambda _path: [],
-    )
-    present, missing = capabilities_mod.capability_report(shallow_cfg)
-    assert "auto-fix" in present
-    assert any(item.startswith("linting") for item in present)
-    assert "boilerplate detection" in missing
-    assert "design review" in missing
-
-
-def test_generic_registration_helpers(monkeypatch) -> None:
-    detector_calls: list[str] = []
-    scoring_calls: list[str] = []
-
-    monkeypatch.setattr(registration_mod, "register_detector", lambda meta: detector_calls.append(meta.name))
-    monkeypatch.setattr(registration_mod, "register_scoring_policy", lambda policy: scoring_calls.append(policy.detector))
-    monkeypatch.setattr(registration_mod, "make_generic_fixer", lambda tool: {"tool": tool["id"]})
-
-    tool_specs = [
-        {
-            "id": "lint_errors",
-            "label": "Lint errors",
-            "tier": 3,
-            "fix_cmd": "tool --fix",
-            "cmd": "tool",
-            "fmt": "rdjson",
-        },
-        {
-            "id": "formatting",
-            "label": "Formatting",
-            "tier": 2,
-            "fix_cmd": None,
-            "cmd": "fmt",
-            "fmt": "rdjson",
-        },
-    ]
-
-    fixers = registration_mod._register_generic_tool_specs(tool_specs)
-    assert detector_calls == ["lint_errors", "formatting"]
-    assert scoring_calls == ["lint_errors", "formatting"]
-    assert set(fixers.keys()) == {"lint-errors"}
-
-    opts = registration_mod.GenericLangOptions(exclude=["vendor"], treesitter_spec=None)
-    finder, extract_fn, dep_graph_fn, has_ts, ts_spec = registration_mod._resolve_generic_extractors(
-        path_extensions=[".py"],
-        opts=opts,
-    )
-    assert callable(finder)
-    assert extract_fn is capabilities_mod.noop_extract_functions
-    assert dep_graph_fn is capabilities_mod.empty_dep_graph
-    assert has_ts is False
-    assert ts_spec is None
-
-    ts_opts = registration_mod.GenericLangOptions(
-        treesitter_spec=SimpleNamespace(import_query="(import)", resolve_import=lambda *_args: None),
-    )
-    monkeypatch.setattr("desloppify.languages._framework.treesitter.is_available", lambda: True)
-    monkeypatch.setattr(
-        "desloppify.languages._framework.treesitter.analysis.extractors.make_ts_extractor",
-        lambda _spec, _finder: "ts-extractor",
-    )
-    monkeypatch.setattr(
-        "desloppify.languages._framework.treesitter.imports.graph.make_ts_dep_builder",
-        lambda _spec, _finder: "ts-dep-builder",
-    )
-
-    _, extract_fn, dep_graph_fn, has_ts, ts_spec = registration_mod._resolve_generic_extractors(
-        path_extensions=[".py"],
-        opts=ts_opts,
-    )
-    assert extract_fn == "ts-extractor"
-    assert dep_graph_fn == "ts-dep-builder"
-    assert has_ts is True
-    assert ts_spec is ts_opts.treesitter_spec
-
-
-def test_build_generic_phases_includes_expected_phase_sets(monkeypatch) -> None:
-    monkeypatch.setattr(registration_mod, "_make_structural_phase", lambda _spec=None: DetectorPhase("Structural analysis", lambda *_args: ([], {})))
-    monkeypatch.setattr(registration_mod, "_make_coupling_phase", lambda _fn: DetectorPhase("Coupling + cycles + orphaned", lambda *_args: ([], {})))
-
-    monkeypatch.setattr(
-        "desloppify.languages._framework.base.phase_builders.detector_phase_security",
-        lambda: DetectorPhase("Security", lambda *_args: ([], {})),
-    )
-    monkeypatch.setattr(
-        "desloppify.languages._framework.base.phase_builders.detector_phase_test_coverage",
-        lambda: DetectorPhase("Test coverage", lambda *_args: ([], {})),
-    )
-    monkeypatch.setattr(
-        "desloppify.languages._framework.base.phase_builders.shared_subjective_duplicates_tail",
-        lambda: [DetectorPhase("Subjective review", lambda *_args: ([], {}))],
-    )
-    monkeypatch.setattr(
-        "desloppify.languages._framework.base.phase_builders.detector_phase_signature",
-        lambda: DetectorPhase("Signature analysis", lambda *_args: ([], {})),
-    )
-    monkeypatch.setattr(
-        "desloppify.languages._framework.treesitter.phases.make_ast_smells_phase",
-        lambda _spec: DetectorPhase("AST smells", lambda *_args: ([], {})),
-    )
-    monkeypatch.setattr(
-        "desloppify.languages._framework.treesitter.phases.make_cohesion_phase",
-        lambda _spec: DetectorPhase("Responsibility cohesion", lambda *_args: ([], {})),
-    )
-    monkeypatch.setattr(
-        "desloppify.languages._framework.treesitter.phases.make_unused_imports_phase",
-        lambda _spec: DetectorPhase("Unused imports", lambda *_args: ([], {})),
-    )
-
-    tool_specs = [
-        {
-            "id": "lint",
-            "label": "Lint",
-            "cmd": "lint",
-            "fmt": "json",
-            "tier": 3,
-        }
-    ]
-
-    phases = registration_mod._build_generic_phases(
-        tool_specs=tool_specs,
-        ts_spec=None,
-        has_treesitter=False,
-        extract_fn=capabilities_mod.noop_extract_functions,
-        dep_graph_fn=capabilities_mod.empty_dep_graph,
-    )
-    labels = [phase.label for phase in phases]
-    assert "Lint" in labels
-    assert "Structural analysis" in labels
-    assert "Security" in labels
-    assert "Coupling + cycles + orphaned" not in labels
-    assert "Signature analysis" not in labels
-
-    ts_spec = SimpleNamespace(import_query="(import)")
-    phases = registration_mod._build_generic_phases(
-        tool_specs=tool_specs,
-        ts_spec=ts_spec,
-        has_treesitter=True,
-        extract_fn=lambda _path: [],
-        dep_graph_fn=lambda _path: {},
-    )
-    labels = [phase.label for phase in phases]
-    assert "AST smells" in labels
-    assert "Responsibility cohesion" in labels
-    assert "Unused imports" in labels
-    assert "Signature analysis" in labels
-    assert "Coupling + cycles + orphaned" in labels
-    assert "Test coverage" in labels
 
 
 class _AccessorHarness(accessors_mod.LangRunStateAccessors):

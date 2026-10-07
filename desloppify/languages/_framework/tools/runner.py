@@ -1,4 +1,4 @@
-"""External command execution helpers for generic language plugins."""
+"""External command execution for tool phases."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
-from desloppify.languages._framework.generic_parts.parsers import ToolParserError
+from desloppify.languages._framework.tools.parsers import ToolParserError
 
 SubprocessRun = Callable[..., subprocess.CompletedProcess[str]]
 ToolParser = Callable[[str, Path], list[dict] | tuple[list[dict], dict]]
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class ToolRunResult:
-    """Structured execution result for generic-tool detector commands."""
+    """Structured execution result for external tool commands."""
 
     entries: list[dict]
     status: Literal["ok", "empty", "error"]

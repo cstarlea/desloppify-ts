@@ -64,7 +64,6 @@ from desloppify.languages.framework import (
     make_lang_run,
     record_grammar_load_failures,
     reset_grammar_load_failures,
-    reset_script_import_caches,
 )
 from desloppify.state_io import StateModel, ensure_state_defaults, save_state, utc_now
 from desloppify.state_scoring import ScoreSnapshot, score_snapshot
@@ -294,7 +293,6 @@ def prepare_scan_runtime(args: argparse.Namespace) -> ScanRuntime:
     state_file = runtime.state_path
     state = runtime.state if isinstance(runtime.state, dict) else {}
     ensure_state_defaults(state)
-    reset_script_import_caches(str(path))
     config = runtime.config if isinstance(runtime.config, dict) else {}
     lang_config = resolve_lang(args)
     reset_subjective_count = 0

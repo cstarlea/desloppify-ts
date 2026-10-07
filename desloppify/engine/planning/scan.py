@@ -21,7 +21,6 @@ from desloppify.languages.framework import (
     LangRun,
     auto_detect_lang,
     available_langs,
-    capability_report,
     clear_review_phase_prefetch,
     get_lang,
     make_lang_run,
@@ -71,14 +70,6 @@ def _build_zone_map(path: Path, lang: LangRun, zone_overrides: dict[str, str] | 
         f"{zone}: {count}" for zone, count in sorted(counts.items()) if count > 0
     )
     _stderr(f"  Zones: {zone_str}")
-
-    report = capability_report(lang)
-    if report is not None:
-        present, missing = report
-        if present:
-            _stderr(f"  Capabilities: {', '.join(present)}")
-        if missing:
-            _stderr(f"  Not available: {', '.join(missing)}")
 
 
 def _select_phases(lang: LangRun, *, include_slow: bool, profile: str) -> list[DetectorPhase]:

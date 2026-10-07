@@ -11,7 +11,6 @@ from desloppify.languages.framework import (
     load_all,
     make_lang_config,
     registry_state,
-    shared_phase_labels,
 )
 
 logger = logging.getLogger(__name__)
@@ -37,7 +36,7 @@ def _get_tool_labels(cfg: LangConfig) -> str:
     """Extract tool labels from phases."""
     if cfg.integration_depth == "full":
         return "custom detectors"
-    labels = [p.label for p in cfg.phases if p.label not in shared_phase_labels()]
+    labels = [p.label for p in cfg.phases]
     suffix = " (auto-fix)" if cfg.fixers else ""
     return (", ".join(labels) if labels else "none") + suffix
 

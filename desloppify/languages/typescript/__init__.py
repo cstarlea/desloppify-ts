@@ -63,17 +63,13 @@ from desloppify.languages.typescript.plugin_contract import (
 
 def _ts_treesitter_phases() -> list[DetectorPhase]:
     """Cherry-pick tree-sitter phases that complement TS's own detectors."""
-    from desloppify.languages._framework.treesitter import get_spec, is_available
-    from desloppify.languages._framework.treesitter.phases import make_cohesion_phase
+    from desloppify.languages._framework.treesitter import TYPESCRIPT_SPEC, is_available
+    from desloppify.languages._framework.treesitter.cohesion import make_cohesion_phase
 
     if not is_available():
         return []
 
-    spec = get_spec("typescript")
-    if spec is None:
-        return []
-
-    return [make_cohesion_phase(spec)]
+    return [make_cohesion_phase(TYPESCRIPT_SPEC)]
 
 
 def _ts_extract_functions(path):
