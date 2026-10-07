@@ -10,7 +10,7 @@ from typing import Any
 
 from desloppify.base.discovery.file_paths import rel
 
-from desloppify.base.discovery.source import find_tsx_files
+from desloppify.base.discovery.source import find_tsx_and_jsx_files
 from desloppify.base.output.fallbacks import log_best_effort_failure
 from desloppify.base.output.terminal import colorize, print_table
 from desloppify.base.discovery.paths import get_project_root
@@ -26,7 +26,7 @@ def detect_mixed_concerns(path: Path) -> tuple[list[dict[str, Any]], int]:
 
     Returns (entries, total_files_checked).
     """
-    files = find_tsx_files(path)
+    files = find_tsx_and_jsx_files(path)
     entries = []
     for filepath in files:
         try:

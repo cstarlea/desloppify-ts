@@ -53,23 +53,10 @@ TS_GOD_RULES = [
 ]
 
 TS_SKIP_NAMES = {
-    "index.ts",
-    "index.tsx",
-    "types.ts",
-    "types.tsx",
-    "constants.ts",
-    "constants.tsx",
-    "utils.ts",
-    "utils.tsx",
-    "helpers.ts",
-    "helpers.tsx",
-    "settings.ts",
-    "settings.tsx",
-    "main.ts",
-    "main.tsx",
-    "App.tsx",
-    "vite-env.d.ts",
-}
+    f"{stem}{ext}"
+    for stem in ("index", "types", "constants", "utils", "helpers", "settings", "main")
+    for ext in (".ts", ".tsx", ".js", ".jsx")
+} | {"App.tsx", "App.jsx", "vite-env.d.ts"}
 
 TS_SKIP_DIRS = {"src/shared/components/ui"}
 

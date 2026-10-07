@@ -94,11 +94,11 @@ def test_get_lang_returns_same_instance():
 # ── available_langs ──────────────────────────────────────────
 
 
-def test_available_langs_are_typescript_and_javascript():
-    """available_langs lists the TypeScript and JavaScript plugins."""
+def test_available_langs_is_typescript():
+    """available_langs lists the TypeScript plugin."""
     # Other tests register throwaway "test_*" languages in the shared registry.
     builtin = [name for name in available_langs() if not name.startswith(("test_", "_"))]
-    assert builtin == ["javascript", "typescript"]
+    assert builtin == ["typescript"]
 
 
 def test_available_langs_returns_sorted():
@@ -122,14 +122,14 @@ def test_auto_detect_typescript_project(tmp_path):
 
 
 def test_auto_detect_javascript_project(tmp_path):
-    """A package.json project with only .js files auto-detects as javascript."""
+    """A package.json project with only .js files is scanned by the TypeScript plugin."""
     (tmp_path / "package.json").write_text('{"name": "test"}')
     src = tmp_path / "src"
     src.mkdir()
     (src / "index.js").write_text("export const x = 1;")
 
     result = auto_detect_lang(tmp_path)
-    assert result == "javascript"
+    assert result == "typescript"
 
 
 def test_auto_detect_no_config_returns_none(tmp_path):
@@ -330,7 +330,7 @@ def test_load_all_surfaces_import_failures(monkeypatch, caplog):
     real_import_module = importlib.import_module
 
     def fake_import_module(name, package=None):
-        if name == ".javascript":
+        if name == ".typescript":
             raise ImportError("simulated import failure")
         return real_import_module(name, package)
 
@@ -344,9 +344,9 @@ def test_load_all_surfaces_import_failures(monkeypatch, caplog):
 
         with caplog.at_level(logging.WARNING):
             load_all()
-        assert ".javascript" in caplog.text
+        assert ".typescript" in caplog.text
         assert "simulated import failure" in caplog.text
-        assert ".javascript" in registry_state.get_load_errors()
+        assert ".typescript" in registry_state.get_load_errors()
     finally:
         registry_state.clear()
         for name, cfg in original_registry.items():

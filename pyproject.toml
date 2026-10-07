@@ -65,7 +65,7 @@ include-package-data = false
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
-testpaths = ['desloppify/tests', 'desloppify/languages/typescript/tests', 'desloppify/languages/javascript/tests']
+testpaths = ['desloppify/tests', 'desloppify/languages/typescript/tests']
 norecursedirs = ["desloppify/tests/fixtures"]
 
 [tool.ruff]

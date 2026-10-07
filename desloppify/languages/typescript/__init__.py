@@ -78,10 +78,10 @@ def _ts_treesitter_phases() -> list[DetectorPhase]:
 
 def _ts_extract_functions(path):
     """Extract all TS functions for duplicate detection."""
-    from desloppify.base.discovery.source import find_ts_and_tsx_files
+    from desloppify.base.discovery.source import find_ts_and_js_files
 
     functions = []
-    for filepath in find_ts_and_tsx_files(path):
+    for filepath in find_ts_and_js_files(path):
         if "node_modules" in filepath or ".d.ts" in filepath:
             continue
         functions.extend(extract_ts_functions(filepath))

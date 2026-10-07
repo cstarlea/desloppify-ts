@@ -7,7 +7,7 @@ import re
 from pathlib import Path
 
 from desloppify.base.discovery.paths import get_project_root
-from desloppify.base.discovery.source import find_tsx_files
+from desloppify.base.discovery.source import find_tsx_and_jsx_files
 from desloppify.languages.typescript.detectors.smells.helpers import scan_code
 
 MAX_FUNC_SCAN = 2000
@@ -20,7 +20,7 @@ def detect_hook_return_bloat(path: Path) -> tuple[list[dict], int]:
     total_hooks = 0
     hook_re = re.compile(r"(?:export\s+)?(?:function|const)\s+(use[A-Z]\w*)")
 
-    for filepath in find_tsx_files(path):
+    for filepath in find_tsx_and_jsx_files(path):
         try:
             p = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
             content = p.read_text()
@@ -151,7 +151,7 @@ def detect_boolean_state_explosion(path: Path) -> tuple[list[dict], int]:
         r"const\s+\[(\w+),\s*(set\w+)\]\s*=\s*useState(?:<boolean>)?\s*\(\s*false\s*\)"
     )
 
-    for filepath in find_tsx_files(path):
+    for filepath in find_tsx_and_jsx_files(path):
         try:
             p = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
             content = p.read_text()

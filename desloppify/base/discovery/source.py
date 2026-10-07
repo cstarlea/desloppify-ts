@@ -273,61 +273,41 @@ def find_source_files(
 
 
 TS_SOURCE_EXTENSIONS = (".ts", ".tsx", ".mts", ".cts")
+JS_SOURCE_EXTENSIONS = (".js", ".jsx", ".mjs", ".cjs")
+SOURCE_EXTENSIONS = TS_SOURCE_EXTENSIONS + JS_SOURCE_EXTENSIONS
 TS_DECLARATION_SUFFIXES = (".d.ts", ".d.mts", ".d.cts")
+MINIFIED_SUFFIXES = (".min.js", ".min.mjs", ".min.cjs")
+_NOT_SOURCE_SUFFIXES = TS_DECLARATION_SUFFIXES + MINIFIED_SUFFIXES
 
 
-def find_ts_files(path: str | Path, *, runtime: RuntimeContext | None = None) -> list[str]:
-    """Find TypeScript ``.ts`` source files (excluding ``.tsx``)."""
-    if runtime is None:
-        return find_source_files(path, [".ts"])
-    return find_source_files(path, [".ts"], runtime=runtime)
-
-
-def find_ts_and_tsx_files(
-    path: str | Path,
-    *,
-    runtime: RuntimeContext | None = None,
+def _sources(
+    path: str | Path, extensions: tuple[str, ...], runtime: RuntimeContext | None
 ) -> list[str]:
-    """Find TypeScript sources (``.ts``, ``.tsx``, ``.mts``, ``.cts``).
-
-    Ambient declaration files (``.d.ts``, ``.d.mts``, ``.d.cts``) are not
-    sources and are left out.
-    """
     if runtime is None:
-        files = find_source_files(path, list(TS_SOURCE_EXTENSIONS))
+        files = find_source_files(path, list(extensions))
     else:
-        files = find_source_files(path, list(TS_SOURCE_EXTENSIONS), runtime=runtime)
-    return [f for f in files if not f.endswith(TS_DECLARATION_SUFFIXES)]
+        files = find_source_files(path, list(extensions), runtime=runtime)
+    return [f for f in files if not f.endswith(_NOT_SOURCE_SUFFIXES)]
 
 
-def find_tsx_files(path: str | Path, *, runtime: RuntimeContext | None = None) -> list[str]:
-    if runtime is None:
-        return find_source_files(path, [".tsx"])
-    return find_source_files(path, [".tsx"], runtime=runtime)
-
-
-def find_js_and_jsx_files(
+def find_ts_and_js_files(
     path: str | Path,
     *,
     runtime: RuntimeContext | None = None,
 ) -> list[str]:
-    """Find JavaScript source files across common extensions."""
-    exts = [".js", ".jsx", ".mjs", ".cjs"]
-    if runtime is None:
-        return find_source_files(path, exts)
-    return find_source_files(path, exts, runtime=runtime)
+    """Find TypeScript and JavaScript sources.
+
+    Ambient declaration files (``.d.ts``, ``.d.mts``, ``.d.cts``) and
+    minified bundles (``.min.js``) are not sources and are left out.
+    """
+    return _sources(path, SOURCE_EXTENSIONS, runtime)
 
 
-def find_js_ts_and_tsx_files(
-    path: str | Path,
-    *,
-    runtime: RuntimeContext | None = None,
+def find_tsx_and_jsx_files(
+    path: str | Path, *, runtime: RuntimeContext | None = None
 ) -> list[str]:
-    """Find JavaScript + TypeScript source files across common extensions."""
-    exts = [".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx"]
-    if runtime is None:
-        return find_source_files(path, exts)
-    return find_source_files(path, exts, runtime=runtime)
+    """Find JSX component sources (``.tsx``, ``.jsx``)."""
+    return _sources(path, (".tsx", ".jsx"), runtime)
 
 
 def find_py_files(path: str | Path, *, runtime: RuntimeContext | None = None) -> list[str]:
@@ -350,10 +330,7 @@ __all__ = [
     "read_file_text_result",
     "clear_source_file_cache_for_tests",
     "find_source_files",
-    "find_ts_files",
-    "find_ts_and_tsx_files",
-    "find_tsx_files",
-    "find_js_and_jsx_files",
-    "find_js_ts_and_tsx_files",
+    "find_ts_and_js_files",
+    "find_tsx_and_jsx_files",
     "find_py_files",
 ]

@@ -17,12 +17,13 @@ STATIC = "static"  # import ... from / export ... from / import x = require()
 SIDE_EFFECT = "side_effect"  # import './x'
 DYNAMIC = "dynamic"  # import('./x')
 REQUIRE = "require"  # require('./x')
+RESOLVE = "resolve"  # require.resolve('./x'), a path handed to a loader
 MOCK = "mock"  # vi.mock('./x') / jest.mock('./x')
 REFERENCE = "reference"  # /// <reference path="./x" />
 GLOB = "glob"  # import.meta.glob('./pages/*.tsx'), specifier is the pattern
 DYNAMIC_PREFIX = "dynamic_prefix"  # import(`./pages/${name}`), specifier is the prefix
 
-DEFERRED_KINDS = frozenset({DYNAMIC, MOCK, REFERENCE, GLOB, DYNAMIC_PREFIX})
+DEFERRED_KINDS = frozenset({DYNAMIC, MOCK, REFERENCE, RESOLVE, GLOB, DYNAMIC_PREFIX})
 
 
 @dataclass(frozen=True)
@@ -178,6 +179,10 @@ def _call_expression(node, out: list[ImportRef]) -> None:
         value = _string_value(_first_argument(node))
         if value is not None:
             out.append(ImportRef(value, MOCK))
+    elif obj_text == "require" and prop_text == "resolve":
+        value = _string_value(_first_argument(node))
+        if value is not None:
+            out.append(ImportRef(value, RESOLVE))
     elif obj_text == "import.meta" and prop_text == "glob":
         for pattern in _glob_patterns(_first_argument(node)):
             if not pattern.startswith("!"):
@@ -247,6 +252,7 @@ _FALLBACK_PATTERNS = (
     (re.compile(r"""^\s*import\s*['"]([^'"]+)['"]""", re.MULTILINE), SIDE_EFFECT, False),
     (re.compile(r"""\bimport\s*\(\s*['"`]([^'"`$]+)['"`]\s*\)"""), DYNAMIC, False),
     (re.compile(r"""\brequire\s*\(\s*['"]([^'"]+)['"]\s*\)"""), REQUIRE, False),
+    (re.compile(r"""\brequire\.resolve\s*\(\s*['"]([^'"]+)['"]\s*\)"""), RESOLVE, False),
 )
 
 
@@ -302,6 +308,7 @@ __all__ = [
     "MOCK",
     "REFERENCE",
     "REQUIRE",
+    "RESOLVE",
     "SIDE_EFFECT",
     "STATIC",
     "extract_imports_regex",

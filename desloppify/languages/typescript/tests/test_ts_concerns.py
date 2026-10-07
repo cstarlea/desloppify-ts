@@ -154,7 +154,7 @@ class TestDetectMixedConcerns:
         _write(tmp_path, "service.ts", content)
 
         entries, total = concerns_detector_mod.detect_mixed_concerns(tmp_path)
-        assert total == 0  # .ts files are not found by find_tsx_files
+        assert total == 0  # .ts files are not found by find_tsx_and_jsx_files
 
     def test_results_sorted_by_concern_count(self, tmp_path):
         """Results are sorted by concern_count in descending order."""

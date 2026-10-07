@@ -7,7 +7,7 @@ import re
 from pathlib import Path
 
 from desloppify.base.discovery.paths import get_project_root
-from desloppify.base.discovery.source import find_tsx_files
+from desloppify.base.discovery.source import find_tsx_and_jsx_files
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +19,7 @@ def detect_context_nesting(path: Path) -> tuple[list[dict], int]:
     provider_open = re.compile(r"<(\w+Provider)\b(?!.*/>)")
     provider_close = re.compile(r"</(\w+Provider)\s*>")
 
-    for filepath in find_tsx_files(path):
+    for filepath in find_tsx_and_jsx_files(path):
         total_files += 1
         try:
             p = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath

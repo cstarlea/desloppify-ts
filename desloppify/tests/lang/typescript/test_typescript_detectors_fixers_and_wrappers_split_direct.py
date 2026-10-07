@@ -203,7 +203,7 @@ def test_ts_asset_smells_and_unused_fallback_helpers(monkeypatch, tmp_path) -> N
         encoding="utf-8",
     )
 
-    monkeypatch.setattr(ts_unused_mod, "find_ts_and_tsx_files", lambda _path: [str(ts_file)])
+    monkeypatch.setattr(ts_unused_mod, "find_ts_and_js_files", lambda _path: [str(ts_file)])
     monkeypatch.setattr(ts_unused_mod, "get_project_root", lambda: tmp_path)
     monkeypatch.setattr(ts_unused_mod, "read_file_text", lambda filepath: Path(filepath).read_text(encoding="utf-8"))
 
@@ -257,7 +257,7 @@ def test_ts_command_registry_canonical_surface_and_wrapper_passthrough(
     orphan_payload = json.loads(printed[-1])
     assert orphan_payload["count"] == 1
 
-    monkeypatch.setattr(cli_mod, "find_ts_and_tsx_files", lambda _path: ["src/a.ts", "node_modules/x.ts", "src/types.d.ts"])
+    monkeypatch.setattr(cli_mod, "find_ts_and_js_files", lambda _path: ["src/a.ts", "node_modules/x.ts", "src/types.d.ts"])
     monkeypatch.setattr(cli_mod, "extract_ts_functions", lambda filepath: [SimpleNamespace(name="fn", file=filepath, line=1, loc=4)])
     monkeypatch.setattr(
         cli_mod.dupes_detector_mod,

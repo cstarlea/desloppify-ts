@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from desloppify.base.discovery.paths import get_project_root
-from desloppify.base.discovery.source import find_ts_and_tsx_files
+from desloppify.base.discovery.source import find_ts_and_js_files
 from desloppify.languages.typescript.plugin_contract import TS_EXCLUSIONS
 
 
@@ -26,7 +26,7 @@ def iter_typescript_sources(path: Path) -> list[str]:
     """Return normalized source candidates for TypeScript detectors."""
     return [
         filepath
-        for filepath in find_ts_and_tsx_files(path)
+        for filepath in find_ts_and_js_files(path)
         if not should_skip_typescript_source(filepath)
     ]
 

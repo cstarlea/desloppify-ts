@@ -8,7 +8,7 @@ from collections import defaultdict
 from pathlib import Path
 
 from desloppify.base.discovery.file_paths import rel, resolve_path
-from desloppify.base.discovery.source import find_ts_and_tsx_files
+from desloppify.base.discovery.source import find_ts_and_js_files
 from desloppify.base.output.terminal import colorize, print_table
 from desloppify.languages._framework.base.types import DetectorCoverageStatus
 from desloppify.languages.typescript.detectors.knip_adapter import detect_with_knip_result
@@ -23,7 +23,7 @@ _KNIP_REMEDIATION = {
 def _count_exports(path: Path) -> int:
     """Approximate the export population so dead-export scores are proportional."""
     total = 0
-    for filepath in find_ts_and_tsx_files(path):
+    for filepath in find_ts_and_js_files(path):
         try:
             text = Path(resolve_path(filepath)).read_text(encoding="utf-8", errors="replace")
         except OSError:

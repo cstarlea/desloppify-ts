@@ -788,10 +788,10 @@ class TestResolveDefaultPath:
 
 class TestResolveLang:
     def test_prefers_explicit_lang(self):
-        args = SimpleNamespace(lang="javascript", path="/tmp/somewhere")
+        args = SimpleNamespace(lang="typescript", path="/tmp/somewhere")
         lang = resolve_lang(args)
         assert lang is not None
-        assert lang.name == "javascript"
+        assert lang.name == "typescript"
 
     def test_auto_detect_uses_path_when_it_looks_like_project_root(
         self, tmp_path, monkeypatch
@@ -832,7 +832,7 @@ class TestResolveLang:
         args = SimpleNamespace(lang=None, path=str(src))
         lang = resolve_lang(args)
         assert lang is not None
-        assert lang.name == "javascript"
+        assert lang.name == "typescript"
 
     def test_auto_detect_walks_up_from_external_subdir_path(
         self, tmp_path, monkeypatch
@@ -856,32 +856,6 @@ class TestResolveLang:
         lang = resolve_lang(args)
         assert lang is not None
         assert lang.name == "typescript"
-
-    def test_auto_detect_prefers_path_subtree_when_no_markers(
-        self, tmp_path, monkeypatch
-    ):
-        root = tmp_path / "project"
-        root.mkdir()
-
-        # No marker files anywhere in this repo-style tree.
-        ts_dir = root / "web"
-        ts_dir.mkdir()
-        for i in range(3):
-            (ts_dir / f"view_{i}.ts").write_text("export const x = 1\n")
-
-        js_dir = root / "scripts"
-        js_dir.mkdir()
-        for i in range(2):
-            (js_dir / f"job_{i}.js").write_text("console.log('x')\n")
-
-        monkeypatch.setattr(lang_helpers_mod, "get_project_root", lambda: root)
-
-        # Path points to javascript subtree; detection should use this subtree
-        # first, not the entire repo where TypeScript files are more numerous.
-        args = SimpleNamespace(lang=None, path=str(js_dir))
-        lang = resolve_lang(args)
-        assert lang is not None
-        assert lang.name == "javascript"
 
     def test_lang_config_markers_include_plugin_markers(self, monkeypatch):
         class DummyCfg:

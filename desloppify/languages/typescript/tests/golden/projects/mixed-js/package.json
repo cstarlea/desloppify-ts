@@ -1,0 +1,17 @@
+{
+  "name": "mixed-js",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "./src/index.js",
+  "bin": {
+    "mixed-report": "./src/cli.js"
+  },
+  "scripts": {
+    "test": "vitest",
+    "typecheck": "tsc"
+  },
+  "devDependencies": {
+    "typescript": "5.8.3",
+    "vitest": "^3.0.0"
+  }
+}

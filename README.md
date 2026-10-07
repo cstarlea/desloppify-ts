@@ -12,7 +12,7 @@ That score generates a scorecard badge for your GitHub profile or README:
 
 <img src="assets/scorecard.png" width="100%">
 
-This fork supports TypeScript (with plain JavaScript files handled by a lighter plugin). Other languages were removed to keep the tool focused; the last multi-language version is tagged `pre-ts-only`.
+This fork supports TypeScript and JavaScript: `.js`/`.jsx`/`.mjs`/`.cjs` files are scanned together with TypeScript, whether the project is plain JavaScript, mid-migration (`allowJs`) or TypeScript with a few JS files. Other languages were removed to keep the tool focused; the last multi-language version is tagged `pre-ts-only`.
 
 ## For your agent's consideration...
 

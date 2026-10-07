@@ -13,7 +13,7 @@ from desloppify.base.discovery.file_paths import rel, resolve_path
 from desloppify.base.discovery.paths import get_project_root
 from desloppify.base.discovery.source import (
     find_source_files,
-    find_ts_and_tsx_files,
+    find_ts_and_js_files,
 )
 from desloppify.base.output.terminal import colorize, print_table
 from desloppify.base.search.grep import grep_files
@@ -146,7 +146,7 @@ def build_dep_graph(
     resolver = ModuleResolver(path, project_root)
     extractor = ImportExtractor()
 
-    ts_files = find_ts_and_tsx_files(path)
+    ts_files = find_ts_and_js_files(path)
     # Seed every module so files with no imports of their own (constants,
     # types, leaf utilities) can still be found orphaned. Ambient
     # declaration files are never imported, so they stay out of the graph.

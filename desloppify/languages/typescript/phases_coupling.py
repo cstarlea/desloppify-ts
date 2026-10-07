@@ -26,6 +26,7 @@ import desloppify.languages.typescript.detectors.deps.packages as packages_mod
 import desloppify.languages.typescript.detectors.facade as facade_detector_mod
 import desloppify.languages.typescript.detectors.patterns.analysis as patterns_detector_mod
 from desloppify.languages.typescript.phases_config import TS_SKIP_DIRS, TS_SKIP_NAMES
+from desloppify.languages.typescript.plugin_contract import TS_BARREL_NAMES
 from desloppify.state_io import Issue
 
 
@@ -291,7 +292,7 @@ def make_boundary_issues(
         graph,
         shared_prefix=shared_prefix,
         tools_prefix=tools_prefix,
-        skip_basenames={"index.ts", "index.tsx"},
+        skip_basenames=TS_BARREL_NAMES,
     )
     for entry in boundary_entries:
         if rel(entry["file"]) in single_use_emitted:

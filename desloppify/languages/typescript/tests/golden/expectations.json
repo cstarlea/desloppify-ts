@@ -118,5 +118,35 @@
       "known_false_positives": {},
       "known_false_negatives": {}
     }
+  },
+  "mixed-js": {
+    "must_find": [
+      "orphaned::src/legacy/old-report.js"
+    ],
+    "must_not_find": [
+      "orphaned::src/math/sum.ts",
+      "orphaned::src/math/mean.js",
+      "orphaned::src/format.js",
+      "orphaned::src/cjs/loader.cjs",
+      "orphaned::src/cli.js",
+      "orphaned::src/index.js",
+      "facade::src/index.js",
+      "test_coverage::src/report.js",
+      "security::public/js/chart.min.js",
+      "orphaned::public/js/chart.min.js"
+    ],
+    "known_false_positives": {},
+    "known_false_negatives": {},
+    "node": {
+      "must_find": [
+        "exports::src/format.js::truncate",
+        "exports::src/math/sum.ts::sumOfSquares"
+      ],
+      "must_not_find": [],
+      "known_false_positives": {
+        "exports::src/cjs/loader.cjs::loadNumbers": "knip reports members of a CommonJS module.exports object as unused when ESM code reaches them through the default import (loader.loadNumbers)"
+      },
+      "known_false_negatives": {}
+    }
   }
 }

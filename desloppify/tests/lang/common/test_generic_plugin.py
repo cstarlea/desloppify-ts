@@ -681,12 +681,12 @@ class TestStubs:
 @pytest.mark.usefixtures("_cleanup_registry")
 class TestLangsCommand:
     def test_all_builtin_langs_discoverable(self):
-        """The TypeScript and JavaScript plugins are the built-in languages."""
+        """TypeScript is the only built-in language."""
         from desloppify.languages import available_langs
 
         # Other tests register throwaway "test_*" languages in the shared registry.
         builtin = [name for name in available_langs() if not name.startswith(("test_", "_"))]
-        assert builtin == ["javascript", "typescript"]
+        assert builtin == ["typescript"]
 
     def test_langs_hides_shared_phases_from_tool_list(self):
         from desloppify.app.commands.langs import _get_tool_labels

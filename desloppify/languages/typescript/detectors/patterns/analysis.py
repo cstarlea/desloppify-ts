@@ -9,7 +9,7 @@ from pathlib import Path
 
 from desloppify.base.discovery.file_paths import rel, resolve_path
 from desloppify.base.discovery.paths import get_area
-from desloppify.base.discovery.source import find_ts_and_tsx_files
+from desloppify.base.discovery.source import find_ts_and_js_files
 from desloppify.base.output.fallbacks import log_best_effort_failure
 from desloppify.languages.typescript.detectors.contracts import DetectorResult
 from .catalog import PATTERN_FAMILIES
@@ -21,7 +21,7 @@ def _build_census(
     path: Path,
 ) -> tuple[dict[str, dict[str, set[str]]], dict[str, dict[str, dict[str, list[dict]]]]]:
     """Build matrix: area -> family -> set(pattern names), with file/line evidence."""
-    files = find_ts_and_tsx_files(path)
+    files = find_ts_and_js_files(path)
     census: dict[str, dict[str, set[str]]] = defaultdict(lambda: defaultdict(set))
     evidence: dict[str, dict[str, dict[str, list[dict]]]] = defaultdict(
         lambda: defaultdict(lambda: defaultdict(list))

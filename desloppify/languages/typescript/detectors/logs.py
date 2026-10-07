@@ -14,7 +14,7 @@ from collections import defaultdict
 from pathlib import Path
 
 from desloppify.base.discovery.file_paths import rel
-from desloppify.base.discovery.source import find_ts_and_tsx_files
+from desloppify.base.discovery.source import find_ts_and_js_files
 from desloppify.base.output.terminal import colorize, print_table
 from desloppify.base.search.grep import grep_files
 from desloppify.languages.typescript.detectors.contracts import DetectorResult
@@ -32,7 +32,7 @@ _PAT2 = r"console\.(log|warn|info|debug)\s*\(\s*`\$\{\w*(TAG|DEBUG|LOG)\w*\}"
 
 def detect_logs(path: Path) -> DetectorResult[dict]:
     """Detect tagged logs with explicit population semantics."""
-    ts_files = find_ts_and_tsx_files(path)
+    ts_files = find_ts_and_js_files(path)
     total_files = len(ts_files)
 
     hits1 = grep_files(_PAT1, ts_files)

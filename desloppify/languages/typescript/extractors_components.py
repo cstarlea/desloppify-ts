@@ -6,7 +6,7 @@ import logging
 import re
 from pathlib import Path
 
-from desloppify.base.discovery.source import find_tsx_files
+from desloppify.base.discovery.source import find_tsx_and_jsx_files
 from desloppify.base.discovery.paths import get_project_root
 from desloppify.engine.detectors.base import ClassInfo
 from desloppify.engine.detectors.passthrough import (
@@ -33,7 +33,7 @@ _COMPONENT_PATTERNS = [
 def extract_ts_components(path: Path) -> list[ClassInfo]:
     """Extract React component hook metrics from TSX files."""
     results = []
-    for filepath in find_tsx_files(path):
+    for filepath in find_tsx_and_jsx_files(path):
         try:
             p = (
                 Path(filepath)
@@ -118,7 +118,7 @@ def tsx_passthrough_pattern(name: str) -> str:
 def detect_passthrough_components(path: Path) -> list[dict]:
     """Detect React components where most props are same-name forwarded to children."""
     entries = []
-    for filepath in find_tsx_files(path):
+    for filepath in find_tsx_and_jsx_files(path):
         try:
             p = (
                 Path(filepath)
