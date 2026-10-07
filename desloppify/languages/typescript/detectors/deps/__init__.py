@@ -29,22 +29,12 @@ from desloppify.languages.typescript.detectors.deps.imports import (
     ImportRef,
     extract_imports_regex,
 )
-from desloppify.languages.typescript.detectors.deps.packages import (
-    WorkspaceResolver,
-    declared_dependencies,
-    discover_packages,
-)
-from desloppify.languages.typescript.detectors.deps.resolve import (
-    _TSCONFIG_NAMES,
-)
-from desloppify.languages.typescript.detectors.deps.resolve import (
-    find_tsconfig_root as _find_tsconfig_root,
+from desloppify.languages.typescript.detectors.deps.resolver import (
+    ModuleResolver,
+    is_bare,
 )
 from desloppify.languages.typescript.detectors.deps.resolve import (
     load_tsconfig_paths as _load_tsconfig_paths,
-)
-from desloppify.languages.typescript.detectors.deps.resolve import (
-    resolve_module as _resolve_module,
 )
 from desloppify.languages.typescript.detectors.deps.resolve import (
     specifier_target as _specifier_target,
@@ -59,30 +49,6 @@ from desloppify.languages.typescript.detectors.deps.runtime import (
 _FRAMEWORK_EXTENSIONS = (".svelte", ".vue", ".astro")
 _DENO_EXTERNAL_PREFIXES = ("http://", "https://", "npm:", "jsr:")
 _DECLARATION_SUFFIXES = (".d.ts", ".d.mts", ".d.cts")
-_NODE_BUILTINS = frozenset(
-    {
-        "assert", "async_hooks", "buffer", "child_process", "cluster", "console",
-        "constants", "crypto", "dgram", "diagnostics_channel", "dns", "domain",
-        "events", "fs", "http", "http2", "https", "inspector", "module", "net",
-        "os", "path", "perf_hooks", "process", "punycode", "querystring",
-        "readline", "repl", "stream", "string_decoder", "sys", "timers", "tls",
-        "trace_events", "tty", "url", "util", "v8", "vm", "wasi", "worker_threads",
-        "zlib",
-    }
-)
-
-
-def _package_name(specifier: str) -> str:
-    parts = specifier.split("/")
-    return "/".join(parts[:2]) if specifier.startswith("@") and len(parts) > 1 else parts[0]
-
-
-def _is_external_package(specifier: str, dependencies: set[str]) -> bool:
-    """npm dependencies, Node builtins and bundler virtual modules (``virtual:x``)."""
-    if ":" in specifier:
-        return True
-    name = _package_name(specifier)
-    return name in dependencies or name in _NODE_BUILTINS
 
 
 def _extract_module_specifiers(line: str) -> list[str]:
@@ -158,44 +124,6 @@ def _pattern_targets(
     ]
 
 
-class _TsconfigLookup:
-    """Path aliases from the tsconfig nearest to each file.
-
-    Packages in a monorepo each have their own tsconfig (and ``paths``), so
-    one scan-wide config resolves aliases against the wrong directory.
-    Files with no tsconfig between them and the project root use the
-    scan-wide one.
-    """
-
-    def __init__(self, scan_path: Path, project_root: Path) -> None:
-        self._project_root = project_root.resolve()
-        default_root = _find_tsconfig_root(scan_path, project_root)
-        self.default = (default_root, _load_tsconfig_paths(default_root))
-        self._by_dir: dict[Path, tuple[Path, dict[str, str]]] = {}
-
-    def for_file(self, filepath: str) -> tuple[Path, dict[str, str]]:
-        directory = Path(filepath).parent
-        if not directory.is_relative_to(self._project_root):
-            return self.default
-        visited: list[Path] = []
-        result = self.default
-        while True:
-            cached = self._by_dir.get(directory)
-            if cached is not None:
-                result = cached
-                break
-            visited.append(directory)
-            if any((directory / name).is_file() for name in _TSCONFIG_NAMES):
-                result = (directory, _load_tsconfig_paths(directory))
-                break
-            if directory == self._project_root or directory == directory.parent:
-                break
-            directory = directory.parent
-        for seen in visited:
-            self._by_dir[seen] = result
-        return result
-
-
 def build_dep_graph(
     path: Path,
     roslyn_cmd: str | None = None,
@@ -215,10 +143,7 @@ def build_dep_graph(
         lambda: {"imports": set(), "importers": set(), "external_imports": set()}
     )
     project_root = get_project_root()
-    tsconfigs = _TsconfigLookup(path, project_root)
-    packages = discover_packages(path, project_root)
-    workspace = WorkspaceResolver(packages)
-    dependencies = declared_dependencies(packages)
+    resolver = ModuleResolver(path, project_root)
     extractor = ImportExtractor()
 
     ts_files = find_ts_and_tsx_files(path)
@@ -241,7 +166,6 @@ def build_dep_graph(
         if not refs:
             continue
         graph[source_resolved]  # ensure entry exists
-        tsconfig_root, tsconfig_paths = tsconfigs.for_file(source_resolved)
         for ref in refs:
             module_path = ref.specifier
             if module_path.startswith(_DENO_EXTERNAL_PREFIXES):
@@ -250,27 +174,11 @@ def build_dep_graph(
             if ref.kind in (GLOB, DYNAMIC_PREFIX):
                 pattern_refs.append((filepath, source_resolved, ref))
                 continue
-            target = _resolve_module(
-                module_path,
-                filepath,
-                tsconfig_paths,
-                tsconfig_root,
-                graph,
-                source_resolved,
-                source_root=project_root,
-            )
-            if target is None and workspace and not module_path.startswith((".", "/")):
-                # tsconfig paths take precedence, as in TypeScript; then the
-                # workspace package that node_modules would symlink to.
-                target = workspace.resolve(module_path)
-                if target is not None:
-                    graph[source_resolved]["imports"].add(target)
-                    graph[target]["importers"].add(source_resolved)
-            if (
-                target is None
-                and not module_path.startswith((".", "/"))
-                and not _is_external_package(module_path, dependencies)
-            ):
+            target = resolver.resolve(module_path, source_resolved)
+            if target is not None:
+                graph[source_resolved]["imports"].add(target)
+                graph[target]["importers"].add(source_resolved)
+            elif is_bare(module_path) and not resolver.is_external(module_path):
                 # Not a dependency and not resolved: probably an alias the
                 # resolver doesn't understand, so the file it names may look
                 # orphaned when it isn't.
@@ -279,7 +187,7 @@ def build_dep_graph(
                 runtime_edges[source_resolved].add(target)
 
     for filepath, source_resolved, ref in pattern_refs:
-        tsconfig_root, tsconfig_paths = tsconfigs.for_file(source_resolved)
+        tsconfig_root, tsconfig_paths = resolver.tsconfigs.for_file(source_resolved)
         for target in _pattern_targets(
             ref, filepath, tsconfig_paths, tsconfig_root, project_root, seeded
         ):

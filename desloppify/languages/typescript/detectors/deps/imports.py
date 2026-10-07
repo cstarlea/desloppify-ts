@@ -272,6 +272,14 @@ class ImportExtractor:
     def uses_treesitter(self) -> bool:
         return self._parser is not None
 
+    def extract_text(self, text: str) -> list[ImportRef]:
+        """Imports in source *text* (no file, no parse cache)."""
+        if self._parser is not None:
+            refs: list[ImportRef] = []
+            _walk(self._parser.parse(text.encode("utf-8")).root_node, refs)
+            return refs
+        return extract_imports_regex(text)
+
     def extract(self, filepath: str) -> list[ImportRef]:
         if self._parser is not None and not filepath.endswith((".vue", ".svelte", ".astro")):
             refs = extract_imports_treesitter(filepath, self._parser)

@@ -31,6 +31,7 @@ from desloppify.languages.framework import (
 from desloppify.languages.typescript.detectors.deps.resolve import (
     load_tsconfig_paths_cached,
 )
+from desloppify.languages.typescript.detectors.deps.resolver import clear_resolver_cache
 
 GOLDEN_DIR = Path(__file__).parent
 PROJECTS_DIR = GOLDEN_DIR / "projects"
@@ -81,6 +82,7 @@ def scan_project(
     tools = ("git", "node") if node_tools else ("git",)
     os.environ["PATH"] = _hermetic_path(project.parent / f".golden-bin-{len(tools)}", tools)
     load_tsconfig_paths_cached.cache_clear()
+    clear_resolver_cache()
     reset_grammar_load_failures()
     try:
         with runtime_scope(RuntimeContext(project_root=project)):
@@ -100,6 +102,7 @@ def scan_project(
         os.environ["PATH"] = saved_path
         os.chdir(saved_cwd)
         load_tsconfig_paths_cached.cache_clear()
+        clear_resolver_cache()
 
     return {
         "issues": sorted(

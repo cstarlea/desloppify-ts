@@ -8,60 +8,67 @@
       "summary": "Import cycle (2 files): packages/config/src/index.ts -> packages/utils/src/money.ts"
     },
     {
-      "id": "test_coverage::apps/docs/app/layout.tsx",
+      "id": "test_coverage::apps/docs/app/layout.tsx::untested_module",
       "tier": 3,
       "confidence": "high",
       "zone": "production",
-      "summary": "Untested module (13 LOC, 0 importers) — no test files found"
+      "summary": "Untested module (13 LOC, 0 importers)"
     },
     {
-      "id": "test_coverage::apps/docs/app/page.tsx",
+      "id": "test_coverage::apps/docs/app/page.tsx::untested_module",
       "tier": 3,
       "confidence": "high",
       "zone": "production",
-      "summary": "Untested module (17 LOC, 0 importers) — no test files found"
+      "summary": "Untested module (17 LOC, 0 importers)"
     },
     {
-      "id": "test_coverage::apps/web/src/main.tsx",
+      "id": "test_coverage::apps/web/src/main.tsx::untested_module",
       "tier": 3,
       "confidence": "high",
       "zone": "production",
-      "summary": "Untested module (15 LOC, 0 importers) — no test files found"
+      "summary": "Untested module (15 LOC, 0 importers)"
     },
     {
-      "id": "test_coverage::apps/web/src/receipt.tsx",
+      "id": "test_coverage::apps/web/src/receipt.tsx::untested_module",
       "tier": 3,
       "confidence": "high",
       "zone": "production",
-      "summary": "Untested module (12 LOC, 1 importers) — no test files found"
+      "summary": "Untested module (12 LOC, 1 importers)"
     },
     {
-      "id": "test_coverage::packages/config/src/index.ts",
+      "id": "test_coverage::packages/config/src/index.ts::untested_module",
       "tier": 3,
       "confidence": "high",
       "zone": "production",
-      "summary": "Untested module (10 LOC, 2 importers) — no test files found"
+      "summary": "Untested module (10 LOC, 2 importers)"
+    },
+    {
+      "id": "test_coverage::packages/utils/src/dates.ts::transitive_only",
+      "tier": 3,
+      "confidence": "medium",
+      "zone": "production",
+      "summary": "No direct tests (19 LOC, 1 importers) — covered only via imports from tested modules"
     }
   ],
   "potentials": {
     "coupling": 0,
     "cycles": 12,
     "deprecated": 0,
-    "dupes": 8,
+    "dupes": 11,
     "exports": 0,
     "facade": 12,
-    "flat_dirs": 12,
+    "flat_dirs": 13,
     "logs": 12,
-    "naming": 5,
+    "naming": 6,
     "orphaned": 12,
     "patterns": 0,
     "props": 0,
     "react": 0,
     "security": 12,
-    "single_use": 3,
+    "single_use": 2,
     "smells": 12,
     "structural": 12,
-    "test_coverage": 18,
+    "test_coverage": 23,
     "unused": 12
   },
   "reduced_coverage": [

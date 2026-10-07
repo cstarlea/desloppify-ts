@@ -5,17 +5,21 @@ from __future__ import annotations
 import logging
 import os
 import re
+from functools import lru_cache
 from pathlib import Path
 
 from desloppify.base.discovery.file_paths import resolve_path
 from desloppify.base.output.fallbacks import log_best_effort_failure
-from desloppify.base.discovery.paths import get_project_root, get_src_path
+from desloppify.base.discovery.paths import get_project_root
 from desloppify.base.text_utils import strip_c_style_comments
-
-TS_IMPORT_RE = re.compile(
-    r"""(?:\bfrom\s+|\bimport\s*\(\s*|\bimport\s+)(?:type\s+)?['\"]([^'\"]+)['\"]""",
-    re.MULTILINE,
+from desloppify.languages.typescript.detectors.deps.imports import (
+    DYNAMIC_PREFIX,
+    GLOB,
+    MOCK,
+    ImportExtractor,
 )
+from desloppify.languages.typescript.detectors.deps.resolver import project_resolver
+
 TS_REEXPORT_RE = re.compile(
     r"""^export\s+(?:\{[^}]*\}|\*)\s+from\s+['\"]([^'\"]+)['\"]""", re.MULTILINE
 )
@@ -81,7 +85,6 @@ EXPECT_COMPARISON_RE = re.compile(
 EXPECT_TO_BE_DEFINED_RE = re.compile(r"""\.toBeDefined\s*\(""")
 
 BARREL_BASENAMES = {"index.ts", "index.tsx"}
-_TS_EXTENSIONS = ["", ".ts", ".tsx", "/index.ts", "/index.tsx"]
 logger = logging.getLogger(__name__)
 
 
@@ -170,44 +173,49 @@ def has_testable_logic(filepath: str, content: str) -> bool:
     return False
 
 
+def _production_key(resolved: str, production_files: set[str]) -> str | None:
+    """*resolved* (absolute) in the form ``production_files`` uses, if it is one."""
+    if resolved in production_files:
+        return resolved
+    relative = _relative_if_under_root(resolved)
+    return relative if relative in production_files else None
+
+
 def resolve_import_spec(
     spec: str, test_path: str, production_files: set[str]
 ) -> str | None:
-    """Resolve a TypeScript import specifier to a production file path."""
-    if spec.startswith("@/") or spec.startswith("~/"):
-        base = get_src_path() / spec[2:]
-    elif spec.startswith("."):
-        test_dir = Path(test_path).parent
-        base = (test_dir / spec).resolve()
-    else:
-        return None
+    """Resolve a TypeScript import specifier to a production file path.
 
-    for ext in _TS_EXTENSIONS:
-        candidate = str(Path(str(base) + ext))
-        if candidate in production_files:
-            return candidate
-        rel_candidate = _relative_if_under_root(candidate)
-        if rel_candidate in production_files:
-            return rel_candidate
-        try:
-            resolved = str(Path(str(base) + ext).resolve())
-            if resolved in production_files:
-                return resolved
-            rel_resolved = _relative_if_under_root(resolved)
-            if rel_resolved in production_files:
-                return rel_resolved
-        except OSError as exc:
-            log_best_effort_failure(
-                logger,
-                f"resolve TypeScript import specifier {spec} from {test_path}",
-                exc,
-            )
-    return None
+    Uses the same resolver as the dependency graph (nearest tsconfig paths,
+    workspace packages, ``.js`` → ``.ts`` specifiers).
+    """
+    resolver = project_resolver(get_project_root())
+    try:
+        resolved = resolver.resolve(spec, test_path)
+    except OSError as exc:
+        log_best_effort_failure(
+            logger, f"resolve TypeScript import specifier {spec} from {test_path}", exc
+        )
+        return None
+    return _production_key(resolved, production_files) if resolved else None
 
 
 def parse_test_import_specs(content: str) -> list[str]:
-    """Extract import specs from TypeScript test content."""
-    return [m.group(1) for m in TS_IMPORT_RE.finditer(content) if m.group(1)]
+    """Extract import specs from TypeScript test content.
+
+    Imports inside comments and strings don't count, and neither do
+    ``vi.mock``/``jest.mock`` targets: mocking a module replaces it.
+    """
+    return [
+        ref.specifier
+        for ref in _extractor().extract_text(content)
+        if ref.kind not in (MOCK, GLOB, DYNAMIC_PREFIX)
+    ]
+
+
+@lru_cache(maxsize=1)
+def _extractor() -> ImportExtractor:
+    return ImportExtractor()
 
 
 def resolve_barrel_reexports(filepath: str, production_files: set[str]) -> set[str]:
@@ -238,6 +246,29 @@ def _cross_extension_candidates(src_basename: str) -> list[str]:
     return [stem + alt for alt in _TS_SOURCE_EXTENSIONS]
 
 
+def _package_dir(path: str) -> str:
+    """Absolute directory of the package (nearest package.json) holding *path*."""
+    root = get_project_root()
+    return _package_dir_cached(resolve_path(path), str(root))
+
+
+@lru_cache(maxsize=4096)
+def _package_dir_cached(path: str, root_str: str) -> str:
+    root = Path(root_str)
+    directory = Path(path).parent
+    while directory.is_relative_to(root) and directory != root:
+        if (directory / "package.json").is_file():
+            return str(directory)
+        directory = directory.parent
+    return root_str
+
+
+def basename_match_allowed(test_path: str, prod_path: str) -> bool:
+    """Name-only test mapping stays inside one package: in a monorepo,
+    ``packages/a/format.test.ts`` says nothing about ``packages/b/format.ts``."""
+    return _package_dir(test_path) == _package_dir(prod_path)
+
+
 def map_test_to_source(test_path: str, production_set: set[str]) -> str | None:
     """Map a TypeScript test file path to a production file by naming convention."""
     basename = os.path.basename(test_path)
@@ -258,17 +289,25 @@ def map_test_to_source(test_path: str, production_set: set[str]) -> str | None:
     if dir_basename == "__tests__" and parent:
         candidates.append(os.path.join(parent, basename))
 
-    for prod in production_set:
-        prod_base = os.path.basename(prod)
-        for c in candidates:
-            if os.path.basename(c) == prod_base and prod in production_set:
-                return prod
-
     for c in candidates:
         if c in production_set:
             return c
 
-    return None
+    # Same file name elsewhere (tests/ beside src/): only within the package,
+    # preferring the file whose directory shares the most with the test's.
+    names = {os.path.basename(c) for c in candidates}
+    matches = [
+        prod
+        for prod in production_set
+        if os.path.basename(prod) in names and basename_match_allowed(test_path, prod)
+    ]
+    if not matches:
+        return None
+    test_parts = Path(dirname).parts
+    return max(
+        sorted(matches),
+        key=lambda prod: len(os.path.commonprefix([Path(prod).parent.parts, test_parts])),
+    )
 
 
 def strip_test_markers(basename: str) -> str | None:
