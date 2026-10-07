@@ -14,7 +14,8 @@
   },
   "scripts": {
     "build": "tsc",
-    "test": "ava"
+    "test": "ava",
+    "bench": "tsx src/bench"
   },
   "devDependencies": {
     "ava": "^6.0.0",

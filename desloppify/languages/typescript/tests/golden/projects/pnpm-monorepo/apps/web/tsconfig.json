@@ -1,1 +1,10 @@
-{ "extends": "../../tsconfig.base.json", "include": ["src"] }
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "paths": {
+      "~/*": ["./src/*"],
+      "@acme/utils/*": ["../../packages/utils/src/*"]
+    }
+  },
+  "include": ["src"]
+}

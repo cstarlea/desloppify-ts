@@ -1,0 +1,12 @@
+{
+  "name": "@acme/config",
+  "version": "0.0.0",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@acme/utils": "workspace:*"
+  }
+}

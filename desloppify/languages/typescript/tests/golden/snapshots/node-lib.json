@@ -8,18 +8,11 @@
       "summary": "Deprecated: isClientError (1 importers)"
     },
     {
-      "id": "facade::src/index.ts",
-      "tier": 2,
-      "confidence": "medium",
-      "zone": "production",
-      "summary": "Re-export facade (5 LOC): imports from ./client.js, ./errors.js, ./title.js, +2 (1 importers)"
-    },
-    {
-      "id": "orphaned::src/cli.ts",
+      "id": "orphaned::src/old-client.ts",
       "tier": 3,
       "confidence": "medium",
       "zone": "production",
-      "summary": "Orphaned file (11 LOC): zero importers, not an entry point"
+      "summary": "Orphaned file (17 LOC): zero importers, not an entry point"
     },
     {
       "id": "smells::src/title.ts::async_no_await",
@@ -27,6 +20,13 @@
       "confidence": "medium",
       "zone": "production",
       "summary": "1x Async functions without await"
+    },
+    {
+      "id": "test_coverage::src/bench.ts::untested_module",
+      "tier": 3,
+      "confidence": "high",
+      "zone": "production",
+      "summary": "Untested module (12 LOC, 0 importers)"
     },
     {
       "id": "test_coverage::src/cli.ts::untested_module",
@@ -55,28 +55,35 @@
       "confidence": "high",
       "zone": "production",
       "summary": "Untested module (12 LOC, 1 importers)"
+    },
+    {
+      "id": "test_coverage::src/old-client.ts::untested_module",
+      "tier": 3,
+      "confidence": "high",
+      "zone": "production",
+      "summary": "Untested module (17 LOC, 0 importers)"
     }
   ],
   "potentials": {
     "coupling": 0,
-    "cycles": 7,
+    "cycles": 9,
     "deprecated": 1,
-    "dupes": 2,
+    "dupes": 3,
     "exports": 0,
-    "facade": 7,
+    "facade": 9,
     "flat_dirs": 2,
-    "logs": 7,
+    "logs": 9,
     "naming": 2,
-    "orphaned": 7,
+    "orphaned": 9,
     "patterns": 0,
     "props": 0,
     "react": 0,
-    "security": 7,
+    "security": 9,
     "single_use": 2,
-    "smells": 7,
-    "structural": 7,
-    "test_coverage": 18,
-    "unused": 7
+    "smells": 9,
+    "structural": 9,
+    "test_coverage": 26,
+    "unused": 9
   },
   "reduced_coverage": [
     "exports: knip_not_installed",

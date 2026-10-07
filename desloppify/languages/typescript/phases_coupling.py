@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from desloppify.base.discovery.file_paths import rel
-from desloppify.base.discovery.paths import get_src_path
+from desloppify.base.discovery.paths import get_project_root, get_src_path
 from desloppify.base.output.terminal import log
 from desloppify.engine.detectors import coupling as coupling_detector_mod
 from desloppify.engine.detectors import graph as graph_detector_mod
@@ -22,6 +22,7 @@ from desloppify.languages._framework.issue_factories import (
     make_single_use_issues,
 )
 import desloppify.languages.typescript.detectors.deps as deps_detector_mod
+import desloppify.languages.typescript.detectors.deps.packages as packages_mod
 import desloppify.languages.typescript.detectors.facade as facade_detector_mod
 import desloppify.languages.typescript.detectors.patterns.analysis as patterns_detector_mod
 from desloppify.languages.typescript.phases_config import TS_SKIP_DIRS, TS_SKIP_NAMES
@@ -111,8 +112,20 @@ def detect_cross_tool_imports(
     return results, cross_edge_counts.eligible_edges
 
 
+def package_context(
+    path: Path, graph: dict
+) -> tuple[list[packages_mod.Package], packages_mod.PackageEntries]:
+    """Workspace packages for the scan and the entry files their manifests name."""
+    packages = packages_mod.discover_packages(path, get_project_root())
+    return packages, packages_mod.workspace_entries(packages, sorted(graph))
+
+
 def detect_cycles_and_orphans(
-    path: Path, graph: dict, lang: LangRuntimeContract
+    path: Path,
+    graph: dict,
+    lang: LangRuntimeContract,
+    packages: list[packages_mod.Package] | None = None,
+    entries: packages_mod.PackageEntries | None = None,
 ) -> tuple[list[Issue], int]:
     """Detect import cycles and orphaned files."""
     results: list[Issue] = []
@@ -129,6 +142,8 @@ def detect_cycles_and_orphans(
             extra_barrel_names=lang.barrel_names,
             # Dynamic imports, import.meta.glob and mocks are graph edges
             # already, so no suffix-matched dynamic import fallback here.
+            entry_files=entries.all if entries else None,
+            package_roots=[p.directory for p in packages or ()],
         ),
     )
     orphan_entries = filter_entries(lang.zone_map, orphan_entries, "orphaned")
@@ -136,9 +151,17 @@ def detect_cycles_and_orphans(
     return results, total_graph_files
 
 
-def detect_facades(graph: dict, lang: LangRuntimeContract) -> list[Issue]:
-    """Detect re-export facade files."""
+def detect_facades(
+    graph: dict, lang: LangRuntimeContract, public_entries: set[str] | None = None
+) -> list[Issue]:
+    """Detect re-export facade files.
+
+    A package's public entry (``exports``/``main``) re-exporting its modules
+    is the package's API, not an indirection layer.
+    """
     facade_entries, _ = facade_detector_mod.detect_reexport_facades(graph)
+    if public_entries:
+        facade_entries = [e for e in facade_entries if e["file"] not in public_entries]
     facade_entries = filter_entries(lang.zone_map, facade_entries, "facade")
     return make_facade_issues(facade_entries, log)
 
@@ -294,10 +317,13 @@ def phase_coupling(
     )
     results.extend(cross_tool_issues)
 
-    cycle_orphan_issues, total_graph_files = detect_cycles_and_orphans(path, graph, lang)
+    packages, entries = package_context(path, graph)
+    cycle_orphan_issues, total_graph_files = detect_cycles_and_orphans(
+        path, graph, lang, packages, entries
+    )
     results.extend(cycle_orphan_issues)
 
-    results.extend(detect_facades(graph, lang))
+    results.extend(detect_facades(graph, lang, entries.public))
 
     pattern_issues, total_areas = detect_pattern_anomalies(path)
     results.extend(pattern_issues)
@@ -329,5 +355,6 @@ __all__ = [
     "detect_single_use",
     "make_boundary_issues",
     "orphaned_detector_mod",
+    "package_context",
     "phase_coupling",
 ]

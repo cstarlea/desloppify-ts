@@ -64,18 +64,19 @@
   },
   "node-lib": {
     "must_find": [
-      "deprecated::src/errors.ts::isClientError"
+      "deprecated::src/errors.ts::isClientError",
+      "orphaned::src/old-client.ts"
     ],
     "must_not_find": [
       "security::src/title.ts",
       "orphaned::src/title.ts",
       "test_coverage::src/retry.ts",
-      "orphaned::src/links.mts"
+      "orphaned::src/links.mts",
+      "orphaned::src/cli.ts",
+      "facade::src/index.ts",
+      "orphaned::src/bench.ts"
     ],
-    "known_false_positives": {
-      "orphaned::src/cli.ts": "package.json bin entry; entry points from package.json (roadmap M1 1.5)",
-      "facade::src/index.ts": "package.json exports/main entry is meant to re-export (roadmap M1 1.5, M2 2.5)"
-    },
+    "known_false_positives": {},
     "known_false_negatives": {
       "unused::src/retry.ts::startedAt": "without tsc the source-based fallback misses unused locals (reported as reduced coverage)"
     },
@@ -92,15 +93,19 @@
     }
   },
   "pnpm-monorepo": {
-    "must_find": [],
+    "must_find": [
+      "cycles::packages/config/src/index.ts::"
+    ],
     "must_not_find": [
       "orphaned::packages/utils/src/",
       "orphaned::apps/web/src/checkout.tsx",
-      "cycles::apps/web/src/cart.ts"
+      "orphaned::apps/web/src/receipt.tsx",
+      "cycles::apps/web/src/cart.ts",
+      "facade::packages/ui/src/index.ts",
+      "orphaned::apps/docs/",
+      "orphaned::packages/config/"
     ],
-    "known_false_positives": {
-      "facade::packages/ui/src/index.ts": "workspace import '@acme/ui' is not resolved, so the package entry looks unused (roadmap M1 1.2)"
-    },
+    "known_false_positives": {},
     "known_false_negatives": {},
     "node": {
       "must_find": [],

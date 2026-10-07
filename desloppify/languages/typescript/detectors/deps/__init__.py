@@ -29,6 +29,13 @@ from desloppify.languages.typescript.detectors.deps.imports import (
     ImportRef,
     extract_imports_regex,
 )
+from desloppify.languages.typescript.detectors.deps.packages import (
+    WorkspaceResolver,
+    discover_packages,
+)
+from desloppify.languages.typescript.detectors.deps.resolve import (
+    _TSCONFIG_NAMES,
+)
 from desloppify.languages.typescript.detectors.deps.resolve import (
     find_tsconfig_root as _find_tsconfig_root,
 )
@@ -126,6 +133,44 @@ def _pattern_targets(
     ]
 
 
+class _TsconfigLookup:
+    """Path aliases from the tsconfig nearest to each file.
+
+    Packages in a monorepo each have their own tsconfig (and ``paths``), so
+    one scan-wide config resolves aliases against the wrong directory.
+    Files with no tsconfig between them and the project root use the
+    scan-wide one.
+    """
+
+    def __init__(self, scan_path: Path, project_root: Path) -> None:
+        self._project_root = project_root.resolve()
+        default_root = _find_tsconfig_root(scan_path, project_root)
+        self.default = (default_root, _load_tsconfig_paths(default_root))
+        self._by_dir: dict[Path, tuple[Path, dict[str, str]]] = {}
+
+    def for_file(self, filepath: str) -> tuple[Path, dict[str, str]]:
+        directory = Path(filepath).parent
+        if not directory.is_relative_to(self._project_root):
+            return self.default
+        visited: list[Path] = []
+        result = self.default
+        while True:
+            cached = self._by_dir.get(directory)
+            if cached is not None:
+                result = cached
+                break
+            visited.append(directory)
+            if any((directory / name).is_file() for name in _TSCONFIG_NAMES):
+                result = (directory, _load_tsconfig_paths(directory))
+                break
+            if directory == self._project_root or directory == directory.parent:
+                break
+            directory = directory.parent
+        for seen in visited:
+            self._by_dir[seen] = result
+        return result
+
+
 def build_dep_graph(
     path: Path,
     roslyn_cmd: str | None = None,
@@ -143,8 +188,8 @@ def build_dep_graph(
         lambda: {"imports": set(), "importers": set(), "external_imports": set()}
     )
     project_root = get_project_root()
-    tsconfig_root = _find_tsconfig_root(path, project_root)
-    tsconfig_paths = _load_tsconfig_paths(tsconfig_root)
+    tsconfigs = _TsconfigLookup(path, project_root)
+    workspace = WorkspaceResolver(discover_packages(path, project_root))
     extractor = ImportExtractor()
 
     ts_files = find_ts_and_tsx_files(path)
@@ -167,6 +212,7 @@ def build_dep_graph(
         if not refs:
             continue
         graph[source_resolved]  # ensure entry exists
+        tsconfig_root, tsconfig_paths = tsconfigs.for_file(source_resolved)
         for ref in refs:
             module_path = ref.specifier
             if module_path.startswith(_DENO_EXTERNAL_PREFIXES):
@@ -184,10 +230,18 @@ def build_dep_graph(
                 source_resolved,
                 source_root=project_root,
             )
+            if target is None and workspace and not module_path.startswith((".", "/")):
+                # tsconfig paths take precedence, as in TypeScript; then the
+                # workspace package that node_modules would symlink to.
+                target = workspace.resolve(module_path)
+                if target is not None:
+                    graph[source_resolved]["imports"].add(target)
+                    graph[target]["importers"].add(source_resolved)
             if target is not None and ref.runtime:
                 runtime_edges[source_resolved].add(target)
 
     for filepath, source_resolved, ref in pattern_refs:
+        tsconfig_root, tsconfig_paths = tsconfigs.for_file(source_resolved)
         for target in _pattern_targets(
             ref, filepath, tsconfig_paths, tsconfig_root, project_root, seeded
         ):
