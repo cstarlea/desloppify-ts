@@ -49,6 +49,34 @@ def test_rel_absolute_under_project_root(monkeypatch):
     assert rel(abs_path) == "foo/bar.py"
 
 
+def test_rel_relative_path_is_project_relative_not_cwd_relative(
+    tmp_path, monkeypatch, patch_project_root
+):
+    """Finder output ("src/a.ts") stays project-relative whatever the cwd is."""
+    project = tmp_path / "project"
+    elsewhere = tmp_path / "elsewhere"
+    project.mkdir()
+    elsewhere.mkdir()
+    patch_project_root(project)
+    monkeypatch.chdir(elsewhere)
+    assert rel("src/a.ts") == "src/a.ts"
+
+
+def test_read_file_text_resolves_relative_paths_against_project_root(
+    tmp_path, monkeypatch, patch_project_root
+):
+    from desloppify.base.discovery.source import read_file_text
+
+    project = tmp_path / "project"
+    (project / "src").mkdir(parents=True)
+    (project / "src" / "a.ts").write_text("export const a = 1;\n")
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    patch_project_root(project)
+    monkeypatch.chdir(elsewhere)
+    assert read_file_text("src/a.ts") == "export const a = 1;\n"
+
+
 def test_rel_path_outside_project_root(tmp_path, monkeypatch):
     """Path outside PROJECT_ROOT is returned as a relative path from PROJECT_ROOT."""
     outside = str(tmp_path / "unrelated" / "file.py")

@@ -5,13 +5,14 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+from desloppify.base.discovery.file_paths import resolve_path
 from desloppify.languages._framework.facade_common import detect_reexport_facades_common
 
 
 def is_ts_facade(filepath: str) -> dict | None:
     """Check if a TypeScript file is a pure re-export facade."""
     try:
-        content = Path(filepath).read_text()
+        content = Path(resolve_path(filepath)).read_text()
         lines = content.splitlines()
     except (OSError, UnicodeDecodeError):
         return None

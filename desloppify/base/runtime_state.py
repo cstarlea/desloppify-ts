@@ -38,15 +38,19 @@ class FileTextCache:
         self._values.clear()
         self._last_result = None
 
-    def read_result(self, filepath: str) -> FileTextReadResult:
+    def read_result(self, filepath: str, *, root: Path | None = None) -> FileTextReadResult:
+        """Read *filepath*; a relative path is taken relative to *root*, not the cwd."""
         if self._enabled and filepath in self._values:
             result = self._values[filepath]
             self._last_result = (filepath, result)
             return result
 
+        path = Path(filepath)
+        if root is not None and not path.is_absolute():
+            path = root / path
         try:
             result = FileTextReadResult(
-                content=Path(filepath).read_text(errors="replace"),
+                content=path.read_text(errors="replace"),
                 error_kind=None,
             )
         except OSError as exc:
@@ -56,8 +60,8 @@ class FileTextCache:
             self._values[filepath] = result
         return result
 
-    def read(self, filepath: str) -> str | None:
-        return self.read_result(filepath).content
+    def read(self, filepath: str, *, root: Path | None = None) -> str | None:
+        return self.read_result(filepath, root=root).content
 
     def last_error_kind(self, filepath: str) -> str | None:
         if self._last_result and self._last_result[0] == filepath:

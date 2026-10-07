@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 import sys
 from collections.abc import Mapping
 from functools import lru_cache
@@ -121,6 +122,34 @@ def _project_root_from_state_path(state_path_value: str | Path | None) -> Path |
     ):
         return state_file.parent.parent
     return None
+
+
+def _project_root_from_scan_path(
+    scan_path_value: str | Path | None, cwd_root: Path
+) -> Path | None:
+    """Infer the project root from an explicit ``--path``.
+
+    The nearest ancestor of the path (inclusive) holding existing desloppify
+    state wins, then the nearest git work tree. Without either, a path inside
+    the cwd keeps the cwd as root (the historical behavior) and a path outside
+    it is its own root, so ``desloppify scan --path ../app`` keeps its state
+    and finding IDs in ``../app`` instead of the cwd.
+    """
+    if scan_path_value in (None, ""):
+        return None
+    try:
+        scan_path = Path(scan_path_value).resolve()
+    except OSError:
+        return None
+    start = scan_path if scan_path.is_dir() else scan_path.parent
+    chain = [start, *start.parents]
+    for marker in (".desloppify", ".git"):
+        for directory in chain:
+            if (directory / marker).exists():
+                return directory
+    if scan_path.is_relative_to(cwd_root):
+        return None
+    return start
 
 
 def _resolve_default_path(args: argparse.Namespace) -> None:
@@ -269,6 +298,10 @@ def main() -> None:
     try:
         with runtime_scope() as runtime:
             inferred = _project_root_from_state_path(getattr(args, "state", None))
+            if inferred is None and "DESLOPPIFY_ROOT" not in os.environ:
+                inferred = _project_root_from_scan_path(
+                    getattr(args, "path", None), get_project_root()
+                )
             if inferred is not None:
                 runtime.project_root = inferred
             _warn_if_running_installed_package_from_checkout()
