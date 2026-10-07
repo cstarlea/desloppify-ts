@@ -144,42 +144,54 @@ class TestResolveTsImport:
         result = _resolve_import("../../../lib/helpers", test, {prod}, "typescript")
         assert result == prod
 
-    def test_alias_at_slash(self, tmp_path, monkeypatch):
-        """@/components/Button resolves via get_src_path()."""
-        monkeypatch.setattr(ts_cov, "get_src_path", lambda: tmp_path / "src")
+    def test_alias_from_tsconfig_paths(self, tmp_path, set_project_root):
+        """@/components/Button resolves through the project's tsconfig paths."""
+        _write_file(
+            tmp_path,
+            "tsconfig.json",
+            '{ "compilerOptions": { "paths": { "@/*": ["./app/*"] } } }',
+        )
         prod = _write_file(
             tmp_path,
-            "src/components/Button.tsx",
+            "app/components/Button.tsx",
             "export default function Button() {}\n",
         )
-        result = _resolve_import(
-            "@/components/Button", "/any/test.ts", {prod}, "typescript"
-        )
+        test = _write_file(tmp_path, "tests/button.test.ts", "")
+        result = _resolve_import("@/components/Button", test, {prod}, "typescript")
         assert result == prod
 
-    def test_alias_tilde(self, tmp_path, monkeypatch):
-        """~/utils resolves via get_src_path()."""
-        monkeypatch.setattr(ts_cov, "get_src_path", lambda: tmp_path / "src")
-        prod = _write_file(tmp_path, "src/utils.ts", "export const x = 1;\n")
-        result = _resolve_import("~/utils", "/any/test.ts", {prod}, "typescript")
-        assert result == prod
+    def test_unconfigured_tilde_alias_is_not_guessed(self, tmp_path, set_project_root):
+        """~/ means nothing unless a tsconfig maps it."""
+        _write_file(tmp_path, "src/utils.ts", "export const x = 1;\n")
+        test = _write_file(tmp_path, "src/utils.test.ts", "")
+        prod = str(tmp_path / "src" / "utils.ts")
+        assert _resolve_import("~/utils", test, {prod}, "typescript") is None
 
-    def test_alias_resolves_relative_production_paths(self, tmp_path, monkeypatch):
+    def test_alias_resolves_relative_production_paths(self, tmp_path, set_project_root):
         """Alias resolution should also work when production paths are project-relative."""
-        monkeypatch.setattr(ts_cov, "get_src_path", lambda: tmp_path / "src")
-        monkeypatch.setattr(ts_cov, "get_project_root", lambda: tmp_path)
+        _write_file(
+            tmp_path,
+            "tsconfig.json",
+            '{ "compilerOptions": { "paths": { "~/*": ["./src/*"] } } }',
+        )
         _write_file(
             tmp_path,
             "src/components/Button.tsx",
             "export default function Button() {}\n",
         )
         result = _resolve_import(
-            "@/components/Button",
-            "/any/test.ts",
+            "~/components/Button",
+            "src/components/Button.test.tsx",
             {"src/components/Button.tsx"},
             "typescript",
         )
         assert result == "src/components/Button.tsx"
+
+    def test_esm_js_specifier_resolves_to_ts_source(self, tmp_path, set_project_root):
+        prod = _write_file(tmp_path, "src/client.ts", "export const x = 1;\n")
+        test = _write_file(tmp_path, "test/client.test.ts", "")
+        result = _resolve_import("../src/client.js", test, {prod}, "typescript")
+        assert result == prod
 
     def test_index_ts_extension_probing(self, tmp_path):
         """Bare directory import resolves to index.ts."""

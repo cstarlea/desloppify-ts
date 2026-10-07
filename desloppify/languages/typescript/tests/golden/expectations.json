@@ -96,7 +96,8 @@
   },
   "pnpm-monorepo": {
     "must_find": [
-      "cycles::packages/config/src/index.ts::"
+      "cycles::packages/config/src/index.ts::",
+      "test_coverage::packages/utils/src/dates.ts"
     ],
     "must_not_find": [
       "orphaned::packages/utils/src/",

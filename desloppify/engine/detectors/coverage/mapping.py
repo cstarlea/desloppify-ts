@@ -164,6 +164,9 @@ def naming_based_mapping(
 ) -> set[str]:
     """Map test files to production files by naming conventions."""
     tested = set()
+    # Optional language hook restricting name-only matches (e.g. to a package).
+    allowed = getattr(_load_lang_test_coverage_module(lang_name), "basename_match_allowed", None)
+    allowed = allowed if callable(allowed) else None
 
     prod_by_basename: dict[str, list[str]] = {}
     for p in production_files:
@@ -180,7 +183,8 @@ def naming_based_mapping(
         src_name = _strip_test_markers(basename, lang_name)
         if src_name and src_name in prod_by_basename:
             for p in prod_by_basename[src_name]:
-                tested.add(p)
+                if allowed is None or allowed(tf, p):
+                    tested.add(p)
 
     return tested
 
