@@ -120,6 +120,44 @@ def package_context(
     return packages, packages_mod.workspace_entries(packages, sorted(graph))
 
 
+def _specifier_could_name(specifier: str, filepath: str) -> bool:
+    """Whether ``~/lib/format`` (alias stripped) could be ``.../lib/format.ts``."""
+    parts = specifier.split("/")
+    rest = parts[2:] if specifier.startswith("@") and len(parts) > 2 else parts[1:]
+    if not rest or not rest[-1]:
+        return False
+    tail = "/" + "/".join(rest)
+    path = Path(filepath)
+    stem_path = str(path.with_suffix("")).replace("\\", "/")
+    if stem_path.endswith(tail):
+        return True
+    return path.stem == "index" and str(path.parent).replace("\\", "/").endswith(tail)
+
+
+def flag_unresolved_orphans(entries: list[dict], graph: dict) -> None:
+    """Lower confidence for orphans an unresolved import may actually reach.
+
+    A safety net while the resolver matures: an alias it can't map leaves the
+    target with no importers, so the orphan finding is less certain.
+    """
+    unresolved: dict[str, set[str]] = {}
+    for source, node in graph.items():
+        for specifier in node.get("unresolved_imports", ()):
+            unresolved.setdefault(specifier, set()).add(source)
+    if not unresolved:
+        return
+    for entry in entries:
+        sources = {
+            source
+            for specifier, importers in unresolved.items()
+            if _specifier_could_name(specifier, entry["file"])
+            for source in importers
+        }
+        if sources:
+            entry["confidence"] = "low"
+            entry["possible_importers"] = sorted(rel(s) for s in sources)
+
+
 def detect_cycles_and_orphans(
     path: Path,
     graph: dict,
@@ -147,6 +185,7 @@ def detect_cycles_and_orphans(
         ),
     )
     orphan_entries = filter_entries(lang.zone_map, orphan_entries, "orphaned")
+    flag_unresolved_orphans(orphan_entries, graph)
     results.extend(make_orphaned_issues(orphan_entries, log))
     return results, total_graph_files
 

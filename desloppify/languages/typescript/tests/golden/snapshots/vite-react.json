@@ -29,6 +29,13 @@
       "summary": "Orphaned file (12 LOC): zero importers, not an entry point"
     },
     {
+      "id": "orphaned::src/lib/analytics.ts",
+      "tier": 3,
+      "confidence": "low",
+      "zone": "production",
+      "summary": "Orphaned file (13 LOC): zero importers, not an entry point (an unresolved import in src/main.tsx may point here)"
+    },
+    {
       "id": "orphaned::src/lib/constants.ts",
       "tier": 3,
       "confidence": "medium",
@@ -99,6 +106,13 @@
       "summary": "Untested module (16 LOC, 1 importers)"
     },
     {
+      "id": "test_coverage::src/lib/analytics.ts::untested_module",
+      "tier": 3,
+      "confidence": "high",
+      "zone": "production",
+      "summary": "Untested module (13 LOC, 0 importers)"
+    },
+    {
       "id": "test_coverage::src/lib/constants.ts::untested_module",
       "tier": 3,
       "confidence": "high",
@@ -145,7 +159,7 @@
       "tier": 3,
       "confidence": "high",
       "zone": "production",
-      "summary": "Untested module (11 LOC, 0 importers)"
+      "summary": "Untested module (13 LOC, 0 importers)"
     },
     {
       "id": "test_coverage::src/widgets/Clock.tsx::untested_module",
@@ -171,24 +185,24 @@
   ],
   "potentials": {
     "coupling": 0,
-    "cycles": 17,
+    "cycles": 18,
     "deprecated": 1,
-    "dupes": 14,
+    "dupes": 16,
     "exports": 0,
-    "facade": 17,
+    "facade": 18,
     "flat_dirs": 7,
-    "logs": 17,
+    "logs": 18,
     "naming": 6,
-    "orphaned": 17,
+    "orphaned": 18,
     "patterns": 0,
     "props": 4,
     "react": 0,
-    "security": 17,
+    "security": 18,
     "single_use": 8,
-    "smells": 17,
-    "structural": 17,
-    "test_coverage": 51,
-    "unused": 17
+    "smells": 18,
+    "structural": 18,
+    "test_coverage": 54,
+    "unused": 18
   },
   "reduced_coverage": [
     "exports: knip_not_installed",

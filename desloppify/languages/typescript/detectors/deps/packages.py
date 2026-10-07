@@ -351,6 +351,20 @@ def resolve_package_subpath(package: Package, subpath: str) -> str | None:
     return resolve_package_path(package, subpath)
 
 
+_DEPENDENCY_FIELDS = ("dependencies", "devDependencies", "peerDependencies", "optionalDependencies")
+
+
+def declared_dependencies(packages: list[Package]) -> set[str]:
+    """Every package name the manifests depend on (npm packages, not files)."""
+    names: set[str] = set()
+    for package in packages:
+        for field_name in _DEPENDENCY_FIELDS:
+            deps = package.manifest.get(field_name)
+            if isinstance(deps, dict):
+                names.update(k for k in deps if isinstance(k, str))
+    return names
+
+
 class WorkspaceResolver:
     """Resolve bare specifiers that name a workspace package."""
 
@@ -457,6 +471,7 @@ __all__ = [
     "Package",
     "PackageEntries",
     "WorkspaceResolver",
+    "declared_dependencies",
     "discover_packages",
     "package_entries",
     "resolve_package_path",
