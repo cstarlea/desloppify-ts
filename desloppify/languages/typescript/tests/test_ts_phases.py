@@ -176,8 +176,9 @@ def test_phase_coupling_passes_orphaned_options(monkeypatch, tmp_path: Path):
     )
     assert options.extra_entry_patterns == _FakeCouplingLang.entry_patterns
     assert options.extra_barrel_names == _FakeCouplingLang.barrel_names
-    assert callable(options.dynamic_import_finder)
-    assert callable(options.alias_resolver)
+    # Dynamic imports are resolved graph edges, not suffix-matched afterwards.
+    assert options.dynamic_import_finder is None
+    assert options.alias_resolver is None
 
     # Extensions were correctly passed from lang config
     assert captured["extensions"] == [".ts", ".tsx"]

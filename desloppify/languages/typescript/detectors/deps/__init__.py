@@ -3,23 +3,31 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
 from desloppify.base.discovery.file_paths import rel, resolve_path
-from desloppify.base.search.grep import grep_files
-from desloppify.base.output.terminal import colorize, print_table
+from desloppify.base.discovery.paths import get_project_root
 from desloppify.base.discovery.source import (
     find_source_files,
     find_ts_and_tsx_files,
 )
-from desloppify.base.discovery.paths import get_project_root
+from desloppify.base.output.terminal import colorize, print_table
+from desloppify.base.search.grep import grep_files
 from desloppify.engine.detectors.graph import (
     detect_cycles,
     finalize_graph,
     get_coupling_score,
+)
+from desloppify.languages.typescript.detectors.deps.imports import (
+    DYNAMIC_PREFIX,
+    GLOB,
+    ImportExtractor,
+    ImportRef,
+    extract_imports_regex,
 )
 from desloppify.languages.typescript.detectors.deps.resolve import (
     find_tsconfig_root as _find_tsconfig_root,
@@ -30,6 +38,9 @@ from desloppify.languages.typescript.detectors.deps.resolve import (
 from desloppify.languages.typescript.detectors.deps.resolve import (
     resolve_module as _resolve_module,
 )
+from desloppify.languages.typescript.detectors.deps.resolve import (
+    specifier_target as _specifier_target,
+)
 from desloppify.languages.typescript.detectors.deps.runtime import (
     build_dynamic_import_targets as _build_dynamic_import_targets,
 )
@@ -38,15 +49,81 @@ from desloppify.languages.typescript.detectors.deps.runtime import (
 )
 
 _FRAMEWORK_EXTENSIONS = (".svelte", ".vue", ".astro")
-_IMPORT_SPEC_RE = re.compile(
-    r"""(?:from\s+|import\s+)(?:type\s+)?['"]([^'"]+)['"]"""
-)
 _DENO_EXTERNAL_PREFIXES = ("http://", "https://", "npm:", "jsr:")
+_DECLARATION_SUFFIXES = (".d.ts", ".d.mts", ".d.cts")
 
 
 def _extract_module_specifiers(line: str) -> list[str]:
     """Extract static import/export module specifiers from one source line."""
-    return [match.group(1) for match in _IMPORT_SPEC_RE.finditer(line)]
+    return [ref.specifier for ref in extract_imports_regex(line)]
+
+
+def _glob_regex(pattern: str) -> re.Pattern[str]:
+    """Translate a bundler glob (``**``, ``*``, ``?``, ``{a,b}``) to a regex."""
+    out: list[str] = []
+    i = 0
+    while i < len(pattern):
+        ch = pattern[i]
+        if pattern.startswith("**/", i):
+            out.append("(?:.*/)?")
+            i += 3
+            continue
+        if pattern.startswith("**", i):
+            out.append(".*")
+            i += 2
+            continue
+        if ch == "*":
+            out.append("[^/]*")
+        elif ch == "?":
+            out.append("[^/]")
+        elif ch == "{":
+            close = pattern.find("}", i)
+            if close == -1:
+                out.append(re.escape(ch))
+            else:
+                options = pattern[i + 1 : close].split(",")
+                out.append("(?:" + "|".join(re.escape(o) for o in options) + ")")
+                i = close + 1
+                continue
+        else:
+            out.append(re.escape(ch))
+        i += 1
+    return re.compile("".join(out) + r"\Z")
+
+
+def _pattern_targets(
+    ref: ImportRef,
+    filepath: str,
+    tsconfig_paths: dict[str, str],
+    tsconfig_root: Path,
+    project_root: Path,
+    candidates: list[str],
+) -> list[str]:
+    """Files matched by ``import.meta.glob('./x/*.ts')`` or ``import(`./x/${y}`)``."""
+    specifier = ref.specifier
+    if ref.kind == GLOB:
+        cut = min((specifier.find(c) for c in "*?{" if c in specifier), default=len(specifier))
+        static_head = specifier[: specifier.rfind("/", 0, cut) + 1]
+    else:
+        static_head = specifier[: specifier.rfind("/") + 1]
+    tail = specifier[len(static_head) :]
+    if ref.kind == GLOB and static_head.startswith("/"):
+        base: Path | None = (project_root / static_head.lstrip("/")).resolve()  # Vite: root-relative
+    else:
+        base = _specifier_target(
+            static_head or "./", filepath, tsconfig_paths, tsconfig_root, source_root=project_root
+        )
+    if base is None:
+        return []
+    base_str = str(base).rstrip(os.sep) + os.sep
+    if ref.kind == DYNAMIC_PREFIX:
+        return [c for c in candidates if c.startswith(base_str + tail)]
+    tail_re = _glob_regex(tail)
+    return [
+        c
+        for c in candidates
+        if c.startswith(base_str) and tail_re.match(c[len(base_str) :].replace(os.sep, "/"))
+    ]
 
 
 def build_dep_graph(
@@ -55,7 +132,11 @@ def build_dep_graph(
 ) -> dict[str, dict[str, Any]]:
     """Build a dependency graph: for each file, who it imports and who imports it.
 
-    Returns {resolved_path: {"imports": set[str], "importers": set[str], "import_count": int, "importer_count": int}}
+    Returns {resolved_path: {"imports": set[str], "importers": set[str],
+    "deferred_imports": set[str], "import_count": int, "importer_count": int}}.
+    ``deferred_imports`` holds targets reached only through type-only, dynamic,
+    mock or triple-slash references: real dependencies, but not ones that run
+    at module initialization, so they can't form an import cycle.
     """
     del roslyn_cmd
     graph: dict[str, dict[str, Any]] = defaultdict(
@@ -64,24 +145,37 @@ def build_dep_graph(
     project_root = get_project_root()
     tsconfig_root = _find_tsconfig_root(path, project_root)
     tsconfig_paths = _load_tsconfig_paths(tsconfig_root)
+    extractor = ImportExtractor()
 
     ts_files = find_ts_and_tsx_files(path)
     # Seed every module so files with no imports of their own (constants,
     # types, leaf utilities) can still be found orphaned. Ambient
     # declaration files are never imported, so they stay out of the graph.
+    seeded: list[str] = []
     for filepath in ts_files:
-        if not filepath.endswith((".d.ts", ".d.mts", ".d.cts")):
-            graph[resolve_path(filepath)]
-    hits = grep_files(r"""(?:\bfrom\s+['"]|\bimport\s+['"])""", ts_files)
+        if not filepath.endswith(_DECLARATION_SUFFIXES):
+            resolved = resolve_path(filepath)
+            graph[resolved]
+            seeded.append(resolved)
 
-    for filepath, _lineno, content in hits:
+    runtime_edges: dict[str, set[str]] = defaultdict(set)
+    pattern_refs: list[tuple[str, str, ImportRef]] = []
+    fw_files = find_source_files(path, list(_FRAMEWORK_EXTENSIONS))
+    for filepath in [*ts_files, *fw_files]:
         source_resolved = resolve_path(filepath)
+        refs = extractor.extract(source_resolved)
+        if not refs:
+            continue
         graph[source_resolved]  # ensure entry exists
-        for module_path in _extract_module_specifiers(content):
+        for ref in refs:
+            module_path = ref.specifier
             if module_path.startswith(_DENO_EXTERNAL_PREFIXES):
                 graph[source_resolved]["external_imports"].add(module_path)
                 continue
-            _resolve_module(
+            if ref.kind in (GLOB, DYNAMIC_PREFIX):
+                pattern_refs.append((filepath, source_resolved, ref))
+                continue
+            target = _resolve_module(
                 module_path,
                 filepath,
                 tsconfig_paths,
@@ -90,26 +184,19 @@ def build_dep_graph(
                 source_resolved,
                 source_root=project_root,
             )
+            if target is not None and ref.runtime:
+                runtime_edges[source_resolved].add(target)
 
-    fw_files = find_source_files(path, list(_FRAMEWORK_EXTENSIONS))
-    if fw_files:
-        fw_hits = grep_files(r"""(?:\bfrom\s+['"]|\bimport\s+['"])""", fw_files)
-        for filepath, _lineno, content in fw_hits:
-            source_resolved = resolve_path(filepath)
-            graph[source_resolved]  # ensure entry exists
-            for module_path in _extract_module_specifiers(content):
-                if module_path.startswith(_DENO_EXTERNAL_PREFIXES):
-                    graph[source_resolved]["external_imports"].add(module_path)
-                    continue
-                _resolve_module(
-                    module_path,
-                    filepath,
-                    tsconfig_paths,
-                    tsconfig_root,
-                    graph,
-                    source_resolved,
-                    source_root=project_root,
-                )
+    for filepath, source_resolved, ref in pattern_refs:
+        for target in _pattern_targets(
+            ref, filepath, tsconfig_paths, tsconfig_root, project_root, seeded
+        ):
+            if target != source_resolved:
+                graph[source_resolved]["imports"].add(target)
+                graph[target]["importers"].add(source_resolved)
+
+    for source, node in graph.items():
+        node["deferred_imports"] = node["imports"] - runtime_edges.get(source, set())
 
     return finalize_graph(dict(graph))
 

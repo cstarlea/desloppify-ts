@@ -127,8 +127,8 @@ def detect_cycles_and_orphans(
         options=orphaned_detector_mod.OrphanedDetectionOptions(
             extra_entry_patterns=lang.entry_patterns,
             extra_barrel_names=lang.barrel_names,
-            dynamic_import_finder=deps_detector_mod.build_dynamic_import_targets,
-            alias_resolver=deps_detector_mod.ts_alias_resolver,
+            # Dynamic imports, import.meta.glob and mocks are graph edges
+            # already, so no suffix-matched dynamic import fallback here.
         ),
     )
     orphan_entries = filter_entries(lang.zone_map, orphan_entries, "orphaned")

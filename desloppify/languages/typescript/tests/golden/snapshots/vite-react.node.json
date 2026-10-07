@@ -75,7 +75,7 @@
       "tier": 3,
       "confidence": "high",
       "zone": "production",
-      "summary": "Untested module (16 LOC, 1 importers)"
+      "summary": "Untested module (17 LOC, 1 importers)"
     },
     {
       "id": "test_coverage::src/components/Header.tsx::untested_module",
@@ -127,6 +127,48 @@
       "summary": "Untested module (12 LOC, 2 importers)"
     },
     {
+      "id": "test_coverage::src/lib/widgets.ts::untested_module",
+      "tier": 3,
+      "confidence": "high",
+      "zone": "production",
+      "summary": "Untested module (10 LOC, 2 importers)"
+    },
+    {
+      "id": "test_coverage::src/locales/en.ts::untested_module",
+      "tier": 3,
+      "confidence": "high",
+      "zone": "production",
+      "summary": "Untested module (11 LOC, 1 importers)"
+    },
+    {
+      "id": "test_coverage::src/locales/fr.ts::untested_module",
+      "tier": 3,
+      "confidence": "high",
+      "zone": "production",
+      "summary": "Untested module (11 LOC, 1 importers)"
+    },
+    {
+      "id": "test_coverage::src/main.tsx::untested_module",
+      "tier": 3,
+      "confidence": "high",
+      "zone": "production",
+      "summary": "Untested module (11 LOC, 0 importers)"
+    },
+    {
+      "id": "test_coverage::src/widgets/Clock.tsx::untested_module",
+      "tier": 3,
+      "confidence": "high",
+      "zone": "production",
+      "summary": "Untested module (16 LOC, 1 importers)"
+    },
+    {
+      "id": "test_coverage::src/widgets/Weather.tsx::untested_module",
+      "tier": 3,
+      "confidence": "high",
+      "zone": "production",
+      "summary": "Untested module (16 LOC, 1 importers)"
+    },
+    {
       "id": "unused::src/components/Header.tsx::useMemo:1",
       "tier": 1,
       "confidence": "high",
@@ -136,24 +178,24 @@
   ],
   "potentials": {
     "coupling": 0,
-    "cycles": 12,
+    "cycles": 17,
     "deprecated": 1,
-    "dupes": 10,
-    "exports": 18,
-    "facade": 12,
-    "flat_dirs": 5,
-    "logs": 12,
-    "naming": 4,
-    "orphaned": 12,
+    "dupes": 14,
+    "exports": 22,
+    "facade": 17,
+    "flat_dirs": 7,
+    "logs": 17,
+    "naming": 6,
+    "orphaned": 17,
     "patterns": 0,
-    "props": 2,
+    "props": 4,
     "react": 0,
-    "security": 12,
-    "single_use": 4,
-    "smells": 12,
-    "structural": 12,
-    "test_coverage": 29,
-    "unused": 12
+    "security": 17,
+    "single_use": 8,
+    "smells": 17,
+    "structural": 17,
+    "test_coverage": 51,
+    "unused": 17
   },
   "reduced_coverage": []
 }

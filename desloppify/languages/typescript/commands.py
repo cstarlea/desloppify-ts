@@ -30,8 +30,6 @@ from desloppify.languages._framework.commands.registry import (
 )
 from desloppify.languages.typescript.detectors.deps import (
     build_dep_graph,
-    build_dynamic_import_targets,
-    ts_alias_resolver,
 )
 from desloppify.languages.typescript.detectors.facade import detect_reexport_facades
 from desloppify.languages.typescript.detectors.smells import detect_smells
@@ -55,7 +53,12 @@ from desloppify.languages.typescript.phases_config import (
     TS_SKIP_DIRS,
     TS_SKIP_NAMES,
 )
-from desloppify.languages.typescript.plugin_contract import TS_BARREL_NAMES, TS_LARGE_THRESHOLD
+from desloppify.languages.typescript.plugin_contract import (
+    TS_BARREL_NAMES,
+    TS_ENTRY_PATTERNS,
+    TS_EXTENSIONS,
+    TS_LARGE_THRESHOLD,
+)
 
 
 cmd_large = make_cmd_large(
@@ -122,10 +125,10 @@ def cmd_orphaned(args: argparse.Namespace) -> None:
     entries, _ = orphaned_detector_mod.detect_orphaned_files(
         Path(args.path),
         graph,
-        extensions=[".ts", ".tsx"],
+        extensions=TS_EXTENSIONS,
         options=orphaned_detector_mod.OrphanedDetectionOptions(
-            dynamic_import_finder=build_dynamic_import_targets,
-            alias_resolver=ts_alias_resolver,
+            extra_entry_patterns=TS_ENTRY_PATTERNS,
+            extra_barrel_names=TS_BARREL_NAMES,
         ),
     )
     if getattr(args, "json", False):

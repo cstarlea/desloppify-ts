@@ -5,15 +5,13 @@ from __future__ import annotations
 import json
 import logging
 import os
+from collections.abc import Iterator
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
-from collections.abc import Iterator
 
 from desloppify.base.output.fallbacks import log_best_effort_failure
 
-_RESOLVE_EXTENSIONS = ("", ".ts", ".tsx", "/index.ts", "/index.tsx")
-_JS_SPECIFIER_EXTENSIONS = {".js", ".mjs", ".cjs"}
 logger = logging.getLogger(__name__)
 
 
@@ -282,32 +280,78 @@ def extract_paths(data: dict[str, Any], base_dir: Path) -> dict[str, str] | None
     return result or None
 
 
+# Extensions a specifier may name, mapped to the sources TypeScript tries for
+# it (``moduleResolution: bundler`` / ``nodenext``): ``./a.js`` is ``a.ts``.
+_SPECIFIER_SOURCE_MAP: dict[str, tuple[str, ...]] = {
+    ".js": (".ts", ".tsx", ".js", ".jsx"),
+    ".jsx": (".tsx", ".jsx"),
+    ".mjs": (".mts", ".mjs"),
+    ".cjs": (".cts", ".cjs"),
+}
+_TS_SOURCE_SUFFIXES = (".ts", ".tsx", ".mts", ".cts")
+# JavaScript files are not scanned (no ``allowJs`` support yet), so extensionless
+# specifiers only try TypeScript sources.
+_EXTENSIONLESS_SUFFIXES = (".ts", ".tsx", ".mts", ".cts")
+_INDEX_NAMES = ("index.ts", "index.tsx", "index.mts", "index.cts")
+_PACKAGE_ENTRY_FIELDS = ("types", "typings", "source", "module", "main")
+
+
+def _package_dir_entries(directory: Path) -> Iterator[Path]:
+    """Entry files named by ``directory/package.json`` (types/main/...)."""
+    manifest = directory / "package.json"
+    if not manifest.is_file():
+        return
+    try:
+        data = json.loads(manifest.read_text(encoding="utf-8-sig", errors="replace"))
+    except (json.JSONDecodeError, OSError):
+        return
+    if not isinstance(data, dict):
+        return
+    for field in _PACKAGE_ENTRY_FIELDS:
+        value = data.get(field)
+        if isinstance(value, str) and value:
+            entry = directory / value
+            yield from _file_candidates(entry, allow_directory=False)
+
+
+def _file_candidates(target: Path, *, allow_directory: bool = True) -> Iterator[Path]:
+    suffix = target.suffix
+    if suffix in _TS_SOURCE_SUFFIXES:
+        yield target
+    elif suffix in _SPECIFIER_SOURCE_MAP:
+        stem = str(target)[: -len(suffix)]
+        for source_suffix in _SPECIFIER_SOURCE_MAP[suffix]:
+            yield Path(stem + source_suffix)
+    else:
+        # ``./styles.css``, ``./data.json`` and extensionless specifiers.
+        if suffix:
+            yield target
+        for source_suffix in _EXTENSIONLESS_SUFFIXES:
+            yield Path(str(target) + source_suffix)
+    if allow_directory:
+        yield from _package_dir_entries(target)
+        for name in _INDEX_NAMES:
+            yield target / name
+
+
 def iter_resolve_candidates(target: Path) -> Iterator[Path]:
-    """Yield filesystem candidates for a module specifier target."""
+    """Yield filesystem candidates for a module specifier target, in TS order."""
     seen: set[str] = set()
-
-    def _emit(candidate: Path) -> Iterator[Path]:
+    for candidate in _file_candidates(target):
         key = str(candidate)
-        if key in seen:
-            return
-        seen.add(key)
-        yield candidate
+        if key not in seen:
+            seen.add(key)
+            yield candidate
 
-    if target.suffix in {".ts", ".tsx"}:
-        yield from _emit(target)
-        return
 
-    if target.suffix in _JS_SPECIFIER_EXTENSIONS:
-        stem = target.with_suffix("")
-        yield from _emit(Path(str(stem) + ".ts"))
-        yield from _emit(Path(str(stem) + ".tsx"))
-        yield from _emit(Path(str(stem) + "/index.ts"))
-        yield from _emit(Path(str(stem) + "/index.tsx"))
-        yield from _emit(target)
-        return
-
-    for ext in _RESOLVE_EXTENSIONS:
-        yield from _emit(Path(str(target) + ext))
+def resolve_target(target: Path) -> str | None:
+    """First existing source file for a specifier target, as an absolute path."""
+    for candidate in iter_resolve_candidates(target):
+        if candidate.is_file() and not candidate.name.endswith(
+            (".d.ts", ".d.mts", ".d.cts")
+        ):
+            return str(candidate.resolve())
+    return None
 
 
 def resolve_alias(
@@ -328,6 +372,31 @@ def resolve_alias(
     return None
 
 
+def specifier_target(
+    module_path: str,
+    filepath: str,
+    tsconfig_paths: dict[str, str],
+    project_root: Path,
+    *,
+    source_root: Path | None = None,
+) -> Path | None:
+    """Absolute path a specifier points at, before extension/index candidates.
+
+    None for bare package specifiers that no tsconfig alias covers.
+    """
+    if module_path.startswith("."):
+        relative_root = source_root or project_root
+        source_dir = (
+            Path(filepath).parent
+            if Path(filepath).is_absolute()
+            else (relative_root / filepath).parent
+        )
+        return (source_dir / module_path).resolve()
+    if module_path.startswith("/"):
+        return Path(module_path)
+    return resolve_alias(module_path, tsconfig_paths, project_root)
+
+
 def resolve_module(
     module_path: str,
     filepath: str,
@@ -337,26 +406,16 @@ def resolve_module(
     source_resolved: str,
     *,
     source_root: Path | None = None,
-) -> None:
-    """Resolve an import specifier and add edges to the graph."""
-    target: Path | None = None
-    if module_path.startswith("."):
-        relative_root = source_root or project_root
-        source_dir = (
-            Path(filepath).parent
-            if Path(filepath).is_absolute()
-            else (relative_root / filepath).parent
-        )
-        target = (source_dir / module_path).resolve()
-    else:
-        target = resolve_alias(module_path, tsconfig_paths, project_root)
-
+) -> str | None:
+    """Resolve an import specifier, add the edge to the graph, return the target."""
+    target = specifier_target(
+        module_path, filepath, tsconfig_paths, project_root, source_root=source_root
+    )
     if target is None:
-        return
-
-    for candidate in iter_resolve_candidates(target):
-        if candidate.is_file():
-            target_resolved = str(candidate)
-            graph[source_resolved]["imports"].add(target_resolved)
-            graph[target_resolved]["importers"].add(source_resolved)
-            break
+        return None
+    target_resolved = resolve_target(target)
+    if target_resolved is None:
+        return None
+    graph[source_resolved]["imports"].add(target_resolved)
+    graph[target_resolved]["importers"].add(source_resolved)
+    return target_resolved

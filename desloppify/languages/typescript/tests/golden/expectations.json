@@ -15,7 +15,10 @@
       "orphaned::vite.config.ts",
       "orphaned::src/components/Header.tsx",
       "orphaned::src/types.ts",
-      "test_coverage::src/lib/format.ts"
+      "test_coverage::src/lib/format.ts",
+      "orphaned::src/widgets/",
+      "orphaned::src/locales/",
+      "orphaned::src/lib/widgets.ts"
     ],
     "known_false_positives": {},
     "known_false_negatives": {},
@@ -43,7 +46,8 @@
       "orphaned::components/product-grid.tsx",
       "orphaned::components/site-nav.tsx",
       "orphaned::lib/",
-      "smells::lib/products.ts::hardcoded_url"
+      "smells::lib/products.ts::hardcoded_url",
+      "orphaned::components/cart-badge.tsx"
     ],
     "known_false_positives": {},
     "known_false_negatives": {},
@@ -65,7 +69,8 @@
     "must_not_find": [
       "security::src/title.ts",
       "orphaned::src/title.ts",
-      "test_coverage::src/retry.ts"
+      "test_coverage::src/retry.ts",
+      "orphaned::src/links.mts"
     ],
     "known_false_positives": {
       "orphaned::src/cli.ts": "package.json bin entry; entry points from package.json (roadmap M1 1.5)",
@@ -90,10 +95,10 @@
     "must_find": [],
     "must_not_find": [
       "orphaned::packages/utils/src/",
-      "orphaned::apps/web/src/checkout.tsx"
+      "orphaned::apps/web/src/checkout.tsx",
+      "cycles::apps/web/src/cart.ts"
     ],
     "known_false_positives": {
-      "cycles::apps/web/src/cart.ts": "cart.ts -> checkout.tsx is `import type` only; no runtime cycle (roadmap M1 1.3)",
       "facade::packages/ui/src/index.ts": "workspace import '@acme/ui' is not resolved, so the package entry looks unused (roadmap M1 1.2)"
     },
     "known_false_negatives": {},

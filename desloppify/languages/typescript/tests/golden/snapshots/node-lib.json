@@ -12,7 +12,7 @@
       "tier": 2,
       "confidence": "medium",
       "zone": "production",
-      "summary": "Re-export facade (4 LOC): imports from ./client.js, ./errors.js, ./title.js, +1 (1 importers)"
+      "summary": "Re-export facade (5 LOC): imports from ./client.js, ./errors.js, ./title.js, +2 (1 importers)"
     },
     {
       "id": "orphaned::src/cli.ts",
@@ -48,28 +48,35 @@
       "confidence": "high",
       "zone": "production",
       "summary": "Untested module (13 LOC, 2 importers)"
+    },
+    {
+      "id": "test_coverage::src/links.mts::untested_module",
+      "tier": 3,
+      "confidence": "high",
+      "zone": "production",
+      "summary": "Untested module (12 LOC, 1 importers)"
     }
   ],
   "potentials": {
     "coupling": 0,
-    "cycles": 6,
+    "cycles": 7,
     "deprecated": 1,
-    "dupes": 1,
+    "dupes": 2,
     "exports": 0,
-    "facade": 6,
+    "facade": 7,
     "flat_dirs": 2,
-    "logs": 6,
+    "logs": 7,
     "naming": 2,
-    "orphaned": 6,
+    "orphaned": 7,
     "patterns": 0,
     "props": 0,
     "react": 0,
-    "security": 6,
-    "single_use": 1,
-    "smells": 6,
-    "structural": 6,
-    "test_coverage": 15,
-    "unused": 6
+    "security": 7,
+    "single_use": 2,
+    "smells": 7,
+    "structural": 7,
+    "test_coverage": 18,
+    "unused": 7
   },
   "reduced_coverage": [
     "exports: knip_not_installed",
