@@ -13,10 +13,13 @@ from desloppify.languages._framework.node.frameworks.nextjs.info import (
     nextjs_info_from_evidence,
 )
 from desloppify.languages._framework.node.frameworks.nextjs.scanners import (
+    scan_nextjs_browser_globals_missing_use_client,
+    scan_nextjs_navigation_hooks_missing_use_client,
     scan_nextjs_server_modules_in_pages_router,
     scan_nextjs_server_navigation_apis_in_client,
     scan_nextjs_use_server_in_client,
     scan_nextjs_use_server_not_first,
+    scan_rsc_missing_use_client,
 )
 from desloppify.languages.framework import make_lang_run
 from desloppify.languages.typescript import TypeScriptConfig
@@ -259,3 +262,53 @@ def test_next_lint_unknown_installation_keeps_legacy_command(tmp_path, content):
     if content is not None:
         _write(tmp_path, "node_modules/next/package.json", content)
     assert _next_lint_command(tmp_path) is None
+
+
+def test_browser_globals_missing_use_client_skips_test_and_story_files(tmp_path: Path):
+    _write(tmp_path, "package.json", '{"dependencies": {"next": "14.0.0"}}\n')
+    _write(
+        tmp_path,
+        "app/widget.tsx",
+        "export default function Widget(){ return <div>{window.innerWidth}</div> }\n",
+    )
+    for name in (
+        "app/widget.test.tsx",
+        "app/widget.spec.ts",
+        "app/widget.stories.tsx",
+        "app/__tests__/widget.tsx",
+        "app/__mocks__/widget.ts",
+    ):
+        _write(tmp_path, name, "it('x', () => { document.body.innerHTML = '' })\n")
+
+    info = nextjs_info_from_evidence(
+        {"marker_dir_hits": ["app"]},
+        package_root=tmp_path.resolve(),
+        package_json_relpath="package.json",
+    )
+    entries, scanned = scan_nextjs_browser_globals_missing_use_client(tmp_path, info)
+    assert {entry["file"] for entry in entries} == {"app/widget.tsx"}
+    assert scanned == 1
+
+
+@pytest.mark.parametrize(
+    ("scanner", "call"),
+    [
+        (scan_rsc_missing_use_client, "useState(0)"),
+        (scan_nextjs_navigation_hooks_missing_use_client, "useRouter()"),
+    ],
+    ids=["react_hooks", "navigation_hooks"],
+)
+def test_hook_rules_missing_use_client_skip_test_and_story_files(tmp_path: Path, scanner, call):
+    _write(tmp_path, "package.json", '{"dependencies": {"next": "14.0.0"}}\n')
+    _write(tmp_path, "app/widget.tsx", f"export default function Widget(){{ {call}; return null }}\n")
+    for name in ("app/widget.test.tsx", "app/widget.stories.tsx", "app/__tests__/widget.tsx"):
+        _write(tmp_path, name, f"it('x', () => {{ renderHook(() => {call}) }})\n")
+
+    info = nextjs_info_from_evidence(
+        {"marker_dir_hits": ["app"]},
+        package_root=tmp_path.resolve(),
+        package_json_relpath="package.json",
+    )
+    entries, scanned = scanner(tmp_path, info)
+    assert {entry["file"] for entry in entries} == {"app/widget.tsx"}
+    assert scanned == 1
