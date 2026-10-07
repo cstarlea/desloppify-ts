@@ -684,7 +684,9 @@ class TestLangsCommand:
         """The TypeScript and JavaScript plugins are the built-in languages."""
         from desloppify.languages import available_langs
 
-        assert available_langs() == ["javascript", "typescript"]
+        # Other tests register throwaway "test_*" languages in the shared registry.
+        builtin = [name for name in available_langs() if not name.startswith(("test_", "_"))]
+        assert builtin == ["javascript", "typescript"]
 
     def test_langs_hides_shared_phases_from_tool_list(self):
         from desloppify.app.commands.langs import _get_tool_labels

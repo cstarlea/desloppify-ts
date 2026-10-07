@@ -96,7 +96,9 @@ def test_get_lang_returns_same_instance():
 
 def test_available_langs_are_typescript_and_javascript():
     """available_langs lists the TypeScript and JavaScript plugins."""
-    assert available_langs() == ["javascript", "typescript"]
+    # Other tests register throwaway "test_*" languages in the shared registry.
+    builtin = [name for name in available_langs() if not name.startswith(("test_", "_"))]
+    assert builtin == ["javascript", "typescript"]
 
 
 def test_available_langs_returns_sorted():
