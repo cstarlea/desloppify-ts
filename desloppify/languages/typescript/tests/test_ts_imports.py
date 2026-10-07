@@ -11,7 +11,7 @@ import desloppify.base.discovery.paths as paths_api_mod
 import desloppify.languages.typescript.detectors.deps as deps_detector_mod
 import desloppify.languages.typescript.detectors.deps.imports as imports_mod
 import desloppify.languages.typescript.detectors.deps.resolve as deps_resolve_mod
-from desloppify.base.discovery.source import find_ts_and_tsx_files
+from desloppify.base.discovery.source import find_ts_and_js_files
 from desloppify.engine.detectors.graph import detect_cycles
 from desloppify.languages.typescript.detectors.deps.imports import (
     DYNAMIC,
@@ -20,6 +20,7 @@ from desloppify.languages.typescript.detectors.deps.imports import (
     MOCK,
     REFERENCE,
     REQUIRE,
+    RESOLVE,
     SIDE_EFFECT,
     STATIC,
     ImportExtractor,
@@ -226,6 +227,31 @@ def test_template_literal_dynamic_import_links_files_under_prefix(tmp_path):
     }
 
 
+@pytest.mark.parametrize("treesitter", [True, False], ids=["treesitter", "regex"])
+def test_require_resolve_is_a_deferred_reference(monkeypatch, treesitter):
+    if treesitter and not _TREESITTER:
+        pytest.skip("needs tree-sitter with the tsx grammar")
+    text = "export default { theme: require.resolve('./theme.js'), x: require('./x') };\n"
+    if treesitter:
+        refs = ImportExtractor().extract_text(text)
+    else:
+        refs = extract_imports_regex(text)
+    assert sorted(refs, key=lambda r: r.specifier) == [
+        ImportRef("./theme.js", RESOLVE),
+        ImportRef("./x", REQUIRE),
+    ]
+
+
+@needs_treesitter
+def test_require_resolve_target_is_not_orphaned_by_the_graph(tmp_path):
+    _write(tmp_path, "theme.js", "module.exports = {};\n")
+    _write(tmp_path, "site.config.ts", "export default { theme: require.resolve('./theme.js') };\n")
+    graph = deps_detector_mod.build_dep_graph(tmp_path)
+    theme = _key(tmp_path, "theme.js")
+    assert graph[theme]["importers"] == {_key(tmp_path, "site.config.ts")}
+    assert theme in graph[_key(tmp_path, "site.config.ts")]["deferred_imports"]
+
+
 # ── resolution candidates ────────────────────────────────────
 
 
@@ -254,8 +280,31 @@ def test_directory_import_uses_package_json_entry(tmp_path):
     }
 
 
-def test_declaration_files_are_not_sources(tmp_path):
-    for name in ("a.ts", "b.mts", "c.cts", "d.tsx", "e.d.ts", "f.d.mts", "g.d.cts"):
+def test_declaration_and_minified_files_are_not_sources(tmp_path):
+    names = (
+        "a.ts", "b.mts", "c.cts", "d.tsx", "e.d.ts", "f.d.mts", "g.d.cts",
+        "h.js", "i.jsx", "j.mjs", "k.cjs", "l.min.js", "m.min.mjs",
+    )
+    for name in names:
         _write(tmp_path, name)
-    found = {Path(f).name for f in find_ts_and_tsx_files(tmp_path)}
-    assert found == {"a.ts", "b.mts", "c.cts", "d.tsx"}
+    found = {Path(f).name for f in find_ts_and_js_files(tmp_path)}
+    assert found == {"a.ts", "b.mts", "c.cts", "d.tsx", "h.js", "i.jsx", "j.mjs", "k.cjs"}
+
+
+@pytest.mark.parametrize(
+    ("specifier", "target"),
+    [("./helpers", "helpers.js"), ("./view", "view.jsx"), ("./lib", "lib/index.js")],
+)
+def test_extensionless_specifiers_reach_javascript_files(tmp_path, specifier, target):
+    _write(tmp_path, target)
+    _write(tmp_path, "main.ts", f"import {{ x }} from '{specifier}';\n")
+    graph = deps_detector_mod.build_dep_graph(tmp_path)
+    assert graph[_key(tmp_path, "main.ts")]["imports"] == {_key(tmp_path, target)}
+
+
+def test_typescript_source_wins_over_a_javascript_file_of_the_same_name(tmp_path):
+    _write(tmp_path, "util.ts")
+    _write(tmp_path, "util.js")
+    _write(tmp_path, "main.ts", "import { x } from './util';\n")
+    graph = deps_detector_mod.build_dep_graph(tmp_path)
+    assert graph[_key(tmp_path, "main.ts")]["imports"] == {_key(tmp_path, "util.ts")}

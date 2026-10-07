@@ -289,10 +289,10 @@ _SPECIFIER_SOURCE_MAP: dict[str, tuple[str, ...]] = {
     ".cjs": (".cts", ".cjs"),
 }
 _TS_SOURCE_SUFFIXES = (".ts", ".tsx", ".mts", ".cts")
-# JavaScript files are not scanned (no ``allowJs`` support yet), so extensionless
-# specifiers only try TypeScript sources.
-_EXTENSIONLESS_SUFFIXES = (".ts", ".tsx", ".mts", ".cts")
-_INDEX_NAMES = ("index.ts", "index.tsx", "index.mts", "index.cts")
+# Extensionless specifiers try TypeScript sources first, then JavaScript ones
+# (``allowJs``); TypeScript never infers ``.mjs``/``.cjs``.
+_EXTENSIONLESS_SUFFIXES = (".ts", ".tsx", ".mts", ".cts", ".js", ".jsx")
+_INDEX_NAMES = ("index.ts", "index.tsx", "index.mts", "index.cts", "index.js", "index.jsx")
 _PACKAGE_ENTRY_FIELDS = ("types", "typings", "source", "module", "main")
 
 

@@ -7,7 +7,7 @@ import re
 from pathlib import Path
 
 from desloppify.base.discovery.paths import get_project_root
-from desloppify.base.discovery.source import find_ts_and_tsx_files, read_file_text
+from desloppify.base.discovery.source import find_ts_and_js_files, read_file_text
 from desloppify.base.text_utils import strip_c_style_comments
 
 _IDENT_RE = re.compile(r"^[A-Za-z_$][A-Za-z0-9_$]*$")
@@ -75,7 +75,7 @@ def _extract_import_names(line: str) -> list[str]:
 
 def detect_unused_fallback(path: Path, category: str) -> tuple[list[dict], int]:
     """Conservative source-based fallback for Deno/edge TS projects."""
-    files = find_ts_and_tsx_files(path)
+    files = find_ts_and_js_files(path)
     entries: list[dict] = []
 
     for filepath in files:

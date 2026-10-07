@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from desloppify.base.discovery.file_paths import rel, resolve_path
-from desloppify.base.discovery.source import find_ts_and_tsx_files
+from desloppify.base.discovery.source import find_ts_and_js_files
 from desloppify.base.output.terminal import colorize, print_table
 from desloppify.base.output.fallbacks import log_best_effort_failure
 from desloppify.base.search.grep import grep_count_files, grep_files
@@ -33,7 +33,7 @@ _JSDOC_DEPRECATED_RE = r"@deprecated\b"
 
 def detect_deprecated_result(path: Path) -> DetectorResult[dict[str, Any]]:
     """Find deprecated symbols with explicit population semantics."""
-    ts_files = find_ts_and_tsx_files(path)
+    ts_files = find_ts_and_js_files(path)
     hits = grep_files(_JSDOC_DEPRECATED_RE, ts_files, flags=re.IGNORECASE)
 
     entries = []

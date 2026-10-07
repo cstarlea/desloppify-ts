@@ -19,6 +19,7 @@ from desloppify.languages.typescript.detectors.deps.imports import (
     ImportExtractor,
 )
 from desloppify.languages.typescript.detectors.deps.resolver import project_resolver
+from desloppify.languages.typescript.plugin_contract import TS_BARREL_NAMES
 
 TS_REEXPORT_RE = re.compile(
     r"""^export\s+(?:\{[^}]*\}|\*)\s+from\s+['\"]([^'\"]+)['\"]""", re.MULTILINE
@@ -84,7 +85,7 @@ EXPECT_COMPARISON_RE = re.compile(
 )
 EXPECT_TO_BE_DEFINED_RE = re.compile(r"""\.toBeDefined\s*\(""")
 
-BARREL_BASENAMES = {"index.ts", "index.tsx"}
+BARREL_BASENAMES = TS_BARREL_NAMES
 logger = logging.getLogger(__name__)
 
 

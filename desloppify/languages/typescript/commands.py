@@ -9,7 +9,7 @@ from pathlib import Path
 
 from desloppify.base.discovery.file_paths import rel
 from desloppify.base.discovery.paths import get_src_path
-from desloppify.base.discovery.source import find_ts_and_tsx_files
+from desloppify.base.discovery.source import find_ts_and_js_files
 from desloppify.base.output.terminal import colorize, display_entries, print_table
 from desloppify.engine.detectors import coupling as coupling_detector_mod
 from desloppify.engine.detectors import dupes as dupes_detector_mod
@@ -62,12 +62,12 @@ from desloppify.languages.typescript.plugin_contract import (
 
 
 cmd_large = make_cmd_large(
-    find_ts_and_tsx_files,
+    find_ts_and_js_files,
     default_threshold=TS_LARGE_THRESHOLD,
     module_name=__name__,
 )
 cmd_complexity = make_cmd_complexity(
-    find_ts_and_tsx_files,
+    find_ts_and_js_files,
     TS_COMPLEXITY_SIGNALS,
     module_name=__name__,
 )
@@ -84,7 +84,7 @@ cmd_passthrough = make_cmd_passthrough(
     module_name=__name__,
 )
 cmd_naming = make_cmd_naming(
-    find_ts_and_tsx_files,
+    find_ts_and_js_files,
     skip_names=TS_SKIP_NAMES,
     skip_dirs=TS_SKIP_DIRS,
     module_name=__name__,
@@ -158,7 +158,7 @@ def cmd_orphaned(args: argparse.Namespace) -> None:
 
 def cmd_dupes(args: argparse.Namespace) -> None:
     functions = []
-    for filepath in find_ts_and_tsx_files(Path(args.path)):
+    for filepath in find_ts_and_js_files(Path(args.path)):
         if "node_modules" in filepath or ".d.ts" in filepath:
             continue
         functions.extend(extract_ts_functions(filepath))
@@ -219,7 +219,7 @@ def cmd_coupling(args: argparse.Namespace) -> None:
         graph,
         shared_prefix=shared_prefix,
         tools_prefix=tools_prefix,
-        skip_basenames={"index.ts", "index.tsx"},
+        skip_basenames=TS_BARREL_NAMES,
     )
     if getattr(args, "json", False):
         print(

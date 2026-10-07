@@ -11,6 +11,7 @@ coverage) is compared with `snapshots/<project>.json`.
 | `next-app` | Next.js 16 (`proxy.ts`, `mdx-components.tsx`, `forbidden.tsx`, route handlers, server actions), `baseUrl` bare imports, `dangerouslySetInnerHTML` |
 | `node-lib` | NodeNext `./x.js` specifiers, package `exports`/`bin`, AVA tests, deprecated public API, `page.$eval` (not `eval`) |
 | `pnpm-monorepo` | `pnpm-workspace.yaml`, workspace package imports, `paths` inherited through `extends`, a type-only import cycle |
+| `mixed-js` | JavaScript project mid-migration (`allowJs`): a `.ts` file imported only from JS, extensionless and `index.js` imports, a `.cjs` module, a JS test, a JS orphan, a minified bundle that must be ignored |
 
 `expectations.json` holds the intent behind each project: findings that must
 or must not appear, plus **known false positives / negatives** that are still

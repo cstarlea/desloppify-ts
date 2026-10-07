@@ -11,7 +11,7 @@ import re
 from pathlib import Path
 
 from desloppify.base.discovery.paths import get_project_root
-from desloppify.base.discovery.source import find_js_ts_and_tsx_files
+from desloppify.base.discovery.source import find_ts_and_js_files
 from desloppify.languages._framework.node.js_text import (
     code_text as _code_text,
     strip_js_ts_comments as _strip_ts_comments,
@@ -255,7 +255,7 @@ def scan_nextjs_error_files_missing_use_client(
     }
     entries: list[dict] = []
     scanned = 0
-    for filepath in find_js_ts_and_tsx_files(path):
+    for filepath in find_ts_and_js_files(path):
         if not _is_under_any_root(filepath, info.app_roots):
             continue
         if Path(filepath).name not in targets:
@@ -288,7 +288,7 @@ def scan_nextjs_pages_router_artifacts_in_app_router(
 
     entries: list[dict] = []
     scanned = 0
-    for filepath in find_js_ts_and_tsx_files(path):
+    for filepath in find_ts_and_js_files(path):
         if not _is_under_any_root(filepath, info.app_roots):
             continue
 
@@ -308,7 +308,7 @@ def scan_nextjs_use_server_not_first(
     """Find modules where 'use server' exists but is not the first meaningful line."""
     entries: list[dict] = []
     scanned = 0
-    for filepath in find_js_ts_and_tsx_files(path):
+    for filepath in find_ts_and_js_files(path):
         scanned += 1
         try:
             full = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
@@ -338,7 +338,7 @@ def scan_nextjs_next_head_in_app_router(
 
     entries: list[dict] = []
     scanned = 0
-    for filepath in find_js_ts_and_tsx_files(path):
+    for filepath in find_ts_and_js_files(path):
         if not _is_under_any_root(filepath, info.app_roots):
             continue
 
@@ -368,7 +368,7 @@ def scan_nextjs_use_client_not_first(
 
     entries: list[dict] = []
     scanned = 0
-    for filepath in find_js_ts_and_tsx_files(path):
+    for filepath in find_ts_and_js_files(path):
         if not _is_under_any_root(filepath, info.app_roots):
             continue
 
@@ -399,7 +399,7 @@ def scan_nextjs_next_document_misuse(
     entries: list[dict] = []
     scanned = 0
 
-    for filepath in find_js_ts_and_tsx_files(path):
+    for filepath in find_ts_and_js_files(path):
         scanned += 1
         try:
             full = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
@@ -433,7 +433,7 @@ def scan_nextjs_server_navigation_apis_in_client(
 
     entries: list[dict] = []
     scanned = 0
-    for filepath in find_js_ts_and_tsx_files(path):
+    for filepath in find_ts_and_js_files(path):
         scanned += 1
         try:
             full = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
@@ -469,7 +469,7 @@ def scan_nextjs_browser_globals_missing_use_client(
 
     entries: list[dict] = []
     scanned = 0
-    for filepath in find_js_ts_and_tsx_files(path):
+    for filepath in find_ts_and_js_files(path):
         if not _is_under_any_root(filepath, info.app_roots):
             continue
         if filepath.endswith("/route.ts") or filepath.endswith("/route.tsx"):
@@ -506,7 +506,7 @@ def scan_nextjs_client_layouts(
 
     entries: list[dict] = []
     scanned = 0
-    for filepath in find_js_ts_and_tsx_files(path):
+    for filepath in find_ts_and_js_files(path):
         if not _is_under_any_root(filepath, info.app_roots):
             continue
         if not _is_layout_module(filepath):
@@ -535,7 +535,7 @@ def scan_nextjs_async_client_components(
 
     entries: list[dict] = []
     scanned = 0
-    for filepath in find_js_ts_and_tsx_files(path):
+    for filepath in find_ts_and_js_files(path):
         scanned += 1
         try:
             full = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
@@ -567,7 +567,7 @@ def scan_nextjs_use_server_in_client(
 
     entries: list[dict] = []
     scanned = 0
-    for filepath in find_js_ts_and_tsx_files(path):
+    for filepath in find_ts_and_js_files(path):
         scanned += 1
         try:
             full = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
@@ -607,7 +607,7 @@ def scan_nextjs_server_modules_in_pages_router(
                 return True
         return False
 
-    for filepath in find_js_ts_and_tsx_files(path):
+    for filepath in find_ts_and_js_files(path):
         if not _is_under_any_root(filepath, info.pages_roots):
             continue
         if _is_pages_api_route(filepath):
@@ -656,7 +656,7 @@ def scan_nextjs_pages_api_route_handlers(
                 return True
         return False
 
-    for filepath in find_js_ts_and_tsx_files(path):
+    for filepath in find_ts_and_js_files(path):
         if not _is_under_any_root(filepath, info.pages_roots):
             continue
         if not _is_pages_api_route(filepath):
@@ -691,7 +691,7 @@ def scan_nextjs_app_router_exports_in_pages_router(
 
     entries: list[dict] = []
     scanned = 0
-    for filepath in find_js_ts_and_tsx_files(path):
+    for filepath in find_ts_and_js_files(path):
         if not _is_under_any_root(filepath, info.pages_roots):
             continue
 
@@ -733,7 +733,7 @@ def scan_rsc_missing_use_client(path: Path, info: NextjsFrameworkInfo) -> tuple[
 
     entries: list[dict] = []
     scanned = 0
-    for filepath in find_js_ts_and_tsx_files(path):
+    for filepath in find_ts_and_js_files(path):
         if not _is_under_any_root(filepath, info.app_roots):
             continue
 
@@ -777,7 +777,7 @@ def scan_nextjs_navigation_hooks_missing_use_client(
 
     entries: list[dict] = []
     scanned = 0
-    for filepath in find_js_ts_and_tsx_files(path):
+    for filepath in find_ts_and_js_files(path):
         if not _is_under_any_root(filepath, info.app_roots):
             continue
 
@@ -815,7 +815,7 @@ def scan_nextjs_server_imports_in_client(
 
     entries: list[dict] = []
     scanned = 0
-    for filepath in find_js_ts_and_tsx_files(path):
+    for filepath in find_ts_and_js_files(path):
         scanned += 1
         try:
             full = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
@@ -859,7 +859,7 @@ def scan_next_router_imports_in_app_router(
 
     entries: list[dict] = []
     scanned = 0
-    for filepath in find_js_ts_and_tsx_files(path):
+    for filepath in find_ts_and_js_files(path):
         if not _is_under_any_root(filepath, info.app_roots):
             continue
         scanned += 1
@@ -890,7 +890,7 @@ def scan_nextjs_server_exports_in_client(
 
     entries: list[dict] = []
     scanned = 0
-    for filepath in find_js_ts_and_tsx_files(path):
+    for filepath in find_ts_and_js_files(path):
         scanned += 1
         try:
             full = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
@@ -935,7 +935,7 @@ def scan_nextjs_pages_router_apis_in_app_router(
 
     entries: list[dict] = []
     scanned = 0
-    for filepath in find_js_ts_and_tsx_files(path):
+    for filepath in find_ts_and_js_files(path):
         if not _is_under_any_root(filepath, info.app_roots):
             continue
 
@@ -980,7 +980,7 @@ def scan_nextjs_env_leaks_in_client(
 
     entries: list[dict] = []
     scanned = 0
-    for filepath in find_js_ts_and_tsx_files(path):
+    for filepath in find_ts_and_js_files(path):
         scanned += 1
         try:
             full = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
@@ -1050,7 +1050,7 @@ def scan_nextjs_route_handlers_and_middleware_misuse(
             "src/middleware.jsx",
         }
 
-    for filepath in find_js_ts_and_tsx_files(path):
+    for filepath in find_ts_and_js_files(path):
         if not (_is_route_handler(filepath) or _is_middleware(filepath)):
             continue
 

@@ -74,7 +74,7 @@ class TestDetectLangFromExt:
         assert detect_lang_from_ext("foo.tsx") == "typescript"
 
     def test_javascript_js(self):
-        assert detect_lang_from_ext("foo.js") == "javascript"
+        assert detect_lang_from_ext("foo.js") == "typescript"
 
     def test_unknown_ext(self):
         assert detect_lang_from_ext("foo.xyz") is None
@@ -114,7 +114,7 @@ class TestDetectLangFromDir:
 
     def test_javascript_dir(self, tmp_path):
         (tmp_path / "foo.js").write_text("")
-        assert detect_lang_from_dir(str(tmp_path)) == "javascript"
+        assert detect_lang_from_dir(str(tmp_path)) == "typescript"
 
     def test_typescript_dir(self, tmp_path):
         (tmp_path / "bar.ts").write_text("")

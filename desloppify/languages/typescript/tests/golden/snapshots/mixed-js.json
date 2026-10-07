@@ -1,0 +1,78 @@
+{
+  "issues": [
+    {
+      "id": "facade::src/math/index.js",
+      "tier": 2,
+      "confidence": "medium",
+      "zone": "production",
+      "summary": "Re-export facade (3 LOC): imports from ./sum.js, ./mean (2 importers)"
+    },
+    {
+      "id": "orphaned::src/legacy/old-report.js",
+      "tier": 3,
+      "confidence": "medium",
+      "zone": "production",
+      "summary": "Orphaned file (17 LOC): zero importers, not an entry point"
+    },
+    {
+      "id": "test_coverage::src/cjs/loader.cjs::untested_module",
+      "tier": 3,
+      "confidence": "high",
+      "zone": "production",
+      "summary": "Untested module (13 LOC, 1 importers)"
+    },
+    {
+      "id": "test_coverage::src/format.js::transitive_only",
+      "tier": 3,
+      "confidence": "medium",
+      "zone": "production",
+      "summary": "No direct tests (11 LOC, 1 importers) — covered only via imports from tested modules"
+    },
+    {
+      "id": "test_coverage::src/legacy/old-report.js::untested_module",
+      "tier": 3,
+      "confidence": "high",
+      "zone": "production",
+      "summary": "Untested module (17 LOC, 0 importers)"
+    },
+    {
+      "id": "test_coverage::src/math/mean.js::transitive_only",
+      "tier": 3,
+      "confidence": "medium",
+      "zone": "production",
+      "summary": "No direct tests (12 LOC, 1 importers) — covered only via imports from tested modules"
+    },
+    {
+      "id": "test_coverage::src/math/sum.ts::transitive_only",
+      "tier": 3,
+      "confidence": "medium",
+      "zone": "production",
+      "summary": "No direct tests (12 LOC, 2 importers) — covered only via imports from tested modules"
+    }
+  ],
+  "potentials": {
+    "coupling": 0,
+    "cycles": 9,
+    "deprecated": 0,
+    "dupes": 9,
+    "exports": 0,
+    "facade": 9,
+    "flat_dirs": 5,
+    "logs": 9,
+    "naming": 5,
+    "orphaned": 9,
+    "patterns": 0,
+    "props": 0,
+    "react": 0,
+    "security": 9,
+    "single_use": 2,
+    "smells": 9,
+    "structural": 9,
+    "test_coverage": 21,
+    "unused": 9
+  },
+  "reduced_coverage": [
+    "exports: knip_not_installed",
+    "unused: tsc_missing"
+  ]
+}

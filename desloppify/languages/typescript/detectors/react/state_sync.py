@@ -7,7 +7,7 @@ import re
 from pathlib import Path
 
 from desloppify.base.discovery.paths import get_project_root
-from desloppify.base.discovery.source import find_tsx_files
+from desloppify.base.discovery.source import find_tsx_and_jsx_files
 from desloppify.languages.typescript.detectors.smells.helpers import (
     _strip_ts_comments,
     scan_code,
@@ -22,7 +22,7 @@ def detect_state_sync(path: Path) -> tuple[list[dict], int]:
     entries = []
     total_effects = 0
 
-    for filepath in find_tsx_files(path):
+    for filepath in find_tsx_and_jsx_files(path):
         try:
             p = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
             content = p.read_text()

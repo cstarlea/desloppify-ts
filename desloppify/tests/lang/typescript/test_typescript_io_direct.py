@@ -14,7 +14,7 @@ def test_typescript_io_helpers_filter_and_resolve_paths(monkeypatch, tmp_path: P
 
     monkeypatch.setattr(
         io_mod,
-        "find_ts_and_tsx_files",
+        "find_ts_and_js_files",
         lambda _path: [
             "src/app.ts",
             "src/widget.tsx",

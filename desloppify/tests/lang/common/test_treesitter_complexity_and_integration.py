@@ -239,21 +239,6 @@ let add a b =
 # ── Generic lang integration for new languages ────────────────
 
 
-class TestNewLanguageIntegration:
-    def test_javascript_registered(self):
-        import desloppify.languages.javascript  # noqa: F401
-        from desloppify.languages._framework.generic_support.capabilities import (
-            empty_dep_graph,
-            noop_extract_functions,
-        )
-        from desloppify.languages._framework.registry.resolution import get_lang
-
-        lang = get_lang("javascript")
-        assert lang.extract_functions is not noop_extract_functions
-        assert lang.build_dep_graph is not empty_dep_graph
-        assert ".js" in lang.extensions
-
-
 # ── Cyclomatic complexity tests ───────────────────────────────
 
 

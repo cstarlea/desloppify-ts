@@ -1,0 +1,13 @@
+{
+  // A JavaScript project part-way through a move to TypeScript.
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "allowJs": true,
+    "checkJs": false,
+    "strict": true,
+    "noEmit": true
+  },
+  "include": ["src", "test"]
+}
