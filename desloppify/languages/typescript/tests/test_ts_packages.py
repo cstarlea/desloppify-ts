@@ -318,3 +318,43 @@ def test_bundled_output_maps_to_any_source_extension(tmp_path):
     assert _resolver(tmp_path).resolve("@trpc/next/client") == _key(
         tmp_path, "packages/next/src/client.ts"
     )
+
+
+# ── unresolved imports (orphan confidence) ───────────────────
+
+
+def test_unresolved_bare_imports_exclude_dependencies_and_builtins(tmp_path):
+    _manifest(tmp_path, "", name="app", dependencies={"react": "^19", "@tanstack/query": "^5"})
+    _write(
+        tmp_path,
+        "main.ts",
+        "import React from 'react';\n"
+        "import { useQuery } from '@tanstack/query/react';\n"
+        "import fs from 'fs';\n"
+        "import path from 'node:path';\n"
+        "import 'virtual:pwa-register';\n"
+        "import { track } from '#lib/analytics';\n"
+        "import { x } from '~/missing/thing';\n",
+    )
+    graph = deps_detector_mod.build_dep_graph(tmp_path)
+    assert graph[_key(tmp_path, "main.ts")]["unresolved_imports"] == {
+        "#lib/analytics",
+        "~/missing/thing",
+    }
+
+
+def test_orphans_reachable_by_unresolved_imports_get_low_confidence(tmp_path):
+    from desloppify.languages.typescript.phases_coupling import flag_unresolved_orphans
+
+    main = str(tmp_path / "src" / "main.ts")
+    graph = {main: {"unresolved_imports": {"#lib/analytics", "~/widgets"}}}
+    entries = [
+        {"file": str(tmp_path / "src" / "lib" / "analytics.ts"), "loc": 20},
+        {"file": str(tmp_path / "src" / "widgets" / "index.ts"), "loc": 20},
+        {"file": str(tmp_path / "src" / "lib" / "unrelated.ts"), "loc": 20},
+    ]
+    flag_unresolved_orphans(entries, graph)
+    analytics, widgets, unrelated = entries
+    assert analytics["confidence"] == widgets["confidence"] == "low"
+    assert analytics["possible_importers"] == ["src/main.ts"]
+    assert "confidence" not in unrelated

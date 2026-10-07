@@ -20,7 +20,9 @@
       "orphaned::src/locales/",
       "orphaned::src/lib/widgets.ts"
     ],
-    "known_false_positives": {},
+    "known_false_positives": {
+      "orphaned::src/lib/analytics.ts": "package.json imports (#lib/*) not resolved yet (roadmap M1 1.1); reported at low confidence because an unresolved import may point here"
+    },
     "known_false_negatives": {},
     "node": {
       "must_find": [

@@ -2,6 +2,9 @@
   "name": "vite-react",
   "private": true,
   "type": "module",
+  "imports": {
+    "#lib/*": "./src/lib/*.ts"
+  },
   "scripts": {
     "dev": "vite",
     "test": "vitest"

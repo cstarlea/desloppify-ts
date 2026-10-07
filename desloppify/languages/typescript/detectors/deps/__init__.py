@@ -31,6 +31,7 @@ from desloppify.languages.typescript.detectors.deps.imports import (
 )
 from desloppify.languages.typescript.detectors.deps.packages import (
     WorkspaceResolver,
+    declared_dependencies,
     discover_packages,
 )
 from desloppify.languages.typescript.detectors.deps.resolve import (
@@ -58,6 +59,30 @@ from desloppify.languages.typescript.detectors.deps.runtime import (
 _FRAMEWORK_EXTENSIONS = (".svelte", ".vue", ".astro")
 _DENO_EXTERNAL_PREFIXES = ("http://", "https://", "npm:", "jsr:")
 _DECLARATION_SUFFIXES = (".d.ts", ".d.mts", ".d.cts")
+_NODE_BUILTINS = frozenset(
+    {
+        "assert", "async_hooks", "buffer", "child_process", "cluster", "console",
+        "constants", "crypto", "dgram", "diagnostics_channel", "dns", "domain",
+        "events", "fs", "http", "http2", "https", "inspector", "module", "net",
+        "os", "path", "perf_hooks", "process", "punycode", "querystring",
+        "readline", "repl", "stream", "string_decoder", "sys", "timers", "tls",
+        "trace_events", "tty", "url", "util", "v8", "vm", "wasi", "worker_threads",
+        "zlib",
+    }
+)
+
+
+def _package_name(specifier: str) -> str:
+    parts = specifier.split("/")
+    return "/".join(parts[:2]) if specifier.startswith("@") and len(parts) > 1 else parts[0]
+
+
+def _is_external_package(specifier: str, dependencies: set[str]) -> bool:
+    """npm dependencies, Node builtins and bundler virtual modules (``virtual:x``)."""
+    if ":" in specifier:
+        return True
+    name = _package_name(specifier)
+    return name in dependencies or name in _NODE_BUILTINS
 
 
 def _extract_module_specifiers(line: str) -> list[str]:
@@ -179,6 +204,8 @@ def build_dep_graph(
 
     Returns {resolved_path: {"imports": set[str], "importers": set[str],
     "deferred_imports": set[str], "import_count": int, "importer_count": int}}.
+    Nodes with bare specifiers that resolve to nothing (and name no declared
+    dependency) also get ``unresolved_imports``.
     ``deferred_imports`` holds targets reached only through type-only, dynamic,
     mock or triple-slash references: real dependencies, but not ones that run
     at module initialization, so they can't form an import cycle.
@@ -189,7 +216,9 @@ def build_dep_graph(
     )
     project_root = get_project_root()
     tsconfigs = _TsconfigLookup(path, project_root)
-    workspace = WorkspaceResolver(discover_packages(path, project_root))
+    packages = discover_packages(path, project_root)
+    workspace = WorkspaceResolver(packages)
+    dependencies = declared_dependencies(packages)
     extractor = ImportExtractor()
 
     ts_files = find_ts_and_tsx_files(path)
@@ -237,6 +266,15 @@ def build_dep_graph(
                 if target is not None:
                     graph[source_resolved]["imports"].add(target)
                     graph[target]["importers"].add(source_resolved)
+            if (
+                target is None
+                and not module_path.startswith((".", "/"))
+                and not _is_external_package(module_path, dependencies)
+            ):
+                # Not a dependency and not resolved: probably an alias the
+                # resolver doesn't understand, so the file it names may look
+                # orphaned when it isn't.
+                graph[source_resolved].setdefault("unresolved_imports", set()).add(module_path)
             if target is not None and ref.runtime:
                 runtime_edges[source_resolved].add(target)
 

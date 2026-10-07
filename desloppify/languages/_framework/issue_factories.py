@@ -171,15 +171,21 @@ def make_orphaned_issues(entries: list[dict], stderr_fn) -> list[Issue]:
     """Normalize orphaned file entries into issues."""
     results = []
     for e in entries:
+        detail: dict = {"loc": e["loc"]}
+        summary = f"Orphaned file ({e['loc']} LOC): zero importers, not an entry point"
+        possible = e.get("possible_importers")
+        if possible:
+            detail["possible_importers"] = possible
+            summary += f" (an unresolved import in {possible[0]} may point here)"
         results.append(
             make_issue(
                 "orphaned",
                 e["file"],
                 "",
                 tier=3,
-                confidence="medium",
-                summary=f"Orphaned file ({e['loc']} LOC): zero importers, not an entry point",
-                detail={"loc": e["loc"]},
+                confidence=e.get("confidence", "medium"),
+                summary=summary,
+                detail=detail,
             )
         )
     if entries:
