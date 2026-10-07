@@ -5,7 +5,6 @@
 	typecheck \
 	arch \
 	ci-contracts \
-	integration-roslyn \
 	tests \
 	tests-full \
 	tests-golden-node \
@@ -57,9 +56,6 @@ ci-contracts: install-ci-tools
 	pytest -q desloppify/tests/ci/test_ci_contracts.py
 	pytest -q desloppify/tests/commands/test_lifecycle_transitions.py -k "assessment_then_score_when_no_review_followup"
 
-integration-roslyn: install-ci-tools
-	pytest -q desloppify/tests/lang/csharp/test_csharp_deps.py -k "roslyn"
-
 tests: install-ci-tools
 	pytest -q $(PYTEST_XML_FLAG)
 
@@ -82,7 +78,7 @@ package-smoke: install-ci-tools
 		WHEEL=$$(ls -t dist/desloppify-*.whl | head -n 1) && \
 		python -m pip install "$$WHEEL[full]" && \
 		python -c "from importlib.resources import files; from pathlib import Path; docs=Path('docs'); bundled=files('desloppify.data.global'); names=sorted(p.name for p in docs.glob('*.md')); assert names; missing=[name for name in names if not bundled.joinpath(name).is_file()]; assert not missing, f'missing bundled docs: {missing}'; mismatched=[name for name in names if bundled.joinpath(name).read_text(encoding='utf-8') != (docs / name).read_text(encoding='utf-8')]; assert not mismatched, f'mismatched bundled docs: {mismatched}'" && \
-		python -c "import importlib.metadata as m,sys; extras=set(m.metadata('desloppify').get_all('Provides-Extra') or []); required={'full','treesitter','python-security','scorecard'}; missing=required-extras; print('missing extras metadata:', sorted(missing)) if missing else None; sys.exit(1 if missing else 0)" && \
+		python -c "import importlib.metadata as m,sys; extras=set(m.metadata('desloppify').get_all('Provides-Extra') or []); required={'full','treesitter','scorecard'}; missing=required-extras; print('missing extras metadata:', sorted(missing)) if missing else None; sys.exit(1 if missing else 0)" && \
 		desloppify --help > /dev/null
 	rm -rf .pkg-smoke
 

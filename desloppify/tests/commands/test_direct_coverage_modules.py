@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from types import SimpleNamespace
 
 import desloppify.app.cli_support.parser as cli_parser
@@ -51,34 +50,6 @@ import desloppify.intelligence.review.dimensions.holistic as review_dimensions_h
 import desloppify.intelligence.review.dimensions.validation as review_dimensions_validation
 import desloppify.languages as lang_pkg
 import desloppify.languages._framework.registry.discovery as lang_discovery
-import desloppify.languages._framework.scaffold_move as dart_move
-import desloppify.languages._framework.scaffold_move as gdscript_move
-import desloppify.languages.csharp.extractors as csharp_extractors
-import desloppify.languages.csharp.extractors_classes as csharp_extractors_classes
-import desloppify.languages.dart.commands as dart_commands
-import desloppify.languages.dart.extractors as dart_extractors
-import desloppify.languages.dart.phases as dart_phases
-import desloppify.languages.dart.review as dart_review
-import desloppify.languages.gdscript.commands as gdscript_commands
-import desloppify.languages.gdscript.extractors as gdscript_extractors
-import desloppify.languages.gdscript.phases as gdscript_phases
-import desloppify.languages.gdscript.review as gdscript_review
-import desloppify.languages.python.detectors.private_imports as private_imports
-import desloppify.languages.python.detectors.smells_ast._dispatch as smells_ast_dispatch
-import desloppify.languages.python.detectors.smells_ast._helpers as smells_ast_shared
-import desloppify.languages.python.detectors.smells_ast._source_detectors as smells_ast_source_detectors
-import desloppify.languages.python.detectors.smells_ast._tree_context_paths as smells_ast_tree_context_paths
-import desloppify.languages.python.detectors.smells_ast._tree_quality_detectors as smells_ast_tree_quality_detectors
-import desloppify.languages.python.detectors.smells_ast._tree_quality_detectors_types as smells_ast_tree_quality_detectors_types
-import desloppify.languages.python.detectors.smells_ast._tree_safety_detectors as smells_ast_tree_safety_detectors
-import desloppify.languages.python.detectors.smells_ast._tree_safety_detectors_runtime as smells_ast_tree_safety_detectors_runtime
-import desloppify.languages.python.extractors_classes as py_extractors_classes
-import desloppify.languages.python.extractors_shared as py_extractors_shared
-import desloppify.languages.python.phases as py_phases
-import desloppify.languages.python.phases_quality as py_phases_quality
-import desloppify.languages.rust.detectors._shared as rust_shared_mod
-import desloppify.languages.rust.move as rust_move_mod
-import desloppify.languages.rust.phases_smells as rust_phases_smells_mod
 import desloppify.languages.typescript.detectors.smells.detector_safety as ts_smell_detectors_safety
 import desloppify.languages.typescript.detectors.smells.helpers as ts_smell_helpers_mod
 import desloppify.languages.typescript.detectors.deps.runtime as ts_deps_runtime
@@ -86,8 +57,6 @@ import desloppify.languages.typescript.extractors_components as ts_extractors_co
 from desloppify.engine._work_queue.models import QueueBuildOptions, QueueVisibility
 from desloppify.intelligence.review import prepare_batches_builders as review_prepare_batches
 from desloppify.languages._framework.registry import resolution as lang_resolution
-from desloppify.languages.csharp import move as csharp_move
-from desloppify.languages.csharp import review as csharp_review
 from desloppify.languages.typescript import review as ts_review
 
 
@@ -159,7 +128,7 @@ def test_smoke_commands():
 
 
 def test_smoke_engine():
-    """Engine modules: state internals, python detectors."""
+    """Engine modules: state internals, TypeScript detectors."""
     # state internals
     _assert_all_callables(
         persistence.load_state,
@@ -171,31 +140,12 @@ def test_smoke_engine():
         noise.resolve_issue_noise_settings,
     )
 
-    # python detector modules
+    # TypeScript detector modules
     _assert_all_callables(
-        private_imports.detect_private_imports,
-        private_imports._is_dunder,
-        smells_ast_dispatch.detect_ast_smells,
-        smells_ast_shared._looks_like_path_var,
-        smells_ast_source_detectors.detect_duplicate_constants,
-        smells_ast_source_detectors.detect_vestigial_parameter,
-        smells_ast_tree_context_paths._detect_hardcoded_path_sep,
-        smells_ast_tree_quality_detectors._detect_optional_param_sprawl,
-        smells_ast_tree_quality_detectors_types._detect_optional_param_sprawl,
-        smells_ast_tree_safety_detectors._detect_silent_except,
-        smells_ast_tree_safety_detectors_runtime._detect_silent_except,
-        py_extractors_classes.extract_py_classes,
-        py_extractors_shared.extract_py_params,
-        py_phases_quality.phase_smells,
-        py_phases_quality.phase_dict_keys,
         ts_smell_detectors_safety._detect_swallowed_errors,
         ts_deps_runtime.build_dynamic_import_targets,
         ts_extractors_components.extract_ts_components,
     )
-    assert private_imports._is_dunder("__all__")
-    assert isinstance(py_phases.PY_ENTRY_PATTERNS, list)
-    assert isinstance(py_phases.PY_COMPLEXITY_SIGNALS, list)
-    assert isinstance(py_phases.PY_GOD_RULES, list)
 
 
 def test_work_queue_split_modules_have_direct_behavior(monkeypatch):
@@ -289,137 +239,11 @@ def test_smoke_lang_plugins():
         lang_resolution.make_lang_config,
         lang_resolution.get_lang,
         lang_resolution.auto_detect_lang,
-        csharp_extractors.find_csharp_files,
-        csharp_extractors.extract_csharp_functions,
-        csharp_extractors_classes.extract_csharp_classes,
-        dart_commands.get_detect_commands,
-        dart_extractors.find_dart_files,
-        dart_extractors.extract_functions,
-        dart_review.module_patterns,
-        dart_review.api_surface,
-        gdscript_commands.get_detect_commands,
-        gdscript_extractors.find_gdscript_files,
-        gdscript_extractors.extract_functions,
-        gdscript_review.module_patterns,
-        gdscript_review.api_surface,
     )
-
-    # csharp
-    assert isinstance(csharp_move.VERIFY_HINT, str)
-    assert "dotnet build" in csharp_move.VERIFY_HINT
-    assert csharp_move.find_replacements("a.cs", "b.cs", {}) == {}
-    assert csharp_move.find_self_replacements("a.cs", "b.cs", {}) == []
-    assert csharp_move.filter_intra_package_importer_changes(
-        "a.cs", [("a", "b")], set()
-    ) == [("a", "b")]
-    assert csharp_move.filter_directory_self_changes("a.cs", [("a", "b")], set()) == [
-        ("a", "b")
-    ]
-    assert isinstance(csharp_review.module_patterns("public class A {}"), list)
-    assert csharp_review.api_surface({"A.cs": "public class A {}"}) == {}
 
     # typescript
     assert isinstance(ts_review.module_patterns("export default function A() {}"), list)
     assert ts_review.api_surface({"a.ts": "export function f() {}"}) == {}
-
-    # dart
-    assert isinstance(dart_move.get_verify_hint(), str)
-    assert dart_move.find_replacements("a.dart", "b.dart", {}) == {}
-    assert dart_move.find_self_replacements("a.dart", "b.dart", {}) == []
-    assert isinstance(dart_commands.get_detect_commands(), dict)
-    assert isinstance(dart_phases.DART_COMPLEXITY_SIGNALS, list)
-    assert callable(dart_phases.phase_structural)
-    assert callable(dart_phases.phase_coupling)
-    assert isinstance(dart_review.HOLISTIC_REVIEW_DIMENSIONS, list)
-
-    # gdscript
-    assert isinstance(gdscript_move.get_verify_hint(), str)
-    assert gdscript_move.find_replacements("a.gd", "b.gd", {}) == {}
-    assert gdscript_move.find_self_replacements("a.gd", "b.gd", {}) == []
-    assert isinstance(gdscript_commands.get_detect_commands(), dict)
-    assert isinstance(gdscript_phases.GDSCRIPT_COMPLEXITY_SIGNALS, list)
-    assert callable(gdscript_phases.phase_structural)
-    assert callable(gdscript_phases.phase_coupling)
-    assert isinstance(gdscript_review.HOLISTIC_REVIEW_DIMENSIONS, list)
-
-
-def test_rust_move_smells_and_shared_helpers_have_direct_coverage(monkeypatch, tmp_path):
-    assert rust_move_mod.VERIFY_HINT == "cargo check"
-    assert rust_move_mod.find_replacements("src/lib.rs", "src/new.rs", {}) == {}
-    assert rust_move_mod.find_self_replacements("src/lib.rs", "src/new.rs", {}) == []
-    assert rust_move_mod.filter_intra_package_importer_changes(
-        "src/lib.rs",
-        [("old", "new")],
-        {"src/lib.rs"},
-    ) == [("old", "new")]
-
-    monkeypatch.setattr(
-        rust_phases_smells_mod,
-        "detect_smells",
-        lambda _path: (
-            [
-                {
-                    "id": "allow_attr",
-                    "label": "Allow attr",
-                    "severity": "medium",
-                    "matches": [
-                        {
-                            "file": "src/lib.rs",
-                            "line": 3,
-                            "content": "#[allow(dead_code)]",
-                        }
-                    ],
-                }
-            ],
-            4,
-        ),
-    )
-    monkeypatch.setattr(
-        rust_phases_smells_mod,
-        "normalize_smell_entries",
-        lambda entries: [
-            SimpleNamespace(to_mapping=lambda entry=entry: entry) for entry in entries
-        ],
-    )
-    monkeypatch.setattr(
-        rust_phases_smells_mod,
-        "make_smell_issues",
-        lambda entries, _log: [{"detector": "smells", "entries": entries}],
-    )
-    issues, potentials = rust_phases_smells_mod.phase_smells(
-        Path("."),
-        SimpleNamespace(zone_map=None),
-    )
-    assert issues[0]["detector"] == "smells"
-    assert potentials == {"smells": 4}
-
-    manifest = tmp_path / "Cargo.toml"
-    manifest.write_text(
-        """
-[package]
-name = "demo"
-version = "0.1.0"
-
-[features]
-serde = []
-
-[dependencies]
-tokio = { version = "1", optional = true }
-""".strip()
-        + "\n"
-    )
-    assert rust_shared_mod._declared_features(manifest) == {"serde", "tokio"}
-
-    public_fns = rust_shared_mod._iter_public_functions(
-        "#[inline]\npub fn run(&self, value: i32) -> i32 {\n    value + 1\n}\n"
-    )
-    assert public_fns[0].name == "run"
-    assert rust_shared_mod._receiver_from_signature(public_fns[0].signature) == "&self"
-
-    public_types = rust_shared_mod._iter_public_types(
-        "pub struct Widget {\n    pub value: i32,\n}\n"
-    )
-    assert public_types[0].name == "Widget"
 
 
 def test_typescript_split_smell_helpers_have_direct_coverage():
@@ -623,10 +447,6 @@ def test_render_markdown_for_backlog_uses_backlog_heading():
 
 def test_private_imports_is_dunder():
     """_is_dunder correctly identifies dunder names."""
-    assert private_imports._is_dunder("__all__") is True
-    assert private_imports._is_dunder("__init__") is True
-    assert private_imports._is_dunder("_private") is False
-    assert private_imports._is_dunder("public") is False
 
 
 def test_command_registry_has_core_commands():

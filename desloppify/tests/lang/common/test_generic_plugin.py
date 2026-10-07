@@ -529,7 +529,6 @@ class TestMakeToolPhase:
         else:
             assert argv == ["/bin/sh", "-lc", "echo ok | cat"]
 
-
     def test_resolve_command_argv_windows_backslash_path_preserved(self):
         with patch("desloppify.languages._framework.generic_parts.tool_runner.os.name", "nt"):
             argv = resolve_command_argv(r"C:\Tools\tool.exe --flag")
@@ -682,23 +681,12 @@ class TestStubs:
 @pytest.mark.usefixtures("_cleanup_registry")
 class TestLangsCommand:
     def test_all_builtin_langs_discoverable(self):
-        """All full plugins and generic plugins should be available."""
+        """The TypeScript and JavaScript plugins are the built-in languages."""
         from desloppify.languages import available_langs
 
-        names = available_langs()
-        for full_lang in [
-            "python",
-            "typescript",
-            "csharp",
-            "dart",
-            "gdscript",
-            "go",
-            "rust",
-        ]:
-            assert full_lang in names, f"{full_lang} not found in {names}"
-        for generic_lang_name in ["ruby", "java", "kotlin"]:
-            assert generic_lang_name in names, f"{generic_lang_name} not found in {names}"
-        assert len(names) > 10, f"Expected >10 languages, got {len(names)}: {names}"
+        # Other tests register throwaway "test_*" languages in the shared registry.
+        builtin = [name for name in available_langs() if not name.startswith(("test_", "_"))]
+        assert builtin == ["javascript", "typescript"]
 
     def test_langs_hides_shared_phases_from_tool_list(self):
         from desloppify.app.commands.langs import _get_tool_labels
@@ -739,24 +727,6 @@ class TestLangsCommand:
         )
         labels = _get_tool_labels(cfg)
         assert "(auto-fix)" not in labels
-
-
-class TestJavaPmdCommand:
-    def test_java_pmd_command_defaults_to_single_main_thread(self):
-        from desloppify.languages.java import PMD_COMMAND
-
-        assert "--threads 0" in PMD_COMMAND
-
-    def test_java_pmd_thread_arg_accepts_pmd_core_relative_values(self):
-        from desloppify.languages.java import _pmd_threads_arg
-
-        assert _pmd_threads_arg("2") == "--threads 2"
-        assert _pmd_threads_arg("0.5C") == "--threads 0.5C"
-
-    def test_java_pmd_thread_arg_falls_back_for_invalid_values(self):
-        from desloppify.languages.java import _pmd_threads_arg
-
-        assert _pmd_threads_arg("$(rm -rf /)") == "--threads 0"
 
 
 # ── Dynamic registration tests ──────────────────────────

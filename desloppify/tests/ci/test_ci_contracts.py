@@ -11,7 +11,6 @@ yaml = pytest.importorskip("yaml")
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 CI_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "ci.yml"
-INTEGRATION_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "integration.yml"
 PUBLISH_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "python-publish.yml"
 CI_PLAN = REPO_ROOT / "dev" / "ci_plan.md"
 MAKEFILE = REPO_ROOT / "Makefile"
@@ -76,21 +75,6 @@ def test_ci_workflow_has_expected_triggers() -> None:
     assert on_block.get("push", {}).get("branches") == ["main"]
 
 
-def test_integration_workflow_uses_deterministic_roslyn_path() -> None:
-    wf = _load_yaml(INTEGRATION_WORKFLOW)
-    on_block = _on_block(wf)
-    assert "schedule" in on_block
-    assert "workflow_dispatch" in on_block
-
-    job = wf["jobs"]["roslyn-integration"]
-    assert (
-        job["env"]["DESLOPPIFY_TEST_CSHARP_ROSLYN_CMD"]
-        == "python .github/scripts/roslyn_stub.py"
-    )
-    assert any(step.get("uses") == "actions/setup-dotnet@v4" for step in job["steps"])
-    assert any("make integration-roslyn" in run for run in _run_commands(job))
-
-
 def test_publish_workflow_keeps_release_safety_gates() -> None:
     wf = _load_yaml(PUBLISH_WORKFLOW)
     on_block = _on_block(wf)
@@ -113,7 +97,6 @@ def test_makefile_contains_ci_gate_targets() -> None:
         "typecheck",
         "arch",
         "ci-contracts",
-        "integration-roslyn",
         "tests",
         "tests-full",
         "tests-golden-node",

@@ -595,45 +595,6 @@ class TestGracefulDegradation:
 # ── Integration with generic_lang ─────────────────────────────
 
 
-class TestGenericLangIntegration:
-    def test_go_is_full_plugin(self):
-        import desloppify.languages.go  # noqa: F401
-        from desloppify.languages._framework.registry.resolution import get_lang
-
-        lang = get_lang("go")
-        assert lang.extract_functions is not None
-        assert lang.integration_depth == "full"
-
-    def test_go_phases_include_structural(self):
-        import desloppify.languages.go  # noqa: F401
-        from desloppify.languages._framework.registry.resolution import get_lang
-
-        lang = get_lang("go")
-        phase_labels = [p.label for p in lang.phases]
-        assert "Structural analysis" in phase_labels
-        assert "Test coverage" in phase_labels
-        assert "Security" in phase_labels
-
-    def test_rust_is_full_plugin(self):
-        import desloppify.languages.rust  # noqa: F401
-        from desloppify.languages._framework.registry.resolution import get_lang
-
-        lang = get_lang("rust")
-        assert lang.extract_functions is not None
-        assert lang.integration_depth == "full"
-
-    def test_rust_phases_include_structural(self):
-        import desloppify.languages.rust  # noqa: F401
-        from desloppify.languages._framework.registry.resolution import get_lang
-
-        lang = get_lang("rust")
-        phase_labels = [p.label for p in lang.phases]
-        assert "Structural analysis" in phase_labels
-        assert "Test coverage" in phase_labels
-        assert "Security" in phase_labels
-
-
-
 # ── Spec validation tests ─────────────────────────────────────
 
 

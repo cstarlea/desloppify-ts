@@ -13,11 +13,11 @@ from desloppify.languages._framework.runtime_support.runtime import (
     LangRunOverrides,
     make_lang_run,
 )
-from desloppify.languages.python import PythonConfig
+from desloppify.languages.typescript import TypeScriptConfig
 
 
 def test_make_lang_run_instances_do_not_share_runtime_state() -> None:
-    config = PythonConfig()
+    config = TypeScriptConfig()
 
     run_a = make_lang_run(
         config,
@@ -28,11 +28,11 @@ def test_make_lang_run_instances_do_not_share_runtime_state() -> None:
     )
     run_b = make_lang_run(config)
 
-    run_a.zone_map = {"a.py": "production"}
-    run_a.dep_graph = {"a.py": {"imports": set(), "importers": set()}}
-    run_a.complexity_map["a.py"] = 99
+    run_a.zone_map = {"a.ts": "production"}
+    run_a.dep_graph = {"a.ts": {"imports": set(), "importers": set()}}
+    run_a.complexity_map["a.ts"] = 99
     run_a.runtime_cache["framework"] = {"detected": True}
-    run_a.review_cache["a.py"] = {"reviewed_at": "2026-01-01T00:00:00+00:00"}
+    run_a.review_cache["a.ts"] = {"reviewed_at": "2026-01-01T00:00:00+00:00"}
     run_a.state.runtime_settings["alpha"] = 2
     run_a.state.runtime_options["beta"] = "y"
 
@@ -52,9 +52,9 @@ def test_make_lang_run_instances_do_not_share_runtime_state() -> None:
 
 
 def test_generate_issues_keeps_runtime_fields_off_lang_config(tmp_path: Path) -> None:
-    config = PythonConfig()
-    source = tmp_path / "sample.py"
-    source.write_text("def f():\n    return 1\n")
+    config = TypeScriptConfig()
+    source = tmp_path / "sample.ts"
+    source.write_text("export const f = () => 1;\n")
 
     def _runtime_mutation_phase(_path: Path, lang: LangRun):
         lang.zone_map = {str(source): "production"}
@@ -92,7 +92,7 @@ def test_generate_issues_keeps_runtime_fields_off_lang_config(tmp_path: Path) ->
 
 def test_lang_run_does_not_auto_forward_unknown_config_attrs() -> None:
     """New LangConfig attrs must be explicitly delegated in LangRun."""
-    config = PythonConfig()
+    config = TypeScriptConfig()
     config.future_runtime_attr = "hidden-by-default"
     run = make_lang_run(config)
 
@@ -101,7 +101,7 @@ def test_lang_run_does_not_auto_forward_unknown_config_attrs() -> None:
 
 
 def test_make_lang_run_preserves_empty_review_cache_reference() -> None:
-    config = PythonConfig()
+    config = TypeScriptConfig()
     review_cache: dict[str, object] = {}
     run = make_lang_run(
         config,
@@ -111,14 +111,14 @@ def test_make_lang_run_preserves_empty_review_cache_reference() -> None:
 
 
 def test_lang_run_props_threshold_defaults_to_lang_config() -> None:
-    config = PythonConfig()
+    config = TypeScriptConfig()
     config.props_threshold = 23
     run = make_lang_run(config)
     assert run.props_threshold == 23
 
 
 def test_lang_run_does_not_forward_runtime_option_aliases() -> None:
-    config = PythonConfig()
+    config = TypeScriptConfig()
     run = make_lang_run(config)
     with pytest.raises(AttributeError):
         _ = run.runtime_option_aliases

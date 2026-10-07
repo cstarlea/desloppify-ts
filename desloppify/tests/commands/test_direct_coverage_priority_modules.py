@@ -42,11 +42,6 @@ import desloppify.intelligence.narrative.signals as narrative_signals_mod
 import desloppify.intelligence.review.context_holistic.selection.contexts as selection_contexts_mod
 import desloppify.intelligence.review.selection_cache as review_selection_cache_mod
 import desloppify.languages._framework.scoped_store as scoped_store_mod
-import desloppify.languages.csharp.detectors.deps_support_projects as csharp_deps_support_mod
-import desloppify.languages.python.detectors.deps_dynamic as py_deps_dynamic_mod
-import desloppify.languages.python.detectors.deps_resolution as py_deps_resolution_mod
-import desloppify.languages.python.detectors.smells_runtime as py_smells_runtime_mod
-import desloppify.languages.python.phases_runtime as py_phases_runtime_mod
 import desloppify.languages.typescript.detectors.deps.resolve as ts_deps_resolve_mod
 import desloppify.languages.typescript.fixers.fixer_io as ts_fixer_io_mod
 import desloppify.languages.typescript.fixers.import_rewrite as ts_import_rewrite_mod
@@ -93,11 +88,6 @@ def test_direct_coverage_priority_modules_smoke():
     assert callable(selection_contexts_mod.architecture_context)
     assert callable(review_selection_cache_mod.get_file_issues)
     assert callable(scoped_store_mod.resolve_effective_scope)
-    assert callable(csharp_deps_support_mod.map_file_to_project)
-    assert callable(py_deps_dynamic_mod.find_python_dynamic_imports)
-    assert callable(py_deps_resolution_mod.resolve_python_import)
-    assert callable(py_smells_runtime_mod._detect_empty_except)
-    assert callable(py_phases_runtime_mod.run_phase_structural)
     assert callable(ts_deps_resolve_mod.resolve_module)
 
     assert callable(ts_scanner_mod.scan_code)
@@ -172,12 +162,7 @@ def test_next_and_status_init_modules_are_stub_only():
 def test_language_packages_avoid_import_time_registry_mutation() -> None:
     package_root = Path(__file__).resolve().parents[2]
     rel_paths = (
-        "languages/python/__init__.py",
         "languages/typescript/__init__.py",
-        "languages/csharp/__init__.py",
-        "languages/go/__init__.py",
-        "languages/dart/__init__.py",
-        "languages/gdscript/__init__.py",
     )
     for rel_path in rel_paths:
         tree = ast.parse((package_root / rel_path).read_text(encoding="utf-8"))

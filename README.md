@@ -12,7 +12,7 @@ That score generates a scorecard badge for your GitHub profile or README:
 
 <img src="assets/scorecard.png" width="100%">
 
-Currently supports 29 languages — full plugin depth for TypeScript, Python, C#, C++, Dart, GDScript, Go, and Rust; generic linter + tree-sitter support for Ruby, Java, Kotlin, and 18 more. For C++ projects, `compile_commands.json` is the primary analysis path and `Makefile` repositories fall back to best-effort local include scanning.
+This fork supports TypeScript (with plain JavaScript files handled by a lighter plugin). Other languages were removed to keep the tool focused; the last multi-language version is tagged `pre-ts-only`.
 
 ## For your agent's consideration...
 
@@ -55,14 +55,11 @@ The scan output includes agent instructions — follow them, don't substitute yo
 
 ## Monorepos and multi-project directories
 
-If your workspace contains multiple programs (e.g., a frontend and backend in sibling directories), scan each one separately with `--path`:
+Each `--path` target should be a single coherent project. A pnpm, npm or yarn workspace counts as one project: scan it from the workspace root so imports between packages resolve.
 
 ```bash
-desloppify --lang typescript scan --path ./frontend
-desloppify --lang python scan --path ./backend
+desloppify scan --path .
 ```
-
-Scanning the parent directory that contains both will mix state and path context across unrelated codebases, producing unreliable results. Each `--path` target should be a single coherent project. Desloppify maintains separate state per language, so you can scan a TypeScript frontend and a Python backend from the same workspace without conflict — just target them individually.
 
 ## CI
 

@@ -28,7 +28,6 @@ from desloppify.intelligence.review import (
     import_review_issues as _import_review_issues_impl,
 )
 from desloppify.languages._framework.runtime_support.runtime import make_lang_run
-from desloppify.languages.python import PythonConfig
 from desloppify.languages.typescript import TypeScriptConfig
 from desloppify.state import empty_state, find_suspect_detectors
 
@@ -83,7 +82,7 @@ class TestReviewCoverageNoCache:
         f1 = _make_file(str(tmp_path), "module_a.py")
         f2 = _make_file(str(tmp_path), "module_b.py")
         entries, potential = detect_review_coverage(
-            [f1, f2], zone_map=None, review_cache={}, lang_name="python"
+            [f1, f2], zone_map=None, review_cache={}, lang_name="typescript"
         )
         assert potential == 2
         assert len(entries) == 2
@@ -93,7 +92,7 @@ class TestReviewCoverageNoCache:
     def test_small_files_skipped(self, tmp_path):
         small = _make_file(str(tmp_path), "tiny.py", lines=5)
         entries, potential = detect_review_coverage(
-            [small], zone_map=None, review_cache={}, lang_name="python"
+            [small], zone_map=None, review_cache={}, lang_name="typescript"
         )
         assert potential == 0
         assert len(entries) == 0
@@ -123,7 +122,7 @@ class TestReviewCoverageHolisticBaseline:
             [f],
             zone_map=None,
             review_cache={},
-            lang_name="python",
+            lang_name="typescript",
             holistic_cache={
                 "reviewed_at": now,
                 "file_count_at_review": 1,
@@ -141,7 +140,7 @@ class TestReviewCoverageHolisticBaseline:
             [f],
             zone_map=None,
             review_cache={},
-            lang_name="python",
+            lang_name="typescript",
             holistic_cache={
                 "reviewed_at": old,
                 "file_count_at_review": 1,
@@ -160,7 +159,7 @@ class TestReviewCoverageHolisticBaseline:
             [f],
             zone_map=None,
             review_cache={},
-            lang_name="python",
+            lang_name="typescript",
             holistic_cache={
                 "reviewed_at": now,
                 "file_count_at_review": 1,
@@ -181,7 +180,7 @@ class TestReviewCoverageZoneFiltering:
         f = _make_file(str(tmp_path), "test_foo.py")
         zm = FakeZoneMap({f: FakeZone("test")})
         entries, potential = detect_review_coverage(
-            [f], zone_map=zm, review_cache={}, lang_name="python"
+            [f], zone_map=zm, review_cache={}, lang_name="typescript"
         )
         assert potential == 0
         assert len(entries) == 0
@@ -190,7 +189,7 @@ class TestReviewCoverageZoneFiltering:
         f = _make_file(str(tmp_path), "gen.py")
         zm = FakeZoneMap({f: FakeZone("generated")})
         entries, potential = detect_review_coverage(
-            [f], zone_map=zm, review_cache={}, lang_name="python"
+            [f], zone_map=zm, review_cache={}, lang_name="typescript"
         )
         assert potential == 0
 
@@ -198,7 +197,7 @@ class TestReviewCoverageZoneFiltering:
         f = _make_file(str(tmp_path), "vendor.py")
         zm = FakeZoneMap({f: FakeZone("vendor")})
         entries, potential = detect_review_coverage(
-            [f], zone_map=zm, review_cache={}, lang_name="python"
+            [f], zone_map=zm, review_cache={}, lang_name="typescript"
         )
         assert potential == 0
 
@@ -206,7 +205,7 @@ class TestReviewCoverageZoneFiltering:
         f = _make_file(str(tmp_path), "config.py")
         zm = FakeZoneMap({f: FakeZone("config")})
         entries, potential = detect_review_coverage(
-            [f], zone_map=zm, review_cache={}, lang_name="python"
+            [f], zone_map=zm, review_cache={}, lang_name="typescript"
         )
         assert potential == 0
 
@@ -214,7 +213,7 @@ class TestReviewCoverageZoneFiltering:
         f = _make_file(str(tmp_path), "app.py")
         zm = FakeZoneMap({f: FakeZone("production")})
         entries, potential = detect_review_coverage(
-            [f], zone_map=zm, review_cache={}, lang_name="python"
+            [f], zone_map=zm, review_cache={}, lang_name="typescript"
         )
         assert potential == 1
         assert len(entries) == 1
@@ -237,7 +236,7 @@ class TestReviewCoverageFreshCache:
         }
         with patch("desloppify.engine.detectors.review_coverage.rel", return_value=rpath):
             entries, potential = detect_review_coverage(
-                [f], zone_map=None, review_cache=cache, lang_name="python"
+                [f], zone_map=None, review_cache=cache, lang_name="typescript"
             )
         assert potential == 1
         assert len(entries) == 0
@@ -259,7 +258,7 @@ class TestReviewCoverageStaleCache:
         }
         with patch("desloppify.engine.detectors.review_coverage.rel", return_value=rpath):
             entries, potential = detect_review_coverage(
-                [f], zone_map=None, review_cache=cache, lang_name="python"
+                [f], zone_map=None, review_cache=cache, lang_name="typescript"
             )
         assert potential == 1
         assert len(entries) == 1
@@ -282,7 +281,7 @@ class TestReviewCoverageStaleCache:
         }
         with patch("desloppify.engine.detectors.review_coverage.rel", return_value=rpath):
             entries, potential = detect_review_coverage(
-                [f], zone_map=None, review_cache=cache, lang_name="python"
+                [f], zone_map=None, review_cache=cache, lang_name="typescript"
             )
         assert potential == 1
         assert len(entries) == 1
@@ -302,7 +301,7 @@ class TestReviewCoverageStaleCache:
         }
         with patch("desloppify.engine.detectors.review_coverage.rel", return_value=rpath):
             entries, potential = detect_review_coverage(
-                [f], zone_map=None, review_cache=cache, lang_name="python"
+                [f], zone_map=None, review_cache=cache, lang_name="typescript"
             )
         assert potential == 1
         assert len(entries) == 1
@@ -384,7 +383,7 @@ class TestIDCollision:
             },
         ]
         state = empty_state()
-        _ = _call_import_review_issues(issues_data, state, "python")
+        _ = _call_import_review_issues(issues_data, state, "typescript")
 
         # Same file+dimension+identifier → same issue ID (last writer wins)
         ids = list(state["work_items"].keys())
@@ -415,7 +414,7 @@ class TestIDCollision:
             },
         ]
         state = empty_state()
-        _ = _call_import_review_issues(issues_data, state, "python")
+        _ = _call_import_review_issues(issues_data, state, "typescript")
 
         ids = list(state["work_items"].keys())
         assert len(ids) == 1
@@ -435,12 +434,12 @@ class TestIDCollision:
             },
         ]
         state = empty_state()
-        _call_import_review_issues(issues_data, state, "python")
+        _call_import_review_issues(issues_data, state, "typescript")
         id1 = list(state["work_items"].keys())[0]
 
         # Re-import same issue
         state2 = empty_state()
-        _call_import_review_issues(issues_data, state2, "python")
+        _call_import_review_issues(issues_data, state2, "typescript")
         id2 = list(state2["issues"].keys())[0]
 
         assert id1 == id2
@@ -484,7 +483,7 @@ class TestNewDimensions:
                 }
             ]
             state = empty_state()
-            _call_import_review_issues(issues_data, state, "python")
+            _call_import_review_issues(issues_data, state, "typescript")
             assert len(state["work_items"]) == 1, f"Issue for {dim} was rejected"
 
 
@@ -514,10 +513,6 @@ class TestRegistryIntegration:
 
 
 class TestPhaseIntegration:
-    def test_phase_registered_in_python(self):
-        cfg = PythonConfig()
-        labels = [p.label for p in cfg.phases]
-        assert "Subjective review" in labels
 
     def test_phase_registered_in_typescript(self):
         cfg = TypeScriptConfig()
@@ -525,7 +520,7 @@ class TestPhaseIntegration:
         assert "Subjective review" in labels
 
     def test_review_cache_lives_on_lang_run(self):
-        cfg = PythonConfig()
+        cfg = TypeScriptConfig()
         assert not hasattr(cfg, "_review_cache")
 
         run = make_lang_run(cfg)

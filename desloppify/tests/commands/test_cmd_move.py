@@ -73,11 +73,8 @@ class TestDetectLangFromExt:
     def test_typescript_tsx(self):
         assert detect_lang_from_ext("foo.tsx") == "typescript"
 
-    def test_python_py(self):
-        assert detect_lang_from_ext("foo.py") == "python"
-
-    def test_csharp_cs(self):
-        assert detect_lang_from_ext("foo.cs") == "csharp"
+    def test_javascript_js(self):
+        assert detect_lang_from_ext("foo.js") == "javascript"
 
     def test_unknown_ext(self):
         assert detect_lang_from_ext("foo.xyz") is None
@@ -115,17 +112,13 @@ class TestDetectLangFromExt:
 class TestDetectLangFromDir:
     """detect_lang_from_dir inspects directory contents."""
 
-    def test_python_dir(self, tmp_path):
-        (tmp_path / "foo.py").write_text("")
-        assert detect_lang_from_dir(str(tmp_path)) == "python"
+    def test_javascript_dir(self, tmp_path):
+        (tmp_path / "foo.js").write_text("")
+        assert detect_lang_from_dir(str(tmp_path)) == "javascript"
 
     def test_typescript_dir(self, tmp_path):
         (tmp_path / "bar.ts").write_text("")
         assert detect_lang_from_dir(str(tmp_path)) == "typescript"
-
-    def test_csharp_dir(self, tmp_path):
-        (tmp_path / "Service.cs").write_text("")
-        assert detect_lang_from_dir(str(tmp_path)) == "csharp"
 
     def test_empty_dir(self, tmp_path):
         assert detect_lang_from_dir(str(tmp_path)) is None

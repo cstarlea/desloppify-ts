@@ -55,11 +55,6 @@ def _reset_read_warning_cache():
 
 
 class TestStripTestMarkers:
-    def test_python_test_prefix(self):
-        assert _strip_test_markers("test_utils.py", "python") == "utils.py"
-
-    def test_python_test_suffix(self):
-        assert _strip_test_markers("utils_test.py", "python") == "utils.py"
 
     def test_python_no_marker(self):
         assert _strip_test_markers("utils.py", "python") is None
@@ -75,13 +70,6 @@ class TestStripTestMarkers:
 
     def test_typescript_spec_ts(self):
         assert _strip_test_markers("helpers.spec.ts", "typescript") == "helpers.ts"
-
-    def test_python_test_prefix_nested(self):
-        # Only basename is passed, so nested name shouldn't matter
-        assert _strip_test_markers("test_deep_module.py", "python") == "deep_module.py"
-
-    def test_go_test_suffix(self):
-        assert _strip_test_markers("utils_test.go", "go") == "utils.go"
 
     def test_go_no_marker(self):
         assert _strip_test_markers("utils.go", "go") is None
@@ -113,20 +101,6 @@ class TestInferLangName:
 
 
 class TestMapTestToSource:
-    def test_python_test_prefix_same_dir(self):
-        prod_set = {"src/utils.py"}
-        result = _map_test_to_source("src/test_utils.py", prod_set, "python")
-        assert result == "src/utils.py"
-
-    def test_python_test_prefix_parent_dir(self):
-        prod_set = {"src/utils.py"}
-        result = _map_test_to_source("src/tests/test_utils.py", prod_set, "python")
-        assert result == "src/utils.py"
-
-    def test_python_test_suffix(self):
-        prod_set = {"src/utils.py"}
-        result = _map_test_to_source("src/utils_test.py", prod_set, "python")
-        assert result == "src/utils.py"
 
     def test_typescript_test_marker(self):
         prod_set = {"src/utils.ts"}
@@ -205,19 +179,13 @@ class TestImportBasedMapping:
         result = import_based_mapping(graph, test_files, production_files)
         assert result == set()
 
-    def test_external_test_file_parsed(self, tmp_path):
-        """External test files not in graph are parsed from source.
-
-        _import_based_mapping builds prod_by_module from absolute paths, so
-        the test import must reference the last component of the production
-        module name (basename without extension) which is also indexed.
-        """
-        prod_file = _write_file(tmp_path, "src/utils.py", "# production code\n" * 15)
-        # Import "utils" — _import_based_mapping indexes basename "utils" → prod_file
+    def test_external_test_file_parsed(self, tmp_path, set_project_root):
+        """External test files not in graph are parsed from source."""
+        prod_file = _write_file(tmp_path, "src/utils.ts", "export const x = 1;\n" * 15)
         test_file = _write_file(
             tmp_path,
-            "external_tests/test_utils.py",
-            "import utils\n\ndef test_it():\n    assert True\n",
+            "external_tests/utils.test.ts",
+            "import { x } from '../src/utils';\n\nit('works', () => {\n  expect(x).toBe(1);\n});\n",
         )
         graph = {}
         test_files = {test_file}
@@ -255,64 +223,10 @@ class TestImportBasedMapping:
         assert prod_file in result
 
 
-class TestInlineRustCoverage:
-    def test_detect_test_coverage_counts_inline_rust_tests_without_test_files(
-        self, tmp_path
-    ):
-        source = _write_file(
-            tmp_path,
-            "src/lib.rs",
-            (
-                "pub fn add(a: i32, b: i32) -> i32 {\n"
-                "    let total = a + b;\n"
-                "    if total > 10 {\n"
-                "        return total;\n"
-                "    }\n"
-                "    total\n"
-                "}\n"
-                "\n"
-                "#[cfg(test)]\n"
-                "mod tests {\n"
-                "    #[test]\n"
-                "    fn it_adds() {\n"
-                "        assert_eq!(4, 2 + 2);\n"
-                "    }\n"
-                "}\n"
-            ),
-        )
-        graph = {
-            source: {
-                "imports": set(),
-                "importers": set(),
-                "import_count": 0,
-                "importer_count": 0,
-            }
-        }
-        zone_map = FileZoneMap([source], [])
-
-        entries, potential = detect_test_coverage(graph, zone_map, "rust")
-
-        assert entries == []
-        assert potential >= 3
-
-
 # ── _parse_test_imports ──────────────────────────────────
 
 
 class TestParseTestImports:
-    def test_python_from_import(self, tmp_path):
-        tf = _write_file(tmp_path, "test_x.py", "from mymod import func\n")
-        prod = {str(tmp_path / "mymod.py")}
-        prod_by_module = {"mymod": str(tmp_path / "mymod.py")}
-        result = _parse_test_imports(tf, prod, prod_by_module)
-        assert str(tmp_path / "mymod.py") in result
-
-    def test_python_import_statement(self, tmp_path):
-        tf = _write_file(tmp_path, "test_x.py", "import mymod\n")
-        prod = {str(tmp_path / "mymod.py")}
-        prod_by_module = {"mymod": str(tmp_path / "mymod.py")}
-        result = _parse_test_imports(tf, prod, prod_by_module)
-        assert str(tmp_path / "mymod.py") in result
 
     def test_ts_import(self, tmp_path):
         tf = _write_file(tmp_path, "test_x.ts", 'import { foo } from "./utils"\n')
@@ -324,18 +238,6 @@ class TestParseTestImports:
     def test_nonexistent_file(self):
         result = _parse_test_imports("/no/such/file.py", set(), {})
         assert result == set()
-
-    def test_dotted_python_import(self, tmp_path):
-        tf = _write_file(tmp_path, "test_x.py", "from pkg.sub.mod import func\n")
-        prod_path = "pkg/sub/mod.py"
-        prod = {prod_path}
-        prod_by_module = {
-            "pkg.sub.mod": prod_path,
-            "pkg.sub": "pkg/sub/__init__.py",
-            "mod": prod_path,
-        }
-        result = _parse_test_imports(tf, prod, prod_by_module)
-        assert prod_path in result
 
 
 class TestGetTestFilesForProd:
@@ -425,67 +327,6 @@ class TestTransitiveCoverage:
 
 class TestAnalyzeTestQuality:
     # Python test function counting uses MULTILINE and should count all test defs.
-
-    def test_python_thorough(self, tmp_path):
-        # Single test function with many assertions → thorough
-        content = (
-            "def test_a():\n"
-            "    assert 1 == 1\n"
-            "    assert 2 == 2\n"
-            "    assert 3 == 3\n"
-            "    assert 4 == 4\n"
-        )
-        tf = _write_file(tmp_path, "test_thorough.py", content)
-        result = analyze_test_quality({tf}, "python")
-        assert tf in result
-        assert result[tf]["quality"] == "thorough"
-        assert result[tf]["assertions"] >= 4
-        assert result[tf]["test_functions"] == 1
-
-    def test_python_adequate(self, tmp_path):
-        content = "def test_a():\n    assert 1 == 1\n    assert 2 == 2\n"
-        tf = _write_file(tmp_path, "test_adequate.py", content)
-        result = analyze_test_quality({tf}, "python")
-        assert result[tf]["quality"] in ("thorough", "adequate")
-
-    def test_python_assertion_free(self, tmp_path):
-        content = "def test_a():\n    pass\n"
-        tf = _write_file(tmp_path, "test_noassert.py", content)
-        result = analyze_test_quality({tf}, "python")
-        assert result[tf]["quality"] == "assertion_free"
-        assert result[tf]["assertions"] == 0
-        assert result[tf]["test_functions"] == 1
-
-    def test_python_over_mocked(self, tmp_path):
-        content = (
-            "def test_a(m1, m2, m3):\n"
-            "    assert True\n"
-            "\n"
-            "# mocks scattered in setup\n"
-            "@mock.patch('module.thing')\n"
-            "@mock.patch('module.other')\n"
-            "@mock.patch('module.third')\n"
-        )
-        tf = _write_file(tmp_path, "test_mocked.py", content)
-        result = analyze_test_quality({tf}, "python")
-        assert result[tf]["quality"] == "over_mocked"
-        assert result[tf]["mocks"] > result[tf]["assertions"]
-
-    def test_python_counts_multiple_test_functions(self, tmp_path):
-        content = (
-            "def test_a():\n"
-            "    assert True\n"
-            "\n"
-            "def test_b():\n"
-            "    pass\n"
-            "\n"
-            "def test_c():\n"
-            "    pass\n"
-        )
-        tf = _write_file(tmp_path, "test_multi.py", content)
-        result = analyze_test_quality({tf}, "python")
-        assert result[tf]["test_functions"] == 3
-        assert result[tf]["quality"] == "smoke"
 
     def test_typescript_snapshot_heavy(self, tmp_path):
         content = (
@@ -798,11 +639,13 @@ class TestDetectTestCoverage:
 
     def test_quality_issue_assertion_free(self, tmp_path):
         """Directly tested file with assertion-free test → quality issue."""
-        prod_f = _write_file(tmp_path, "utils.py", "def foo():\n    return 1\n" * 10)
+        prod_f = _write_file(
+            tmp_path, "utils.ts", "export function foo() {\n  return 1;\n}\n" * 10
+        )
         test_f = _write_file(
             tmp_path,
-            "test_utils.py",
-            "def test_foo():\n    pass\n",
+            "utils.test.ts",
+            "import { foo } from './utils';\n\nit('foo', () => {\n  foo();\n});\n",
         )
         all_files = [prod_f, test_f]
         zone_map = _make_zone_map(all_files)
@@ -810,7 +653,7 @@ class TestDetectTestCoverage:
             prod_f: {"imports": set(), "importer_count": 0},
             test_f: {"imports": {prod_f}},
         }
-        entries, potential = detect_test_coverage(graph, zone_map, "python")
+        entries, potential = detect_test_coverage(graph, zone_map, "typescript")
         assert potential > 0
         qual_entries = [
             e for e in entries if e["detail"]["kind"] == "assertion_free_test"
@@ -949,11 +792,13 @@ class TestDetectTestCoverage:
 
     def test_naming_convention_mapping(self, tmp_path):
         """Test file matched by naming convention (no graph import edge)."""
-        prod_f = _write_file(tmp_path, "utils.py", "def foo():\n    return 1\n" * 10)
+        prod_f = _write_file(
+            tmp_path, "utils.ts", "export function foo() {\n  return 1;\n}\n" * 10
+        )
         test_f = _write_file(
             tmp_path,
-            "test_utils.py",
-            "def test_foo():\n    assert True\n    assert True\n    assert True\n",
+            "utils.test.ts",
+            "it('foo', () => {\n  expect(1).toBe(1);\n  expect(2).toBe(2);\n  expect(3).toBe(3);\n});\n",
         )
         all_files = [prod_f, test_f]
         zone_map = _make_zone_map(all_files)
@@ -962,7 +807,7 @@ class TestDetectTestCoverage:
             prod_f: {"imports": set(), "importer_count": 0},
             test_f: {"imports": set()},
         }
-        entries, potential = detect_test_coverage(graph, zone_map, "python")
+        entries, potential = detect_test_coverage(graph, zone_map, "typescript")
         assert potential > 0
         # Should be matched by naming convention, not untested
         untested = [
@@ -971,4 +816,3 @@ class TestDetectTestCoverage:
             if e["detail"]["kind"] in ("untested_module", "untested_critical")
         ]
         assert untested == []
-
