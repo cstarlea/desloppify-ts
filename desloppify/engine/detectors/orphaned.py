@@ -204,7 +204,7 @@ class _FrameworkConventions:
 def _has_dunder_all(filepath: str) -> bool:
     """Return True if the file defines ``__all__``, signaling a public API surface."""
     try:
-        text = Path(filepath).read_text(encoding="utf-8", errors="replace")
+        text = Path(resolve_path(filepath)).read_text(encoding="utf-8", errors="replace")
     except OSError:
         return False
     return _DUNDER_ALL_RE.search(text) is not None
@@ -295,7 +295,7 @@ def detect_orphaned_files(
             continue
 
         try:
-            loc = count_lines(Path(filepath))
+            loc = count_lines(Path(resolve_path(filepath)))
         except (OSError, UnicodeDecodeError):
             loc = 0
 

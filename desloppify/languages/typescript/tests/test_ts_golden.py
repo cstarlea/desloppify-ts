@@ -143,15 +143,11 @@ def test_expectations(name, node_tools, scans):
     assert not problems, f"{name}:\n  " + "\n  ".join(problems)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "roadmap M1 1.9: detectors resolve paths against the process cwd, so "
-        "scanning a project from another directory changes results"
-    ),
-)
-def test_scan_does_not_depend_on_cwd(tmp_path):
-    project = harness.copy_project("vite-react", tmp_path)
-    from_inside = harness.scan_project(project)
-    from_parent = harness.scan_project(project, cwd=tmp_path)
+@pytest.mark.parametrize("node_tools", LAYERS)
+@pytest.mark.parametrize("name", PROJECTS)
+def test_scan_does_not_depend_on_cwd(tmp_path, name, node_tools):
+    """Roadmap 1.9: the process cwd must not change findings, IDs or potentials."""
+    project = harness.copy_project(name, tmp_path, node_tools=node_tools)
+    from_inside = harness.scan_project(project, node_tools=node_tools)
+    from_parent = harness.scan_project(project, cwd=tmp_path, node_tools=node_tools)
     assert from_parent == from_inside

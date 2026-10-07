@@ -7,6 +7,7 @@ import os
 import re
 from pathlib import Path
 
+from desloppify.base.discovery.file_paths import resolve_path
 from desloppify.base.output.fallbacks import log_best_effort_failure
 from desloppify.base.discovery.paths import get_project_root, get_src_path
 from desloppify.base.text_utils import strip_c_style_comments
@@ -87,7 +88,7 @@ logger = logging.getLogger(__name__)
 def _relative_if_under_root(path_str: str) -> str:
     """Return project-relative path when possible; else return original."""
     try:
-        return str(Path(path_str).resolve().relative_to(get_project_root())).replace("\\", "/")
+        return str(Path(resolve_path(path_str)).relative_to(get_project_root())).replace("\\", "/")
     except (OSError, ValueError):
         return path_str
 
@@ -212,7 +213,7 @@ def parse_test_import_specs(content: str) -> list[str]:
 def resolve_barrel_reexports(filepath: str, production_files: set[str]) -> set[str]:
     """Resolve one-hop TypeScript barrel re-exports to concrete production files."""
     try:
-        content = Path(filepath).read_text()
+        content = Path(resolve_path(filepath)).read_text()
     except (OSError, UnicodeDecodeError) as exc:
         log_best_effort_failure(logger, f"read barrel re-export source {filepath}", exc)
         return set()

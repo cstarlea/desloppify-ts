@@ -110,8 +110,15 @@ def is_file_cache_enabled(*, runtime: RuntimeContext | None = None) -> bool:
 
 
 def read_file_text(filepath: str, *, runtime: RuntimeContext | None = None) -> str | None:
-    """Read a file as text, with optional caching."""
-    return resolve_runtime_context(runtime).file_text_cache.read(filepath)
+    """Read a file as text, with optional caching.
+
+    Relative paths (as the source finders return) are relative to the project
+    root, whatever the process cwd is.
+    """
+    resolved_runtime = resolve_runtime_context(runtime)
+    return resolved_runtime.file_text_cache.read(
+        filepath, root=get_project_root(runtime=resolved_runtime)
+    )
 
 
 def read_file_text_result(
@@ -120,7 +127,10 @@ def read_file_text_result(
     runtime: RuntimeContext | None = None,
 ) -> FileTextReadResult:
     """Read a file as text and include read-status metadata."""
-    return resolve_runtime_context(runtime).file_text_cache.read_result(filepath)
+    resolved_runtime = resolve_runtime_context(runtime)
+    return resolved_runtime.file_text_cache.read_result(
+        filepath, root=get_project_root(runtime=resolved_runtime)
+    )
 
 
 def clear_source_file_cache_for_tests(*, runtime: RuntimeContext | None = None) -> None:

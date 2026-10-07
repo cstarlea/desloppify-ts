@@ -991,3 +991,70 @@ class TestProjectRootFromStatePath:
         from desloppify.cli import _project_root_from_state_path
 
         assert _project_root_from_state_path(str(sf)) is None
+
+
+# ---------------------------------------------------------------------------
+# _project_root_from_scan_path
+# ---------------------------------------------------------------------------
+
+
+class TestProjectRootFromScanPath:
+    """``--path`` decides the project root (roadmap 1.9)."""
+
+    def test_none_or_empty(self, tmp_path):
+        from desloppify.cli import _project_root_from_scan_path
+
+        assert _project_root_from_scan_path(None, tmp_path) is None
+        assert _project_root_from_scan_path("", tmp_path) is None
+
+    def test_existing_state_dir_wins(self, tmp_path):
+        from desloppify.cli import _project_root_from_scan_path
+
+        (tmp_path / "repo" / ".git").mkdir(parents=True)
+        (tmp_path / "repo" / "app" / ".desloppify").mkdir(parents=True)
+        (tmp_path / "repo" / "app" / "src").mkdir()
+        cwd = tmp_path / "elsewhere"
+        cwd.mkdir()
+        assert _project_root_from_scan_path(tmp_path / "repo" / "app" / "src", cwd) == (
+            tmp_path / "repo" / "app"
+        )
+
+    def test_state_at_cwd_beats_nested_git(self, tmp_path):
+        """A submodule's .git must not move an existing project's state."""
+        from desloppify.cli import _project_root_from_scan_path
+
+        (tmp_path / ".desloppify").mkdir()
+        (tmp_path / "vendor" / "lib" / ".git").mkdir(parents=True)
+        assert _project_root_from_scan_path(tmp_path / "vendor" / "lib", tmp_path) == tmp_path
+
+    def test_git_work_tree(self, tmp_path):
+        from desloppify.cli import _project_root_from_scan_path
+
+        (tmp_path / "repo" / ".git").mkdir(parents=True)
+        (tmp_path / "repo" / "packages" / "a").mkdir(parents=True)
+        assert _project_root_from_scan_path(
+            tmp_path / "repo" / "packages" / "a", tmp_path / "other"
+        ) == (tmp_path / "repo")
+
+    def test_path_inside_cwd_without_markers_keeps_cwd(self, tmp_path):
+        from desloppify.cli import _project_root_from_scan_path
+
+        (tmp_path / "src").mkdir()
+        assert _project_root_from_scan_path(tmp_path / "src", tmp_path) is None
+
+    def test_path_outside_cwd_without_markers_is_its_own_root(self, tmp_path):
+        from desloppify.cli import _project_root_from_scan_path
+
+        (tmp_path / "app").mkdir()
+        (tmp_path / "cwd").mkdir()
+        assert _project_root_from_scan_path(tmp_path / "app", tmp_path / "cwd") == (
+            tmp_path / "app"
+        )
+
+    def test_file_path_uses_its_directory(self, tmp_path):
+        from desloppify.cli import _project_root_from_scan_path
+
+        (tmp_path / "app").mkdir()
+        target = tmp_path / "app" / "main.ts"
+        target.write_text("export {};\n")
+        assert _project_root_from_scan_path(target, tmp_path / "cwd") == tmp_path / "app"

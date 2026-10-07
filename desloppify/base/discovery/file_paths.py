@@ -44,9 +44,14 @@ def safe_relpath(path: str | Path, start: str | Path) -> str:
 
 
 def rel(path: str | Path, *, project_root: str | Path | None = None) -> str:
-    """Return a normalized project-relative path when possible."""
+    """Return a normalized project-relative path when possible.
+
+    A relative *path* is already relative to the project root (as the source
+    finders return it), not to the process cwd.
+    """
     root = get_project_root(project_root=project_root)
-    resolved = Path(path).resolve()
+    candidate = Path(path)
+    resolved = (candidate if candidate.is_absolute() else root / candidate).resolve()
     try:
         return normalize_path_separators(str(resolved.relative_to(root)))
     except ValueError:

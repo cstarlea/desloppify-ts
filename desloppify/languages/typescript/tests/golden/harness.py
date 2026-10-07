@@ -75,9 +75,8 @@ def scan_project(
     """
     saved_path = os.environ.get("PATH", "")
     saved_cwd = os.getcwd()
-    # Several detectors still resolve paths against the process cwd rather than
-    # the project root (roadmap 1.9), so scan from inside the project as the
-    # CLI normally does.
+    # Scans must not depend on the cwd (test_scan_does_not_depend_on_cwd
+    # checks this); default to the project, as when the CLI runs inside it.
     os.chdir(cwd or project)
     tools = ("git", "node") if node_tools else ("git",)
     os.environ["PATH"] = _hermetic_path(project.parent / f".golden-bin-{len(tools)}", tools)
