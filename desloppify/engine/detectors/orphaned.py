@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from desloppify.base.discovery.file_paths import rel
-from desloppify.base.discovery.file_paths import count_lines
+from desloppify.base.discovery.file_paths import count_lines, resolve_path
 
 _DUNDER_ALL_RE = re.compile(r"^__all__\s*[:=]", re.MULTILINE)
 
@@ -169,6 +169,36 @@ class OrphanedDetectionOptions:
     dynamic_import_finder: Callable[[Path, list[str]], set[str]] | None = None
     alias_resolver: Callable[[str], str] | None = None
     detect_frameworks: bool = True
+    # Absolute paths that are entry points (e.g. named by a package manifest).
+    entry_files: set[str] | None = None
+    # Package directories inside the scan; framework conventions are detected
+    # per package and matched relative to it.
+    package_roots: list[Path] | None = None
+
+
+class _FrameworkConventions:
+    """Framework convention checks, detected for the package owning each file."""
+
+    def __init__(self, scan_path: Path, package_roots: list[Path] | None) -> None:
+        roots = {scan_path.resolve(), *(Path(r).resolve() for r in package_roots or ())}
+        self._roots = sorted(roots, key=lambda p: len(p.parts), reverse=True)
+        self._detected: dict[Path, tuple[bool, bool]] = {}
+
+    def is_entry(self, filepath: str) -> bool:
+        file_path = Path(resolve_path(filepath))
+        root = next((r for r in self._roots if file_path.is_relative_to(r)), None)
+        if root is None:
+            return False
+        if root not in self._detected:
+            self._detected[root] = (
+                _detect_nextjs_project(root),
+                _detect_react_router_project(root),
+            )
+        is_nextjs, is_react_router = self._detected[root]
+        relative = file_path.relative_to(root).as_posix()
+        if is_nextjs and _is_nextjs_convention_entry(relative):
+            return True
+        return is_react_router and _is_react_router_convention_entry(relative)
 
 
 def _has_dunder_all(filepath: str) -> bool:
@@ -218,12 +248,11 @@ def detect_orphaned_files(
     dynamic_import_finder = resolved_options.dynamic_import_finder
     alias_resolver = resolved_options.alias_resolver
 
-    # Framework convention detection
-    is_nextjs = (
-        resolved_options.detect_frameworks and _detect_nextjs_project(path)
-    )
-    is_react_router = (
-        resolved_options.detect_frameworks and _detect_react_router_project(path)
+    entry_files = resolved_options.entry_files or set()
+    conventions = (
+        _FrameworkConventions(path, resolved_options.package_roots)
+        if resolved_options.detect_frameworks
+        else None
     )
 
     dynamic_targets = (
@@ -251,10 +280,10 @@ def detect_orphaned_files(
         if basename in all_barrel_names:
             continue
 
-        if is_nextjs and _is_nextjs_convention_entry(r):
+        if filepath in entry_files:
             continue
 
-        if is_react_router and _is_react_router_convention_entry(r):
+        if conventions is not None and conventions.is_entry(filepath):
             continue
 
         if dynamic_targets and _is_dynamically_imported(

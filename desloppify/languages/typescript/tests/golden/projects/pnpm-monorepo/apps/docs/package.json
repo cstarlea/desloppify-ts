@@ -1,0 +1,10 @@
+{
+  "name": "docs",
+  "private": true,
+  "scripts": {
+    "dev": "next dev"
+  },
+  "dependencies": {
+    "next": "16.0.0"
+  }
+}

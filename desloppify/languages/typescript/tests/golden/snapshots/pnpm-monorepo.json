@@ -1,40 +1,68 @@
 {
   "issues": [
     {
-      "id": "facade::packages/ui/src/index.ts",
-      "tier": 2,
+      "id": "cycles::packages/config/src/index.ts::packages/config/src/index.ts::packages/utils/src/money.ts",
+      "tier": 3,
       "confidence": "high",
       "zone": "production",
-      "summary": "Re-export facade (2 LOC): imports from ./button, ./card (0 importers)"
+      "summary": "Import cycle (2 files): packages/config/src/index.ts -> packages/utils/src/money.ts"
+    },
+    {
+      "id": "test_coverage::apps/docs/app/layout.tsx",
+      "tier": 3,
+      "confidence": "high",
+      "zone": "production",
+      "summary": "Untested module (13 LOC, 0 importers) — no test files found"
+    },
+    {
+      "id": "test_coverage::apps/docs/app/page.tsx",
+      "tier": 3,
+      "confidence": "high",
+      "zone": "production",
+      "summary": "Untested module (17 LOC, 0 importers) — no test files found"
     },
     {
       "id": "test_coverage::apps/web/src/main.tsx",
       "tier": 3,
       "confidence": "high",
       "zone": "production",
-      "summary": "Untested module (12 LOC, 0 importers) — no test files found"
+      "summary": "Untested module (15 LOC, 0 importers) — no test files found"
+    },
+    {
+      "id": "test_coverage::apps/web/src/receipt.tsx",
+      "tier": 3,
+      "confidence": "high",
+      "zone": "production",
+      "summary": "Untested module (12 LOC, 1 importers) — no test files found"
+    },
+    {
+      "id": "test_coverage::packages/config/src/index.ts",
+      "tier": 3,
+      "confidence": "high",
+      "zone": "production",
+      "summary": "Untested module (10 LOC, 2 importers) — no test files found"
     }
   ],
   "potentials": {
     "coupling": 0,
-    "cycles": 8,
+    "cycles": 12,
     "deprecated": 0,
-    "dupes": 6,
+    "dupes": 8,
     "exports": 0,
-    "facade": 8,
-    "flat_dirs": 8,
-    "logs": 8,
-    "naming": 3,
-    "orphaned": 8,
+    "facade": 12,
+    "flat_dirs": 12,
+    "logs": 12,
+    "naming": 5,
+    "orphaned": 12,
     "patterns": 0,
     "props": 0,
     "react": 0,
-    "security": 8,
-    "single_use": 5,
-    "smells": 8,
-    "structural": 8,
-    "test_coverage": 3,
-    "unused": 8
+    "security": 12,
+    "single_use": 3,
+    "smells": 12,
+    "structural": 12,
+    "test_coverage": 18,
+    "unused": 12
   },
   "reduced_coverage": [
     "exports: knip_not_installed",
