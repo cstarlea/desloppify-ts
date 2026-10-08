@@ -1,5 +1,10 @@
 """Tests for desloppify.languages.typescript.detectors.smells.helpers."""
 
+import importlib.util
+
+import pytest
+
+import desloppify.languages.typescript.detectors.smells.detector_safety as safety_mod
 from desloppify.languages.typescript.detectors.smells import TS_SMELL_CHECKS
 from desloppify.languages.typescript.detectors.smells.detector_core import (
     _find_function_start,
@@ -21,6 +26,7 @@ from desloppify.languages.typescript.detectors.smells.helpers import (
     _code_text,
     _content_line_info,
     _extract_block_body,
+    _build_ts_line_state,
     _FileContext,
     _strip_ts_comments,
     _track_brace_body,
@@ -544,6 +550,53 @@ class TestDetectDeadUseeffects:
         counts = _make_counts()
         _detect_dead_useeffects(_ctx(content), counts)
         assert len(counts["dead_useeffect"]) == 0
+
+
+
+_DEAD_EFFECT_CASES = [
+    pytest.param("useEffect(function () {\n}, []);\n", [1], id="function-form"),
+    pytest.param("useEffect(() => {\n  return;\n}, [a]);\n", [1], id="bare-return"),
+    pytest.param("React.useEffect(function () { return; });\n", [1], id="react-function-return"),
+    pytest.param("useEffect(() => {\n  return () => off();\n}, []);\n", [], id="returns-cleanup"),
+    pytest.param("useEffect(function () { load(); }, []);\n", [], id="function-with-body"),
+    pytest.param("const s = `\nuseEffect(() => {\n}, []);\n`;\n", [], id="template-string"),
+]
+
+
+@pytest.mark.parametrize(("content", "lines"), _DEAD_EFFECT_CASES)
+@pytest.mark.parametrize("path", ["tree", "regex"])
+def test_dead_useeffect_forms(content, lines, path, monkeypatch):
+    if path == "tree" and importlib.util.find_spec("tree_sitter_language_pack") is None:
+        pytest.skip("needs tree-sitter")
+    if path == "regex":
+        monkeypatch.setattr(safety_mod, "parse_text", lambda *_args: None)
+    split = content.splitlines()
+    ctx = _FileContext("a.tsx", content, split, _build_ts_line_state(split))
+    counts = _make_counts()
+    _detect_dead_useeffects(ctx, counts)
+    assert [m["line"] for m in counts["dead_useeffect"]] == lines
+
+
+@pytest.mark.skipif(
+    importlib.util.find_spec("tree_sitter_language_pack") is None, reason="needs tree-sitter"
+)
+def test_dead_useeffect_tree_sees_calls_mid_line():
+    content = "const a = 1; useEffect(() => {}, []);\nfoo(); React.useEffect(function () {});\n"
+    counts = _make_counts()
+    _detect_dead_useeffects(_ctx(content, "a.tsx"), counts)
+    assert [m["line"] for m in counts["dead_useeffect"]] == [1, 2]
+
+
+@pytest.mark.skipif(
+    importlib.util.find_spec("tree_sitter_language_pack") is None, reason="needs tree-sitter"
+)
+def test_dead_useeffect_tree_line_matches_the_fixer_after_a_line_separator():
+    content = "const s = 'a b';\nuseEffect(() => {}, []);\n"
+    counts = _make_counts()
+    _detect_dead_useeffects(_ctx(content, "a.tsx"), counts)
+    [match] = counts["dead_useeffect"]
+    assert match["line"] == 2
+    assert match["content"] == "useEffect(() => {}, []);"
 
 
 class TestDetectSwallowedErrors:
