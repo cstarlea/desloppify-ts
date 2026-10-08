@@ -59,6 +59,7 @@ The fork (`cstarlea/desloppify`) is a **TypeScript/JavaScript-only** code-health
 | #29 | Resilient `plan.json` loading, the plan counterpart of #25 (2.19) |
 | #30 | Fixer round-trip property tests; fixes for mixed line endings in `fixer_io` and `byte_offset` after CR/U+2028/U+2029 (2.4) |
 | #32 | AST dead-useeffect fixer, the last line-based fixer (2.3, FX-17) |
+| #33 | `dead_useeffect` smell on the syntax tree; reports `function () {}` and bare `return;` callbacks (2.11) |
 
 ---
 
@@ -89,7 +90,7 @@ Every adversarial input in the original review broke one of the line-regex fixer
 | 2.8 | Props detector: count properties; include extends, generics and intersections; match names on word boundaries | M | DT-4 |
 | 2.9 | **Done (#22).** Facade: every top-level statement is a re-export (directives and comments allowed); cover multi-line, `export * as`, `export type *` | S | DT-6 |
 | 2.10 | Deprecated: attach JSDoc to the AST node; count importers from the graph plus uses in the same file; skip `.d.ts` | M | DT-5 |
-| 2.11 | Skip comment and string spans in the remaining line-regex detectors (security, smells, logs) | M | DT-7, FX-4 |
+| 2.11 | **Partial: the `dead_useeffect` smell is on the syntax tree, with a fallback that skips template and block-comment lines (#33).** Skip comment and string spans in the remaining line-regex detectors (security, smells, logs) | M | DT-7, FX-4 |
 | 2.12 | Zones: `@generated` headers; directory-level issues classified by zone | S | DT-11 |
 | 2.13 | **Done (#26).** A separate `params` category for unused symbols, with every category decided on the syntax tree | S | FX-15 |
 | 2.14 | package.json `imports` (`#subpath`) in the resolver. The vite-react golden pins this as a known false positive | S | GR-1 |
