@@ -37,6 +37,12 @@ from desloppify.languages.typescript.detectors.smells.helpers import (
 )
 
 
+needs_treesitter = pytest.mark.skipif(
+    importlib.util.find_spec("tree_sitter_language_pack") is None,
+    reason="the syntax-tree function smells need tree-sitter",
+)
+
+
 def _ctx(content: str, filepath: str = "test.ts") -> _FileContext:
     """Build a _FileContext from content string for testing."""
     lines = content.splitlines()
@@ -735,6 +741,7 @@ class TestDetectStubFunctions:
         _detect_stub_functions(_ctx(content), counts)
         assert len(counts["stub_function"]) == 0
 
+    @needs_treesitter
     def test_empty_method_flagged(self):
         content = "class A {\n  reset() {\n  }\n}"
         counts = _make_counts()
@@ -757,6 +764,17 @@ def _messages(detector, content: str, smell: str) -> list[tuple[int, str]]:
     return [(m["line"], m["content"]) for m in counts[smell]]
 
 
+def test_regex_fallback_still_finds_declarations(no_tree):
+    content = "async function fetchData() {\n  return 1;\n}\nfunction noop() {\n}\n"
+    assert _messages(_detect_async_no_await, content, "async_no_await") == [
+        (1, "async fetchData has no await")
+    ]
+    assert _messages(_detect_stub_functions, content, "stub_function") == [
+        (4, "noop() — body is empty")
+    ]
+
+
+@needs_treesitter
 class TestFunctionShapeOnSyntaxTree:
     """Forms the line regexes missed or misread (DT-3)."""
 
@@ -841,13 +859,4 @@ class TestFunctionShapeOnSyntaxTree:
         )
         assert _messages(_detect_nested_closures, content, "nested_closure") == [
             (2, "A.run() — 3 nested closures")
-        ]
-
-    def test_regex_fallback_still_finds_declarations(self, no_tree):
-        content = "async function fetchData() {\n  return 1;\n}\nfunction noop() {\n}\n"
-        assert _messages(_detect_async_no_await, content, "async_no_await") == [
-            (1, "async fetchData has no await")
-        ]
-        assert _messages(_detect_stub_functions, content, "stub_function") == [
-            (4, "noop() — body is empty")
         ]

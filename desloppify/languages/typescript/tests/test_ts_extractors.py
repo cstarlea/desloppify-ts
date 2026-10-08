@@ -1,7 +1,10 @@
 """Tests for desloppify.languages.typescript.extractors — TS function/component extraction."""
 
+import importlib.util
 import re
 import textwrap
+
+import pytest
 
 from desloppify.languages.typescript.extractors_components import (
     extract_props,
@@ -267,6 +270,10 @@ def test_extract_skips_strings_with_braces(tmp_path):
     assert funcs[0].name == "withStrings"
 
 
+@pytest.mark.skipif(
+    importlib.util.find_spec("tree_sitter_language_pack") is None,
+    reason="the syntax-tree extractor needs tree-sitter",
+)
 def test_extract_forms_the_line_regex_missed(tmp_path):
     """Async, default exports, methods, multi-line params and concise arrows (DT-3)."""
     ts_file = tmp_path / "forms.ts"
