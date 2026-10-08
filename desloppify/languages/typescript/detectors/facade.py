@@ -13,9 +13,9 @@ another module's bindings, with at least one such statement:
 
 A side-effect import (``import './x'``) or any declaration makes the file do
 something besides forwarding, so it is not a facade. Files with only
-comments or directives are not facades either, and nor are files whose first
-statement is ``'use client'`` or ``'use server'``: in Next.js those mark a
-client or server boundary, which a re-export alone can carry.
+comments or directives are not facades either, and nor are files whose
+directive prologue holds ``'use client'`` or ``'use server'``: in Next.js
+those mark a client or server boundary, which a re-export alone can carry.
 
 Without tree-sitter a regex fallback recognises the ``export ... from`` forms
 and directives but not import-then-export.
@@ -62,7 +62,6 @@ def _reexport_sources_tree(parsed: ParsedSource) -> list[str] | None:
     imported: dict[str, str] = {}  # local binding -> module source
     reexported: list[str] = []
     local_exports: list[str] = []
-    first = True
     in_prologue = True
 
     for node in parsed.root.named_children:
@@ -70,9 +69,8 @@ def _reexport_sources_tree(parsed: ParsedSource) -> list[str] | None:
         if kind in ("comment", "hash_bang_line"):
             continue
         if in_prologue and _is_directive(node):
-            if first and _string_value(parsed, node.named_children[0]) in _BOUNDARY_DIRECTIVES:
+            if _string_value(parsed, node.named_children[0]) in _BOUNDARY_DIRECTIVES:
                 return None
-            first = False
             continue
         in_prologue = False
 
@@ -199,14 +197,14 @@ def _reexport_sources_regex(content: str) -> list[str] | None:
     """Best-effort facade check without a parser.
 
     Matches the ``export ... from`` forms (multi-line included) after a
-    directive prologue that doesn't open with a boundary directive;
+    directive prologue without a boundary directive;
     import-then-export files are not recognised.
     """
     code = _HASH_BANG_RE.sub("", content)
     code = _LINE_COMMENT_RE.sub(r"\1", _BLOCK_COMMENT_RE.sub("", code))
     pos = 0
     while match := _DIRECTIVE_RE.match(code, pos):
-        if pos == 0 and match.group(2) in _BOUNDARY_DIRECTIVES:
+        if match.group(2) in _BOUNDARY_DIRECTIVES:
             return None
         pos = match.end()
     sources: list[str] = []

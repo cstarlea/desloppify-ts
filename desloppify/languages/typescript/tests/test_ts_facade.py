@@ -27,11 +27,6 @@ _FACADES = [
     pytest.param("export type * from './t';\n", ["./t"], id="type-star"),
     pytest.param("export type * as T from './t';\n", ["./t"], id="type-star-as"),
     pytest.param("export { default } from './d';\n", ["./d"], id="default"),
-    pytest.param(
-        "'use strict';\n'use client';\nexport { Button } from './button';\n",
-        ["./button"],
-        id="use-client-not-first",
-    ),
     pytest.param('"use strict"\nexport * from "./x"\n', ["./x"], id="use-strict-no-semicolons"),
     pytest.param("#!/usr/bin/env node\nexport * from './x';\n", ["./x"], id="hashbang"),
     pytest.param(
@@ -57,6 +52,10 @@ _NOT_FACADES = [
     pytest.param(
         "// Client boundary.\n/* see docs */\n'use client';\nexport * from './x';\n",
         id="comments-before-use-client",
+    ),
+    pytest.param(
+        "'use strict';\n// note\n\"use client\"\nexport { Button } from './button';\n",
+        id="use-client-later-in-prologue",
     ),
     pytest.param("export * from './x';\nsetup();\n", id="call"),
     pytest.param("export { a };\n", id="local-export-without-import"),
