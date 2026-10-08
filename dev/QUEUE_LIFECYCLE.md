@@ -62,7 +62,7 @@ Temporary skips therefore **block the scan step** until one of these happens:
      - skip entries whose issue is now `auto_resolved`.
 
      Wontfix and false-positive skip entries are kept, because those issues keep their status.
-   - **Close clusters.** A cluster is marked done when it has emptied, or when all its issues are `fixed`, `auto_resolved` or `wontfix`.
+   - **Close clusters.** A cluster is marked done when it has emptied, or when all its issues have a resolved status: `fixed`, `wontfix`, `false_positive` or `auto_resolved` (`resolved_statuses()` in `base/enums.py`). `plan resolve` applies the same rule: it marks a cluster done once the members it didn't just resolve are already resolved in state.
    - **Resurface skips.** Temporary skips whose `review_after` scans have passed return to the queue, and their `deferred` issues reopen.
    - **Prune.** Superseded entries older than 90 days are dropped.
 2. `reconcile_plan()` runs only at a boundary: when the live queue has nothing left but synthetic items, or on `--force-rescan`. It syncs subjective dimensions, auto-clusters, injects workflow and triage items, and writes the persisted mode. Other callers:
@@ -151,8 +151,7 @@ The rename and restore run under the file's lock, or in memory only if the lock 
 
 ## Known gaps
 
-These are tracked in `dev/FORK_ROADMAP.md` as 2.38, 2.39 and 2.40.
+These are tracked in `dev/FORK_ROADMAP.md` as 2.38 and 2.39.
 
 - **`plan skip --permanent` on a deferred issue leaves it `deferred`.** `resolve_issues()` matches only `open` issues, so the state status doesn't change while the plan entry becomes `permanent`. The issue then keeps failing lenient. The deferred-disposition item suggests exactly this command.
 - **`fixed` and `false_positive` are marked `scan_verified` on any absence.** That includes absences where their detector didn't run, and issues outside the scan's `--path`, so verified can credit a fix that no detector confirmed.
-- **Clusters close only on `fixed`, `auto_resolved` and `wontfix`.** `_reconcile_active_clusters_by_item_status` doesn't count `false_positive`, so a cluster whose last open issue was marked a false positive stays active.
