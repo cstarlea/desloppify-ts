@@ -63,7 +63,7 @@ The fork (`cstarlea/desloppify`) is a **TypeScript/JavaScript-only** code-health
 | #34 | Unused-vars fixer removes nested destructuring patterns that end up empty; one `ALL_DESTRUCTURED` constant (2.26, 2.27) |
 | #35 | State and plan read-modify-writes under the locks; corrupt-file recovery under the lock; atomic progression trim (2.20) |
 | #36 | Facade detector exempts files with `'use client'`/`'use server'` in the directive prologue (2.28) |
-| #43 | CLI logging configured at startup: `  WARNING: …` lines, coloured on a terminal; `DESLOPPIFY_LOG_LEVEL` (2.32) |
+| #40 | Shared typed syntax-tree helper: `parsed_file` parses once per scan; typed queries for functions, classes, imports/exports, JSX and calls; facade and `dead_useeffect` migrated (2.1) |
 
 ---
 
@@ -77,7 +77,7 @@ Every adversarial input in the original review broke one of the line-regex fixer
 
 | # | Item | Effort | Findings |
 |---|---|---|---|
-| 2.1 | Shared typed TS AST helper: parse once per file through the parse cache; queries for functions, classes, imports and JSX; regex kept only as a fallback without tree-sitter | L | AR-2 |
+| 2.1 | **Done (#40).** Shared typed TS AST helper: `syntax.tree.parsed_file` parses each file once per scan through the parse cache (grammar by extension); `syntax.queries` returns dataclasses for functions (incl. overload signatures), classes and members, imports, exports, JSX elements and calls. Facade and the `dead_useeffect` smell use it; regex stays only as each caller's fallback without tree-sitter. Cohesion and `deps/imports` still parse .ts files with `tsx`, and cohesion keys the cache by relative path, so those parses aren't shared yet | L | AR-2 |
 | 2.2 | **Done (#16)**, except `--verify`. Output validation gate for every fixer and `move`: parse before and after, refuse to write if the parse-error count rises, and show a real unified diff in `--dry-run`. Optional `--verify` runs `tsc --noEmit` and reverts on new errors | M | FX-11 |
 | 2.3 | **Done for unused-imports (#17), unused-vars (#19), unused-params (#20, #27, #28), debug-logs (#23), empty-if-chain (#24) and dead-useeffect (#32); none needs `--unsafe`.** Every fixer now edits syntax-tree nodes. dead-useeffect removes only a standalone `useEffect`/`React.useEffect` statement with an empty, comment-free callback and deps that only read values; it leaves template strings, code sharing the line and the `//` line above alone (FX-17) | M | FX-17 |
 | 2.4 | **Done (#30).** Fixer round-trip property tests: output parses, a second run is a no-op, CRLF/BOM/mode are preserved, and no new `tsc` errors appear. Seeded with the adversarial cases in the appendix. They found and fixed mixed-line-ending rewrites in `fixer_io` and `byte_offset` miscounting lines after CR/U+2028/U+2029 | M | FX-19 |
@@ -97,7 +97,7 @@ Every adversarial input in the original review broke one of the line-regex fixer
 | 2.11 | **Partial: the `dead_useeffect` smell is on the syntax tree, with a fallback that skips template and block-comment lines (#33).** Skip comment and string spans in the remaining line-regex detectors (security, smells, logs) | M | DT-7, FX-4 |
 | 2.12 | Zones: `@generated` headers; directory-level issues classified by zone | S | DT-11 |
 | 2.13 | **Done (#26).** A separate `params` category for unused symbols, with every category decided on the syntax tree | S | FX-15 |
-| 2.14 | package.json `imports` (`#subpath`) in the resolver. The vite-react golden pins this as a known false positive | S | GR-1 |
+| 2.14 | **Done (#37).** package.json `imports` (`#subpath`) in the resolver: the importer's nearest package.json is the scope; exact and `*` keys, condition objects and fallback arrays in order; bare targets resolve when they name a workspace package. The vite-react golden's `analytics.ts` false positive is gone | S | GR-1 |
 | 2.15 | Move the `_NEXTJS_*` constants out of `engine/detectors/orphaned.py` into `FrameworkSpec.entry_conventions` | S | GR-6 |
 | 2.16 | Test coverage follows re-export chains of any depth (it stops after one barrel hop today; see trpc `parseTRPCMessage.ts`) | M | DT-12 |
 | 2.17 | Test-health score: count coverage through a tested public entry as covered, and fix the "production files" and "checks" labels | M | DT-12 |
@@ -108,10 +108,10 @@ Every adversarial input in the original review broke one of the line-regex fixer
 
 | # | Item | Effort | Findings |
 |---|---|---|---|
-| 2.18 | Strict score: scan-confirmed resolutions (`auto_resolved`) stop counting as failures; add a test that full remediation reaches 100 in every mode; make scoring.md, README and SKILL.md agree | S | CE-2 |
+| 2.18 | **Done (#38).** Strict no longer counts scan-confirmed resolutions (`auto_resolved`) as failures; verified counts a manual `fixed`/`false_positive` once a rescan confirms it (`scan_verified`); a mechanical dimension whose detector ran with zero checks left is no longer carried forward with its old score. A test checks that fixing and rescanning reaches 100 in every mode; scoring.md and SKILL.md describe the three modes as the code does | S | CE-2 |
 | 2.19 | **Done for `state.json` (#25) and `plan.json` (#29).** Resilient loading: quarantine invalid issues and plan entries instead of discarding the whole file; rename the bad file to `.corrupted`; don't rotate `.bak` after a failed load; coerce the version field | S | CE-3 |
 | 2.20 | **Done (#35).** Every mutating command holds the state lock, then the plan lock, from its first load to its return; read-only commands load unlocked, and the corrupt-file rename and `.bak` restore run under the lock (or in memory if it stays busy). One re-entrant, ranked file lock backs `state_lock`, `plan_lock` and the progression log, whose trim now runs under the append lock. `plan triage --run-stages` and `review --run-batches`/`--scan-after-import` stay unlocked because they wait on desloppify subprocesses | M | CE-4 |
-| 2.21 | Auto-resolve deferred, triaged_out and wontfix issues when a scan confirms they're gone | S | CE-5 |
+| 2.21 | **Done (#42).** Deferred and triaged_out issues auto-resolve when a scan confirms they're gone, under the same conditions as open issues, and reconcile supersedes their skip entries. Wontfix stays wontfix: the scan marks it `scan_verified`, so it stops failing strict and verified, and clears the mark if the finding returns; its skip entry is kept. A superseded entry is dropped once its issue reappears so a fresh skip or queue entry isn't stripped | S | CE-5 |
 | 2.22 | Rewrite `docs/scoring.md` and `dev/QUEUE_LIFECYCLE.md` from the code | S | CE-6 |
 | 2.23 | First run: headline the objective score (marked provisional) until subjective dimensions are assessed; `--profile ci` prints plain output with a threshold exit code; move `cycles` out of the Security dimension | M | CE-12 |
 | 2.24 | Expire carried-forward subjective dimensions; concerns ignore suppressed issues | S | CE-9, CE-10 |
@@ -267,10 +267,10 @@ Status key: **done** (with PR), **partial** (what's left is in §2), **open**, *
 | ID | Sev | Title | Status |
 |---|---|---|---|
 | CE-1 | high | One plan.json across languages | dropped |
-| CE-2 | high | Strict never recovers from real fixes | open → 2.18 |
+| CE-2 | high | Strict never recovers from real fixes | done (#38) |
 | CE-3 | medium | One bad issue loses the whole state | done (#25, #29); plan sections → 2.30 |
 | CE-4 | medium | Unlocked read-modify-write | done (#35) |
-| CE-5 | medium | Deferred, triaged_out and wontfix never auto-resolve | open → 2.21 |
+| CE-5 | medium | Deferred, triaged_out and wontfix never auto-resolve | done (#42) |
 | CE-6 | medium | scoring.md and QUEUE_LIFECYCLE contradict code | open → 2.22 |
 | CE-7 | low | Subjective scores taken as-is | open |
 | CE-8 | low | Plan subsystem complexity | open → §2E |

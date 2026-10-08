@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import re
 
-from desloppify.languages.typescript.syntax.tree import ParsedSource, parse_text
+from desloppify.languages.typescript.syntax.queries import calls, function_info, statements
+from desloppify.languages.typescript.syntax.tree import ParsedSource, parsed_file
 
 from .detector_core import (
     _CATCH_DEFAULT_FIELD_THRESHOLD,
@@ -46,7 +47,6 @@ def _detect_catch_return_default(ctx, smell_counts: dict[str, list[dict]]) -> No
 
 
 _EFFECT_CALLEES = frozenset({"useEffect", "React.useEffect"})
-_EFFECT_CALLBACKS = frozenset({"arrow_function", "function_expression", "function"})
 _EFFECT_START = re.compile(
     r"(?:React\.)?useEffect\s*\(\s*(?:\(\s*\)\s*=>|function\s*\(\s*\))\s*\{"
 )
@@ -61,7 +61,7 @@ def _detect_dead_useeffects(ctx, smell_counts: dict[str, list[dict]]) -> None:
     """
     if "useEffect" not in ctx.content:
         return
-    parsed = parse_text(ctx.content, ctx.filepath)
+    parsed = parsed_file(ctx.filepath)
     found = _dead_effects_regex(ctx) if parsed is None else _dead_effects_tree(parsed)
     for row, line in found:
         _emit(smell_counts, "dead_useeffect", ctx, row + 1, line.strip()[:100])
@@ -71,32 +71,24 @@ def _dead_effects_tree(parsed: ParsedSource) -> list[tuple[int, str]]:
     """(row, line text) of each dead effect; rows count ``\\n`` only, as the fixer's do."""
     found: dict[int, str] = {}
     source = parsed.source
-    stack = [parsed.root]
-    while stack:
-        node = stack.pop()
-        stack.extend(node.named_children)
-        if node.type != "call_expression":
-            continue
-        function = node.child_by_field_name("function")
-        args = node.child_by_field_name("arguments")
-        if function is None or parsed.text(function) not in _EFFECT_CALLEES:
-            continue
-        values = [] if args is None else [a for a in args.named_children if a.type != "comment"]
-        if not values or values[0].type not in _EFFECT_CALLBACKS:
-            continue
-        body = values[0].child_by_field_name("body")
-        if body is None or body.type != "statement_block":
-            continue
-        statements = [s for s in body.named_children if s.type != "comment"]
-        if not statements or (
-            len(statements) == 1
-            and statements[0].type == "return_statement"
-            and not statements[0].named_children
+    for call in calls(parsed, _EFFECT_CALLEES):
+        callback = function_info(parsed, call.arguments[0]) if call.arguments else None
+        if (
+            callback is None
+            or callback.kind not in ("arrow", "expression")
+            or callback.is_generator
+            or callback.expression_body
+            or callback.body is None
         ):
-            start = source.rfind(b"\n", 0, node.start_byte) + 1
-            end = source.find(b"\n", node.start_byte)
+            continue
+        body = statements(callback.body_node)
+        if not body or (
+            len(body) == 1 and body[0].type == "return_statement" and not body[0].named_children
+        ):
+            start = source.rfind(b"\n", 0, call.span.start_byte) + 1
+            end = source.find(b"\n", call.span.start_byte)
             line = source[start : len(source) if end == -1 else end]
-            found[node.start_point[0]] = line.decode("utf-8", "replace")
+            found[call.line - 1] = line.decode("utf-8", "replace")
     return sorted(found.items())
 
 

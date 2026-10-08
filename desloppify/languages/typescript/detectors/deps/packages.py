@@ -181,7 +181,7 @@ def _compiler_dir(config: Path, option: str, depth: int = 0) -> Path | None:
     return None
 
 
-def _load_package(directory: Path) -> Package | None:
+def load_package(directory: Path) -> Package | None:
     manifest = _read_json(directory / "package.json")
     if manifest is None:
         return None
@@ -223,7 +223,7 @@ def discover_packages(scan_path: Path, project_root: Path) -> list[Package]:
         if resolved in seen:
             continue
         seen.add(resolved)
-        package = _load_package(resolved)
+        package = load_package(resolved)
         if package is not None:
             packages.append(package)
     return packages
@@ -351,6 +351,27 @@ def resolve_package_subpath(package: Package, subpath: str) -> str | None:
     return resolve_package_path(package, subpath)
 
 
+# ── imports (#subpath) ───────────────────────────────────────
+
+
+def package_import_targets(package: Package, specifier: str) -> list[str]:
+    """Targets the package's ``imports`` field maps a ``#subpath`` to, in condition order.
+
+    Keys may be exact (``#config``) or contain one ``*`` (``#lib/*``);
+    values may be strings, condition objects or fallback arrays. Targets
+    are package-relative paths (``./src/x.ts``) or bare package names.
+    """
+    imports = package.manifest.get("imports")
+    if not isinstance(imports, dict):
+        return []
+    keys = {k: v for k, v in imports.items() if isinstance(k, str) and k.startswith("#")}
+    matched = _match_subpath(keys, specifier)
+    if matched is None:
+        return []
+    value, star = matched
+    return [leaf.replace("*", star) if star is not None else leaf for leaf in _leaves(value)]
+
+
 _DEPENDENCY_FIELDS = ("dependencies", "devDependencies", "peerDependencies", "optionalDependencies")
 
 
@@ -473,7 +494,9 @@ __all__ = [
     "WorkspaceResolver",
     "declared_dependencies",
     "discover_packages",
+    "load_package",
     "package_entries",
+    "package_import_targets",
     "resolve_package_path",
     "resolve_package_subpath",
     "workspace_entries",
