@@ -4,6 +4,11 @@
 angle-bracket casts (``<T>value``) are valid; everything else uses ``tsx``.
 All functions return None when tree-sitter or the grammar is unavailable, so
 callers decide how to degrade.
+
+``parsed_file`` is the entry point for files on disk: during a scan it goes
+through the scan-scoped parse cache, so each file is parsed once per grammar
+however many detectors ask. The cache is cleared when a scan starts and ends.
+Typed queries over the result live in ``syntax.queries``.
 """
 
 from __future__ import annotations
@@ -12,7 +17,9 @@ import logging
 from dataclasses import dataclass
 from pathlib import Path
 
+from desloppify.base.discovery.file_paths import resolve_path
 from desloppify.languages._framework.treesitter import PARSE_INIT_ERRORS, is_available
+from desloppify.languages._framework.treesitter.cache import get_or_parse_tree
 from desloppify.languages._framework.treesitter.parsing import _get_parser
 
 logger = logging.getLogger(__name__)
@@ -66,9 +73,27 @@ def parse_text(text: str, path: str | Path) -> ParsedSource | None:
     return ParsedSource(source, parser.parse(source))
 
 
+def parsed_file(path: str | Path) -> ParsedSource | None:
+    """Parse a file on disk (relative paths are under the project root), once per scan.
+
+    The tree covers the file's exact bytes. None without tree-sitter or when
+    the file can't be read.
+    """
+    grammar = grammar_for(path)
+    parser = get_parser(grammar)
+    if parser is None:
+        return None
+    cached = get_or_parse_tree(resolve_path(str(path)), parser, grammar)
+    if cached is None:
+        return None
+    source, tree = cached
+    return ParsedSource(source, tree)
+
+
 __all__ = [
     "ParsedSource",
     "get_parser",
     "grammar_for",
     "parse_text",
+    "parsed_file",
 ]
