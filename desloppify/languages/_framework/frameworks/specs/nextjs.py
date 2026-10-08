@@ -546,10 +546,17 @@ def _next_lint_command(scan_root: Path) -> str | None:
     return None
 
 
+_NEXT_CONFIG_FILES = (
+    "next.config.js",
+    "next.config.mjs",
+    "next.config.cjs",
+    "next.config.ts",
+)
+
 # Files Next.js loads from the file system. The orphaned detector treats them
 # as entry points in packages with a next.config at their root.
 NEXTJS_ENTRY_CONVENTIONS = EntryConventions(
-    config_files=("next.config.js", "next.config.mjs", "next.config.ts"),
+    config_files=_NEXT_CONFIG_FILES,
     extensions=frozenset({".ts", ".tsx", ".js", ".jsx"}),
     # At the package root or in src/.
     root_stems=frozenset(
@@ -595,12 +602,7 @@ NEXTJS_SPEC = FrameworkSpec(
     ecosystem="node",
     detection=DetectionConfig(
         dependencies=("next",),
-        config_files=(
-            "next.config.js",
-            "next.config.mjs",
-            "next.config.cjs",
-            "next.config.ts",
-        ),
+        config_files=_NEXT_CONFIG_FILES,
         marker_dirs=("app", "src/app", "pages", "src/pages"),
         script_pattern=r"(?:^|\s)next(?:\s|$)",
         marker_dirs_imply_presence=False,

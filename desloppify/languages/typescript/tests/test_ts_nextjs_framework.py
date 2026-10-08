@@ -312,3 +312,25 @@ def test_hook_rules_missing_use_client_skip_test_and_story_files(tmp_path: Path,
     entries, scanned = scanner(tmp_path, info)
     assert {entry["file"] for entry in entries} == {"app/widget.tsx"}
     assert scanned == 1
+
+
+def test_detect_orphaned_applies_scan_zones_and_entries(tmp_path: Path, capsys):
+    """`detect orphaned` reports what `scan` does: config files are zoned out."""
+    import json
+
+    from desloppify.languages.typescript.commands import cmd_orphaned
+
+    body = "".join(f"export const v{i} = {i};\n" for i in range(20))
+    _write(tmp_path, "package.json", '{"dependencies": {"next": "15.0.0"}}\n')
+    _write(tmp_path, "next.config.ts", body)
+    _write(tmp_path, "app/page.tsx", body)
+    _write(tmp_path, "src/lonely.ts", body)
+    _write(tmp_path, "src/lonely.test.ts", body)
+
+    cmd_orphaned(SimpleNamespace(path=str(tmp_path), json=True, top=20))
+    payload = json.loads(capsys.readouterr().out)
+    assert [e["file"] for e in payload["entries"]] == ["src/lonely.ts"]
+    assert payload["entries"][0]["confidence"] == "medium"
+
+    cmd_orphaned(SimpleNamespace(path=str(tmp_path), json=False, top=20))
+    assert "Orphaned files: 1 file, 20 LOC" in capsys.readouterr().out

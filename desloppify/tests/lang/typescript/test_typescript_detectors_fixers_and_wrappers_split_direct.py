@@ -251,9 +251,10 @@ def test_ts_command_registry_canonical_surface_and_wrapper_passthrough(
             }
         },
     )
+    monkeypatch.setattr(cli_mod, "package_context", lambda _path, _graph: ([], None))
     monkeypatch.setattr(
-        cli_mod.orphaned_detector_mod,
-        "detect_orphaned_files",
+        cli_mod,
+        "find_orphans",
         lambda *_args, **_kwargs: ([{"file": "src/a.ts", "loc": 10}], 1),
     )
 

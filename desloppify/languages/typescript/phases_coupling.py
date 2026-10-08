@@ -160,19 +160,18 @@ def flag_unresolved_orphans(entries: list[dict], graph: dict) -> None:
             entry["possible_importers"] = sorted(rel(s) for s in sources)
 
 
-def detect_cycles_and_orphans(
+def find_orphans(
     path: Path,
     graph: dict,
     lang: LangRuntimeContract,
     packages: list[packages_mod.Package] | None = None,
     entries: packages_mod.PackageEntries | None = None,
-) -> tuple[list[Issue], int]:
-    """Detect import cycles and orphaned files."""
-    results: list[Issue] = []
-    cycle_entries, _ = graph_detector_mod.detect_cycles(graph)
-    cycle_entries = filter_entries(lang.zone_map, cycle_entries, "cycles", file_key="files")
-    results.extend(make_cycle_issues(cycle_entries, log))
+) -> tuple[list[dict], int]:
+    """Orphaned-file entries as the scan reports them (zones applied, confidence set).
 
+    Returns (entries, total_graph_files). ``detect orphaned`` uses this too,
+    so it and ``scan`` agree.
+    """
     orphan_entries, total_graph_files = orphaned_detector_mod.detect_orphaned_files(
         path,
         graph,
@@ -189,6 +188,23 @@ def detect_cycles_and_orphans(
     )
     orphan_entries = filter_entries(lang.zone_map, orphan_entries, "orphaned")
     flag_unresolved_orphans(orphan_entries, graph)
+    return orphan_entries, total_graph_files
+
+
+def detect_cycles_and_orphans(
+    path: Path,
+    graph: dict,
+    lang: LangRuntimeContract,
+    packages: list[packages_mod.Package] | None = None,
+    entries: packages_mod.PackageEntries | None = None,
+) -> tuple[list[Issue], int]:
+    """Detect import cycles and orphaned files."""
+    results: list[Issue] = []
+    cycle_entries, _ = graph_detector_mod.detect_cycles(graph)
+    cycle_entries = filter_entries(lang.zone_map, cycle_entries, "cycles", file_key="files")
+    results.extend(make_cycle_issues(cycle_entries, log))
+
+    orphan_entries, total_graph_files = find_orphans(path, graph, lang, packages, entries)
     results.extend(make_orphaned_issues(orphan_entries, log))
     return results, total_graph_files
 

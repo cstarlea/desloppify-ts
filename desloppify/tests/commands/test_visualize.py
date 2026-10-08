@@ -240,7 +240,7 @@ class TestTreeTextRoot:
         lang = self._lang(["src/main.ts", "vite.config.ts"])
         lines = generate_tree_text(root, lang=lang).splitlines()
         assert lines[0].startswith(f"{root.name}/  (2 files")
-        assert any(line.startswith("  src/  (1 files") for line in lines)
+        assert any(line.startswith("  src/  (1 file,") for line in lines)
         assert any(line.strip().startswith("vite.config.ts") for line in lines)
 
     def test_focus_accepts_scan_relative_and_project_relative_paths(self, set_project_root):
@@ -250,7 +250,7 @@ class TestTreeTextRoot:
         scan = root / "packages" / "ui"
         for focus in ("src", "packages/ui/src"):
             text = generate_tree_text(scan, options=TreeTextOptions(focus=focus), lang=lang)
-            assert text.splitlines()[0].startswith("src/  (1 files"), focus
+            assert text.splitlines()[0].startswith("src/  (1 file,"), focus
 
 
 # ===========================================================================
@@ -432,7 +432,7 @@ class TestPrintTree:
         assert "components/" in lines[0]
         assert "2 files" in lines[0]
         assert "300 LOC" in lines[0]
-        assert "1 issues" in lines[0]
+        assert "1 issue)" in lines[0]
 
     def test_depth_limit_stops_recursion(self):
         tree = {

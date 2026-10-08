@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from desloppify.base.discovery.file_paths import rel
-from desloppify.base.output.terminal import colorize, print_table
+from desloppify.base.output.terminal import colorize, plural, print_table
 from desloppify.engine.detectors.dupes import detect_duplicates
 from desloppify.engine.detectors.graph import detect_cycles
 from desloppify.engine.detectors.orphaned import (
@@ -206,7 +206,7 @@ def make_cmd_orphaned(
             return
 
         total_loc = sum(entry["loc"] for entry in entries)
-        print(colorize(f"\nOrphaned files: {len(entries)} files, {total_loc} LOC\n", "bold"))
+        print(colorize(f"\nOrphaned files: {plural(len(entries), 'file')}, {total_loc} LOC\n", "bold"))
         top = getattr(args, "top", 20)
         rows = [[rel(entry["file"]), str(entry["loc"])] for entry in entries[:top]]
         print_table(["File", "LOC"], rows, [85, 6])
