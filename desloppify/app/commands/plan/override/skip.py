@@ -30,6 +30,7 @@ from desloppify.engine._plan.refresh_lifecycle import (
 from desloppify.engine._plan.sync import reconcile_plan
 from desloppify.engine.plan_ops import (
     SKIP_KIND_LABELS,
+    SKIPPABLE_STATUSES,
     append_log_entry,
     backlog_items,
     skip_items,
@@ -106,8 +107,32 @@ def _apply_state_skip_resolution(
             status,
             note or "",
             attestation=attestation,
+            from_statuses=SKIPPABLE_STATUSES,
         )
     return state_data
+
+
+def _split_skippable_ids(
+    state: dict,
+    plan: dict,
+    issue_ids: list[str],
+    *,
+    deferred_only: bool,
+) -> tuple[list[str], list[str]]:
+    """Return ``(skippable, kept)``: kept issues are already wontfix or resolved."""
+    work_items = state.get("work_items", {})
+    skipped = plan.get("skipped", {})
+    skippable: list[str] = []
+    kept: list[str] = []
+    for fid in issue_ids:
+        if deferred_only and skipped.get(fid, {}).get("kind") != "temporary":
+            continue
+        issue = work_items.get(fid)
+        if isinstance(issue, dict) and issue.get("status") not in SKIPPABLE_STATUSES:
+            kept.append(fid)
+            continue
+        skippable.append(fid)
+    return skippable, kept
 
 
 def _validate_temporary_skip_confirmation(
@@ -220,9 +245,24 @@ def cmd_plan_skip(args: argparse.Namespace) -> None:
     state_file = runtime.state_path
     plan_file = _plan_file_for_state(state_file)
     plan = load_plan(plan_file)
-    issue_ids = resolve_ids_from_patterns(state, patterns, plan=plan)
+    issue_ids, kept_ids = _split_skippable_ids(
+        state,
+        plan,
+        resolve_ids_from_patterns(state, patterns, plan=plan, status_filter="all"),
+        deferred_only=bool(getattr(args, "deferred_only", False)),
+    )
+    if kept_ids:
+        print(
+            colorize(
+                f"  Left {len(kept_ids)} issue(s) unchanged: already wontfix, "
+                "false positive or resolved. `desloppify plan unskip --force` "
+                "reopens a skipped one.",
+                "yellow",
+            )
+        )
     if not issue_ids:
-        print(colorize("  No matching issues found.", "yellow"))
+        if not kept_ids:
+            print(colorize("  No matching issues found.", "yellow"))
         return
 
     _warn_or_block_bulk_skip(issue_ids, confirm=bool(getattr(args, "confirm", False)))

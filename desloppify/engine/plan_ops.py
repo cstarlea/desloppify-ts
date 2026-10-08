@@ -37,6 +37,7 @@ from desloppify.engine._plan.operations.skip import (
 from desloppify.engine._plan.skip_policy import (
     SKIP_KIND_LABELS,
     SKIP_KIND_SECTION_LABELS,
+    SKIPPABLE_STATUSES,
     USER_SKIP_KINDS,
     skip_kind_from_flags,
     skip_kind_requires_attestation,
@@ -54,6 +55,7 @@ from desloppify.engine._plan.step_parser import (
 __all__ = [
     "SKIP_KIND_LABELS",
     "SKIP_KIND_SECTION_LABELS",
+    "SKIPPABLE_STATUSES",
     "USER_SKIP_KINDS",
     "add_to_cluster",
     "annotate_issue",

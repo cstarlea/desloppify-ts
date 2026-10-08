@@ -5,6 +5,9 @@ from __future__ import annotations
 USER_SKIP_KINDS = ("temporary", "permanent", "false_positive")
 SYSTEM_SKIP_KINDS = ("triaged_out", "triage_observe_auto")
 VALID_SKIP_KINDS = set(USER_SKIP_KINDS + SYSTEM_SKIP_KINDS)
+# Statuses a user skip may change. A wontfix stays wontfix; resolved issues
+# are not re-skipped.
+SKIPPABLE_STATUSES = ("open", "deferred", "triaged_out")
 
 SKIP_KIND_LABELS = {
     "temporary": "Skipped",
@@ -59,6 +62,7 @@ def skip_kind_needs_state_reopen(kind: str) -> bool:
 __all__ = [
     "SKIP_KIND_LABELS",
     "SKIP_KIND_SECTION_LABELS",
+    "SKIPPABLE_STATUSES",
     "SYSTEM_SKIP_KINDS",
     "USER_SKIP_KINDS",
     "VALID_SKIP_KINDS",
