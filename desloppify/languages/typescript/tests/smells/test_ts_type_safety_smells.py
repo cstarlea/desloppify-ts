@@ -120,6 +120,30 @@ class TestTree:
         assert _smells(tmp_path, source) == {"ts_expect_error_undocumented": [1, 3, 5, 17, 18]}
 
 
+@needs_treesitter
+class TestProjectContext:
+    def test_index_access_assertions_under_no_unchecked_indexed_access(self, tmp_path, set_project_root):
+        source = "const a = list[0]!;\nconst b = map.get(k)!;\nconst c = row[i]!.name;\n"
+        (tmp_path / "base.json").write_text('{ "compilerOptions": { "noUncheckedIndexedAccess": true } }')
+        pkg = tmp_path / "pkg"
+        pkg.mkdir()
+        (pkg / "tsconfig.json").write_text('{\n  // JSONC\n  "extends": "../base.json"\n}')
+        (tmp_path / "plain").mkdir()
+        (tmp_path / "plain" / "tsconfig.json").write_text('{ "compilerOptions": { "strict": true } }')
+        assert _smells(tmp_path / "pkg", source) == {"non_null_assert": [2]}
+        assert _smells(tmp_path / "plain", source) == {"non_null_assert": [1, 2, 3]}
+
+    @pytest.mark.parametrize(
+        "name",
+        ["a.test.ts", "a.spec.tsx", "types.test-d.ts", "__tests__/a.ts", "test-d/a.ts", "test/a.ts"],
+    )
+    def test_expect_error_needs_no_reason_in_tests(self, tmp_path, set_project_root, name):
+        (tmp_path / name).parent.mkdir(parents=True, exist_ok=True)
+        source = "// @ts-expect-error\nf(1);\n// @ts-ignore\ng();\n"
+        assert _smells(tmp_path, source, name) == {"ts_ignore": [3]}
+        assert _smells(tmp_path, source, "src.ts") == {"ts_expect_error_undocumented": [1], "ts_ignore": [3]}
+
+
 class TestRegexFallback:
     @pytest.fixture(autouse=True)
     def _no_tree(self, monkeypatch):
