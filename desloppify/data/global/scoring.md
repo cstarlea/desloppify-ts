@@ -79,15 +79,15 @@ Desloppify tracks three score variants. They differ only in which issue statuses
 | Status | Lenient | Strict | Verified |
 |---|---|---|---|
 | `open`, `deferred`, `triaged_out` | fails | fails | fails |
-| `wontfix` | passes | fails | fails |
+| `wontfix` | passes | fails until a rescan confirms the finding is gone | fails until a rescan confirms the finding is gone |
 | `fixed`, `false_positive` | passes | passes | fails until a rescan confirms the finding is gone |
 | `auto_resolved` | passes | passes | passes |
 
 - **Lenient (overall):** only work you haven't done counts.
-- **Strict:** debt you accepted with `wontfix` also counts. The gap between lenient and strict is your wontfix debt.
+- **Strict:** debt you accepted with `wontfix` also counts while the finding is still there. The gap between lenient and strict is your wontfix debt. A `wontfix` stays `wontfix` when its finding disappears (and counts again if it comes back).
 - **Verified:** a manual `fixed` or `false_positive` counts only once a later scan no longer reports the finding. It covers the mechanical dimensions only.
 
-`auto_resolved` means a scan confirmed the finding is gone (the detector ran and no longer reports it, or its file was deleted), so it never counts. Fixing every finding and rescanning reaches 100 in every variant.
+`auto_resolved` means a scan confirmed the finding is gone (the detector ran and no longer reports it, or its file was deleted), so it never counts. Open, deferred and triaged-out issues become `auto_resolved` that way. Fixing every finding and rescanning reaches 100 in every variant.
 
 ## Zone filtering
 

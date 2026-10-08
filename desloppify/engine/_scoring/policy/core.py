@@ -194,9 +194,10 @@ SUBJECTIVE_CHECKS = 10
 
 # Statuses that count as failures in each mode:
 # - lenient: work still to do (open, deferred, triaged_out).
-# - strict: lenient plus accepted debt (wontfix).
+# - strict: lenient plus accepted debt (wontfix) whose finding is still there.
 # - verified_strict: strict plus manual resolutions (fixed, false_positive)
-#   that no scan has confirmed yet; see ``issue_counts_as_failure``.
+#   that no scan has confirmed yet.
+# See ``issue_counts_as_failure`` for the scan-confirmed exemptions.
 # ``auto_resolved`` means a scan confirmed the finding is gone, so no mode
 # counts it: fixing the code and rescanning reaches 100 everywhere.
 FAILURE_STATUSES_BY_MODE: dict[ScoreMode, frozenset[str]] = {
@@ -205,9 +206,15 @@ FAILURE_STATUSES_BY_MODE: dict[ScoreMode, frozenset[str]] = {
     "verified_strict": frozenset({"open", "wontfix", "fixed", "false_positive", "deferred", "triaged_out"}),
 }
 
-# Manual resolutions that verified_strict credits once a later scan confirms
-# the finding is absent (``resolution_attestation.scan_verified``).
-SCAN_VERIFIABLE_STATUSES: frozenset[str] = frozenset({"fixed", "false_positive"})
+# Failure statuses that stop failing in a mode once a later scan confirms the
+# finding is absent (``resolution_attestation.scan_verified``). A wontfix keeps
+# its status when its finding goes away, but there is no debt left to count;
+# a manual fix or false positive is what verified_strict waits to see confirmed.
+SCAN_VERIFIED_PASSES_BY_MODE: dict[ScoreMode, frozenset[str]] = {
+    "lenient": frozenset(),
+    "strict": frozenset({"wontfix"}),
+    "verified_strict": frozenset({"wontfix", "fixed", "false_positive"}),
+}
 
 
 def issue_counts_as_failure(issue: Mapping[str, Any], mode: ScoreMode) -> bool:
@@ -215,11 +222,12 @@ def issue_counts_as_failure(issue: Mapping[str, Any], mode: ScoreMode) -> bool:
     status = issue.get("status", "open")
     if status not in FAILURE_STATUSES_BY_MODE[mode]:
         return False
-    if mode == "verified_strict" and status in SCAN_VERIFIABLE_STATUSES:
+    if status in SCAN_VERIFIED_PASSES_BY_MODE[mode]:
         attestation = issue.get("resolution_attestation")
         if isinstance(attestation, Mapping) and attestation.get("scan_verified") is True:
             return False
     return True
+
 
 # Tolerance for treating a subjective score as "on target" in integrity checks.
 # Scores within this band of the target are flagged as potential gaming.
@@ -292,7 +300,7 @@ __all__ = [
     "MECHANICAL_DIMENSION_WEIGHTS",
     "MECHANICAL_WEIGHT_FRACTION",
     "MIN_SAMPLE",
-    "SCAN_VERIFIABLE_STATUSES",
+    "SCAN_VERIFIED_PASSES_BY_MODE",
     "SCORING_MODES",
     "SECURITY_EXCLUDED_ZONES",
     "SUBJECTIVE_CHECKS",

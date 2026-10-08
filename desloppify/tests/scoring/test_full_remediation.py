@@ -75,6 +75,8 @@ def scanned(tmp_path):
         _raw_issue("unused", "marked_fixed"),
         _raw_issue("smells", "false_positive"),
         _raw_issue("smells", "left_open_too"),
+        _raw_issue("smells", "deferred"),
+        _raw_issue("unused", "wontfix"),
     ]
     _scan(state, issues, str(tmp_path))
     return state, str(tmp_path)
@@ -92,6 +94,9 @@ def test_fix_and_rescan_reaches_100_in_every_mode(scanned):
     resolve_issues(
         state, "smells::src/a.ts::false_positive", "false_positive", note="not a smell"
     )
+    resolve_issues(state, "unused::src/a.ts::wontfix", "wontfix", note="accepted")
+    # `plan skip` (temporary) sets this status in state.
+    state["work_items"]["smells::src/a.ts::deferred"]["status"] = "deferred"
 
     # The code is fixed: the next scan reports nothing.
     _scan(state, [], root)
@@ -100,10 +105,27 @@ def test_fix_and_rescan_reaches_100_in_every_mode(scanned):
     assert statuses == {
         "left_open": "auto_resolved",
         "left_open_too": "auto_resolved",
+        "deferred": "auto_resolved",
         "marked_fixed": "fixed",
         "false_positive": "false_positive",
+        "wontfix": "wontfix",
     }
     assert _scores(state) == {key: 100.0 for key in _SCORE_KEYS}
+
+
+def test_returning_wontfix_finding_counts_again(scanned):
+    state, root = scanned
+    wontfix_id = "unused::src/a.ts::wontfix"
+    resolve_issues(state, wontfix_id, "wontfix", note="accepted")
+    _scan(state, [], root)
+    assert state["strict_score"] == 100.0
+
+    _scan(state, [_raw_issue("unused", "wontfix")], root)
+
+    assert state["work_items"][wontfix_id]["status"] == "wontfix"
+    assert state["overall_score"] == 100.0
+    assert state["strict_score"] < 100.0
+    assert state["verified_strict_score"] < 100.0
 
 
 def test_auto_resolved_passes_in_every_mode():
@@ -139,6 +161,24 @@ def test_verified_strict_credits_manual_resolution_once_scan_confirms(status):
     issue["resolution_attestation"]["scan_verified"] = True
     after = detector_stats_by_mode("unused", {issue["id"]: issue}, 10)
     assert after["verified_strict"] == (1.0, 0, 0.0)
+
+
+def test_wontfix_passes_strict_and_verified_once_scan_confirms():
+    issue = {
+        "id": "unused::a::x",
+        "detector": "unused",
+        "file": "a.ts",
+        "confidence": "high",
+        "status": "wontfix",
+        "resolution_attestation": {"kind": "manual", "scan_verified": False},
+    }
+    before = detector_stats_by_mode("unused", {issue["id"]: issue}, 10)
+    assert [before[mode][1] for mode in SCORING_MODES] == [0, 1, 1]
+
+    issue["resolution_attestation"]["scan_verified"] = True
+    after = detector_stats_by_mode("unused", {issue["id"]: issue}, 10)
+    for mode in SCORING_MODES:
+        assert after[mode] == (1.0, 0, 0.0), mode
 
 
 def test_dimension_whose_detector_ran_with_no_checks_is_not_carried_forward(scanned):
