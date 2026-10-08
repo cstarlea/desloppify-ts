@@ -56,4 +56,4 @@ CONFIG_SKIP_DETECTORS = {
     "security",
 }
 
-SCRIPT_SKIP_DETECTORS = {"coupling", "single_use", "orphaned", "facade"}
+SCRIPT_SKIP_DETECTORS = {"coupling", "single_use", "orphaned", "facade", "test_coverage"}
