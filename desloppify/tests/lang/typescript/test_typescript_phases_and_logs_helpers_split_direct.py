@@ -40,7 +40,7 @@ def test_phase_config_helpers_and_constants() -> None:
 
 
 def test_phases_basic_cover_logs_unused_exports_and_deprecated(monkeypatch) -> None:
-    lang = SimpleNamespace(zone_map=None)
+    lang = SimpleNamespace(zone_map=None, runtime_cache={})
 
     monkeypatch.setattr(
         phases_basic_mod.logs_detector_mod,
@@ -61,7 +61,7 @@ def test_phases_basic_cover_logs_unused_exports_and_deprecated(monkeypatch) -> N
     monkeypatch.setattr(
         phases_basic_mod.unused_detector_mod,
         "detect_unused_result",
-        lambda _path: ([{"file": "src/a.ts"}], 7, None),
+        lambda _path, **_kwargs: ([{"file": "src/a.ts"}], 7, None),
     )
     monkeypatch.setattr(phases_basic_mod, "make_unused_issues", lambda entries, _log: [{"entries": entries}])
     issues, potentials = phases_basic_mod.phase_unused(Path("."), lang)
