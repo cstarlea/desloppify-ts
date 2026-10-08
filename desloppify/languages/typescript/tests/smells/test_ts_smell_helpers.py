@@ -119,7 +119,6 @@ class TestCodeText:
 
     def test_blanks_double_quoted_string(self):
         result = _code_text('const s = "hello";')
-        # Opening quote + contents blanked; closing quote preserved by scan_code
         assert "hello" not in result
         assert len(result) == len('const s = "hello";')
 
@@ -162,6 +161,39 @@ class TestCodeText:
         result = _code_text("return 1; // await fetch")
         assert "await" not in result
         assert result.startswith("return 1;")
+
+    def test_apostrophe_in_line_comment_does_not_open_a_string(self):
+        text = "// don't retry\nconst a = await f();\n// it's fine\nawait g();\n"
+        expected = " " * 14 + "\nconst a = await f();\n" + " " * 12 + "\nawait g();\n"
+        assert _code_text(text) == expected
+
+    def test_apostrophe_in_block_comment_does_not_open_a_string(self):
+        result = _code_text("/* the caller's\n   job */ await f();\nawait g();")
+        assert result.count("await") == 2
+        assert "caller" not in result
+        assert result.count("\n") == 2
+
+    def test_template_substitutions_stay_code(self):
+        result = _code_text("const s = `id: ${await f('x')} and ${`${await g()}`}`;\nawait h();")
+        assert result.count("await") == 3
+        assert "id:" not in result
+        assert "'x'" not in result
+
+    def test_regex_literals_are_blanked(self):
+        result = _code_text("const q = /['\"]/g; await f();\nconst r = a / b / c;")
+        assert "await f()" in result
+        assert "['" not in result
+        assert "a / b / c" in result
+
+    def test_unclosed_quote_ends_at_the_line(self):
+        result = _code_text("const x = <p>Don't stop</p>;\nawait f();")
+        assert result.endswith("\nawait f();")
+
+    def test_positions_and_newlines_preserved(self):
+        text = "a('x\\'y'); /* c\n d */ `t${b}`; // e\n/re/.test(s)"
+        result = _code_text(text)
+        assert len(result) == len(text)
+        assert [i for i, c in enumerate(result) if c == "\n"] == [i for i, c in enumerate(text) if c == "\n"]
 
 
 # ── _ts_match_is_in_string ───────────────────────────────────
@@ -762,6 +794,35 @@ def _messages(detector, content: str, smell: str) -> list[tuple[int, str]]:
     counts = _make_counts()
     detector(_ctx(content), counts)
     return [(m["line"], m["content"]) for m in counts[smell]]
+
+
+def test_regex_fallback_sees_await_after_an_apostrophe_comment(no_tree):
+    content = (
+        "async function load() {\n"
+        "  // don't cache this\n"
+        "  return await fetch(url);\n"
+        "}\n"
+        "const save = async () => {\n"
+        "  // it's idempotent\n"
+        "  await put(url);\n"
+        "};\n"
+    )
+    assert _messages(_detect_async_no_await, content, "async_no_await") == []
+
+
+def test_nested_closures_after_an_apostrophe_comment():
+    content = (
+        "function outer() {\n"
+        "  // the caller's job\n"
+        "  const a = () => {\n  };\n"
+        "  const b = function () {};\n"
+        "  const c = () => {\n  };\n"
+        "  const function_ = 1;\n"
+        "}\n"
+    )
+    assert _messages(_detect_nested_closures, content, "nested_closure") == [
+        (1, "outer() — 3 nested closures")
+    ]
 
 
 def test_regex_fallback_still_finds_declarations(no_tree):

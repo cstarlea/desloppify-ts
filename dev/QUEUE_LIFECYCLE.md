@@ -61,7 +61,7 @@ Temporary skips therefore **block the scan step** until one of these happens:
      - queue, promoted and cluster references to issues that aren't `open`, `deferred` or `triaged_out`;
      - skip entries whose issue is now `auto_resolved`.
 
-     Wontfix and false-positive skip entries are kept, because those issues keep their status. Such an issue is only taken out of the queue, promoted list and clusters; it is not superseded, and an old superseded entry for it is forgotten.
+     Wontfix and false-positive skip entries are kept, because those issues keep their status.
    - **Close clusters.** A cluster is marked done when it has emptied, or when all its issues have a resolved status: `fixed`, `wontfix`, `false_positive` or `auto_resolved` (`resolved_statuses()` in `base/enums.py`). `plan resolve` applies the same rule: it marks a cluster done once the members it didn't just resolve are already resolved in state.
    - **Resurface skips.** Temporary skips whose `review_after` scans have passed return to the queue, and their `deferred` issues reopen.
    - **Prune.** Superseded entries older than 90 days are dropped.
@@ -109,11 +109,10 @@ Issues outside the scan's `--path` are never confirmed, and nothing about them c
 |---|---|---|
 | `open`, `deferred`, `triaged_out` | `auto_resolved` once confirmed. The note records the old status | No change |
 | `wontfix` | Stays `wontfix`. Once confirmed, it gets `resolution_attestation.scan_verified`, and its note is kept | Stays `wontfix`. `scan_verified` is cleared, so strict and verified count it again |
-| `false_positive` | Stays `false_positive`. Once confirmed, it gets `resolution_attestation.scan_verified`, and its note is kept | Stays `false_positive`, with its note and attestation. `scan_verified` is cleared, so verified counts it again |
-| `fixed` | Stays `fixed`. Once confirmed, it gets `resolution_attestation.scan_verified`, and its note is kept | Reopened as `open`, with `reopen_count` + 1 and the attestation dropped |
+| `fixed`, `false_positive` | Stays as is. Once confirmed, it gets `resolution_attestation.scan_verified`, and its note is kept | Reopened as `open`, with `reopen_count` + 1 and the attestation dropped |
 | `auto_resolved` | No change | Reopened as `open` |
 
-A scan never changes a `wontfix` or `false_positive` status: both are user judgements about the finding itself, so the finding still being reported doesn't overturn them. `plan unskip` is how a user takes one back. `scan_verified` is what lets a gone wontfix stop counting against strict and verified, and a gone `fixed` or `false_positive` stop counting against verified (`issue_counts_as_failure`). A scan that confirms an already-marked issue again leaves it alone. Separately, the scan adds a `stale_wontfix` work item for a wontfix whose finding is still present when either:
+A scan never changes a `wontfix` status. `scan_verified` is what lets a gone wontfix stop counting against strict and verified, and a gone `fixed` or `false_positive` stop counting against verified (`issue_counts_as_failure`). A scan that confirms an already-marked issue again leaves it alone. Separately, the scan adds a `stale_wontfix` work item for a wontfix whose finding is still present when either:
 
 - `wontfix_decay_scans` scans (config, default 20) have passed since it was marked wontfix;
 - a structural finding has grown by at least 10 complexity or 50 LOC.
@@ -151,7 +150,3 @@ A file that can't be used is handled like this:
 3. `.bak` isn't rotated again until a clean file has been written.
 
 The rename and restore run under the file's lock, or in memory only if the lock stays busy for 5 s. A quarantined issue drops out of the scores at the next save, since every save recomputes them. A rescan that still finds the issue adds it back.
-
-### Cluster membership
-
-A cluster's members are its `issue_ids`. Every command that adds or removes members updates that list directly. Resolving (`purge_ids`) and superseding remove members without logging a removal. `normalize_cluster_defaults()` (`engine/_plan/schema/normalize.py`) runs on every load. It re-adds members from overrides that still name the cluster, but it replays the execution log's `cluster_add` entries only when upgrading a legacy plan (`recover_from_log`). Otherwise every load would bring removed members back.

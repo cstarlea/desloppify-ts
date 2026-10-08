@@ -191,7 +191,7 @@ def upgrade_plan_to_v7(plan: dict[str, Any]) -> bool:
         migrate_synthesis_to_triage(plan)
         changed = True
 
-    normalize_cluster_defaults(plan, recover_from_log=needs_legacy_upgrade)
+    normalize_cluster_defaults(plan)
 
     changed = _drop_legacy_plan_keys(
         plan,

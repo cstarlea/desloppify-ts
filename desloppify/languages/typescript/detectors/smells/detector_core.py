@@ -29,7 +29,7 @@ _HANDLED_RE = re.compile(
     r"\b(?:throw|return)\b|toast\(|normalizeAndPresentError\(|presentError\(|rethrow"
 )
 
-_FUNC_RE = re.compile(r"\bfunction\s*[\w(]")
+_FUNC_RE = re.compile(r"\bfunction\b\s*\*?\s*[\w(]")
 _ARROW_RE = re.compile(r"=>\s*\{")
 
 _TS_BRANCH_PATTERNS = (

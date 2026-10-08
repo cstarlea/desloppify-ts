@@ -192,19 +192,9 @@ def _record_execution_log_hash(hash_lookup: dict[str, str], issue_id: str) -> No
         hash_lookup[parts[-1]] = issue_id
 
 
-def normalize_cluster_defaults(
-    plan: dict[str, Any], *, recover_from_log: bool = False
-) -> None:
-    """Normalize cluster memberships and runtime defaults.
-
-    ``recover_from_log`` replays the execution log's cluster adds into
-    ``issue_ids``. It repairs legacy plans only: every writer updates
-    ``issue_ids`` directly, and resolve and supersede remove members without
-    logging a removal, so replaying on every load would bring them back.
-    """
+def normalize_cluster_defaults(plan: dict[str, Any]) -> None:
+    """Recover cluster memberships and normalize runtime defaults."""
     recovered_members, hash_lookup = _execution_log_cluster_members(plan)
-    if not recover_from_log:
-        recovered_members = {}
     override_members = _override_cluster_members(plan)
 
     for cluster in plan["clusters"].values():

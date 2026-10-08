@@ -51,17 +51,6 @@ def _find_candidates(
 
 _ALIVE_STATUSES = frozenset({"open", "deferred", "triaged_out"})
 
-# A wontfix or false_positive skip records a user decision the issue keeps
-# (a scan never changes these statuses), so reconcile never drops the entry.
-_DECIDED_SKIP_STATUSES = frozenset({"wontfix", "false_positive"})
-
-
-def _has_decided_skip(plan: PlanModel, state: StateModel, issue_id: str) -> bool:
-    if issue_id not in plan.get("skipped", {}):
-        return False
-    issue = (state.get("work_items") or state.get("issues", {})).get(issue_id)
-    return issue is not None and issue.get("status") in _DECIDED_SKIP_STATUSES
-
 
 def _is_issue_alive(state: StateModel, issue_id: str) -> bool:
     """Return True if the issue exists and is actionable (open/deferred/triaged_out)."""
@@ -108,35 +97,26 @@ def _supersede_id(
         entry["note"] = override_note
 
     plan["superseded"][issue_id] = entry
-    plan.get("skipped", {}).pop(issue_id, None)
-    _detach_action_references(plan, issue_id, now)
-    return True
 
-
-def _detach_action_references(plan: PlanModel, issue_id: str, now: str) -> bool:
-    """Remove an issue from queue_order, promoted_ids and clusters. Returns True if changed."""
-    changed = False
+    # Remove from queue_order, skipped, promoted_ids, cluster issue_ids
     order: list[str] = plan.get("queue_order", [])
+    skipped: dict = plan.get("skipped", {})
     if issue_id in order:
         order.remove(issue_id)
-        changed = True
-    promoted_before = len(plan.get("promoted_ids", []))
+    skipped.pop(issue_id, None)
     prune_promoted_ids(plan, {issue_id})
-    changed = changed or len(plan.get("promoted_ids", [])) != promoted_before
     for cluster in plan.get("clusters", {}).values():
         ids = cluster.get("issue_ids", [])
         if issue_id in ids:
             ids.remove(issue_id)
-            changed = True
 
     # Clear stale cluster reference from override
     override = plan.get("overrides", {}).get(issue_id)
     if override and override.get("cluster"):
         override["cluster"] = None
         override["updated_at"] = now
-        changed = True
 
-    return changed
+    return True
 
 
 def _prune_old_superseded(plan: PlanModel, now_dt: datetime) -> list[str]:
@@ -184,11 +164,10 @@ def _restore_returned_superseded(plan: PlanModel, state: StateModel) -> None:
     A finding that disappears is superseded; if a later scan reports it again
     the issue reopens. Left in ``superseded``, every reconcile would strip the
     issue from the queue, skips and clusters, undoing a fresh skip or reorder.
-    The same goes for an issue with a wontfix or false_positive skip.
     """
     superseded = plan.get("superseded", {})
     for fid in list(superseded):
-        if _is_issue_alive(state, fid) or _has_decided_skip(plan, state, fid):
+        if _is_issue_alive(state, fid):
             superseded.pop(fid, None)
 
 
@@ -292,11 +271,6 @@ def _supersede_nonactionable_action_references(
     for fid in sorted(_action_referenced_plan_issue_ids(plan)):
         issue = issues.get(fid)
         if issue is None or issue.get("status") in _ALIVE_STATUSES:
-            continue
-        if _has_decided_skip(plan, state, fid):
-            # Not actionable work, but the skip entry stays.
-            if _detach_action_references(plan, fid, now):
-                result.changes += 1
             continue
         if _supersede_id(plan, state, fid, now):
             result.superseded.append(fid)

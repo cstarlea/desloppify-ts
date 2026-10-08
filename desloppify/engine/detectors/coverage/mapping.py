@@ -123,13 +123,6 @@ def import_based_mapping(
         graph, test_files, production_files, prod_by_module, lang_name
     )
 
-    # A language that follows each imported name to its definition has already
-    # credited what the test uses; the expansions below would credit every
-    # module a barrel or facade touches.
-    follows_names = getattr(mod, "follows_reexport_names", None)
-    if callable(follows_names) and follows_names():
-        return tested
-
     barrel_basenames = getattr(mod, "BARREL_BASENAMES", set())
     if barrel_basenames:
         tested |= _expand_barrel_targets(

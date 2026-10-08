@@ -71,9 +71,6 @@ def module_exports(path: str) -> ModuleExports | None:
                 summary.forwarded[binding.exported] = imported[binding.name]
             else:
                 summary.local.add(binding.exported)
-        # ``export default function () {}`` and ``export default {...}`` bind no name.
-        if info.is_default and not info.bindings and info.kind in ("declaration", "default"):
-            summary.local.add("default")
     _CACHE[path] = (parsed.source, summary)
     return summary
 

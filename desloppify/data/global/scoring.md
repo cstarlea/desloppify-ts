@@ -121,7 +121,7 @@ The three modes differ only in which issue statuses count as failures. `issue_co
 "Confirmed gone" means the issue's detector ran and no longer reports it, the zone policy now skips that detector for the file, or the file is gone. `dev/QUEUE_LIFECYCLE.md` in the repository gives the details.
 
 - A confirmed `open`, `deferred` or `triaged_out` issue becomes `auto_resolved`. `auto_resolved` never counts.
-- A confirmed `wontfix`, `fixed` or `false_positive` issue keeps its status, and the scan records `resolution_attestation.scan_verified` on it. A scan never changes a `wontfix` or `false_positive` status: if the finding comes back, the scan clears the mark and the issue counts again where its mode counts it. A `fixed` issue whose finding comes back is reopened.
+- A confirmed `wontfix`, `fixed` or `false_positive` issue keeps its status, and the scan records `resolution_attestation.scan_verified` on it. A scan never changes a `wontfix` status: if the finding comes back, the scan clears the mark and the issue counts again. A `fixed` or `false_positive` issue whose finding comes back is reopened.
 - An absence that isn't confirmed changes nothing, so the mark stays as it was. That covers a detector that didn't run and a file outside the scan's `--path`.
 
 **Fixing every finding and rescanning brings objective and verified to 100.** Overall and strict also need the subjective dimensions to be assessed.
