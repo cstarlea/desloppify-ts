@@ -6,6 +6,7 @@ from collections import defaultdict
 
 from desloppify.base.output.terminal import colorize
 from desloppify.base.discovery.paths import get_area
+from desloppify.engine._scoring.policy.core import is_wontfix_debt
 from desloppify.engine._state.filtering import path_scoped_issues
 
 
@@ -19,7 +20,7 @@ def collect_structural_areas(
     structural = [
         issue
         for issue in issues.values()
-        if issue["tier"] in (3, 4) and issue["status"] in ("open", "wontfix")
+        if issue["tier"] in (3, 4) and (issue["status"] == "open" or is_wontfix_debt(issue))
     ]
     if len(structural) < 5:
         return None
@@ -45,7 +46,7 @@ def build_area_rows(
         t3 = sum(1 for issue in area_issues if issue["tier"] == 3)
         t4 = sum(1 for issue in area_issues if issue["tier"] == 4)
         open_count = sum(1 for issue in area_issues if issue["status"] == "open")
-        debt_count = sum(1 for issue in area_issues if issue["status"] == "wontfix")
+        debt_count = sum(1 for issue in area_issues if is_wontfix_debt(issue))
         weight = sum(issue["tier"] for issue in area_issues)
         rows.append(
             [

@@ -115,7 +115,7 @@ def _show_status_progress(
             objective_backlog=objective_backlog,
         )
         return
-    show_tier_progress_table(by_tier)
+    show_tier_progress_table(by_tier, state.get("stats", {}).get("wontfix_debt_by_tier"))
 
 
 def _print_review_staleness(review_age: object) -> None:

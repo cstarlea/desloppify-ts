@@ -335,7 +335,7 @@ def show_score_delta(
     _unscored_subjective_callout(state)
 
     gap = (new.overall or 0) - (new.strict or 0)
-    _print_wontfix_gap(stats.get("wontfix", 0), gap)
+    _print_wontfix_gap(stats.get("wontfix_debt", stats.get("wontfix", 0)), gap)
     _print_score_legend(state, gap)
 
     if target_strict is not None and new.strict is not None:

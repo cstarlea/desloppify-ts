@@ -262,7 +262,7 @@ def _print_confidence_integrity(score_confidence: dict[str, Any]) -> None:
 def show_score_integrity(state: StateModel, diff: dict[str, Any]) -> None:
     """Show Score Integrity section — surfaces wontfix debt and ignored issues."""
     stats = state.get("stats", {})
-    wontfix = stats.get("wontfix", 0)
+    wontfix = stats.get("wontfix_debt", stats.get("wontfix", 0))
     ignored = diff.get("ignored", 0)
     ignore_patterns = diff.get("ignore_patterns", 0)
     score_confidence = state.get("score_confidence", {})
@@ -288,7 +288,7 @@ def show_score_integrity(state: StateModel, diff: dict[str, Any]) -> None:
     # Wontfix % of actionable issues (open + wontfix + fixed + auto_resolved + false_positive)
     actionable = (
         stats.get("open", 0)
-        + wontfix
+        + stats.get("wontfix", 0)
         + stats.get("fixed", 0)
         + stats.get("auto_resolved", 0)
         + stats.get("false_positive", 0)
