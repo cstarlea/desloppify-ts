@@ -2,10 +2,133 @@
 
 from __future__ import annotations
 
+import importlib.util
+
+import pytest
+
+import desloppify.languages.typescript.detectors.facade as facade_mod
 from desloppify.languages.typescript.detectors.facade import (
     detect_reexport_facades,
     is_ts_facade,
 )
+
+needs_treesitter = pytest.mark.skipif(
+    importlib.util.find_spec("tree_sitter_language_pack") is None,
+    reason="the syntax-tree facade check needs tree-sitter",
+)
+
+# Facades recognised both on the syntax tree and by the regex fallback.
+_FACADES = [
+    pytest.param("export { a, b } from './x';\n", ["./x"], id="named"),
+    pytest.param("export {\n  a,\n  b as c,\n} from './x';\n", ["./x"], id="multi-line"),
+    pytest.param("export * from './x';\n", ["./x"], id="star"),
+    pytest.param("export * as ns from './x';\n", ["./x"], id="star-as"),
+    pytest.param("export type { T } from './t';\n", ["./t"], id="type-named"),
+    pytest.param("export type * from './t';\n", ["./t"], id="type-star"),
+    pytest.param("export type * as T from './t';\n", ["./t"], id="type-star-as"),
+    pytest.param("export { default } from './d';\n", ["./d"], id="default"),
+    pytest.param("'use client';\n\nexport { Button } from './button';\n", ["./button"], id="use-client"),
+    pytest.param('"use strict"\nexport * from "./x"\n', ["./x"], id="use-strict-no-semicolons"),
+    pytest.param("#!/usr/bin/env node\nexport * from './x';\n", ["./x"], id="hashbang"),
+    pytest.param(
+        "/**\n * Public API.\n */\n// see http://example.com\nexport * from './a'; // a\nexport * from './b';\n",
+        ["./a", "./b"],
+        id="comments",
+    ),
+]
+
+# Files that are not facades on either path.
+_NOT_FACADES = [
+    pytest.param("", id="empty"),
+    pytest.param("// only a comment\n/* and another */\n", id="comments-only"),
+    pytest.param("'use client';\n", id="directive-only"),
+    pytest.param("export * from './x';\nconst y = 1;\n", id="declaration"),
+    pytest.param("export * from './x';\nexport const y = 1;\n", id="exported-declaration"),
+    pytest.param("export * from './x';\nexport default function f() {}\n", id="default-function"),
+    pytest.param("import './polyfill';\nexport * from './x';\n", id="side-effect-import"),
+    pytest.param("export * from './x';\n'use client';\n", id="late-directive"),
+    pytest.param("export * from './x';\nsetup();\n", id="call"),
+    pytest.param("export { a };\n", id="local-export-without-import"),
+]
+
+
+def _facade(tmp_path, source: str, name: str = "index.ts") -> dict | None:
+    f = tmp_path / name
+    f.write_text(source)
+    return is_ts_facade(str(f))
+
+
+@needs_treesitter
+@pytest.mark.parametrize(("source", "sources"), _FACADES)
+@pytest.mark.parametrize("name", ["index.ts", "index.tsx", "index.js"])
+def test_reexport_forms_are_facades(tmp_path, source, sources, name):
+    result = _facade(tmp_path, source, name)
+    assert result is not None
+    assert result["imports_from"] == sources
+    assert result["loc"] == len(source.splitlines())
+
+
+@needs_treesitter
+@pytest.mark.parametrize("source", _NOT_FACADES)
+def test_non_facades(tmp_path, source):
+    assert _facade(tmp_path, source) is None
+
+
+@needs_treesitter
+@pytest.mark.parametrize(
+    ("source", "sources"),
+    [
+        pytest.param("import { a } from './x';\nexport { a };\n", ["./x"], id="named"),
+        pytest.param("import { a as b } from './x';\nexport { b as c };\n", ["./x"], id="renamed"),
+        pytest.param("import * as ns from './x';\nexport { ns };\n", ["./x"], id="namespace"),
+        pytest.param("import D from './d';\nexport default D;\n", ["./d"], id="default"),
+        pytest.param(
+            "import { type T, a } from './x';\nexport * from './y';\nexport { type T, a };\n",
+            ["./y", "./x"],
+            id="mixed-with-reexport",
+        ),
+    ],
+)
+def test_import_then_export_is_facade(tmp_path, source, sources):
+    result = _facade(tmp_path, source)
+    assert result is not None
+    assert result["imports_from"] == sources
+
+
+@needs_treesitter
+@pytest.mark.parametrize(
+    "source",
+    [
+        pytest.param("import { a } from './x';\nexport { a, b };\n", id="unimported-name"),
+        pytest.param("import { a } from './x';\nexport const b = a;\n", id="uses-import"),
+        pytest.param("import { a } from './x';\n", id="import-only"),
+        pytest.param("import x = require('./x');\nexport = x;\n", id="import-require"),
+        pytest.param("export * from './x'\nexport type * from\n", id="syntax-error"),
+    ],
+)
+def test_import_then_export_non_facades(tmp_path, source):
+    assert _facade(tmp_path, source) is None
+
+
+class TestWithoutTreeSitter:
+    """The regex fallback handles the ``export ... from`` forms only."""
+
+    @pytest.fixture(autouse=True)
+    def _no_parser(self, monkeypatch):
+        monkeypatch.setattr(facade_mod, "parse_text", lambda _text, _path: None)
+
+    @pytest.mark.parametrize(("source", "sources"), _FACADES)
+    def test_reexport_forms_are_facades(self, tmp_path, source, sources):
+        result = _facade(tmp_path, source)
+        assert result is not None
+        assert result["imports_from"] == sources
+
+    @pytest.mark.parametrize("source", _NOT_FACADES)
+    def test_non_facades(self, tmp_path, source):
+        assert _facade(tmp_path, source) is None
+
+    def test_import_then_export_not_recognised(self, tmp_path):
+        assert _facade(tmp_path, "import { a } from './x';\nexport { a };\n") is None
 
 
 def _make_graph_entry(importer_count: int = 0) -> dict:
