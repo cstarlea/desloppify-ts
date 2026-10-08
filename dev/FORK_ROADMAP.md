@@ -60,6 +60,7 @@ The fork (`cstarlea/desloppify`) is a **TypeScript/JavaScript-only** code-health
 | #30 | Fixer round-trip property tests; fixes for mixed line endings in `fixer_io` and `byte_offset` after CR/U+2028/U+2029 (2.4) |
 | #32 | AST dead-useeffect fixer, the last line-based fixer (2.3, FX-17) |
 | #33 | `dead_useeffect` smell on the syntax tree; reports `function () {}` and bare `return;` callbacks (2.11) |
+| #34 | Unused-vars fixer removes nested destructuring patterns that end up empty; one `ALL_DESTRUCTURED` constant (2.26, 2.27) |
 | #35 | State and plan read-modify-writes under the locks; corrupt-file recovery under the lock; atomic progression trim (2.20) |
 
 ---
@@ -79,8 +80,8 @@ Every adversarial input in the original review broke one of the line-regex fixer
 | 2.3 | **Done for unused-imports (#17), unused-vars (#19), unused-params (#20, #27, #28), debug-logs (#23), empty-if-chain (#24) and dead-useeffect (#32); none needs `--unsafe`.** Every fixer now edits syntax-tree nodes. dead-useeffect removes only a standalone `useEffect`/`React.useEffect` statement with an empty, comment-free callback and deps that only read values; it leaves template strings, code sharing the line and the `//` line above alone (FX-17) | M | FX-17 |
 | 2.4 | **Done (#30).** Fixer round-trip property tests: output parses, a second run is a no-op, CRLF/BOM/mode are preserved, and no new `tsc` errors appear. Seeded with the adversarial cases in the appendix. They found and fixed mixed-line-ending rewrites in `fixer_io` and `byte_offset` miscounting lines after CR/U+2028/U+2029 | M | FX-19 |
 | 2.5 | **Done (#18).** Fixers return the exact issue IDs they fixed, so autofix resolves the right issues | S | FX-16 |
-| 2.26 | unused-vars: nested patterns. `const { a: { b } } = o` with `b` unused is skipped as `would_empty_pattern`, because the emptied inner pattern isn't a declarator. Remove the enclosing `a: { … }` member instead | S | FX-8 |
-| 2.27 | Define the "(all destructured elements)" name once. It is spelled out in `detectors/unused.py`, `fixers/params.py` and `fixers/vars.py` | S | — |
+| 2.26 | **Done (#34).** unused-vars: nested patterns. An emptied inner pattern (`b` unused in `const { a: { b } } = o`) removes the pair or element holding it, cascading outward to the declarator, which still goes only with a pure initializer. TS6198 on a nested pattern cascades the same way. An array pattern whose elements all go is removed whole; a single array element still isn't | S | FX-8 |
+| 2.27 | **Done (#34).** The "(all destructured elements)" name is defined once, as `ALL_DESTRUCTURED` in `syntax/nodes.py`, and imported by `detectors/unused.py`, `fixers/params.py` and `fixers/vars.py` | S | — |
 
 ### 2B. Detector accuracy (rest of Milestone 2, plus M0 and M1 leftovers)
 
