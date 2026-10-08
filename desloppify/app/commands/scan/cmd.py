@@ -28,7 +28,13 @@ from desloppify.app.commands.scan.reporting.dimensions import (
     show_score_model_breakdown,
     show_scorecard_subjective_measures,
 )
+from desloppify.app.commands.scan.reporting.ci import (
+    ScoreGate,
+    ci_report_lines,
+    score_gate_from_args,
+)
 from desloppify.app.commands.scan.reporting.integrity_report import (
+    post_scan_analysis,
     show_post_scan_analysis,
 )
 from desloppify.app.commands.scan.reporting.summary import (  # noqa: F401
@@ -46,6 +52,7 @@ from desloppify.app.commands.scan.workflow import (
 from desloppify.base.exception_sets import CommandError
 from desloppify.base.output.terminal import colorize
 from desloppify.base.search.query import write_query
+from desloppify.state_scoring import score_snapshot
 
 from . import preflight as scan_preflight_mod
 
@@ -111,6 +118,45 @@ def _print_plan_workflow_nudge(state: dict) -> None:
     _print_plan_workflow_nudge_impl(state)
 
 
+def _enforce_score_gate(gate: ScoreGate | None, state: dict) -> None:
+    """Exit with status 1 when ``--fail-under`` isn't met."""
+    if gate is None:
+        return
+    passed, value = gate.check(score_snapshot(state))
+    if not passed:
+        shown = "n/a" if value is None else f"{value:.1f}"
+        raise CommandError(
+            f"{gate.score_name} score {shown} is below --fail-under {gate.threshold:.1f}",
+            exit_code=1,
+        )
+
+
+def _finish_ci_scan(args: argparse.Namespace, runtime, orchestrator, merge) -> None:
+    """Plain ``--profile ci`` report: no colour, coaching, nudges or agent block."""
+    noise = orchestrator.noise_snapshot()
+    warnings, narrative = post_scan_analysis(merge.diff, runtime.state, runtime.lang)
+    orchestrator.persist_reminders(narrative)
+    write_query(
+        build_scan_query_payload(
+            runtime.state,
+            runtime.config,
+            runtime.profile,
+            merge.diff,
+            warnings,
+            narrative,
+            merge,
+            noise,
+        ),
+        query_file=query_file_path(),
+    )
+    gate = score_gate_from_args(args)
+    print("\n".join(ci_report_lines(runtime.state, merge.diff, warnings, gate)))
+    badge_path, _badge_result = emit_scorecard_badge(args, runtime.config, runtime.state, quiet=True)
+    if badge_path is not None:
+        print(f"scorecard: {badge_path}")
+    _enforce_score_gate(gate, runtime.state)
+
+
 def cmd_scan(args: argparse.Namespace) -> None:
     """Run all detectors, update persistent state, show diff."""
     scan_preflight_mod.scan_queue_preflight(args)
@@ -130,6 +176,12 @@ def cmd_scan(args: argparse.Namespace) -> None:
         resolve_noise_snapshot_fn=resolve_noise_snapshot,
         persist_reminder_history_fn=persist_reminder_history,
     )
+    if getattr(runtime, "profile", None) == "ci":
+        issues, potentials, codebase_metrics = orchestrator.generate()
+        merge = orchestrator.merge(issues, potentials, codebase_metrics)
+        _finish_ci_scan(args, runtime, orchestrator, merge)
+        return
+
     _print_scan_header(runtime.lang_label)
     if runtime.reset_subjective_count > 0:
         print(
@@ -193,6 +245,7 @@ def cmd_scan(args: argparse.Namespace) -> None:
     badge_path, _badge_result = emit_scorecard_badge(args, runtime.config, runtime.state)
     print_llm_summary(runtime.state, badge_path, narrative, merge.diff)
     auto_update_skill()
+    _enforce_score_gate(score_gate_from_args(args), runtime.state)
 
 
 __all__ = [

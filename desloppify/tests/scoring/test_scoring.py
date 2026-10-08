@@ -685,8 +685,8 @@ class TestGetDimensionForDetector:
     def test_known_detector_cycles(self):
         dim = get_dimension_for_detector("cycles")
         assert dim is not None
-        assert dim.name == "Security"
-        assert dim.tier == 4
+        assert dim.name == "Code quality"
+        assert dim.tier == 3
 
     def test_known_detector_props(self):
         dim = get_dimension_for_detector("props")

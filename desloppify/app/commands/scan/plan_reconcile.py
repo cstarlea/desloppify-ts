@@ -390,13 +390,15 @@ def reconcile_plan_post_scan(runtime: Any) -> None:
             force_rescan=force_rescan,
             defer_if_subjective_queued=True,
         )
-        _display_reconcile_results(
-            result,
-            plan,
-            mid_cycle=_is_mid_cycle_scan(plan, runtime.state) or force_rescan,
-        )
-        if result.lifecycle_phase_changed:
-            emit_transition_message(result.lifecycle_phase)
+        # The ci profile prints only its plain report.
+        if getattr(runtime, "profile", None) != "ci":
+            _display_reconcile_results(
+                result,
+                plan,
+                mid_cycle=_is_mid_cycle_scan(plan, runtime.state) or force_rescan,
+            )
+            if result.lifecycle_phase_changed:
+                emit_transition_message(result.lifecycle_phase)
         dirty = result.dirty or dirty
 
     if force_rescan:

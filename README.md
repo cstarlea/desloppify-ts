@@ -66,11 +66,10 @@ desloppify scan --path .
 Desloppify works best in CI as a full-codebase health gate, not as a diff-only linter. Run the CI profile against the same coherent project path you scan locally:
 
 ```bash
-desloppify scan --path . --profile ci --no-badge
-desloppify status --json
+desloppify scan --path . --profile ci --no-badge --fail-under 80
 ```
 
-`--profile ci` skips slow and subjective phases and bypasses the mid-cycle scan queue gate so a CI job can collect a fresh mechanical snapshot. Use `status --json` if you want a script to read the strict/objective scores and enforce your own threshold.
+`--profile ci` skips slow and subjective phases and bypasses the mid-cycle scan queue gate so a CI job can collect a fresh mechanical snapshot. It prints a plain report (scores, mechanical dimensions, issue counts, coverage warnings) with no colour, agent instructions or workflow nudges. `--fail-under SCORE` exits with status 1 when the objective score is below `SCORE`; `--fail-score verified|strict|overall` checks another score instead. Without a subjective review, overall and strict count every subjective dimension as 0, so in CI the objective or verified score is usually the one to gate on. `status --json` still gives a script the full score breakdown.
 
 On constrained Java CI runners, the PMD detector defaults to `--threads 0` to avoid worker-thread fanout. Set `DESLOPPIFY_PMD_THREADS` to a PMD thread value such as `2` or `0.5C` if you want more throughput.
 
@@ -93,8 +92,7 @@ jobs:
         with:
           python-version: "3.11"
       - run: pip install --upgrade "desloppify[full]"
-      - run: desloppify scan --path . --profile ci --no-badge
-      - run: desloppify status --json
+      - run: desloppify scan --path . --profile ci --no-badge --fail-under 80
 ```
 
 For monorepos, run one job or matrix entry per project path instead of scanning the workspace root. True incremental or diff-only scanning is not the supported model yet; compare full-codebase results across runs or enforce a project-level threshold.
