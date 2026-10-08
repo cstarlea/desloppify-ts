@@ -90,9 +90,14 @@ def _process_fixer_file(
     path = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
     raw = path.read_bytes().decode("utf-8")  # undecodable files are skipped
     has_bom = raw.startswith(_UTF8_BOM)
-    uses_crlf = "\r\n" in raw
+    # Only an all-CRLF file is normalized: restoring "\r\n" everywhere would
+    # turn the LF lines of a mixed file into CRLF. Mixed files are edited as
+    # they are.
+    uses_crlf = "\r\n" in raw and raw.count("\r\n") == raw.count("\n")
     # Transforms see plain "\n" text with no BOM, so line-1 imports match.
-    original = raw.removeprefix(_UTF8_BOM).replace("\r\n", "\n")
+    original = raw.removeprefix(_UTF8_BOM)
+    if uses_crlf:
+        original = original.replace("\r\n", "\n")
     lines = original.splitlines(keepends=True)
 
     new_lines, fixed = transform_fn(lines, file_entries)
