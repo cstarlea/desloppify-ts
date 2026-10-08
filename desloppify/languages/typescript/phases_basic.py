@@ -47,7 +47,9 @@ def phase_logs(path: Path, lang: LangRuntimeContract) -> tuple[list[Issue], dict
 
 
 def phase_unused(path: Path, lang: LangRuntimeContract) -> tuple[list[Issue], dict[str, int]]:
-    entries, total_files, coverage = unused_detector_mod.detect_unused_result(path)
+    entries, total_files, coverage = unused_detector_mod.detect_unused_result(
+        path, cache=lang.runtime_cache
+    )
     record_reduced_coverage(lang, coverage)
     return make_unused_issues(entries, log), {
         "unused": adjust_potential(lang.zone_map, total_files),

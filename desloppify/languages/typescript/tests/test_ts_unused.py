@@ -9,6 +9,7 @@ from types import SimpleNamespace
 
 import pytest
 
+import desloppify.languages.typescript.detectors.tsc as tsc_mod
 import desloppify.languages.typescript.detectors.unused as ts_unused_mod
 from desloppify.languages.typescript.detectors.unused import (
     TS6133_RE,
@@ -37,7 +38,7 @@ def test_module_imports():
     """Module can be imported without errors."""
     assert callable(detect_unused)
     assert callable(_categorize_unused)
-    assert callable(ts_unused_mod._run_tsc_unused_check)
+    assert callable(tsc_mod.run_tsc_check)
 
 
 # ── TS error regex patterns ──────────────────────────────────
@@ -161,11 +162,11 @@ class TestDenoFallback:
 
         local_tsc = _write(tmp_path, "node_modules/.bin/tsc", "#!/bin/sh\n")
         _write(tmp_path, "packages/app/tsconfig.json", "{}\n")
-        monkeypatch.setattr(ts_unused_mod.os, "name", "posix")
-        monkeypatch.setattr(ts_unused_mod.shutil, "which", lambda _name: "/usr/bin/tsc")
-        monkeypatch.setattr(ts_unused_mod._proc_runtime, "run", _fake_run)
+        monkeypatch.setattr(tsc_mod.os, "name", "posix")
+        monkeypatch.setattr(tsc_mod.shutil, "which", lambda _name: "/usr/bin/tsc")
+        monkeypatch.setattr(tsc_mod._proc_runtime, "run", _fake_run)
         tsconfig = tmp_path / "packages/app/tsconfig.json"
-        result = ts_unused_mod._run_tsc_unused_check(tmp_path, tsconfig)
+        result = tsc_mod.run_tsc_check(tmp_path, tsconfig)
 
         assert result.stdout == ""
         # Hoisted monorepo install is found by walking up; no npx, no temp config.
@@ -176,22 +177,23 @@ class TestDenoFallback:
             "--noEmit",
             "--noUnusedLocals",
             "--noUnusedParameters",
+            "--listFiles",
             "--pretty",
             "false",
         ]
         assert recorded["cwd"] == tmp_path
         assert recorded["timeout"] == 120
-        assert recorded["stdin"] == ts_unused_mod.subprocess.DEVNULL
+        assert recorded["stdin"] == tsc_mod.subprocess.DEVNULL
 
     def test_run_tsc_unused_check_never_uses_npx(self, tmp_path, monkeypatch):
         monkeypatch.setattr(
-            ts_unused_mod.shutil,
+            tsc_mod.shutil,
             "which",
             lambda name: "/usr/bin/npx" if name == "npx" else None,
         )
 
         with pytest.raises(OSError, match="TypeScript compiler not found"):
-            ts_unused_mod._run_tsc_unused_check(tmp_path, tmp_path / "tsconfig.json")
+            tsc_mod.run_tsc_check(tmp_path, tmp_path / "tsconfig.json")
 
     def test_detect_unused_uses_deno_fallback_for_url_imports(self, tmp_path, monkeypatch):
         """Deno-style URL imports should bypass tsc and use source-based fallback."""
@@ -210,7 +212,7 @@ class TestDenoFallback:
         def _should_not_run(*args, **kwargs):
             raise AssertionError("tsc subprocess should not run in Deno fallback mode")
 
-        monkeypatch.setattr(ts_unused_mod._proc_runtime, "run", _should_not_run)
+        monkeypatch.setattr(tsc_mod._proc_runtime, "run", _should_not_run)
         entries, total = detect_unused(tmp_path / "supabase/functions")
         names = {entry["name"] for entry in entries}
         assert "serve" in names
@@ -230,7 +232,7 @@ class TestDenoFallback:
         )
         _write(tmp_path, "supabase/functions/dep.ts", "export const x = 1;\n")
         monkeypatch.setattr(
-            ts_unused_mod._proc_runtime,
+            tsc_mod._proc_runtime,
             "run",
             lambda *args, **kwargs: (_ for _ in ()).throw(
                 AssertionError("tsc subprocess should not run in Deno fallback mode")
@@ -263,8 +265,8 @@ class TestDenoFallback:
             return _Result()
 
         _write(tmp_path, "node_modules/.bin/tsc", "#!/bin/sh\n")
-        monkeypatch.setattr(ts_unused_mod.shutil, "which", lambda _name: None)
-        monkeypatch.setattr(ts_unused_mod._proc_runtime, "run", _fake_run)
+        monkeypatch.setattr(tsc_mod.shutil, "which", lambda _name: None)
+        monkeypatch.setattr(tsc_mod._proc_runtime, "run", _fake_run)
         entries, total = detect_unused(tmp_path / "src")
         assert calls["count"] == 1
         assert total == 1
@@ -292,8 +294,8 @@ class TestDenoFallback:
             return _Result()
 
         _write(tmp_path, "node_modules/.bin/tsc", "#!/bin/sh\n")
-        monkeypatch.setattr(ts_unused_mod.shutil, "which", lambda _name: None)
-        monkeypatch.setattr(ts_unused_mod._proc_runtime, "run", _fake_run)
+        monkeypatch.setattr(tsc_mod.shutil, "which", lambda _name: None)
+        monkeypatch.setattr(tsc_mod._proc_runtime, "run", _fake_run)
         entries, total = detect_unused(tmp_path / "src")
         assert calls["count"] == 1
         assert total == 1
@@ -316,7 +318,7 @@ class TestDenoFallback:
             recorded["tsconfig_path"] = tsconfig_path
             return _Result()
 
-        monkeypatch.setattr(ts_unused_mod, "_run_tsc_unused_check", _fake_run)
+        monkeypatch.setattr(tsc_mod, "run_tsc_check", _fake_run)
 
         entries, total, coverage = ts_unused_mod.detect_unused_result(
             tmp_path / "libs/contracts"
@@ -339,7 +341,7 @@ class TestTscFailureModes:
 
     def _fake_result(self, monkeypatch, *, stdout="", stderr="", returncode=0):
         result = SimpleNamespace(stdout=stdout, stderr=stderr, returncode=returncode)
-        monkeypatch.setattr(ts_unused_mod, "_run_tsc_unused_check", lambda *_a: result)
+        monkeypatch.setattr(tsc_mod, "run_tsc_check", lambda *_a: result)
 
     def test_missing_compiler_falls_back_with_reduced_coverage(self, tmp_path, monkeypatch):
         self._project(tmp_path)
@@ -347,7 +349,7 @@ class TestTscFailureModes:
         def _missing(*_a):
             raise OSError("TypeScript compiler not found")
 
-        monkeypatch.setattr(ts_unused_mod, "_run_tsc_unused_check", _missing)
+        monkeypatch.setattr(tsc_mod, "run_tsc_check", _missing)
         entries, _total, coverage = ts_unused_mod.detect_unused_result(tmp_path / "src")
 
         assert coverage is not None and coverage.status == "reduced"
@@ -423,9 +425,11 @@ class TestTscFailureModes:
         monkeypatch.setattr(
             phases_basic_mod.unused_detector_mod,
             "detect_unused_result",
-            lambda _path: ([], 0, coverage),
+            lambda _path, **_kwargs: ([], 0, coverage),
         )
-        lang = SimpleNamespace(zone_map=None, detector_coverage={}, coverage_warnings=[])
+        lang = SimpleNamespace(
+            zone_map=None, detector_coverage={}, coverage_warnings=[], runtime_cache={}
+        )
         phases_basic_mod.phase_unused(tmp_path, lang)
 
         assert lang.detector_coverage["unused"]["status"] == "reduced"
