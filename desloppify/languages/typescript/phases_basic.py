@@ -15,6 +15,7 @@ from desloppify.languages._framework.issue_factories import make_unused_issues
 import desloppify.languages.typescript.detectors.deprecated as deprecated_detector_mod
 import desloppify.languages.typescript.detectors.exports as exports_detector_mod
 import desloppify.languages.typescript.detectors.logs as logs_detector_mod
+import desloppify.languages.typescript.detectors.tsconfig_health as tsconfig_health_detector_mod
 import desloppify.languages.typescript.detectors.type_errors as type_errors_detector_mod
 import desloppify.languages.typescript.detectors.unused as unused_detector_mod
 from desloppify.state_io import Issue
@@ -95,6 +96,26 @@ def phase_type_errors(
     potential = sum(zone(filepath) not in EXCLUDED_ZONES for filepath in result.checked_files)
     log(f"         {len(result.entries)} errors → {len(results)} issues ({potential} files scored)")
     return results, {"type_error": potential}
+
+
+def phase_tsconfig_health(
+    path: Path, lang: LangRuntimeContract
+) -> tuple[list[Issue], dict[str, int]]:
+    result = tsconfig_health_detector_mod.detect_tsconfig_health(path, lang.zone_map)
+    results = [
+        make_issue(
+            "tsconfig_health",
+            entry["file"],
+            entry["check"],
+            tier=entry["tier"],
+            confidence=entry["confidence"],
+            summary=entry["summary"],
+            detail=entry["detail"],
+        )
+        for entry in result.entries
+    ]
+    log(f"         {result.population_size} checks → {len(results)} issues")
+    return results, {"tsconfig_health": result.population_size}
 
 
 def phase_exports(path: Path, lang: LangRuntimeContract) -> tuple[list[Issue], dict[str, int]]:

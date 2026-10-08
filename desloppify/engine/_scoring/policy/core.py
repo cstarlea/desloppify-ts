@@ -57,6 +57,8 @@ _FILE_BASED_POLICY_DETECTORS = frozenset(
 _LOC_WEIGHT_POLICY_DETECTORS = frozenset({"test_coverage"})
 _EXCLUDED_ZONE_OVERRIDES: dict[str, frozenset[str]] = {
     "security": SECURITY_EXCLUDED_ZONES,
+    # Its issues are on tsconfig files, which are in the config zone.
+    "tsconfig_health": _DEFAULT_EXCLUDED_ZONES - {"config"},
 }
 
 # Legacy test/import surface for code that still expects subjective detectors

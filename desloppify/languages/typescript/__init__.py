@@ -26,6 +26,7 @@ from desloppify.languages.typescript.phases_basic import (
     phase_deprecated,
     phase_exports,
     phase_logs,
+    phase_tsconfig_health,
     phase_type_errors,
     phase_unused,
 )
@@ -104,6 +105,7 @@ class TypeScriptConfig(LangConfig):
                 DetectorPhase("Logs", phase_logs),
                 DetectorPhase("Unused (tsc)", phase_unused),
                 DetectorPhase("Type errors (tsc)", phase_type_errors),
+                DetectorPhase("tsconfig health", phase_tsconfig_health),
                 DetectorPhase("Dead exports", phase_exports),
                 DetectorPhase("Deprecated", phase_deprecated),
                 DetectorPhase("Structural analysis", phase_structural),
