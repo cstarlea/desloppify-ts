@@ -6,6 +6,7 @@ from desloppify.engine._scoring.detection import merge_potentials
 from desloppify.engine._scoring.policy.core import (
     DIMENSIONS,
     TIER_WEIGHTS,
+    is_wontfix_debt,
 )
 from desloppify.engine._scoring.results.core import compute_score_impact
 from desloppify.engine._state.filtering import path_scoped_issues
@@ -74,7 +75,7 @@ def _biggest_gap_dimensions(dim_scores: dict, state: StateModel) -> list[dict]:
             wontfix_count = sum(
                 1
                 for f in scoped.values()
-                if f["status"] == "wontfix"
+                if is_wontfix_debt(f)
                 and _issue_in_dimension(f, name, dim_scores)
             )
             biggest_gap.append(
@@ -166,8 +167,8 @@ def _issue_in_dimension(issue: dict, dim_name: str, dim_scores: dict) -> bool:
 
 def _analyze_debt(dim_scores: dict, issues: dict, history: list[dict]) -> dict:
     """Compute wontfix debt analysis."""
-    # Count wontfix
-    wontfix_count = sum(1 for f in issues.values() if f["status"] == "wontfix")
+    # Count wontfix debt (a scan-confirmed absence no longer counts)
+    wontfix_count = sum(1 for f in issues.values() if is_wontfix_debt(f))
 
     # Compute gap per dimension
     worst_dim = None
