@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from desloppify.languages import framework as lang_mod
-from desloppify.app.commands.move.apply import apply_directory_move
+from desloppify.app.commands.move.apply import apply_directory_move, check_rewrite_syntax
 from desloppify.app.commands.move.language import (
     load_move_module,
     resolve_move_verify_hint,
@@ -65,6 +65,10 @@ def run_directory_move(args, source_abs: str, resolve_path_fn) -> None:
         rel_fn=rel,
         warn_fn=lambda msg: print(colorize(f"  ⚠ {msg}", "yellow")),
     )
+    internal_changes = build_internal_directory_changes(plan)
+    check_rewrite_syntax(
+        {**internal_changes, **plan.external_changes}, dry_run=dry_run
+    )
     if dry_run:
         print(colorize("  Dry run — no files modified.", "yellow"))
         return
@@ -74,7 +78,7 @@ def run_directory_move(args, source_abs: str, resolve_path_fn) -> None:
         dest_abs=dest_abs,
         source_path=source_path,
         external_changes=plan.external_changes,
-        internal_changes=build_internal_directory_changes(plan),
+        internal_changes=internal_changes,
     )
 
     print(colorize("  Done.", "green"))

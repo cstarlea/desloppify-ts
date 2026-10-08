@@ -11,15 +11,43 @@ from desloppify.base.output.terminal import colorize
 _logger = logging.getLogger(__name__)
 
 
+_MAX_DIFF_FILES = 5
+_MAX_DIFF_LINES = 40
+
+
 def show_fix_dry_run_samples(entries: list[dict], results: list[dict]) -> None:
-    """Print sampled before/after context for fix --dry-run."""
+    """Print the diffs (or sampled context) that fix --dry-run would apply."""
     print(colorize("\n  ── Sample changes (before → after) ──", "cyan"))
-    for result in results[:5]:
-        _print_fix_file_sample(result, entries)
+    for result in results[:_MAX_DIFF_FILES]:
+        diff = result.get("diff")
+        if isinstance(diff, str) and diff:
+            _print_diff(diff)
+        else:
+            _print_fix_file_sample(result, entries)
+    if len(results) > _MAX_DIFF_FILES:
+        print(colorize(f"\n  ... and {len(results) - _MAX_DIFF_FILES} more files", "dim"))
     removed_count = sum(len(r["removed"]) if "removed" in r else 1 for r in results)
     if len(entries) > removed_count:
         print(colorize(f"\n  Note: {len(entries) - removed_count} of {len(entries)} entries were skipped (complex patterns, rest elements, etc.)", "dim"))
     print()
+
+
+def _print_diff(diff: str) -> None:
+    lines = diff.splitlines()
+    print()
+    for line in lines[:_MAX_DIFF_LINES]:
+        if line.startswith(("---", "+++")):
+            print(colorize(f"    {line}", "cyan"))
+        elif line.startswith("@@"):
+            print(colorize(f"    {line}", "dim"))
+        elif line.startswith("-"):
+            print(colorize(f"    {line}", "red"))
+        elif line.startswith("+"):
+            print(colorize(f"    {line}", "green"))
+        else:
+            print(f"    {line}")
+    if len(lines) > _MAX_DIFF_LINES:
+        print(colorize(f"    ... {len(lines) - _MAX_DIFF_LINES} more diff lines", "dim"))
 
 
 def _print_fix_file_sample(result: dict, entries: list[dict]) -> None:

@@ -6,16 +6,12 @@ import shutil
 import sys
 from pathlib import Path
 
-from desloppify.base.discovery.file_paths import (
-
-    rel,
-
-    safe_write_text,
-
-)
+from desloppify.base.discovery.file_paths import rel, safe_write_text
 from desloppify.app.commands.move.planning import apply_replacements
+from desloppify.base.exception_sets import CommandError
 from desloppify.base.output.fallbacks import restore_files_best_effort, warn_best_effort
 from desloppify.base.output.terminal import colorize
+from desloppify.languages.typescript.syntax.validation import syntax_regression
 
 
 def _ensure_move_destination_absent(dest_abs: str) -> None:
@@ -36,6 +32,41 @@ def _rollback_move_target(dest_abs: str, source_abs: str, *, target_name: str) -
         shutil.move(dest_abs, source_abs)
     except OSError:
         warn_best_effort(f"Could not move {target_name} back to {rel(source_abs)}")
+
+
+def check_rewrite_syntax(
+    changes: dict[str, list[tuple[str, str]]], *, dry_run: bool
+) -> None:
+    """Refuse a move whose import rewrites would break any file's syntax.
+
+    ``changes`` maps each file, at its current location, to its replacements.
+    A dry run reports the problem; a real run raises before touching anything.
+    """
+    broken: list[str] = []
+    for filepath, replacements in sorted(changes.items()):
+        if not replacements:
+            continue
+        try:
+            original = Path(filepath).read_text()
+        except (OSError, UnicodeDecodeError):
+            continue  # the write path reports unreadable files
+        problem = syntax_regression(
+            filepath, original, apply_replacements(original, replacements)
+        )
+        if problem:
+            broken.append(f"{rel(filepath)}: {problem}")
+    if not broken:
+        return
+    listing = "\n".join(f"    {line}" for line in broken)
+    if dry_run:
+        print(colorize("  ⚠ The import rewrites would break syntax in:", "yellow"))
+        print(colorize(listing, "yellow"))
+        print(colorize("  A real run would abort without changing any files.", "yellow"))
+        return
+    raise CommandError(
+        "Move aborted: the import rewrites would break syntax in:\n"
+        f"{listing}\nNo files were changed."
+    )
 
 
 def apply_file_move(
@@ -117,4 +148,4 @@ def apply_directory_move(
         raise
 
 
-__all__ = ["apply_directory_move", "apply_file_move"]
+__all__ = ["apply_directory_move", "apply_file_move", "check_rewrite_syntax"]
