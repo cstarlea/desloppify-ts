@@ -1,214 +1,580 @@
-"""Unused vars fixer: removes unused names from destructuring patterns + standalone vars."""
+"""Unused-vars fixer that edits syntax-tree ranges.
 
-import re
+Each tsc finding is matched to the declaring name at its reported line and
+column (or, failing that, the only name with that text on the line). The
+fixer removes:
+
+- a declarator (``const a = 1``, or ``b`` in ``let a = 1, b = 2``) whose
+  initializer has no side effects, and the statement once it's empty;
+- a member of an object destructuring pattern (``{ a, b: c, d = 1 }``);
+- a local function, type alias or interface, with a JSDoc block directly above.
+
+It skips what it can't remove without changing behaviour: initializers or
+defaults that may run code, patterns with ``...rest`` (whose contents would
+change), patterns that would end up empty, array destructuring, and names that
+appear anywhere else in their scope (tsc reports variables that are written
+but never read, and removing the declaration would leave those writes
+dangling). Parameters are left to the unused-params fixer.
+
+Needs tree-sitter: without it the fixer changes nothing.
+"""
+
+from __future__ import annotations
+
+import sys
 from collections import defaultdict
-from typing import NamedTuple
+from dataclasses import dataclass, field
 
+from desloppify.base.output.terminal import colorize
 from desloppify.languages._framework.base.types import FixResult
-from desloppify.languages.typescript.fixers.fixer_io import apply_fixer
-from desloppify.languages.typescript.fixers.syntax_scan import collapse_blank_lines
+from desloppify.languages.typescript.syntax.tree import (
+    ParsedSource,
+    get_parser,
+    parse_text,
+)
 
-_DESTR_MEMBER_RE = re.compile(r"^\s*(\w+)\s*(?:=\s*[^,]+)?\s*,?\s*$")
-_REST_ELEMENT_RE = re.compile(r"\.\.\.\w+")
+from .edits import apply_edits, byte_offset, comma_list_edits, whole_statement_range
+from .fixer_io import apply_fixer
+
+ALL_DESTRUCTURED = "(all destructured elements)"
+ALL_VARIABLES = "(all variables)"
+
+_NAME_TYPES = frozenset(
+    {
+        "identifier",
+        "shorthand_property_identifier",
+        "shorthand_property_identifier_pattern",
+        "type_identifier",
+    }
+)
+_DECLARATIONS = frozenset({"lexical_declaration", "variable_declaration"})
+_DECLARATION_KINDS = frozenset({"const", "let", "var"})
+_NAMED_STATEMENTS = frozenset(
+    {
+        "function_declaration",
+        "generator_function_declaration",
+        "type_alias_declaration",
+        "interface_declaration",
+    }
+)
+_STATEMENT_PARENTS = frozenset({"program", "statement_block", "switch_case", "switch_default"})
+_LOOPS = frozenset({"for_statement", "for_in_statement"})
+_FUNCTIONS = frozenset(
+    {
+        "function_declaration",
+        "generator_function_declaration",
+        "function_expression",
+        "function",
+        "generator_function",
+        "arrow_function",
+        "method_definition",
+        "class_static_block",
+    }
+)
+_BLOCKS = frozenset({"program", "statement_block", "switch_body", *_LOOPS, *_FUNCTIONS})
+_PATTERN_WRAPPERS = frozenset(
+    {"pair_pattern", "object_assignment_pattern", "assignment_pattern", "object_pattern", "array_pattern"}
+)
+_PURE_LEAVES = frozenset(
+    {
+        "string",
+        "number",
+        "true",
+        "false",
+        "null",
+        "undefined",
+        "identifier",
+        "regex",
+        "this",
+        "arrow_function",
+        "function_expression",
+        "function",
+        "generator_function",
+    }
+)
+_PURE_WRAPPERS = frozenset(
+    {"parenthesized_expression", "as_expression", "satisfies_expression", "non_null_expression"}
+)
+# A statement starting with one of these continues a previous one with no semicolon.
+_ASI_HAZARD_STARTS = frozenset(b"([`+-/<")
+# Statements that end in a block, so nothing after them can continue them.
+_CLOSED_STATEMENTS = frozenset(
+    {
+        "function_declaration",
+        "generator_function_declaration",
+        "class_declaration",
+        "abstract_class_declaration",
+        "interface_declaration",
+        "enum_declaration",
+        "internal_module",
+        "module",
+        "if_statement",
+        "for_statement",
+        "for_in_statement",
+        "while_statement",
+        "do_statement",
+        "try_statement",
+        "switch_statement",
+        "statement_block",
+        "import_statement",
+    }
+)
 
 
-class _EntryAction(NamedTuple):
-    """Result of analysing a single unused-var entry."""
-
-    lines_to_remove: frozenset[int]
-    inline_removals: dict[int, set[str]]
-    removed_name: str | None
-    skip_reason: str | None
+@dataclass
+class _Target:
+    node: object
+    entries: list[dict] = field(default_factory=list)
 
 
-def _try_direct_var_removal(
-    stripped: str,
-    line_idx: int,
-    name: str,
-) -> _EntryAction | None:
-    """Try to remove a standalone variable declaration. Returns None if not applicable."""
-    if not re.match(r"\s*(?:const|let|var)\s+\w+\s*=", stripped):
-        return None
-    rhs = stripped.split("=", 1)[1] if "=" in stripped else ""
-    if stripped.rstrip().endswith(";") and "(" not in rhs:
-        return _EntryAction(
-            lines_to_remove=frozenset({line_idx}),
-            inline_removals={},
-            removed_name=name,
-            skip_reason=None,
+def fix_unused_vars(entries: list[dict], *, dry_run: bool = False) -> FixResult:
+    """Remove unused declarations reported by the ``unused`` detector."""
+    if entries and get_parser("tsx") is None:
+        print(
+            colorize(
+                "  Skip: the unused-vars fixer needs tree-sitter (install desloppify[full]).",
+                "yellow",
+            ),
+            file=sys.stderr,
         )
-    return _EntryAction(
-        lines_to_remove=frozenset(),
-        inline_removals={},
-        removed_name=None,
-        skip_reason="standalone_var_with_call",
-    )
+        return FixResult(entries=[], skip_reasons={"needs_treesitter": len(entries)})
 
-
-def _handle_unused_entry(
-    entry: dict,
-    *,
-    lines: list[str],
-) -> _EntryAction:
-    """Analyse a single unused-var entry and return the action to take."""
-    name = entry["name"]
-    line_idx = entry["line"] - 1
-    if line_idx < 0 or line_idx >= len(lines):
-        return _EntryAction(frozenset(), {}, None, "out_of_range")
-
-    stripped = lines[line_idx].strip()
-
-    if _is_destr_member_line(stripped, name):
-        destr_start = _find_destr_open_brace(lines, line_idx)
-        if destr_start is not None:
-            destr_text = _get_destr_text(lines, destr_start, line_idx + 20)
-            if _REST_ELEMENT_RE.search(destr_text):
-                return _EntryAction(frozenset(), {}, None, "rest_element")
-            return _EntryAction(frozenset({line_idx}), {}, name, None)
-        return _EntryAction(frozenset(), {}, None, "no_destr_context")
-
-    if re.match(r"\s*(?:const|let|var)\s*\{", stripped):
-        destr_text = _collect_full_statement(lines, line_idx)
-        if _REST_ELEMENT_RE.search(destr_text):
-            return _EntryAction(frozenset(), {}, None, "rest_element")
-        return _EntryAction(frozenset(), {line_idx: {name}}, name, None)
-
-    if re.match(r"\s*(?:const|let|var)\s*\[", stripped):
-        return _EntryAction(frozenset(), {}, None, "array_destructuring")
-    if re.search(r"(?:function|=>)\s*\(", stripped) or re.match(r"\s*\(", stripped):
-        return _EntryAction(frozenset(), {}, None, "function_param")
-
-    direct = _try_direct_var_removal(stripped, line_idx, name)
-    if direct is not None:
-        return direct
-
-    return _EntryAction(frozenset(), {}, None, "other")
-
-
-def _apply_inline_removals(
-    lines: list[str],
-    inline_removals: dict[int, set[str]],
-) -> None:
-    for line_idx, names_to_remove in inline_removals.items():
-        new_line = _remove_names_from_destr(lines, line_idx, names_to_remove)
-        if new_line is not None:
-            lines[line_idx] = new_line
-
-
-def fix_unused_vars(
-    entries: list[dict], *, dry_run: bool = False
-) -> FixResult:
-    """Remove unused names from destructuring patterns.
-
-    Returns a FixResult with entries and skip_reasons.
-    """
     skip_reasons: dict[str, int] = defaultdict(int)
 
-    def _transform(lines: list[str], file_entries: list[dict]):
-        all_lines_to_remove: set[int] = set()
-        merged_inline: dict[int, set[str]] = defaultdict(set)
-        fixed: list[dict] = []
-        for entry in file_entries:
-            action = _handle_unused_entry(entry, lines=lines)
-            all_lines_to_remove |= action.lines_to_remove
-            for line_idx, names in action.inline_removals.items():
-                merged_inline[line_idx] |= names
-            if action.removed_name is not None:
-                fixed.append(entry)
-            if action.skip_reason is not None:
-                skip_reasons[action.skip_reason] += 1
-        _apply_inline_removals(lines, merged_inline)
-        new_lines = collapse_blank_lines(lines, all_lines_to_remove)
-        return new_lines, fixed
+    def transform(lines: list[str], file_entries: list[dict]) -> tuple[list[str], list[dict]]:
+        path = str(file_entries[0].get("file", "")) if file_entries else ""
+        parsed = parse_text("".join(lines), path)
+        if parsed is None:
+            return lines, []
+        new_source, fixed, skipped = remove_unused_vars(parsed, file_entries)
+        for reason in skipped:
+            skip_reasons[reason] += 1
+        if not fixed:
+            return lines, []
+        return new_source.decode("utf-8").splitlines(keepends=True), fixed
 
-    results = apply_fixer(entries, _transform, dry_run=dry_run)
+    results = apply_fixer(entries, transform, dry_run=dry_run)
     return FixResult(entries=results, skip_reasons=dict(skip_reasons))
 
 
-def _is_destr_member_line(stripped: str, name: str) -> bool:
-    """Check if a stripped line is a destructuring member matching `name`."""
-    patterns = [
-        rf"^(?:type\s+)?{re.escape(name)}\s*[,}}]",
-        rf"^(?:type\s+)?{re.escape(name)}\s*=\s*[^,]+[,}}]",
-        rf"^(?:type\s+)?{re.escape(name)}\s*:\s*\w+\s*[,}}]",
-        rf"^(?:type\s+)?{re.escape(name)}\s*$",
-        rf"^(?:type\s+)?{re.escape(name)}\s*=\s*[^,]+\s*$",
-        rf"^(?:type\s+)?{re.escape(name)}\s*,",
-    ]
-    clean = stripped.split("//")[0].strip()
-    return any(re.match(p, clean) for p in patterns)
+def remove_unused_vars(
+    parsed: ParsedSource, file_entries: list[dict]
+) -> tuple[bytes, list[dict], list[str]]:
+    """Return the edited source, the fixed entries and a skip reason per skipped entry."""
+    planner = _Planner(parsed)
+    for entry in file_entries:
+        reason = planner.plan(entry)
+        if reason is not None:
+            planner.skipped.append(reason)
+    edits = planner.resolve()
+    return apply_edits(parsed.source, edits), planner.fixed, planner.skipped
 
 
-def _find_destr_open_brace(lines: list[str], member_idx: int) -> int | None:
-    """Walk backwards from a member line to find the opening { of a destructuring."""
-    for idx in range(member_idx - 1, max(member_idx - 30, -1), -1):
-        stripped = lines[idx].strip()
-        if "{" in stripped:
-            return idx
-        if stripped and not stripped.endswith(",") and "{" not in stripped:
-            if "=" in stripped or "=>" in stripped or "(" in stripped:
+def _key(node) -> tuple[int, int, str]:
+    return node.start_byte, node.end_byte, node.type
+
+
+def _same(a, b) -> bool:
+    return a is not None and b is not None and _key(a) == _key(b)
+
+
+class _Planner:
+    """Maps entries to nodes to delete, then turns them into byte ranges."""
+
+    def __init__(self, parsed: ParsedSource) -> None:
+        self.parsed = parsed
+        self.fixed: list[dict] = []
+        self.skipped: list[str] = []
+        # Removals grouped by the comma list they come out of, or whole statements.
+        self._patterns: dict[tuple, tuple[object, dict[tuple, _Target]]] = {}
+        self._declarations: dict[tuple, tuple[object, dict[tuple, _Target]]] = {}
+        self._statements: dict[tuple, _Target] = {}
+        self._names: dict[str, list[object]] | None = None
+
+    # -- planning ---------------------------------------------------------
+
+    def plan(self, entry: dict) -> str | None:
+        name, line, col = entry.get("name"), entry.get("line"), entry.get("col")
+        if not isinstance(name, str) or not isinstance(line, int):
+            return "not_found"
+        if name in (ALL_DESTRUCTURED, ALL_VARIABLES):
+            return self._plan_aggregate(entry, name, line, col)
+
+        node = self._find_name(name, line, col)
+        if node is None:
+            return "not_found"
+        parent = node.parent
+        if _is_parameter(node):
+            return "function_param"
+        if parent.type in _NAMED_STATEMENTS and _same(parent.child_by_field_name("name"), node):
+            return self._plan_statement(entry, parent, [node])
+        if node.type == "type_identifier":
+            return "type_parameter" if parent.type == "type_parameter" else "other"
+        if parent.type == "variable_declarator" and _same(parent.child_by_field_name("name"), node):
+            return self._plan_declarator(entry, parent, [node])
+        if parent.type == "rest_pattern":
+            return "rest_element"
+        return self._plan_member(entry, node)
+
+    def _plan_aggregate(self, entry: dict, name: str, line: int, col: object) -> str | None:
+        offset = byte_offset(self.parsed.source, line, col) if isinstance(col, int) else None
+        if offset is None:
+            return "not_found"
+        wanted = ("object_pattern", "array_pattern") if name == ALL_DESTRUCTURED else _DECLARATIONS
+        node = self.parsed.root.named_descendant_for_byte_range(offset, offset)
+        while node is not None and node.type not in wanted and node.start_byte == offset:
+            node = node.parent
+        if node is None or node.type not in wanted or node.start_byte != offset:
+            return "not_found"
+        if name == ALL_VARIABLES:
+            statement = _declaration_statement(node)
+            if isinstance(statement, str):
+                return statement
+            declarators = [c for c in node.named_children if c.type == "variable_declarator"]
+            if statement.type != "ambient_declaration" and not all(
+                _is_pure(d.child_by_field_name("value")) for d in declarators
+            ):
+                return "side_effects"
+            names = [n for d in declarators for n in _binding_names(d.child_by_field_name("name"))]
+            return self._plan_statement(entry, statement, names)
+        if _is_parameter(node):
+            return "function_param"
+        declarator = node.parent
+        if declarator.type != "variable_declarator" or not _same(
+            declarator.child_by_field_name("name"), node
+        ):
+            return "other"
+        return self._plan_declarator(entry, declarator, _binding_names(node))
+
+    def _plan_statement(self, entry: dict, statement, names: list) -> str | None:
+        if statement.parent is None or statement.parent.type not in _STATEMENT_PARENTS:
+            return "other"
+        function_scoped = statement.type != "lexical_declaration"
+        if self._used_elsewhere(names, statement, statement, function_scoped=function_scoped):
+            return "written_elsewhere"
+        self._statements.setdefault(_key(statement), _Target(statement)).entries.append(entry)
+        return None
+
+    def _plan_declarator(self, entry: dict, declarator, names: list) -> str | None:
+        declaration = declarator.parent
+        reason = _declarator_blocker(declarator)
+        if reason is not None:
+            return reason
+        function_scoped = _kind(declaration) == "var"
+        if self._used_elsewhere(names, declaration, declarator, function_scoped=function_scoped):
+            return "written_elsewhere"
+        self._add(self._declarations, declaration, declarator, [entry])
+        return None
+
+    def _plan_member(self, entry: dict, node) -> str | None:
+        member, default = _pattern_member(node)
+        if member is None:
+            return "array_destructuring" if _in_array_pattern(node) else "other"
+        pattern = member.parent
+        if any(c.type == "rest_pattern" for c in pattern.named_children):
+            return "rest_element"
+        key = member.child_by_field_name("key") if member.type == "pair_pattern" else None
+        if not _is_pure(default) or (key is not None and key.type == "computed_property_name"):
+            return "side_effects"
+
+        top = pattern
+        while top.parent is not None and top.parent.type in _PATTERN_WRAPPERS:
+            top = top.parent
+        declarator = top.parent
+        if declarator is None or declarator.type != "variable_declarator" or not _same(
+            declarator.child_by_field_name("name"), top
+        ):
+            return "other"
+        statement = _declaration_statement(declarator.parent)
+        if isinstance(statement, str):
+            return statement
+        function_scoped = _kind(declarator.parent) == "var"
+        if self._used_elsewhere([node], declarator.parent, member, function_scoped=function_scoped):
+            return "written_elsewhere"
+        self._add(self._patterns, pattern, member, [entry])
+        return None
+
+    @staticmethod
+    def _add(groups: dict, container, item, entries: list[dict]) -> None:
+        _container, items = groups.setdefault(_key(container), (container, {}))
+        items.setdefault(_key(item), _Target(item)).entries.extend(entries)
+
+    # -- lookups ----------------------------------------------------------
+
+    def _find_name(self, name: str, line: int, col: object):
+        source = self.parsed.source
+        offset = byte_offset(source, line, col) if isinstance(col, int) else None
+        if offset is not None:
+            node = self.parsed.root.named_descendant_for_byte_range(offset, offset)
+            if (
+                node is not None
+                and node.type in _NAME_TYPES
+                and node.start_byte == offset
+                and self.parsed.text(node) == name
+            ):
+                return node
+        matches = [n for n in self._name_index().get(name, []) if n.start_point[0] == line - 1]
+        return matches[0] if len(matches) == 1 else None
+
+    def _name_index(self) -> dict[str, list[object]]:
+        if self._names is None:
+            names: dict[str, list[object]] = defaultdict(list)
+            stack = [self.parsed.root]
+            while stack:
+                node = stack.pop()
+                if node.type in _NAME_TYPES:
+                    names[self.parsed.text(node)].append(node)
+                stack.extend(node.children)
+            self._names = names
+        return self._names
+
+    def _used_elsewhere(
+        self, names: list, declaration, removed, *, function_scoped: bool
+    ) -> bool:
+        """Whether any of ``names`` occurs in the scope ``declaration`` declares into.
+
+        Occurrences inside ``removed`` (the node being deleted, which holds
+        the declaration itself and any self-references) don't count.
+        """
+        scope = _scope(declaration, function_scoped=function_scoped)
+        for name_node in names:
+            for other in self._name_index().get(self.parsed.text(name_node), []):
+                if _within(other, removed):
+                    continue
+                if _within(other, scope):
+                    return True
+        return False
+
+    # -- resolving --------------------------------------------------------
+
+    def resolve(self) -> list[tuple[int, int]]:
+        edits: list[tuple[int, int]] = []
+        for pattern, members in self._patterns.values():
+            items = _list_items(pattern)
+            remove = {i for i, item in enumerate(items) if _key(item) in members}
+            entries = [e for target in members.values() for e in target.entries]
+            if len(remove) < len(items):
+                edits.extend(comma_list_edits(items, remove))
+                self.fixed.extend(entries)
                 continue
-            break
+            declarator = pattern.parent
+            if (
+                declarator.type == "variable_declarator"
+                and _same(declarator.child_by_field_name("name"), pattern)
+                and _declarator_blocker(declarator) is None
+            ):
+                # Every member goes, so the declarator goes with them.
+                self._add(self._declarations, declarator.parent, declarator, entries)
+            else:
+                self.skipped.extend(["would_empty_pattern"] * len(entries))
+
+        for declaration, declarators in self._declarations.values():
+            items = _list_items(declaration)
+            remove = {i for i, item in enumerate(items) if _key(item) in declarators}
+            entries = [e for target in declarators.values() for e in target.entries]
+            if len(remove) < len(items):
+                edits.extend(comma_list_edits(items, remove))
+                self.fixed.extend(entries)
+            else:
+                statement = _declaration_statement(declaration)
+                target = self._statements.setdefault(_key(statement), _Target(statement))
+                target.entries.extend(entries)
+
+        source = self.parsed.source
+        removing = dict(self._statements)
+        # Keep one hazardous statement at a time, last first: keeping it can
+        # make its neighbours' removal safe again.
+        while hazards := [k for k, t in removing.items() if _asi_hazard(source, t.node, removing)]:
+            self.skipped.extend(["asi_hazard"] * len(removing.pop(max(hazards)).entries))
+        for target in removing.values():
+            edits.append(whole_statement_range(source, target.node, leading_jsdoc=True))
+            self.fixed.extend(target.entries)
+        return edits
+
+
+def _declarator_blocker(declarator) -> str | None:
+    """Why removing the whole declarator could change behaviour, or None."""
+    statement = _declaration_statement(declarator.parent)
+    if isinstance(statement, str):
+        return statement
+    if statement.type != "ambient_declaration" and not _is_pure(
+        declarator.child_by_field_name("value")
+    ):
+        return "side_effects"
     return None
 
 
-def _get_destr_text(lines: list[str], start: int, max_end: int) -> str:
-    """Get the text of a destructuring block from start to closing }."""
-    text = ""
-    depth = 0
-    for idx in range(start, min(max_end, len(lines))):
-        text += lines[idx]
-        for ch in lines[idx]:
-            if ch == "{":
-                depth += 1
-            elif ch == "}":
-                depth -= 1
-                if depth <= 0:
-                    return text
-    return text
+def _within(node, container) -> bool:
+    return container.start_byte <= node.start_byte and node.end_byte <= container.end_byte
 
 
-def _collect_full_statement(lines: list[str], start: int) -> str:
-    """Collect a potentially multi-line statement starting at start."""
-    text = ""
-    for idx in range(start, min(start + 20, len(lines))):
-        text += lines[idx]
-        if ";" in lines[idx] or (idx > start and "}" in lines[idx]):
-            break
-    return text
+def _kind(declaration) -> str:
+    first = declaration.child(0)
+    return first.type if first is not None else ""
 
 
-def _remove_names_from_destr(
-    lines: list[str], line_idx: int, names: set[str]
-) -> str | None:
-    """Remove specific names from a single-line object destructuring.
+def _declaration_statement(declaration):
+    """The statement a declaration stands for, or why it can't be removed."""
+    if declaration is None or declaration.type not in _DECLARATIONS:
+        return "other"
+    if _kind(declaration) not in _DECLARATION_KINDS:
+        return "other"  # `using`/`await using` run disposers
+    statement = declaration
+    if statement.parent is not None and statement.parent.type == "ambient_declaration":
+        statement = statement.parent
+    if statement.parent is not None and statement.parent.type in _LOOPS:
+        return "loop_variable"
+    if statement.parent is None or statement.parent.type not in _STATEMENT_PARENTS:
+        return "other"
+    return statement
 
-    Returns None if we can't safely parse/modify.
+
+def _list_items(container) -> list:
+    if container.type in _DECLARATIONS:
+        return [c for c in container.named_children if c.type == "variable_declarator"]
+    return [c for c in container.named_children if c.type != "comment"]
+
+
+def _pattern_member(node):
+    """The object-pattern member that binds ``node``, and its default value."""
+    parent = node.parent
+    if node.type == "shorthand_property_identifier_pattern":
+        if parent.type == "object_pattern":
+            return node, None
+        if parent.type == "object_assignment_pattern" and parent.parent.type == "object_pattern":
+            return parent, parent.child_by_field_name("right")
+        return None, None
+    if node.type != "identifier":
+        return None, None
+    if parent.type == "pair_pattern" and _same(parent.child_by_field_name("value"), node):
+        return parent, None
+    if (
+        parent.type == "assignment_pattern"
+        and _same(parent.child_by_field_name("left"), node)
+        and parent.parent.type == "pair_pattern"
+    ):
+        return parent.parent, parent.child_by_field_name("right")
+    return None, None
+
+
+def _in_array_pattern(node) -> bool:
+    parent = node.parent
+    while parent is not None and parent.type in ("assignment_pattern", "array_pattern"):
+        if parent.type == "array_pattern":
+            return True
+        parent = parent.parent
+    return False
+
+
+def _binding_names(pattern) -> list:
+    """The names a declarator's name (identifier or pattern) binds."""
+    if pattern is None:
+        return []
+    if pattern.type == "identifier":
+        return [pattern]
+    names = []
+    stack = [pattern]
+    while stack:
+        node = stack.pop()
+        parent = node.parent
+        if node.type == "shorthand_property_identifier_pattern":
+            names.append(node)
+        elif node.type == "identifier" and parent is not None and (
+            parent.type in ("array_pattern", "rest_pattern")
+            or (parent.type == "pair_pattern" and _same(parent.child_by_field_name("value"), node))
+            or (parent.type == "assignment_pattern" and _same(parent.child_by_field_name("left"), node))
+        ):
+            names.append(node)
+        elif node.type in _PATTERN_WRAPPERS or node.type == "rest_pattern":
+            stack.extend(node.named_children)
+    return names
+
+
+def _is_parameter(node) -> bool:
+    """Whether ``node`` sits in a function's parameter list."""
+    child, parent = node, node.parent
+    while parent is not None and parent.type not in ("statement_block", "program", *_DECLARATIONS):
+        if parent.type == "formal_parameters":
+            return True
+        if parent.type == "arrow_function" and _same(parent.child_by_field_name("parameter"), child):
+            return True
+        child, parent = parent, parent.parent
+    return False
+
+
+def _scope(node, *, function_scoped: bool):
+    parent = node.parent
+    while parent is not None:
+        if parent.type == "program" or parent.type in (_FUNCTIONS if function_scoped else _BLOCKS):
+            return parent
+        parent = parent.parent
+    return node
+
+
+def _is_pure(node) -> bool:
+    """Whether evaluating ``node`` can't run user code or throw (None is pure)."""
+    if node is None:
+        return True
+    kind = node.type
+    if kind in _PURE_LEAVES:
+        return True
+    if kind == "template_string":
+        return not any(c.type == "template_substitution" for c in node.named_children)
+    if kind in _PURE_WRAPPERS:
+        return bool(node.named_children) and _is_pure(node.named_children[0])
+    if kind == "type_assertion":
+        return bool(node.named_children) and _is_pure(node.named_children[-1])
+    if kind == "unary_expression":
+        operator = node.child_by_field_name("operator")
+        argument = node.child_by_field_name("argument")
+        if operator is None:
+            return False
+        if operator.type in ("!", "typeof", "void"):
+            return _is_pure(argument)
+        return operator.type in ("-", "+") and argument is not None and argument.type == "number"
+    if kind == "array":
+        return all(
+            c.type != "spread_element" and _is_pure(c)
+            for c in node.named_children
+            if c.type != "comment"
+        )
+    if kind == "object":
+        for child in node.named_children:
+            if child.type in ("comment", "shorthand_property_identifier", "method_definition"):
+                continue
+            if child.type != "pair":
+                return False  # spread
+            key = child.child_by_field_name("key")
+            if key is None or key.type == "computed_property_name":
+                return False
+            if not _is_pure(child.child_by_field_name("value")):
+                return False
+        return True
+    return False
+
+
+def _asi_hazard(source: bytes, statement, removing: dict) -> bool:
+    """Whether removing ``statement`` lets the next statement continue the previous one.
+
+    Without semicolons, ``a = b`` followed by ``(f)()`` reads as ``a = b(f)()``
+    once the statement that separated them is gone. Neighbours in
+    ``removing`` are going too, so they're looked past.
     """
-    line = lines[line_idx]
-    brace_match = re.search(r"\{([^}]*)\}", line)
-    if not brace_match:
-        return None
+    following = _neighbour(statement, removing, forward=True)
+    if following is None or source[following.start_byte] not in _ASI_HAZARD_STARTS:
+        return False
+    preceding = _neighbour(statement, removing, forward=False)
+    if preceding is None or preceding.type in _CLOSED_STATEMENTS:
+        return False
+    return not source[: preceding.end_byte].rstrip().endswith(b";")
 
-    inner = brace_match.group(1)
-    members = [m.strip() for m in inner.split(",") if m.strip()]
 
-    remaining = []
-    for m in members:
-        member_name = m.split(":")[0].split("=")[0].strip()
-        if member_name.startswith("type "):
-            member_name = member_name[5:].strip()
-        if member_name.startswith("..."):
-            remaining.append(m)
-            continue
-        if member_name in names:
-            continue
-        remaining.append(m)
+def _neighbour(statement, removing: dict, *, forward: bool):
+    sibling = statement
+    while True:
+        sibling = sibling.next_named_sibling if forward else sibling.prev_named_sibling
+        if sibling is None or (sibling.type != "comment" and _key(sibling) not in removing):
+            return sibling
 
-    if not remaining:
-        return None
 
-    new_inner = ", ".join(remaining)
-    before = line[: brace_match.start()]
-    after = line[brace_match.end() :]
-    return f"{before}{{ {new_inner} }}{after}"
+__all__ = ["ALL_DESTRUCTURED", "ALL_VARIABLES", "fix_unused_vars", "remove_unused_vars"]

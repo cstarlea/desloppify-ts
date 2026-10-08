@@ -407,6 +407,10 @@ class TestFixUnusedImports:
 # =====================================================================
 
 
+@pytest.mark.skipif(
+    importlib.util.find_spec("tree_sitter_language_pack") is None,
+    reason="the unused-vars fixer needs tree-sitter",
+)
 class TestFixUnusedVars:
     """Tests for fix_unused_vars()."""
 
