@@ -267,6 +267,66 @@ def test_extract_skips_strings_with_braces(tmp_path):
     assert funcs[0].name == "withStrings"
 
 
+def test_extract_forms_the_line_regex_missed(tmp_path):
+    """Async, default exports, methods, multi-line params and concise arrows (DT-3)."""
+    ts_file = tmp_path / "forms.ts"
+    ts_file.write_text(
+        textwrap.dedent("""\
+        export default async function handler(
+          req: Request,
+          { a, b: [c] }: Opts,
+          ...rest: string[]
+        ): Promise<{ ok: boolean }> {
+          const inner = () => {
+            return 1;
+          };
+          return { ok: true };
+        }
+
+        export const concise = (n: number) =>
+          n +
+          1 +
+          2;
+
+        export class Client {
+          @memo()
+          async fetch(this: Client, $url: string) {
+            const r = await get($url);
+            return r;
+          }
+          onLoad = (event) => {
+            log(event);
+            return event;
+          };
+        }
+
+        const api = { get() { a(); b(); c(); } };
+        items.forEach((item) => {
+          a(item);
+          b(item);
+        });
+    """)
+    )
+    funcs = extract_ts_functions(str(ts_file))
+    assert [(f.name, f.line, f.end_line, f.params) for f in funcs] == [
+        ("handler", 1, 10, ["req", "a", "c", "rest"]),
+        ("concise", 12, 15, ["n"]),
+        ("Client.fetch", 19, 22, ["$url"]),
+        ("Client.onLoad", 23, 26, ["event"]),
+    ]
+    assert "const inner" in funcs[0].body
+
+
+def test_extract_falls_back_to_regex_without_tree_sitter(tmp_path, monkeypatch):
+    import desloppify.languages.typescript.extractors_functions as functions_mod
+
+    monkeypatch.setattr(functions_mod, "parsed_file", lambda _path: None)
+    ts_file = tmp_path / "plain.ts"
+    ts_file.write_text("export function first(x: string) {\n  const a = x;\n  return a;\n}\n")
+    funcs = extract_ts_functions(str(ts_file))
+    assert [(f.name, f.params) for f in funcs] == [("first", ["x"])]
+
+
 # ── extract_props() ──────────────────────────────────────────
 
 

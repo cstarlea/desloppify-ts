@@ -9,8 +9,11 @@ from desloppify.languages.typescript.detectors.smells import TS_SMELL_CHECKS
 from desloppify.languages.typescript.detectors.smells.detector_core import (
     _find_function_start,
 )
+import desloppify.languages.typescript.detectors.smells.detector_flow as flow_mod
 from desloppify.languages.typescript.detectors.smells.detector_flow import (
     _detect_async_no_await,
+    _detect_high_cyclomatic_complexity,
+    _detect_nested_closures,
     _detect_empty_if_chains,
     _detect_error_no_throw,
     _detect_monster_functions,
@@ -714,8 +717,137 @@ class TestDetectStubFunctions:
         _detect_stub_functions(_ctx(content), counts)
         assert len(counts["stub_function"]) == 0
 
-    def test_decorated_function_skipped(self):
+    def test_decorated_method_skipped(self):
+        content = "class A {\n  @HostListener('click')\n  onClick() {\n  }\n}"
+        counts = _make_counts()
+        _detect_stub_functions(_ctx(content), counts)
+        assert len(counts["stub_function"]) == 0
+
+    def test_decorated_function_skipped_without_tree(self, no_tree):
         content = "@Controller()\nfunction handler() {\n}"
         counts = _make_counts()
         _detect_stub_functions(_ctx(content), counts)
         assert len(counts["stub_function"]) == 0
+
+    def test_constructor_with_parameter_properties_skipped(self):
+        content = "class A {\n  constructor(private readonly x: number) {}\n}"
+        counts = _make_counts()
+        _detect_stub_functions(_ctx(content), counts)
+        assert len(counts["stub_function"]) == 0
+
+    def test_empty_method_flagged(self):
+        content = "class A {\n  reset() {\n  }\n}"
+        counts = _make_counts()
+        _detect_stub_functions(_ctx(content), counts)
+        assert counts["stub_function"] == [
+            {"file": "test.ts", "line": 2, "content": "A.reset() — body is empty"}
+        ]
+
+
+@pytest.fixture
+def no_tree(monkeypatch):
+    """Run the function-shape smells on their regex fallback, as without tree-sitter."""
+    monkeypatch.setattr(flow_mod, "parsed_file", lambda _path: None)
+    monkeypatch.setattr(flow_mod, "parse_text", lambda _text, _path: None)
+
+
+def _messages(detector, content: str, smell: str) -> list[tuple[int, str]]:
+    counts = _make_counts()
+    detector(_ctx(content), counts)
+    return [(m["line"], m["content"]) for m in counts[smell]]
+
+
+class TestFunctionShapeOnSyntaxTree:
+    """Forms the line regexes missed or misread (DT-3)."""
+
+    def test_methods_default_exports_and_bare_arrows_are_seen(self):
+        content = (
+            "export default async function handler() {\n"
+            "  return 1;\n"
+            "}\n"
+            "class Client {\n"
+            "  async fetch(url: string) {\n"
+            "    return url;\n"
+            "  }\n"
+            "  static async create() { return new Client(); }\n"
+            "  onLoad = async () => {\n"
+            "    return null;\n"
+            "  };\n"
+            "}\n"
+            "const load = async x => {\n"
+            "  return x;\n"
+            "};\n"
+        )
+        assert _messages(_detect_async_no_await, content, "async_no_await") == [
+            (1, "async handler has no await"),
+            (5, "async Client.fetch has no await"),
+            (8, "async Client.create has no await"),
+            (9, "async Client.onLoad has no await"),
+            (13, "async load has no await"),
+        ]
+
+    def test_concise_async_arrow_without_await_is_flagged(self):
+        content = "export const get = async (id: string) =>\n  fetch(id);\n"
+        assert _messages(_detect_async_no_await, content, "async_no_await") == [
+            (1, "async get has no await")
+        ]
+
+    def test_async_generator_is_not_flagged(self):
+        content = "async function* items() {\n  yield 1;\n}\n"
+        assert _messages(_detect_async_no_await, content, "async_no_await") == []
+
+    def test_callbacks_and_object_members_are_not_named_functions(self):
+        content = "items.forEach(async (x) => {\n  log(x);\n});\nconst api = { async get() { return 1; } };\n"
+        assert _messages(_detect_async_no_await, content, "async_no_await") == []
+
+    def test_multi_line_params_with_braces_do_not_hide_the_body(self):
+        content = (
+            "export function build(\n"
+            "  { a = {}, b }: { a?: object; b: string },\n"
+            "  cb = () => {},\n"
+            "): { ok: boolean } {\n"
+            "}\n"
+        )
+        assert _messages(_detect_stub_functions, content, "stub_function") == [
+            (1, "build() — body is empty")
+        ]
+
+    def test_function_text_inside_a_string_is_not_a_function(self):
+        content = "const doc = `\nfunction fake() {\n}\n`;\n"
+        assert _messages(_detect_stub_functions, content, "stub_function") == []
+
+    def test_monster_counts_from_the_export_line_to_the_closing_brace(self):
+        body = "\n".join(f"    const x{i} = {i};" for i in range(160))
+        content = f"class Big {{\n  @memo()\n  render() {{\n{body}\n  }}\n}}\n"
+        assert _messages(_detect_monster_functions, content, "monster_function") == [
+            (3, "Big.render() — 162 LOC")
+        ]
+
+    def test_concise_arrow_complexity_is_measured(self):
+        cond = " ||\n  ".join(f"x === {i}" for i in range(20))
+        content = f"const pick = (x: number) =>\n  {cond};\n"
+        found = _messages(_detect_high_cyclomatic_complexity, content, "high_cyclomatic_complexity")
+        assert found == [(1, "pick() — cyclomatic complexity 20")]
+
+    def test_nested_closures_are_counted_in_methods(self):
+        content = (
+            "class A {\n"
+            "  run() {\n"
+            "    a(() => {});\n"
+            "    b(function () {});\n"
+            "    c(() => {});\n"
+            "  }\n"
+            "}\n"
+        )
+        assert _messages(_detect_nested_closures, content, "nested_closure") == [
+            (2, "A.run() — 3 nested closures")
+        ]
+
+    def test_regex_fallback_still_finds_declarations(self, no_tree):
+        content = "async function fetchData() {\n  return 1;\n}\nfunction noop() {\n}\n"
+        assert _messages(_detect_async_no_await, content, "async_no_await") == [
+            (1, "async fetchData has no await")
+        ]
+        assert _messages(_detect_stub_functions, content, "stub_function") == [
+            (4, "noop() — body is empty")
+        ]
