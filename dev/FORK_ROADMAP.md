@@ -133,7 +133,7 @@ Every adversarial input in the original review broke one of the line-regex fixer
 | 2.37 | Wontfix debt totals in the stats and `status` still include wontfix issues a scan confirmed gone (`scan_verified`), though the scores exclude them (#42 follow-up) | S | CE-5 |
 | 2.38 | `plan skip --permanent` on a deferred issue leaves its state status `deferred`: `resolve_issues()` only matches `open` issues, so the plan entry becomes permanent but the issue keeps failing lenient. The deferred-disposition item suggests this exact command (found in the 2.22 pass) | S | CE-5 |
 | 2.39 | `verify_disappeared` marks a `fixed`/`false_positive` issue `scan_verified` on any absence, including when its detector didn't run or the file is outside `--path`, so verified can credit an unconfirmed fix. Open, deferred, triaged_out and wontfix need a confirmed absence (found in the 2.22 pass) | S | CE-2 |
-| 2.40 | Reconcile marks an active cluster done when all its issues are `fixed`, `auto_resolved` or `wontfix`, but not `false_positive` (found in the 2.22 pass) | S | — |
+| 2.40 | **Done (#50).** Cluster completion counts every resolved status (`resolved_statuses()`: fixed, wontfix, false_positive, auto_resolved) in scan reconcile and in `plan resolve`. The resolve path was the visible bug: members recovered from the execution log kept a cluster resolved one issue at a time from ever closing ("1 left in cluster") | S | — |
 
 ### 2D. New capabilities (Milestone 3)
 
