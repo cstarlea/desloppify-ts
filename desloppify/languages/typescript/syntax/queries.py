@@ -836,6 +836,62 @@ def calls(parsed: ParsedSource, callees: Collection[str] | None = None) -> list[
     return found
 
 
+# ── Type declarations ───────────────────────────────────────
+
+
+@dataclass(frozen=True)
+class TypeDeclaration:
+    """An ``interface`` (``kind`` ``interface``) or ``type`` alias (``alias``).
+
+    ``value`` is the interface body or the alias's type node; ``extends``
+    holds an interface's base type nodes. ``span`` starts at ``export``
+    when the declaration is exported.
+    """
+
+    name: str
+    kind: str
+    type_parameters: tuple[str, ...]
+    extends: tuple
+    value: object
+    exported: bool
+    span: Span
+    node: object = field(compare=False, repr=False)
+
+    @property
+    def line(self) -> int:
+        return self.span.start_line
+
+
+def type_declarations(parsed: ParsedSource) -> list[TypeDeclaration]:
+    """Every interface and type alias, nested ones included, in source order."""
+    found = []
+    for node in descendants(parsed.root, ("interface_declaration", "type_alias_declaration")):
+        name = node.child_by_field_name("name")
+        value = node.child_by_field_name("body" if node.type == "interface_declaration" else "value")
+        if name is None or value is None:
+            continue
+        params = node.child_by_field_name("type_parameters")
+        heritage = next((c for c in node.named_children if c.type == "extends_type_clause"), None)
+        holder = node.parent if node.parent is not None and node.parent.type == "export_statement" else node
+        found.append(
+            TypeDeclaration(
+                name=parsed.text(name),
+                kind="interface" if node.type == "interface_declaration" else "alias",
+                type_parameters=tuple(
+                    parsed.text(p.child_by_field_name("name"))
+                    for p in (params.named_children if params is not None else ())
+                    if p.child_by_field_name("name") is not None
+                ),
+                extends=tuple(heritage.named_children) if heritage is not None else (),
+                value=value,
+                exported=holder is not node,
+                span=span(holder),
+                node=node,
+            )
+        )
+    return found
+
+
 __all__ = [
     "CallInfo",
     "ClassInfo",
@@ -850,6 +906,7 @@ __all__ = [
     "JsxElement",
     "Param",
     "Span",
+    "TypeDeclaration",
     "calls",
     "classes",
     "definitions",
@@ -866,4 +923,5 @@ __all__ = [
     "span",
     "statements",
     "string_value",
+    "type_declarations",
 ]

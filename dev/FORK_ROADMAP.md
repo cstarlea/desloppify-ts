@@ -99,7 +99,7 @@ Every adversarial input in the original review broke one of the line-regex fixer
 |---|---|---|---|
 | 2.6 | **Done (#47).** The function extractor and the five function-shape smells read `syntax.queries.definitions()`: declarations and named function expressions, variable-bound or assigned functions, and class members (`Owner.member`), so async, default exports, methods, multi-line/destructured params and concise arrows are seen and bodies come from the tree. `detector_flow` builds the list once per file; `async_no_await` looks for `await` in the function's own body. Signature variance skips default exports and uppercase route-handler names. Regex stays only as the fallback without tree-sitter | M | DT-3 |
 | 2.7 | Type-safety smells as queries: non-null `!`, `as unknown as`, `any`, `@ts-ignore` in block comments, a separate undocumented `@ts-expect-error`; report per-file density | M | DT-9 |
-| 2.8 | Props detector: count properties; include extends, generics and intersections; match names on word boundaries | M | DT-4 |
+| 2.8 | **Done.** Props detector on the syntax tree (`syntax.queries.type_declarations`): an interface or type alias counts its distinct property and method names, including those inherited through `extends`, intersections, generic declarations and `Partial`/`Required`/`Readonly`/`Omit`/`Pick` of types declared in the scan (imports resolved); package types add nothing, a union counts its largest variant, same-name interfaces merge. Props/Context/State must be whole words of the name (`UIState`, bare `Props`; not `Statement`). A plain rename of a checked type and types without properties are skipped. Regex line counting stays only without tree-sitter. trpc `TRPCContextState` (24) is newly reported; zod `ToJSONSchemaContext` 17 → 15 | M | DT-4 |
 | 2.9 | **Done (#22).** Facade: every top-level statement is a re-export (directives and comments allowed); cover multi-line, `export * as`, `export type *` | S | DT-6 |
 | 2.10 | Deprecated: attach JSDoc to the AST node; count importers from the graph plus uses in the same file; skip `.d.ts` | M | DT-5 |
 | 2.11 | **Partial: the `dead_useeffect` smell is on the syntax tree, with a fallback that skips template and block-comment lines (#33).** Skip comment and string spans in the remaining line-regex detectors (security, smells, logs) | M | DT-7, FX-4 |
@@ -266,7 +266,7 @@ Status key: **done** (with PR), **partial** (what's left is in §2), **open**, *
 | DT-1 | high | Global `matches[:50]` drops most smells | done (#1) |
 | DT-2 | high | Body extractor grabs param or return-type braces | done (#1, upstream #629; #11 added tests) |
 | DT-3 | low | Function extractor misses async/default/methods | done (#47) |
-| DT-4 | medium | Props detector counts lines, skips extends/generics/intersections | open → 2.8 |
+| DT-4 | medium | Props detector counts lines, skips extends/generics/intersections | done (2.8) |
 | DT-5 | medium | Deprecated detector false positives; "safe to delete" on public API | partial (#1) → 2.10 |
 | DT-6 | low | Facade misses multi-line, `export * as`, `'use client'` | done (#5, #22, #36) |
 | DT-7 | medium | eval/innerHTML false positives; comments not stripped | partial (#1, #11) → 2.11 |
