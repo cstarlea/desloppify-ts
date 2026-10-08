@@ -15,6 +15,8 @@ from desloppify.engine.policy.zones import (
     _match_pattern,
     classify_file,
     has_generated_header,
+    is_override_pattern,
+    matching_override,
     normalize_zone,
     zone_in,
 )
@@ -673,3 +675,77 @@ class TestZonePolicies:
 
 # ── adjust_potential() ───────────────────────────────────────
 
+
+
+# ── Directory and glob overrides ─────────────────────────────
+
+
+class TestPatternOverrides:
+    @pytest.mark.parametrize(
+        ("pattern", "path", "expected"),
+        [
+            ("www/**", "www/src/pages/index.tsx", True),
+            ("www/**", "www", True),
+            ("www/**", "wwwx/a.ts", False),
+            ("www/**", "src/www/a.ts", False),
+            ("**/*.gen.ts", "a.gen.ts", True),
+            ("**/*.gen.ts", "x/y/a.gen.ts", True),
+            ("src/*.ts", "src/a.ts", True),
+            ("src/*.ts", "src/a/b.ts", False),
+            ("src/?.ts", "src/a.ts", True),
+            ("src/[!a]*.ts", "src/b.ts", True),
+            ("src/[!a]*.ts", "src/a.ts", False),
+            ("app/[[]slug]/**", "app/[slug]/page.tsx", True),
+            ("app/[[]slug]/**", "app/s/page.tsx", False),
+            ("**", "any/where.ts", True),
+        ],
+    )
+    def test_glob_matching(self, pattern, path, expected):
+        assert (matching_override(path, {pattern: "test"}) == pattern) is expected
+
+    def test_brackets_alone_are_a_literal_file(self):
+        assert is_override_pattern("app/[slug]/page.tsx") is False
+        overrides = {"app/[slug]/page.tsx": "test"}
+        assert matching_override("app/s/page.tsx", overrides) is None
+        assert classify_file("app/[slug]/page.tsx", COMMON_ZONE_RULES, overrides) == Zone.TEST
+
+    def test_precedence(self):
+        overrides = {
+            "**/*.ts": "config",
+            "www/**": "vendor",
+            "www/docs/**": "test",
+            "www/docs/keep.ts": "production",
+        }
+        assert classify_file("www/docs/keep.ts", COMMON_ZONE_RULES, overrides) == Zone.PRODUCTION
+        assert classify_file("www/docs/other.ts", COMMON_ZONE_RULES, overrides) == Zone.TEST
+        assert classify_file("www/blog/post.ts", COMMON_ZONE_RULES, overrides) == Zone.VENDOR
+        assert classify_file("src/app.ts", COMMON_ZONE_RULES, overrides) == Zone.CONFIG
+        assert classify_file("src/app.js", COMMON_ZONE_RULES, overrides) == Zone.PRODUCTION
+
+    def test_pattern_beats_builtin_rules(self):
+        overrides = {"www/**": "production"}
+        assert classify_file("www/tests/a.ts", COMMON_ZONE_RULES, overrides) == Zone.PRODUCTION
+        assert classify_file("www/scripts/a.ts", COMMON_ZONE_RULES, overrides) == Zone.PRODUCTION
+
+    def test_pattern_override_beats_generated_header(self, tmp_path):
+        target = tmp_path / "www" / "client.ts"
+        target.parent.mkdir()
+        target.write_text("// @generated\nexport {};\n")
+        zone_map = FileZoneMap(
+            [str(target)],
+            COMMON_ZONE_RULES,
+            rel_fn=lambda p: str(p).removeprefix(str(tmp_path) + "/"),
+            overrides={"www/**": "production"},
+        )
+        assert zone_map.get(str(target)) == Zone.PRODUCTION
+
+    def test_pattern_covers_new_files_and_their_directory(self):
+        overrides = {"www/**": "vendor"}
+        files = ["www/a.ts", "www/later/added.ts", "src/app.ts"]
+        zone_map = FileZoneMap(files, COMMON_ZONE_RULES, overrides=overrides)
+        assert zone_map.get("www/later/added.ts") == Zone.VENDOR
+        assert zone_map.get("www/later") == Zone.VENDOR
+        assert zone_map.get("src/app.ts") == Zone.PRODUCTION
+        # Unscanned files (CSS, Markdown) carrying issues honor overrides too.
+        assert zone_map.get("www/src/custom.css") == Zone.VENDOR
+        assert zone_map.get("docs/intro.md") == Zone.PRODUCTION
