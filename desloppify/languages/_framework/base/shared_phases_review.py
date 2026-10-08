@@ -20,7 +20,7 @@ from desloppify.engine.detectors.jscpd_adapter import detect_with_jscpd
 from desloppify.engine.detectors.security.detector import (
     detect_security_issues as _detect_security_issues_default,
 )
-from desloppify.engine.detectors.test_coverage.detector import detect_test_coverage
+from desloppify.engine.detectors.test_coverage.detector import CoverageResult, run_test_coverage
 from desloppify.engine._state.filtering import make_issue
 from desloppify.engine.policy.zones import EXCLUDED_ZONES, filter_entries
 from desloppify.languages._framework.base.types import (
@@ -587,17 +587,21 @@ def phase_test_coverage(
 
     graph = lang.dep_graph or lang.build_dep_graph(path)
     extra = _find_external_test_files(path, lang)
-    entries, potential = detect_test_coverage(
+    coverage: CoverageResult = run_test_coverage(
         graph,
         zone_map,
         lang.name,
         extra_test_files=extra or None,
         complexity_map=lang.complexity_map or None,
     )
-    entries = filter_entries(zone_map, entries, "test_coverage")
+    potential = coverage.potential
+    entries = filter_entries(zone_map, coverage.entries, "test_coverage")
 
     results = _entries_to_issues("test_coverage", entries, default_name="")
-    _log_phase_summary("test coverage", results, potential, "production files")
+    # The potential weighs each file by √LOC, so it isn't a file count.
+    _log_phase_summary(
+        "test coverage", results, coverage.scored_files, f"production files, √LOC weight {potential}"
+    )
 
     return results, {"test_coverage": potential}
 
