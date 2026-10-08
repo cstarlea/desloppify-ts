@@ -4,6 +4,11 @@ from __future__ import annotations
 
 import os
 import re
+from typing import NamedTuple
+
+from desloppify.languages.typescript.syntax.nodes import FUNCTIONS
+from desloppify.languages.typescript.syntax.queries import definitions
+from desloppify.languages.typescript.syntax.tree import ParsedSource, parse_text, parsed_file
 
 from .detector_core import (
     _ARROW_RE,
@@ -35,6 +40,112 @@ from .helpers import (
     _strip_ts_comments,
     _track_brace_body,
 )
+
+
+class _Function(NamedTuple):
+    """A named function for the function-shape smells.
+
+    ``line`` and ``end_line`` are 0-based; ``body`` is the text inside the
+    body braces, or a concise arrow's expression (``block`` False).
+    """
+
+    name: str
+    line: int
+    end_line: int | None
+    body: str | None
+    block: bool = True
+    is_async: bool = False
+    is_generator: bool = False
+    awaits: bool = False
+    stub_exempt: bool = False
+
+
+_LAST: list = [None, [], False]  # (ctx, functions, from_tree): detectors run one file at a time
+
+
+def _functions(ctx) -> list[_Function]:
+    """The file's named functions from the syntax tree, else from line regexes."""
+    if _LAST[0] is not ctx:
+        parsed = parsed_file(ctx.filepath) or parse_text(ctx.content, ctx.filepath)
+        if parsed is None:
+            _LAST[:] = [ctx, _functions_regex(ctx), False]
+        else:
+            _LAST[:] = [ctx, _functions_tree(parsed), True]
+    return _LAST[1]
+
+
+def _functions_tree(parsed: ParsedSource) -> list[_Function]:
+    found = []
+    for definition in definitions(parsed):
+        info = definition.function
+        body = info.body_node
+        if body is None:
+            continue
+        block = not info.expression_body
+        start, end = (body.start_byte + 1, body.end_byte - 1) if block else (body.start_byte, body.end_byte)
+        found.append(
+            _Function(
+                name=definition.name,
+                line=definition.line - 1,
+                end_line=info.span.end_line - 1,
+                body=parsed.source[start:end].decode("utf-8", "replace"),
+                block=block,
+                is_async=info.is_async,
+                is_generator=info.is_generator,
+                awaits=info.is_async and _awaits(body),
+                # Parameter properties need a constructor; decorated members
+                # are framework hooks.
+                stub_exempt=(info.kind == "method" and info.name == "constructor") or _decorated(info.node),
+            )
+        )
+    return found
+
+
+def _awaits(body) -> bool:
+    """Whether a function body awaits, outside the functions nested in it."""
+    stack = [body]
+    while stack:
+        node = stack.pop()
+        if node.type == "await_expression" or (
+            node.type == "for_in_statement" and any(c.type == "await" for c in node.children)
+        ):
+            return True
+        stack.extend(c for c in node.named_children if c.type not in FUNCTIONS)
+    return False
+
+
+def _decorated(node) -> bool:
+    """Whether a class member has decorators (a method's sit before it in the class body)."""
+    if node.parent is not None and node.parent.type == "public_field_definition":
+        node = node.parent
+    previous = node.prev_named_sibling
+    while previous is not None and previous.type == "comment":
+        previous = previous.prev_named_sibling
+    return (previous is not None and previous.type == "decorator") or any(
+        child.type == "decorator" for child in node.children
+    )
+
+
+def _functions_regex(ctx) -> list[_Function]:
+    found = []
+    for index, line in enumerate(ctx.lines):
+        name = _find_function_start(line, ctx.lines[index + 1 : index + 3])
+        if not name:
+            continue
+        brace_line = _find_opening_brace_line(ctx.lines, index, window=5)
+        end_line = (
+            None if brace_line is None else _track_brace_body(ctx.lines, brace_line, max_scan=2000)
+        )
+        found.append(
+            _Function(
+                name=name,
+                line=index,
+                end_line=end_line,
+                body=_extract_function_body(ctx.lines, index),
+                stub_exempt=index > 0 and ctx.lines[index - 1].strip().startswith("@"),
+            )
+        )
+    return found
 
 
 def _extract_async_declaration_body(lines: list[str], index: int) -> str | None:
@@ -97,6 +208,16 @@ def _extract_async_declaration_body(lines: list[str], index: int) -> str | None:
 
 def _detect_async_no_await(ctx, smell_counts: dict[str, list[dict]]) -> None:
     """Find async functions that do not use await."""
+    found = _functions(ctx)
+    if not _LAST[2]:
+        _async_no_await_regex(ctx, smell_counts)
+        return
+    for function in found:
+        if function.is_async and not function.is_generator and not function.awaits:
+            _emit(smell_counts, "async_no_await", ctx, function.line + 1, f"async {function.name} has no await")
+
+
+def _async_no_await_regex(ctx, smell_counts: dict[str, list[dict]]) -> None:
     async_re = re.compile(r"(?:async\s+function\s+(\w+)|(\w+)\s*=\s*async)")
     for index, line in enumerate(ctx.lines):
         match = async_re.search(line)
@@ -205,52 +326,37 @@ def _detect_error_no_throw(ctx, smell_counts: dict[str, list[dict]]) -> None:
 
 def _detect_high_cyclomatic_complexity(ctx, smell_counts: dict[str, list[dict]]) -> None:
     """Flag functions with cyclomatic complexity > 15."""
-    for index, line in enumerate(ctx.lines):
-        name = _find_function_start(line, ctx.lines[index + 1 : index + 3])
-        if not name:
+    for function in _functions(ctx):
+        if function.body is None:
             continue
-        body = _extract_function_body(ctx.lines, index)
-        if body is None:
-            continue
-        complexity = _compute_ts_cyclomatic_complexity(body)
+        complexity = _compute_ts_cyclomatic_complexity(function.body)
         if complexity > _HIGH_CYCLOMATIC_THRESHOLD:
             _emit(
                 smell_counts,
                 "high_cyclomatic_complexity",
                 ctx,
-                index + 1,
-                f"{name}() — cyclomatic complexity {complexity}",
+                function.line + 1,
+                f"{function.name}() — cyclomatic complexity {complexity}",
             )
 
 
 def _detect_monster_functions(ctx, smell_counts: dict[str, list[dict]]) -> None:
-    """Find functions/components exceeding 150 LOC via brace tracking."""
-    for index, line in enumerate(ctx.lines):
-        name = _find_function_start(line, ctx.lines[index + 1 : index + 3])
-        if not name:
+    """Find functions/components exceeding 150 LOC."""
+    for function in _functions(ctx):
+        if function.end_line is None:
             continue
-        brace_line = _find_opening_brace_line(ctx.lines, index, window=5)
-        if brace_line is None:
-            continue
-        end_line = _track_brace_body(ctx.lines, brace_line, max_scan=2000)
-        if end_line is None:
-            continue
-        loc = end_line - index + 1
+        loc = function.end_line - function.line + 1
         if loc > _MONSTER_FUNCTION_LOC:
-            _emit(smell_counts, "monster_function", ctx, index + 1, f"{name}() — {loc} LOC")
+            _emit(smell_counts, "monster_function", ctx, function.line + 1, f"{function.name}() — {loc} LOC")
 
 
 def _detect_nested_closures(ctx, smell_counts: dict[str, list[dict]]) -> None:
     """Find functions with many nested closure definitions."""
-    for index, line in enumerate(ctx.lines):
-        name = _find_function_start(line, ctx.lines[index + 1 : index + 3])
-        if not name:
+    for function in _functions(ctx):
+        if function.body is None:
             continue
-        body = _extract_function_body(ctx.lines, index)
-        if body is None:
-            continue
-        closure_count = _count_pattern_in_body(body, _FUNC_RE) + _count_pattern_in_body(
-            body,
+        closure_count = _count_pattern_in_body(function.body, _FUNC_RE) + _count_pattern_in_body(
+            function.body,
             _ARROW_RE,
         )
         if closure_count >= _NESTED_CLOSURE_THRESHOLD:
@@ -258,26 +364,22 @@ def _detect_nested_closures(ctx, smell_counts: dict[str, list[dict]]) -> None:
                 smell_counts,
                 "nested_closure",
                 ctx,
-                index + 1,
-                f"{name}() — {closure_count} nested closures",
+                function.line + 1,
+                f"{function.name}() — {closure_count} nested closures",
             )
 
 
 def _detect_stub_functions(ctx, smell_counts: dict[str, list[dict]]) -> None:
     """Find functions with empty or return-only bodies."""
-    for index, line in enumerate(ctx.lines):
-        if index > 0 and ctx.lines[index - 1].strip().startswith("@"):
+    for function in _functions(ctx):
+        if function.body is None or not function.block or function.stub_exempt:
             continue
-        name = _find_function_start(line, ctx.lines[index + 1 : index + 3])
-        if not name:
-            continue
-        body = _extract_function_body(ctx.lines, index, max_scan=30)
-        if body is None:
-            continue
-        body_clean = _strip_ts_comments(body).strip().rstrip(";")
+        body_clean = _strip_ts_comments(function.body).strip().rstrip(";")
         if body_clean in ("", "return", "return null", "return undefined"):
             label = body_clean or "empty"
-            _emit(smell_counts, "stub_function", ctx, index + 1, f"{name}() — body is {label}")
+            _emit(
+                smell_counts, "stub_function", ctx, function.line + 1, f"{function.name}() — body is {label}"
+            )
 
 
 __all__ = [

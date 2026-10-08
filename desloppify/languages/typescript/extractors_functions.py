@@ -9,6 +9,10 @@ from pathlib import Path
 
 from desloppify.base.discovery.paths import get_project_root
 from desloppify.engine.detectors.base import FunctionInfo
+from desloppify.languages.typescript.syntax.nodes import PARAMETERS, binding_names
+from desloppify.languages.typescript.syntax.queries import FunctionInfo as SyntaxFunctionInfo
+from desloppify.languages.typescript.syntax.queries import definitions
+from desloppify.languages.typescript.syntax.tree import ParsedSource, parsed_file
 
 logger = logging.getLogger(__name__)
 
@@ -127,7 +131,76 @@ def _extract_signature(lines: list[str], start_line: int, end_line: int) -> str:
 
 
 def extract_ts_functions(filepath: str) -> list[FunctionInfo]:
-    """Extract function/component bodies from a TS/TSX file."""
+    """Extract function/component bodies from a TS/TSX file.
+
+    Named definitions from the syntax tree (declarations, variable-bound
+    functions, class members); functions nested in one are part of its body,
+    and ``obj.member = function`` implementations are left out.
+    Without tree-sitter a line regex finds top-level-looking declarations.
+    """
+    parsed = parsed_file(filepath)
+    if parsed is None:
+        return _extract_ts_functions_regex(filepath)
+    functions = []
+    covered_until = -1
+    for definition in definitions(parsed):
+        if definition.start < covered_until:
+            continue
+        info = definition.function
+        if _is_member_assignment(info):
+            continue
+        covered_until = info.span.end_byte
+        source = parsed.source
+        start = source.rfind(b"\n", 0, definition.start) + 1
+        end = source.find(b"\n", covered_until)
+        body = source[start : len(source) if end == -1 else end].decode("utf-8", "replace")
+        normalized = normalize_ts_body(body)
+        if len(normalized.splitlines()) < 3:
+            continue
+        end_line = info.span.end_line
+        functions.append(
+            FunctionInfo(
+                name=definition.name,
+                file=filepath,
+                line=definition.line,
+                end_line=end_line,
+                loc=end_line - definition.line + 1,
+                body=body,
+                normalized=normalized,
+                body_hash=hashlib.md5(normalized.encode(), usedforsecurity=False).hexdigest(),
+                params=_param_names(parsed, info),
+                default_export=info.default_export,
+            )
+        )
+    return functions
+
+
+def _is_member_assignment(info: SyntaxFunctionInfo) -> bool:
+    """``obj.method = function () {}``: an implementation of a member, which varies by design."""
+    parent = info.node.parent  # type: ignore[attr-defined]
+    if parent is None or parent.type != "assignment_expression":
+        return False
+    target = parent.child_by_field_name("left")
+    return target is None or target.type != "identifier"
+
+
+def _param_names(parsed: ParsedSource, info: SyntaxFunctionInfo) -> list[str]:
+    """Parameter names; a destructured parameter contributes the names it binds."""
+    names: list[str] = []
+    for param in info.params:
+        node = param.node
+        pattern = node.child_by_field_name("pattern") if node.type in PARAMETERS else node  # type: ignore[attr-defined]
+        if pattern is None or pattern.type == "this":
+            continue
+        if pattern.type in ("object_pattern", "array_pattern"):
+            bound = sorted(binding_names(pattern), key=lambda n: n.start_byte)
+            names.extend(parsed.text(n) for n in bound)
+        else:
+            names.append(param.name)
+    return names
+
+
+def _extract_ts_functions_regex(filepath: str) -> list[FunctionInfo]:
     p = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
     try:
         content = p.read_text()
