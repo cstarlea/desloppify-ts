@@ -18,8 +18,9 @@ def fix_empty_if_chain(
     def transform(
         lines: list[str],
         file_entries: list[dict[str, Any]],
-    ) -> tuple[list[str], list[str]]:
+    ) -> tuple[list[str], list[dict[str, Any]]]:
         lines_to_remove: set[int] = set()
+        fixed: list[dict[str, Any]] = []
 
         for e in file_entries:
             line_idx = e["line"] - 1
@@ -29,9 +30,10 @@ def fix_empty_if_chain(
             end = _find_if_chain_end(lines, line_idx)
             for idx in range(line_idx, end + 1):
                 lines_to_remove.add(idx)
+            fixed.append(e)
 
         new_lines = collapse_blank_lines(lines, lines_to_remove)
-        return new_lines, ["empty_if_chain"]
+        return new_lines, fixed
 
     return FixResult(entries=apply_fixer(entries, transform, dry_run=dry_run))
 

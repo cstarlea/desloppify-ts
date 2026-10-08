@@ -24,10 +24,10 @@ needs_treesitter = pytest.mark.skipif(
 def _fix(source: str, *names_and_lines: tuple[str, int], path: str = "a.ts"):
     parsed = parse_text(source, path)
     entries = [{"name": name, "line": line} for name, line in names_and_lines]
-    out, removed = remove_unused_imports(parsed, entries)
+    out, fixed = remove_unused_imports(parsed, entries)
     text = out.decode("utf-8")
     assert count_syntax_errors(text, path) == 0, text
-    return text, removed
+    return text, [entry["name"] for entry in fixed]
 
 
 @needs_treesitter
@@ -132,7 +132,7 @@ def test_remove_unused_imports(source, targets, expected):
 
 
 @needs_treesitter
-def test_removed_names_follow_entry_order_and_skip_misses():
+def test_fixed_entries_follow_entry_order_and_skip_misses():
     _text, removed = _fix(
         "import { a, b } from 'x';\nimport { c } from 'y';\nuse(b);\n",
         ("c", 2),

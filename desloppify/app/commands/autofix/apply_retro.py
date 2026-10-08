@@ -5,10 +5,10 @@ from __future__ import annotations
 import shutil
 import subprocess  # nosec B404
 import sys
+from collections import Counter
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from desloppify.base.discovery.file_paths import rel
 from desloppify.base.output.terminal import colorize
 from desloppify.languages.framework import FixResult
 
@@ -17,22 +17,31 @@ if TYPE_CHECKING:
 
 
 def _resolve_fixer_results(
-    state: dict, results: list[dict], detector: str, fixer_name: str
+    state: dict, results: list[dict], entries: list[dict], fixer_name: str
 ) -> list[str]:
+    """Mark issues fixed when every detected entry behind them was fixed.
+
+    Fixers report the ``issue_id`` of each entry they fixed. Some issues
+    group several entries (all ``[TAG]`` logs in a file, all matches of a
+    smell in a file), so one skipped entry keeps its issue open.
+    """
     work_items = state.get("work_items") or state.get("issues", {})
     state["work_items"] = work_items
     state["issues"] = work_items
+    detected = Counter(e["issue_id"] for e in entries if e.get("issue_id"))
+    fixed = Counter(
+        issue_id for result in results for issue_id in result.get("fixed_issue_ids", [])
+    )
     resolved_ids = []
-    for result in results:
-        result_file = rel(result["file"])
-        for symbol in result.get("removed", []):
-            issue_id = f"{detector}::{result_file}::{symbol}"
-            if issue_id in work_items and work_items[issue_id]["status"] == "open":
-                work_items[issue_id]["status"] = "fixed"
-                work_items[issue_id]["note"] = (
-                    f"auto-fixed by desloppify autofix {fixer_name}"
-                )
-                resolved_ids.append(issue_id)
+    for issue_id, count in fixed.items():
+        if count < detected.get(issue_id, count):
+            continue
+        issue = work_items.get(issue_id)
+        if issue is None or issue.get("status") != "open":
+            continue
+        issue["status"] = "fixed"
+        issue["note"] = f"auto-fixed by desloppify autofix {fixer_name}"
+        resolved_ids.append(issue_id)
     return resolved_ids
 
 
@@ -109,9 +118,7 @@ def _cascade_unused_import_cleanup(
             "green",
         )
     )
-    resolved = _resolve_fixer_results(
-        state, results, fixer.detector, "cascade-unused-imports"
-    )
+    resolved = _resolve_fixer_results(state, results, entries, "cascade-unused-imports")
     if resolved:
         print(f"  Cascade: auto-resolved {len(resolved)} import issues")
 

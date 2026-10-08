@@ -86,7 +86,7 @@ def _apply_and_report(
     state_file = state_path(args)
     state = state_mod.load_state(state_file)
     prev = state_mod.score_snapshot(state)
-    resolved_ids = _resolve_fixer_results(state, results, fixer.detector, fixer_name)
+    resolved_ids = _resolve_fixer_results(state, results, entries, fixer_name)
     state_mod.save_state(state, state_file)
 
     new = state_mod.score_snapshot(state)

@@ -18,6 +18,7 @@ __all__ = [
     "issue_suppression_fingerprint",
     "remove_ignored_issues",
     "add_ignore",
+    "issue_id",
     "make_issue",
 ]
 
@@ -243,6 +244,12 @@ def add_ignore(state: StateModel, pattern: str) -> int:
     return remove_ignored_issues(state, pattern)
 
 
+def issue_id(detector: str, file: str, name: str) -> str:
+    """The stable ID ``make_issue`` gives an issue."""
+    rfile = rel(file)
+    return f"{detector}::{rfile}::{name}" if name else f"{detector}::{rfile}"
+
+
 def make_issue(
     detector: str,
     file: str,
@@ -255,10 +262,9 @@ def make_issue(
 ) -> Issue:
     """Create a normalized issue dict with a stable ID."""
     rfile = rel(file)
-    issue_id = f"{detector}::{rfile}::{name}" if name else f"{detector}::{rfile}"
     now = utc_now()
     issue: Issue = {
-        "id": issue_id,
+        "id": issue_id(detector, file, name),
         "detector": detector,
         "file": rfile,
         "tier": tier,

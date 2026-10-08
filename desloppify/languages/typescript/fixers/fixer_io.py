@@ -33,7 +33,12 @@ def _group_entries(entries: list[dict], file_key: str) -> dict[str, list[dict]]:
 def apply_fixer(
     entries: list[dict], transform_fn, *, dry_run: bool = False, file_key: str = "file"
 ) -> list[dict]:
-    """Shared file-loop template for fixers."""
+    """Shared file-loop template for fixers.
+
+    ``transform_fn(lines, file_entries)`` returns the new lines and the
+    entries it fixed. Each result lists their display names under
+    ``removed`` and their ``issue_id``s under ``fixed_issue_ids``.
+    """
     by_file = _group_entries(entries, file_key)
     results = []
     skipped_files: list[tuple[str, str]] = []
@@ -90,7 +95,7 @@ def _process_fixer_file(
     original = raw.removeprefix(_UTF8_BOM).replace("\r\n", "\n")
     lines = original.splitlines(keepends=True)
 
-    new_lines, removed_names = transform_fn(lines, file_entries)
+    new_lines, fixed = transform_fn(lines, file_entries)
     new_content = "".join(new_lines)
     if new_content == original:
         return None
@@ -110,12 +115,27 @@ def _process_fixer_file(
     lines_removed = len(original.splitlines()) - len(new_content.splitlines())
     result: dict[str, object] = {
         "file": filepath,
-        "removed": removed_names,
+        "removed": list(dict.fromkeys(_display_name(item) for item in fixed)),
+        "fixed_issue_ids": [
+            item["issue_id"]
+            for item in fixed
+            if isinstance(item, dict) and item.get("issue_id")
+        ],
         "lines_removed": lines_removed,
     }
     if dry_run:
         result["diff"] = unified_diff(rel(filepath), original, new_content)
     return result
+
+
+def _display_name(item: dict | str) -> str:
+    if isinstance(item, str):
+        return item
+    for key in ("name", "tag", "smell_id"):
+        value = item.get(key)
+        if value:
+            return str(value)
+    return "fixed"
 
 
 def unified_diff(label: str, before: str, after: str) -> str:

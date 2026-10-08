@@ -30,6 +30,7 @@ def fix_debug_logs(entries: list[dict], *, dry_run: bool = False) -> FixResult:
 
     def _transform(lines: list[str], file_entries: list[dict]):
         lines_to_remove: set[int] = set()
+        fixed: list[dict] = []
         for entry in file_entries:
             start = entry["line"] - 1
             if start < 0 or start >= len(lines):
@@ -52,12 +53,12 @@ def fix_debug_logs(entries: list[dict], *, dry_run: bool = False) -> FixResult:
             for idx in range(start, end + 1):
                 lines_to_remove.add(idx)
             mark_orphaned_comments(lines, start, lines_to_remove)
+            fixed.append(entry)
 
         lines_to_remove |= find_dead_log_variables(lines, lines_to_remove)
         new_lines = collapse_blank_lines(lines, lines_to_remove)
         new_lines = remove_empty_blocks(new_lines)
-        tags = sorted(set(entry.get("tag", "") for entry in file_entries))
-        return new_lines, tags
+        return new_lines, sorted(fixed, key=lambda entry: entry.get("tag", ""))
 
     raw_results = apply_fixer(entries, _transform, dry_run=dry_run)
     return FixResult(
@@ -68,6 +69,7 @@ def fix_debug_logs(entries: list[dict], *, dry_run: bool = False) -> FixResult:
                 "tags": result["removed"],
                 "lines_removed": result["lines_removed"],
                 "log_count": len(entries_by_file.get(result["file"], [])),
+                "fixed_issue_ids": result["fixed_issue_ids"],
                 **({"diff": result["diff"]} if "diff" in result else {}),
             }
             for result in raw_results
