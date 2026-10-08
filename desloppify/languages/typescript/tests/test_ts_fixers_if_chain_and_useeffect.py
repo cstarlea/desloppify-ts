@@ -54,6 +54,10 @@ class TestFixEmptyIfChain:
 # =====================================================================
 
 
+@pytest.mark.skipif(
+    importlib.util.find_spec("tree_sitter_language_pack") is None,
+    reason="the dead-useeffect fixer needs tree-sitter",
+)
 class TestFixDeadUseEffect:
     """Tests for fix_dead_useeffect()."""
 
@@ -74,8 +78,8 @@ class TestFixDeadUseEffect:
         assert "useEffect" not in content
         assert "const x = 1;" in content
 
-    def test_removes_preceding_comment(self, tmp_path):
-        """A comment immediately before the useEffect is also removed."""
+    def test_keeps_preceding_comment(self, tmp_path):
+        """A comment immediately before the useEffect stays (FX-17)."""
         ts_file = tmp_path / "comp.tsx"
         ts_file.write_text(
             textwrap.dedent("""\
@@ -87,9 +91,7 @@ class TestFixDeadUseEffect:
         )
         entries = [{"file": str(ts_file), "line": 2, "content": "useEffect(() => {"}]
         _ = fix_dead_useeffect(entries, dry_run=False)
-        content = ts_file.read_text()
-        assert "Load data" not in content
-        assert "useEffect" not in content
+        assert ts_file.read_text() == "// Load data on mount\nconst x = 1;\n"
 
     def test_dry_run(self, tmp_path):
         """dry_run=True does not modify the file."""

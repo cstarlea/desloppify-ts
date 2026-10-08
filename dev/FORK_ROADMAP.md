@@ -12,7 +12,7 @@ The fork (`cstarlea/desloppify`) is a **TypeScript/JavaScript-only** code-health
 
 **Accuracy.** The resolver and graph work (Milestones 0 and 1) removed most of the false positives that made upstream v1.0 untrustworthy on real repos:
 
-- unused-imports, unused-vars, unused-params, debug-logs and empty-if-chain edit syntax-tree nodes and run without `--unsafe`; no fixer is marked unsafe now. dead-useeffect still edits by line and was never behind the gate (2.3). Every fixer and `move` refuses to write output that parses worse than its input, and round-trip property tests cover every fixer (#30).
+- Every fixer (unused-imports, unused-vars, unused-params, debug-logs, empty-if-chain and dead-useeffect) edits syntax-tree nodes and runs without `--unsafe`; no fixer is marked unsafe now (2.3, #32). Every fixer and `move` refuses to write output that parses worse than its input, and round-trip property tests cover every fixer (#30).
 - tsc and knip run correctly and report reduced coverage instead of silent zeros.
 - Imports come from the tree-sitter syntax tree.
 - One `ModuleResolver` handles tsconfig `paths`/`extends`/`references`, workspaces and package `exports`, and is shared by the graph, test coverage and `move`.
@@ -58,6 +58,7 @@ The fork (`cstarlea/desloppify`) is a **TypeScript/JavaScript-only** code-health
 | #28 | Params fixer renames every name of an "(all destructured elements)" pattern (2.3) |
 | #29 | Resilient `plan.json` loading, the plan counterpart of #25 (2.19) |
 | #30 | Fixer round-trip property tests; fixes for mixed line endings in `fixer_io` and `byte_offset` after CR/U+2028/U+2029 (2.4) |
+| #32 | AST dead-useeffect fixer, the last line-based fixer (2.3, FX-17) |
 
 ---
 
@@ -67,13 +68,13 @@ Effort: S < 1 day, M a few days, L 1–2 weeks, XL multi-week. IDs in brackets r
 
 ### 2A. AST-based fixers: remove the `--unsafe` gate (Milestone 2)
 
-Every adversarial input in the original review broke one of the line-regex fixers. Five of the six now edit syntax-tree nodes and no longer need `--unsafe` (#17, #19, #20, #23, #24). The flag and gate stay for future fixers. dead-useeffect is the one line-based fixer left, and it was never behind the gate.
+Every adversarial input in the original review broke one of the line-regex fixers. All six now edit syntax-tree nodes and none needs `--unsafe` (#17, #19, #20, #23, #24, #32). The flag and gate stay for future fixers.
 
 | # | Item | Effort | Findings |
 |---|---|---|---|
 | 2.1 | Shared typed TS AST helper: parse once per file through the parse cache; queries for functions, classes, imports and JSX; regex kept only as a fallback without tree-sitter | L | AR-2 |
 | 2.2 | **Done (#16)**, except `--verify`. Output validation gate for every fixer and `move`: parse before and after, refuse to write if the parse-error count rises, and show a real unified diff in `--dry-run`. Optional `--verify` runs `tsc --noEmit` and reverts on new errors | M | FX-11 |
-| 2.3 | **Done for unused-imports (#17), unused-vars (#19), unused-params (#20, #27, #28), debug-logs (#23) and empty-if-chain (#24); none needs `--unsafe`.** Outstanding: **dead-useeffect** (`fixers/useeffect.py`) still deletes whole lines found by brace counting, and it was never marked unsafe, so it writes without `--unsafe` today. Known bugs, strict xfails in `test_ts_fixer_roundtrip.py` since #30: it edits `useEffect` text inside template strings, and `useEffect(...); const later = 1;` loses the whole line. It also deletes the `//` line above an effect (FX-17). Rewrite it on the syntax tree, matching the other fixers | M | FX-17 |
+| 2.3 | **Done for unused-imports (#17), unused-vars (#19), unused-params (#20, #27, #28), debug-logs (#23), empty-if-chain (#24) and dead-useeffect (#32); none needs `--unsafe`.** Every fixer now edits syntax-tree nodes. dead-useeffect removes only a standalone `useEffect`/`React.useEffect` statement with an empty, comment-free callback and deps that only read values; it leaves template strings, code sharing the line and the `//` line above alone (FX-17) | M | FX-17 |
 | 2.4 | **Done (#30).** Fixer round-trip property tests: output parses, a second run is a no-op, CRLF/BOM/mode are preserved, and no new `tsc` errors appear. Seeded with the adversarial cases in the appendix. They found and fixed mixed-line-ending rewrites in `fixer_io` and `byte_offset` miscounting lines after CR/U+2028/U+2029 | M | FX-19 |
 | 2.5 | **Done (#18).** Fixers return the exact issue IDs they fixed, so autofix resolves the right issues | S | FX-16 |
 | 2.26 | unused-vars: nested patterns. `const { a: { b } } = o` with `b` unused is skipped as `would_empty_pattern`, because the emptied inner pattern isn't a declarator. Remove the enclosing `a: { … }` member instead | S | FX-8 |
@@ -207,7 +208,7 @@ Status key: **done** (with PR), **partial** (what's left is in §2), **open**, *
 | FX-14 | medium | Write path loses CRLF, symlinks, mode, encoding | done (#1) |
 | FX-15 | medium | `_categorize_unused` defaults to "imports" | done (#1, #26) |
 | FX-16 | low | Autofix resolves the wrong issue IDs | done (#18) |
-| FX-17 | low | dead-useeffect deletes the preceding `//` line | open → 2.3 |
+| FX-17 | low | dead-useeffect deletes the preceding `//` line | done (#32) |
 | FX-18 | low | BOM hides the line-1 import (fails safe) | done (#1 strips the BOM before fixing; #30 adds a round-trip case) |
 | FX-19 | medium | No adversarial or round-trip fixer tests | done (#30) |
 
