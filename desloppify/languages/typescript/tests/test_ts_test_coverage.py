@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 import desloppify.languages.typescript.detectors.deps.resolve as deps_resolve_mod
+import desloppify.languages.typescript.test_coverage as ts_coverage_mod
 from desloppify.engine.detectors.coverage.mapping import import_based_mapping, naming_based_mapping
 from desloppify.languages.typescript.detectors.deps.imports import ImportExtractor
 from desloppify.languages.typescript.detectors.deps.resolver import clear_resolver_cache
@@ -97,6 +98,21 @@ def test_imported_name_is_credited_to_its_definition_through_any_depth(tmp_path)
     production = set(files.values())
     assert imported_definitions(test, production) == {files["impl"]}
     assert files["impl"] in import_based_mapping({}, {test}, production, "typescript")
+
+
+@needs_treesitter
+def test_barrel_siblings_of_an_imported_name_are_not_credited(tmp_path, monkeypatch):
+    files = _chain_project(tmp_path)
+    test = _touch(tmp_path, "test/parse.test.ts", "import { parse } from '../src';\nparse(' a ');\n")
+    production = set(files.values())
+    graph = {test: {"imports": {files["index"]}}, files["index"]: {"imports": {files["api"], files["other"]}}}
+    tested = import_based_mapping(graph, {test}, production, "typescript")
+    assert files["impl"] in tested
+    assert files["other"] not in tested
+
+    # Without tree-sitter the name-blind barrel and facade hops remain the fallback.
+    monkeypatch.setattr(ts_coverage_mod, "follows_reexport_names", lambda: False)
+    assert files["other"] in import_based_mapping(graph, {test}, production, "typescript")
 
 
 @needs_treesitter
