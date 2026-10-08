@@ -89,7 +89,6 @@ class ScanDiff(TypedDict):
     suspect_detectors: list[str]
     chronic_reopeners: list[dict]
     skipped_other_lang: int
-    resolved_out_of_scope: int
     ignored: int
     ignore_patterns: int
     raw_issues: int

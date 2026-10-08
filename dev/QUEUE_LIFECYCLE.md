@@ -46,7 +46,7 @@ Temporary skips therefore **block the scan step** until one of these happens:
 
 - `plan unskip` reactivates them;
 - `plan backlog` drops them from the plan, and the issues reopen;
-- `plan skip --permanent` makes the skips permanent (but see the first known gap below);
+- `plan skip --permanent --deferred-only "*"` makes them wontfix (the item's suggested command; without `--deferred-only`, `"*"` would also wontfix every open issue);
 - they resolve on their own. A deferred issue whose finding a scan confirms gone becomes `auto_resolved`, and reconcile supersedes its skip entry.
 
 ### After a scan
@@ -83,7 +83,9 @@ Temporary skips therefore **block the scan step** until one of these happens:
 | `triaged_out` | Triage dismissal |
 | `auto_resolved` | A scan confirming the finding is gone |
 
-The status mapping for skip kinds is `skip_kind_state_status()` in `engine/_plan/skip_policy.py`. Manual changes go through `resolve_issues()` in `engine/_state/resolution.py`, which only matches issues that are currently `open`, except when it is reopening them.
+The status mapping for skip kinds is `skip_kind_state_status()` in `engine/_plan/skip_policy.py`. Manual changes go through `resolve_issues()` in `engine/_state/resolution.py`. By default it only matches issues that are currently `open`, except when it is reopening them.
+
+`plan skip` changes issues that are `open`, `deferred` or `triaged_out` (`SKIPPABLE_STATUSES`), so a deferred issue can later be made `wontfix` or `false_positive`. It leaves `wontfix`, `false_positive`, `fixed` and `auto_resolved` issues alone, in state and in the plan; to change one, reopen it first with `plan unskip` (`--force` for a skip with a note). `--deferred-only` restricts it to issues that already have a temporary skip.
 
 ### What a scan does to existing issues
 
@@ -101,16 +103,16 @@ Before any of that, the scan skips these issues:
 - issues whose detector is suspect, i.e. it had open issues before and apparently didn't run this time (`find_suspect_detectors`);
 - issues matching an exclusion.
 
-Issues outside the scan's `--path` are never confirmed.
+Issues outside the scan's `--path` are never confirmed, and nothing about them changes.
 
 | Status before | Finding absent | Finding present again |
 |---|---|---|
 | `open`, `deferred`, `triaged_out` | `auto_resolved` once confirmed. The note records the old status | No change |
 | `wontfix` | Stays `wontfix`. Once confirmed, it gets `resolution_attestation.scan_verified`, and its note is kept | Stays `wontfix`. `scan_verified` is cleared, so strict and verified count it again |
-| `fixed`, `false_positive` | Stays as is. Marked `scan_verified` on any absence, even an unconfirmed one (see the known gaps) | Reopened as `open`, with `reopen_count` + 1 and the attestation dropped |
+| `fixed`, `false_positive` | Stays as is. Once confirmed, it gets `resolution_attestation.scan_verified`, and its note is kept | Reopened as `open`, with `reopen_count` + 1 and the attestation dropped |
 | `auto_resolved` | No change | Reopened as `open` |
 
-A scan never changes a `wontfix` status. `scan_verified` is what lets a gone wontfix stop counting against strict and verified (`issue_counts_as_failure`). Separately, the scan adds a `stale_wontfix` work item for a wontfix whose finding is still present when either:
+A scan never changes a `wontfix` status. `scan_verified` is what lets a gone wontfix stop counting against strict and verified, and a gone `fixed` or `false_positive` stop counting against verified (`issue_counts_as_failure`). A scan that confirms an already-marked issue again leaves it alone. Separately, the scan adds a `stale_wontfix` work item for a wontfix whose finding is still present when either:
 
 - `wontfix_decay_scans` scans (config, default 20) have passed since it was marked wontfix;
 - a structural finding has grown by at least 10 complexity or 50 LOC.
@@ -148,10 +150,3 @@ A file that can't be used is handled like this:
 3. `.bak` isn't rotated again until a clean file has been written.
 
 The rename and restore run under the file's lock, or in memory only if the lock stays busy for 5 s. A quarantined issue drops out of the scores at the next save, since every save recomputes them. A rescan that still finds the issue adds it back.
-
-## Known gaps
-
-These are tracked in `dev/FORK_ROADMAP.md` as 2.38 and 2.39.
-
-- **`plan skip --permanent` on a deferred issue leaves it `deferred`.** `resolve_issues()` matches only `open` issues, so the state status doesn't change while the plan entry becomes `permanent`. The issue then keeps failing lenient. The deferred-disposition item suggests exactly this command.
-- **`fixed` and `false_positive` are marked `scan_verified` on any absence.** That includes absences where their detector didn't run, and issues outside the scan's `--path`, so verified can credit a fix that no detector confirmed.

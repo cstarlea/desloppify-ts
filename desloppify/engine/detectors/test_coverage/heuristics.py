@@ -47,6 +47,15 @@ def _has_inline_tests(filepath: str, lang_name: str) -> bool:
     return False
 
 
+def _public_entry_files(production_files: set[str], lang_name: str) -> set[str]:
+    """Production files that are the package's public API (package.json entries)."""
+    mod = _load_lang_test_coverage_module(lang_name)
+    hook = getattr(mod, "public_entry_files", None)
+    if not callable(hook):
+        return set()
+    return set(hook(production_files)) & production_files
+
+
 def _is_runtime_entrypoint(filepath: str, lang_name: str) -> bool:
     """Best-effort runtime entrypoint detection for no-tests classification."""
     read_result = read_coverage_file(filepath, context="runtime_entrypoint")

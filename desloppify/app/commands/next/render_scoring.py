@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from desloppify.engine._state.issue_semantics import is_review_finding
+from desloppify.engine.scoring import is_loc_weighted_dimension
 
 
 def _normalized_dimension_key(value: str | None) -> str:
@@ -54,11 +55,20 @@ def render_dimension_context(
     if dimension is None or dimension_score is None:
         return
     strict_val = dimension_score.get("strict", dimension_score["score"])
+    failing = dimension_score.get("failing", 0)
+    checks = dimension_score["checks"]
+    if is_loc_weighted_dimension(dimension_score):
+        weighted = sum(
+            float(d.get("weighted_failures", 0.0) or 0.0)
+            for d in dimension_score.get("detectors", {}).values()
+        )
+        counts = f"{failing} issues; {weighted:,.0f} of {checks:,} √LOC weight failing"
+    else:
+        counts = f"{failing} of {checks:,} checks failing"
     print(
         colorize_fn(
             f"\n  Dimension: {dimension.name} — {dimension_score['score']:.1f}% "
-            f"(strict: {strict_val:.1f}%) "
-            f"({dimension_score.get('failing', 0)} of {dimension_score['checks']:,} checks failing)",
+            f"(strict: {strict_val:.1f}%) ({counts})",
             "dim",
         )
     )

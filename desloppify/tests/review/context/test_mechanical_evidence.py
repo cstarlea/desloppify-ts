@@ -621,8 +621,11 @@ class TestMechanicalStaleness:
         # (open issues are now user-controlled and skip verification)
         state["work_items"]["structural::big.py::large_file"]["status"] = "fixed"
 
-        # Second scan: structural issue absent → scan-verified, detector changed
-        merge_scan(state, [], MergeScanOptions(force_resolve=True))
+        # Second scan: structural ran and the issue is absent → scan-verified,
+        # detector changed
+        merge_scan(
+            state, [], MergeScanOptions(force_resolve=True, potentials={"structural": 1})
+        )
 
         dc = state["subjective_assessments"]["design_coherence"]
         assert dc["needs_review_refresh"] is True

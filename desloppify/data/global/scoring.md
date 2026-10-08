@@ -83,7 +83,7 @@ For smells, security, test_coverage, nextjs and next_lint (plus some excluded or
 - 3–5 issues: up to 1.5;
 - 6 or more issues: up to 2.0.
 
-`test_coverage` works differently. Each scorable file contributes `min(sqrt(LOC), 50)` to the potential, and its issues fail by at most that same weight. That makes a large untested file cost more than a small one.
+`test_coverage` works differently. Each scorable file contributes `min(sqrt(LOC), 50)` to the potential, and its issues fail by at most that same weight. That makes a large untested file cost more than a small one. Files shorter than 10 lines aren't scored at all, so a fix that shrinks every remaining file below that leaves Test health with nothing to check, and the dimension drops out of the score.
 
 ## Subjective dimensions
 
@@ -116,9 +116,13 @@ The three modes differ only in which issue statuses count as failures. `issue_co
 
 - **Lenient** (overall, objective) counts only work you haven't done.
 - **Strict** also counts debt you accepted with `wontfix`, for as long as the finding is still there. The gap between overall and strict is your wontfix debt.
-- **Verified** also counts a manual `fixed` or `false_positive` until a later scan stops reporting it. It covers the mechanical dimensions only.
+- **Verified** also counts a manual `fixed` or `false_positive` until a later scan confirms the finding is gone. It covers the mechanical dimensions only.
 
-"Confirmed gone" is recorded on the issue as `resolution_attestation.scan_verified`. A scan never changes a `wontfix` status. When the finding disappears, the scan sets the mark, and if the finding comes back, it clears the mark and the issue counts again. `auto_resolved` means a scan confirmed the finding is gone, so it never counts. When a scan confirms an `open`, `deferred` or `triaged_out` issue is gone, it becomes `auto_resolved`. `dev/QUEUE_LIFECYCLE.md` in the repository says exactly what counts as confirmation.
+"Confirmed gone" means the issue's detector ran and no longer reports it, the zone policy now skips that detector for the file, or the file is gone. `dev/QUEUE_LIFECYCLE.md` in the repository gives the details.
+
+- A confirmed `open`, `deferred` or `triaged_out` issue becomes `auto_resolved`. `auto_resolved` never counts.
+- A confirmed `wontfix`, `fixed` or `false_positive` issue keeps its status, and the scan records `resolution_attestation.scan_verified` on it. A scan never changes a `wontfix` status: if the finding comes back, the scan clears the mark and the issue counts again. A `fixed` or `false_positive` issue whose finding comes back is reopened.
+- An absence that isn't confirmed changes nothing, so the mark stays as it was. That covers a detector that didn't run and a file outside the scan's `--path`.
 
 **Fixing every finding and rescanning brings objective and verified to 100.** Overall and strict also need the subjective dimensions to be assessed.
 
