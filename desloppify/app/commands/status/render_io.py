@@ -8,6 +8,7 @@ from desloppify.app.commands.helpers.query import write_query
 from desloppify.base.output.terminal import colorize, print_table
 from desloppify.engine._state.filtering import open_scope_breakdown
 from desloppify.engine._scoring.results.core import compute_health_breakdown
+from desloppify.state_scoring import headline_score
 
 
 def _status_plan_payload(plan: dict | None) -> dict:
@@ -116,6 +117,7 @@ def write_status_query(request: StatusQueryRequest) -> None:
             "objective_score": objective_score,
             "strict_score": strict_score,
             "verified_strict_score": verified_strict_score,
+            "headline": headline_score(state)._asdict(),
             "dimension_scores": dim_scores,
             "scorecard_dimensions": scorecard_dims,
             "subjective_measures": subjective_measures,

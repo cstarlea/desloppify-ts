@@ -29,7 +29,7 @@ from desloppify.engine._work_queue.context import queue_context
 from desloppify.engine.plan_state import load_plan
 from desloppify.intelligence.narrative.core import NarrativeContext, compute_narrative
 from desloppify.state_io import StateModel
-from desloppify.state_scoring import ScoreSnapshot, score_snapshot
+from desloppify.state_scoring import ScoreSnapshot, score_snapshot, subjective_unassessed
 
 from .render import (
     StatusQueryRequest,
@@ -154,6 +154,7 @@ def print_score_section(
             strict_score=scores.strict,
             verified_strict_score=scores.verified,
             target_strict=target_strict_score,
+            provisional=subjective_unassessed(state),
         ):
             print(colorize(line, style))
         try:
