@@ -20,8 +20,9 @@ def fix_dead_useeffect(
     def transform(
         lines: list[str],
         file_entries: list[dict[str, Any]],
-    ) -> tuple[list[str], list[str]]:
+    ) -> tuple[list[str], list[dict[str, Any]]]:
         lines_to_remove: set[int] = set()
+        fixed: list[dict[str, Any]] = []
 
         for e in file_entries:
             line_idx = e["line"] - 1
@@ -38,8 +39,9 @@ def fix_dead_useeffect(
             # Remove preceding comment if orphaned
             if line_idx > 0 and lines[line_idx - 1].strip().startswith("//"):
                 lines_to_remove.add(line_idx - 1)
+            fixed.append(e)
 
         new_lines = collapse_blank_lines(lines, lines_to_remove)
-        return new_lines, ["dead_useeffect"]
+        return new_lines, fixed
 
     return FixResult(entries=apply_fixer(entries, transform, dry_run=dry_run))

@@ -11,6 +11,11 @@ from desloppify.engine._state.filtering import make_issue
 from desloppify.state_io import Issue
 
 
+def unused_issue_name(entry: dict) -> str:
+    """Issue name for one unused-detector entry: ``<symbol>:<line>``."""
+    return f"{entry['name']}:{entry['line']}"
+
+
 def make_unused_issues(entries: list[dict], stderr_fn) -> list[Issue]:
     """Transform raw unused-detector entries into normalized issues.
 
@@ -23,7 +28,7 @@ def make_unused_issues(entries: list[dict], stderr_fn) -> list[Issue]:
             make_issue(
                 "unused",
                 e["file"],
-                f"{e['name']}:{e['line']}",
+                unused_issue_name(e),
                 tier=tier,
                 confidence="high",
                 summary=f"Unused {e['category']}: {e['name']}",

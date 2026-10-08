@@ -47,12 +47,12 @@ def test_typescript_detector_surface_splits_cli_and_analysis_roles() -> None:
 
 
 def test_ts_fixer_helpers_and_registry(monkeypatch) -> None:
-    monkeypatch.setattr(ts_fixers_mod.unused_detector_mod, "detect_unused", lambda _path, category: ([{"name": category}], 1))
+    monkeypatch.setattr(ts_fixers_mod.unused_detector_mod, "detect_unused", lambda _path, category: ([{"file": "a.ts", "name": category, "line": 3}], 1))
     monkeypatch.setattr(
         ts_fixers_mod.logs_detector_mod,
         "detect_logs",
         lambda _path: DetectorResult(
-            entries=[{"name": "log"}],
+            entries=[{"file": "a.ts", "name": "log", "tag": "DEBUG"}],
             population_kind="files",
             population_size=1,
         ),
@@ -62,8 +62,8 @@ def test_ts_fixer_helpers_and_registry(monkeypatch) -> None:
         "detect_smells",
         lambda _path: (
             [
-                {"id": "dead_useeffect", "matches": [{"name": "effect"}]},
-                {"id": "empty_if_chain", "matches": [{"name": "if"}]},
+                {"id": "dead_useeffect", "matches": [{"file": "a.ts", "name": "effect"}]},
+                {"id": "empty_if_chain", "matches": [{"file": "a.ts", "name": "if"}]},
             ],
             2,
         ),
@@ -96,9 +96,13 @@ def test_ts_fixer_helpers_and_registry(monkeypatch) -> None:
 
     monkeypatch.setattr(ts_fixers_mod, "_ts_fixers_mod", lambda: _Fixers)
 
-    assert ts_fixers_mod._det_unused("imports")(Path("."))[0]["name"] == "imports"
-    assert ts_fixers_mod._det_logs(Path("."))[0]["name"] == "log"
-    assert ts_fixers_mod._det_smell("dead_useeffect")(Path("."))[0]["name"] == "effect"
+    [unused] = ts_fixers_mod._det_unused("imports")(Path("."))
+    assert unused["issue_id"] == "unused::a.ts::imports:3"
+    [log_entry] = ts_fixers_mod._det_logs(Path("."))
+    assert log_entry["issue_id"] == "logs::a.ts::DEBUG"
+    [smell] = ts_fixers_mod._det_smell("dead_useeffect")(Path("."))
+    assert smell["issue_id"] == "smells::a.ts::dead_useeffect"
+    assert smell["smell_id"] == "dead_useeffect"
 
     fixed_logs = ts_fixers_mod._fix_logs([{"name": "debug"}], dry_run=True)
     assert fixed_logs.entries[0]["removed"] == ["debug"]

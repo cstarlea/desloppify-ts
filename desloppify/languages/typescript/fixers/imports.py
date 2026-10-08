@@ -13,7 +13,6 @@ Needs tree-sitter: without it the fixer changes nothing.
 from __future__ import annotations
 
 import sys
-from collections import Counter
 from dataclasses import dataclass
 
 from desloppify.base.output.terminal import colorize
@@ -51,24 +50,24 @@ def fix_unused_imports(entries: list[dict], *, dry_run: bool = False) -> FixResu
         )
         return FixResult(entries=[], skip_reasons={"needs_treesitter": len(import_entries)})
 
-    def transform(lines: list[str], file_entries: list[dict]) -> tuple[list[str], list[str]]:
+    def transform(lines: list[str], file_entries: list[dict]) -> tuple[list[str], list[dict]]:
         text = "".join(lines)
         path = str(file_entries[0].get("file", "")) if file_entries else ""
         parsed = parse_text(text, path)
         if parsed is None:
             return lines, []
-        new_source, removed = remove_unused_imports(parsed, file_entries)
-        if not removed:
+        new_source, fixed = remove_unused_imports(parsed, file_entries)
+        if not fixed:
             return lines, []
-        return new_source.decode("utf-8").splitlines(keepends=True), removed
+        return new_source.decode("utf-8").splitlines(keepends=True), fixed
 
     return FixResult(entries=apply_fixer(import_entries, transform, dry_run=dry_run))
 
 
 def remove_unused_imports(
     parsed: ParsedSource, file_entries: list[dict]
-) -> tuple[bytes, list[str]]:
-    """Return the edited source and the entry names that were removed."""
+) -> tuple[bytes, list[dict]]:
+    """Return the edited source and the entries whose bindings were removed."""
     names_by_line: dict[int, set[str]] = {}
     for entry in file_entries:
         line, name = entry.get("line"), entry.get("name")
@@ -76,7 +75,7 @@ def remove_unused_imports(
             names_by_line.setdefault(line, set()).add(name)
 
     edits: list[tuple[int, int]] = []
-    removed: Counter[str] = Counter()
+    removed_at: set[tuple[int, str]] = set()  # (line, name) of fixed entries
     for statement in parsed.root.named_children:
         if statement.type != "import_statement":
             continue
@@ -88,13 +87,13 @@ def remove_unused_imports(
             continue
         statement_edits, statement_removed = _statement_edits(parsed, statement, wanted)
         edits.extend(statement_edits)
-        removed.update(statement_removed)
+        removed_at |= {(line, name) for line in range(first, last + 1) for name in statement_removed}
 
     source = parsed.source
     for start, end in sorted(edits, reverse=True):
         source = source[:start] + source[end:]
-    order = [str(e.get("name")) for e in file_entries]
-    return source, [name for name in dict.fromkeys(order) if removed[name]]
+    fixed = [e for e in file_entries if (e.get("line"), e.get("name")) in removed_at]
+    return source, fixed
 
 
 def _statement_edits(

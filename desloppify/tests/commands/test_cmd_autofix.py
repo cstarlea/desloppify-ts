@@ -95,62 +95,66 @@ class TestResolveFixerResults:
             }
         return state
 
-    def test_resolves_matching_open_issues(self, monkeypatch):
-        monkeypatch.setattr(fix_apply_mod, "rel", lambda p: p)
+    @staticmethod
+    def _entry(issue_id: str) -> dict:
+        return {"file": issue_id.split("::")[1], "issue_id": issue_id}
 
+    def test_resolves_fixed_open_issues(self):
         state = self._make_state_with_issues(
-            ("unused::a.ts::foo", "open"),
-            ("unused::a.ts::bar", "open"),
+            ("unused::a.ts::foo:3", "open"),
+            ("unused::a.ts::bar:4", "open"),
         )
-        results = [{"file": "a.ts", "removed": ["foo"]}]
-        resolved = _resolve_fixer_results(state, results, "unused", "unused-imports")
-        assert resolved == ["unused::a.ts::foo"]
-        assert state["work_items"]["unused::a.ts::foo"]["status"] == "fixed"
-        assert state["work_items"]["unused::a.ts::bar"]["status"] == "open"
+        entries = [self._entry("unused::a.ts::foo:3"), self._entry("unused::a.ts::bar:4")]
+        results = [{"file": "a.ts", "removed": ["foo"], "fixed_issue_ids": ["unused::a.ts::foo:3"]}]
+        resolved = _resolve_fixer_results(state, results, entries, "unused-imports")
+        assert resolved == ["unused::a.ts::foo:3"]
+        assert state["work_items"]["unused::a.ts::foo:3"]["status"] == "fixed"
+        assert state["work_items"]["unused::a.ts::bar:4"]["status"] == "open"
 
-    def test_skips_already_fixed(self, monkeypatch):
-        monkeypatch.setattr(fix_apply_mod, "rel", lambda p: p)
+    def test_skips_already_fixed(self):
+        state = self._make_state_with_issues(("unused::a.ts::foo:3", "fixed"))
+        entries = [self._entry("unused::a.ts::foo:3")]
+        results = [{"file": "a.ts", "fixed_issue_ids": ["unused::a.ts::foo:3"]}]
+        assert _resolve_fixer_results(state, results, entries, "unused-imports") == []
 
-        state = self._make_state_with_issues(
-            ("unused::a.ts::foo", "fixed"),
-        )
-        results = [{"file": "a.ts", "removed": ["foo"]}]
-        resolved = _resolve_fixer_results(state, results, "unused", "unused-imports")
-        assert resolved == []
-
-    def test_skips_nonexistent_issues(self, monkeypatch):
-        monkeypatch.setattr(fix_apply_mod, "rel", lambda p: p)
-
+    def test_skips_nonexistent_issues(self):
         state = self._make_state_with_issues()
-        results = [{"file": "a.ts", "removed": ["ghost"]}]
-        resolved = _resolve_fixer_results(state, results, "unused", "unused-imports")
-        assert resolved == []
+        entries = [self._entry("unused::a.ts::ghost:1")]
+        results = [{"file": "a.ts", "fixed_issue_ids": ["unused::a.ts::ghost:1"]}]
+        assert _resolve_fixer_results(state, results, entries, "unused-imports") == []
 
-    def test_adds_auto_fix_note(self, monkeypatch):
-        monkeypatch.setattr(fix_apply_mod, "rel", lambda p: p)
-
-        state = self._make_state_with_issues(("unused::a.ts::foo", "open"))
-        results = [{"file": "a.ts", "removed": ["foo"]}]
-        _resolve_fixer_results(state, results, "unused", "unused-imports")
-        note = state["work_items"]["unused::a.ts::foo"]["note"]
+    def test_adds_auto_fix_note(self):
+        state = self._make_state_with_issues(("unused::a.ts::foo:3", "open"))
+        entries = [self._entry("unused::a.ts::foo:3")]
+        results = [{"file": "a.ts", "fixed_issue_ids": ["unused::a.ts::foo:3"]}]
+        _resolve_fixer_results(state, results, entries, "unused-imports")
+        note = state["work_items"]["unused::a.ts::foo:3"]["note"]
         assert "auto-fixed" in note
         assert "unused-imports" in note
 
-    def test_multiple_files(self, monkeypatch):
-        monkeypatch.setattr(fix_apply_mod, "rel", lambda p: p)
-
+    def test_grouped_issue_stays_open_until_every_entry_is_fixed(self):
         state = self._make_state_with_issues(
-            ("unused::a.ts::foo", "open"),
-            ("unused::b.ts::bar", "open"),
+            ("logs::a.ts::DEBUG", "open"),
+            ("logs::b.ts::DEBUG", "open"),
         )
-        state["work_items"]["unused::b.ts::bar"]["file"] = "b.ts"
-
-        results = [
-            {"file": "a.ts", "removed": ["foo"]},
-            {"file": "b.ts", "removed": ["bar"]},
+        entries = [
+            self._entry("logs::a.ts::DEBUG"),
+            self._entry("logs::a.ts::DEBUG"),
+            self._entry("logs::b.ts::DEBUG"),
         ]
-        resolved = _resolve_fixer_results(state, results, "unused", "unused-imports")
-        assert len(resolved) == 2
+        results = [
+            {"file": "a.ts", "fixed_issue_ids": ["logs::a.ts::DEBUG"]},  # one skipped
+            {"file": "b.ts", "fixed_issue_ids": ["logs::b.ts::DEBUG"]},
+        ]
+        resolved = _resolve_fixer_results(state, results, entries, "debug-logs")
+        assert resolved == ["logs::b.ts::DEBUG"]
+        assert state["work_items"]["logs::a.ts::DEBUG"]["status"] == "open"
+
+    def test_results_without_issue_ids_resolve_nothing(self):
+        state = self._make_state_with_issues(("unused::a.ts::foo:3", "open"))
+        entries = [self._entry("unused::a.ts::foo:3")]
+        results = [{"file": "a.ts", "removed": ["foo"]}]
+        assert _resolve_fixer_results(state, results, entries, "unused-imports") == []
 
 
 # ---------------------------------------------------------------------------

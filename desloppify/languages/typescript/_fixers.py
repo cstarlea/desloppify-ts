@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import importlib
 
+from desloppify.engine._state.filtering import issue_id
 from desloppify.languages._framework.base.types import FixerConfig
+from desloppify.languages._framework.issue_factories import unused_issue_name
 import desloppify.languages.typescript.detectors.logs as logs_detector_mod
 import desloppify.languages.typescript.detectors.smells as smells_detector_mod
 import desloppify.languages.typescript.detectors.unused as unused_detector_mod
@@ -20,21 +22,27 @@ def _det_unused(cat):
     """Create a detector function for a specific unused category."""
 
     def f(path):
-        return unused_detector_mod.detect_unused(path, category=cat)[0]
+        entries = unused_detector_mod.detect_unused(path, category=cat)[0]
+        for entry in entries:
+            entry["issue_id"] = issue_id("unused", entry["file"], unused_issue_name(entry))
+        return entries
 
     return f
 
 
 def _det_logs(path):
     """Detect tagged debug logs."""
-    return logs_detector_mod.detect_logs(path).entries
+    entries = logs_detector_mod.detect_logs(path).entries
+    for entry in entries:
+        entry["issue_id"] = issue_id("logs", entry["file"], entry["tag"])
+    return entries
 
 
 def _det_smell(smell_id):
     """Create a detector function for a specific smell ID."""
 
     def f(path):
-        return next(
+        matches = next(
             (
                 e.get("matches", [])
                 for e in smells_detector_mod.detect_smells(path)[0]
@@ -42,6 +50,10 @@ def _det_smell(smell_id):
             ),
             [],
         )
+        for match in matches:
+            match["smell_id"] = smell_id
+            match["issue_id"] = issue_id("smells", match["file"], smell_id)
+        return matches
 
     return f
 

@@ -107,19 +107,19 @@ def fix_unused_vars(
     def _transform(lines: list[str], file_entries: list[dict]):
         all_lines_to_remove: set[int] = set()
         merged_inline: dict[int, set[str]] = defaultdict(set)
-        removed_names: list[str] = []
+        fixed: list[dict] = []
         for entry in file_entries:
             action = _handle_unused_entry(entry, lines=lines)
             all_lines_to_remove |= action.lines_to_remove
             for line_idx, names in action.inline_removals.items():
                 merged_inline[line_idx] |= names
             if action.removed_name is not None:
-                removed_names.append(action.removed_name)
+                fixed.append(entry)
             if action.skip_reason is not None:
                 skip_reasons[action.skip_reason] += 1
         _apply_inline_removals(lines, merged_inline)
         new_lines = collapse_blank_lines(lines, all_lines_to_remove)
-        return new_lines, removed_names
+        return new_lines, fixed
 
     results = apply_fixer(entries, _transform, dry_run=dry_run)
     return FixResult(entries=results, skip_reasons=dict(skip_reasons))

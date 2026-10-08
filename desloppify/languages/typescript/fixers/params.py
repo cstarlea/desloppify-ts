@@ -10,12 +10,8 @@ def fix_unused_params(entries: list[dict], *, dry_run: bool = False) -> FixResul
     """Prefix unused function/callback/catch parameters with _ to signal intentional non-use."""
 
     def _transform(lines: list[str], file_entries: list[dict]):
-        removed_names: list[str] = []
-        for entry in file_entries:
-            removed_name = _rewrite_unused_param(lines, entry)
-            if removed_name:
-                removed_names.append(removed_name)
-        return lines, removed_names
+        fixed = [entry for entry in file_entries if _rewrite_unused_param(lines, entry)]
+        return lines, fixed
 
     return FixResult(entries=apply_fixer(entries, _transform, dry_run=dry_run))
 

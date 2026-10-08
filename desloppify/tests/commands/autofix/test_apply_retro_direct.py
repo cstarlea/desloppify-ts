@@ -88,21 +88,23 @@ def test_cascade_unused_import_cleanup_handles_no_detected_entries(capsys) -> No
     assert "no orphaned imports found" in out
 
 
-def test_cascade_unused_import_cleanup_resolves_cascade_issues(monkeypatch, capsys) -> None:
-    monkeypatch.setattr(retro_mod, "rel", lambda value: str(value))
-
+def test_cascade_unused_import_cleanup_resolves_cascade_issues(capsys) -> None:
     results = FixResult(
         entries=[
             {
                 "file": "src/a.ts",
                 "removed": ["Foo"],
+                "fixed_issue_ids": ["unused::src/a.ts::Foo:1"],
                 "lines_removed": 2,
             }
         ]
     )
-    fixer = _FakeFixer(entries=[{"file": "src/a.ts"}], results=results)
+    fixer = _FakeFixer(
+        entries=[{"file": "src/a.ts", "issue_id": "unused::src/a.ts::Foo:1"}],
+        results=results,
+    )
     lang = SimpleNamespace(fixers={"unused-imports": fixer})
-    state = _state_with_issue("unused::src/a.ts::Foo")
+    state = _state_with_issue("unused::src/a.ts::Foo:1")
 
     retro_mod._cascade_unused_import_cleanup(
         Path("."),
@@ -112,7 +114,7 @@ def test_cascade_unused_import_cleanup_resolves_cascade_issues(monkeypatch, caps
         lang=lang,
     )
 
-    issue = state["work_items"]["unused::src/a.ts::Foo"]
+    issue = state["work_items"]["unused::src/a.ts::Foo:1"]
     assert issue["status"] == "fixed"
     assert "cascade-unused-imports" in str(issue["note"])
 
@@ -134,7 +136,7 @@ def test_resolve_fixer_results_handles_generic_fixer_shape() -> None:
         {"file": "src/b.ts", "fixed": True},
     ]
     resolved = retro_mod._resolve_fixer_results(
-        state, generic_results, "eslint-warning", "eslint-warning"
+        state, generic_results, [], "eslint-warning"
     )
     # No "removed" key means no symbols to match — nothing resolved, but no crash
     assert resolved == []
