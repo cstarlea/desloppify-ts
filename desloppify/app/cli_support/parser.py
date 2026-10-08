@@ -90,7 +90,7 @@ def _cli_version_string() -> str:
     return f"{version_label}\nPython {platform.python_version()} at {sys.executable}"
 
 
-def create_parser(*, langs: list[str], detector_names: list[str]) -> argparse.ArgumentParser:
+def create_parser(*, detector_names: list[str]) -> argparse.ArgumentParser:
     """Build top-level CLI parser with all subcommands."""
     parser = _NoAbbrevArgumentParser(
         prog="desloppify",
@@ -127,7 +127,7 @@ def create_parser(*, langs: list[str], detector_names: list[str]) -> argparse.Ar
     _add_viz_parser(sub)
     _add_detect_parser(sub, detector_names)
     # improve
-    _add_autofix_parser(sub, langs)
+    _add_autofix_parser(sub)
     _add_suppress_parser(sub)
     _add_exclude_parser(sub)
     _add_move_parser(sub)

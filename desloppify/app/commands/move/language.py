@@ -4,18 +4,12 @@ from __future__ import annotations
 
 from types import ModuleType
 
-from desloppify.app.commands.helpers.dynamic_loaders import (
-    load_language_move_module as load_dynamic_language_move_module,
-)
 
+def load_move_module() -> ModuleType:
+    """Load the TypeScript move helpers (``languages/typescript/move.py``)."""
+    from desloppify.languages.typescript import move
 
-def load_lang_move_module(lang_name: str) -> ModuleType:
-    """Load language-specific move helpers from ``lang/<name>/move.py``.
-
-    Falls back to the shared scaffold move module when a language does not
-    provide its own ``move.py``.
-    """
-    return load_dynamic_language_move_module(lang_name)
+    return move
 
 
 def resolve_move_verify_hint(move_mod: ModuleType) -> str:
@@ -29,6 +23,6 @@ def resolve_move_verify_hint(move_mod: ModuleType) -> str:
 
 
 __all__ = [
-    "load_lang_move_module",
+    "load_move_module",
     "resolve_move_verify_hint",
 ]

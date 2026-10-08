@@ -16,8 +16,6 @@ from desloppify.languages._framework.base.types import (
     LangSecurityResult,
 )
 from desloppify.languages._framework.frameworks.phases import framework_phases
-from desloppify.languages._framework.registry.registration import register_full_plugin
-from desloppify.languages._framework.registry.state import register_lang_hooks
 from desloppify.languages.typescript import test_coverage as ts_test_coverage_hooks
 from desloppify.languages.typescript._fixers import get_ts_fixers
 import desloppify.languages.typescript.commands as ts_commands_mod
@@ -130,7 +128,6 @@ class TypeScriptConfig(LangConfig):
             large_threshold=TS_LARGE_THRESHOLD,
             complexity_threshold=TS_COMPLEXITY_THRESHOLD,
             default_scan_profile="full",
-            detect_markers=["package.json"],
             external_test_dirs=["tests", "test", "__tests__"],
             test_file_extensions=TS_EXTENSIONS,
             review_module_patterns_fn=ts_review_module_patterns,
@@ -145,25 +142,12 @@ class TypeScriptConfig(LangConfig):
         )
 
 
-def register() -> None:
-    """Register TypeScript language config + hooks through an explicit entrypoint."""
-    register_full_plugin(
-        "typescript",
-        TypeScriptConfig,
-        test_coverage=ts_test_coverage_hooks,
-    )
-
-
-def register_hooks() -> None:
-    """Register TypeScript hook modules without language-config bootstrap."""
-    register_lang_hooks("typescript", test_coverage=ts_test_coverage_hooks)
-
-
-Config = TypeScriptConfig
+# Hook modules that shared detectors look up by name (see ``get_lang_hook``).
+LANG_HOOKS: dict[str, object] = {"test_coverage": ts_test_coverage_hooks}
 
 
 __all__ = [
-    "Config",
+    "LANG_HOOKS",
     "TS_HOLISTIC_REVIEW_DIMENSIONS",
     "TS_LOW_VALUE_PATTERN",
     "TS_MIGRATION_MIXED_EXTENSIONS",
@@ -171,6 +155,4 @@ __all__ = [
     "TS_REVIEW_GUIDANCE",
     "TS_ZONE_RULES",
     "TypeScriptConfig",
-    "register",
-    "register_hooks",
 ]

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import ast
 import inspect
 from pathlib import Path
 
@@ -74,7 +73,7 @@ def test_direct_coverage_priority_modules_smoke():
     assert callable(subjective_dimensions_mod.default_dimension_keys)
     assert callable(paths_mod.read_code_snippet)
 
-    assert callable(hook_registry_mod.register_lang_hooks)
+    assert callable(hook_registry_mod.get_lang_hook)
     assert callable(schema_migrations_mod.migrate_v5_to_v6)
     assert callable(scoring_health_mod.compute_health_breakdown)
     assert callable(scoring_impact_mod.compute_score_impact)
@@ -155,23 +154,3 @@ def test_next_and_status_init_modules_are_stub_only():
     ):
         text = (package_root / rel_path).read_text(encoding="utf-8")
         assert "__getattr__" not in text
-
-
-def test_language_packages_avoid_import_time_registry_mutation() -> None:
-    package_root = Path(__file__).resolve().parents[2]
-    rel_paths = (
-        "languages/typescript/__init__.py",
-    )
-    for rel_path in rel_paths:
-        tree = ast.parse((package_root / rel_path).read_text(encoding="utf-8"))
-        for node in tree.body:
-            if isinstance(node, ast.Expr) and isinstance(node.value, ast.Call):
-                fn = node.value.func
-                fn_name = fn.id if isinstance(fn, ast.Name) else (
-                    fn.attr if isinstance(fn, ast.Attribute) else ""
-                )
-                assert fn_name != "register_lang_hooks", rel_path
-            if isinstance(node, ast.ClassDef):
-                for decorator in node.decorator_list:
-                    if isinstance(decorator, ast.Call) and isinstance(decorator.func, ast.Name):
-                        assert decorator.func.id != "register_lang", rel_path

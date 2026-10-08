@@ -24,22 +24,15 @@ class LangResolutionError(CommandError):
         super().__init__(message, exit_code=1)
 
 
-def load_lang_config(lang_name: str):
-    """Load one language config with explicit broken-plugin signaling."""
-    try:
-        return lang_api.get_lang(lang_name)
-    except ValueError as exc:
-        raise LangResolutionError(str(exc)) from exc
-    except (ImportError, TypeError, AttributeError) as exc:
-        raise LangResolutionError(
-            f"Language plugin '{lang_name}' failed to load: {exc}"
-        ) from exc
-
-
 def resolve_lang(args: object) -> LangConfig:
     """The TypeScript language config (the only language plugin)."""
     del args
-    return load_lang_config(lang_api.DEFAULT_LANG)
+    try:
+        return lang_api.default_lang()
+    except (ImportError, TypeError, ValueError, AttributeError) as exc:
+        raise LangResolutionError(
+            f"The TypeScript plugin failed to load: {exc}"
+        ) from exc
 
 
 def resolve_lang_settings(config: dict, lang: LangConfig) -> dict[str, object]:

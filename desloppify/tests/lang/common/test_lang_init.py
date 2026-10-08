@@ -1,70 +1,14 @@
-"""Tests for desloppify.languages — register_lang, get_lang, available_langs."""
-
-import importlib
-from pathlib import Path
-from unittest.mock import patch
+"""Tests for desloppify.languages.framework — default_lang, get_lang, get_lang_hook."""
 
 import pytest
 
-import desloppify.languages as lang_mod
-from desloppify.languages import (
-    available_langs,
+from desloppify.languages.framework import (
+    DEFAULT_LANG,
+    default_lang,
     get_lang,
-    register_lang,
+    get_lang_hook,
 )
 from desloppify.languages._framework.base.types import DetectorPhase, LangConfig
-from desloppify.languages._framework.registry.discovery import load_all
-from desloppify.languages._framework.registry import state as registry_state
-
-# ── register_lang ────────────────────────────────────────────
-
-
-def test_languages_module_does_not_re_export_framework_runtime_modules():
-    """The public languages module should stay focused on registration APIs."""
-    assert "discovery" not in vars(lang_mod)
-    assert "registry_state" not in vars(lang_mod)
-    assert "discovery" not in dir(lang_mod)
-    assert "registry_state" not in dir(lang_mod)
-    with pytest.raises(AttributeError):
-        _ = lang_mod.discovery
-    with pytest.raises(AttributeError):
-        _ = lang_mod.registry_state
-
-
-def test_register_lang_adds_to_registry():
-    """register_lang decorator registers a class under the given name."""
-    # Use a unique name so we don't collide with real registrations
-    test_name = "_test_register_dummy"
-    try:
-        # Patch validation since the test module isn't a real lang plugin dir
-        with patch.object(lang_mod, "validate_lang_structure"):
-
-            @register_lang(test_name)
-            class DummyConfig:
-                pass
-
-        assert registry_state.is_registered(test_name)
-        assert registry_state.get(test_name) is DummyConfig
-    finally:
-        registry_state.remove(test_name)
-
-
-def test_register_lang_returns_class_unchanged():
-    """Decorator returns the original class unmodified."""
-    test_name = "_test_register_identity"
-    try:
-
-        class OriginalClass:
-            pass
-
-        # The decorator validates module structure, which will fail for a
-        # plain class not inside a lang package directory. Patch validation.
-        with patch.object(lang_mod, "validate_lang_structure"):
-            result = register_lang(test_name)(OriginalClass)
-        assert result is OriginalClass
-    finally:
-        registry_state.remove(test_name)
-
 
 # ── get_lang ─────────────────────────────────────────────────
 
@@ -77,247 +21,64 @@ def test_get_lang_typescript():
     assert any(ext in cfg.extensions for ext in [".ts", ".tsx"])
 
 
-def test_get_lang_unknown_raises():
-    """get_lang with unknown name raises ValueError."""
+@pytest.mark.parametrize("name", ["javascript", "python", ""])
+def test_get_lang_unknown_raises(name):
+    """get_lang rejects every name but typescript."""
     with pytest.raises(ValueError, match="Unknown language"):
-        get_lang("_nonexistent_language_xyz")
+        get_lang(name)
 
 
-def test_get_lang_returns_same_instance():
-    """get_lang returns the registered instance (not a fresh copy)."""
-    cfg1 = get_lang("typescript")
-    cfg2 = get_lang("typescript")
-    assert cfg1 is cfg2
+def test_get_lang_returns_default_instance():
+    """get_lang and default_lang share one config instance."""
+    assert DEFAULT_LANG == "typescript"
+    assert get_lang("typescript") is default_lang() is default_lang()
 
 
-# ── available_langs ──────────────────────────────────────────
+# ── get_lang_hook ────────────────────────────────────────────
 
 
-def test_available_langs_is_typescript():
-    """available_langs lists the TypeScript plugin."""
-    # Other tests register throwaway "test_*" languages in the shared registry.
-    builtin = [name for name in available_langs() if not name.startswith(("test_", "_"))]
-    assert builtin == ["typescript"]
+def test_get_lang_hook_returns_typescript_test_coverage_module():
+    hook = get_lang_hook("typescript", "test_coverage")
+    assert hook is not None
+    assert callable(getattr(hook, "has_testable_logic", None))
+    assert callable(getattr(hook, "parse_test_import_specs", None))
 
 
-def test_available_langs_returns_sorted():
-    """available_langs returns a sorted list."""
-    langs = available_langs()
-    assert langs == sorted(langs)
+@pytest.mark.parametrize(
+    ("lang_name", "hook_name"),
+    [(None, "test_coverage"), ("python", "test_coverage"), ("typescript", "nope")],
+)
+def test_get_lang_hook_returns_none_for_unknown(lang_name, hook_name):
+    assert get_lang_hook(lang_name, hook_name) is None
 
 
-# ── LangConfig basics ───────────────────────────────────────
+# ── TypeScript config ────────────────────────────────────────
 
 
-def test_typescript_config_has_phases():
-    """TypeScript config has at least one detector phase."""
-    cfg = get_lang("typescript")
-    assert len(cfg.phases) > 0
-
-
-def test_typescript_config_has_extract_functions():
-    """TypeScript config has an extract_functions callable."""
-    cfg = get_lang("typescript")
-    assert cfg.extract_functions is not None
+def test_typescript_config_core_contract():
+    """The TypeScript config has the callables and tables scans rely on."""
+    cfg = default_lang()
+    assert cfg.phases
+    assert all(isinstance(phase, DetectorPhase) for phase in cfg.phases)
+    assert all(phase.label.strip() and callable(phase.run) for phase in cfg.phases)
     assert callable(cfg.extract_functions)
-
-
-def test_typescript_config_has_file_finder():
-    """TypeScript config has a file_finder callable."""
-    cfg = get_lang("typescript")
-    assert cfg.file_finder is not None
     assert callable(cfg.file_finder)
+    assert callable(cfg.build_dep_graph)
+    assert cfg.zone_rules
+    assert cfg.default_scan_profile in {"objective", "full", "ci"}
 
 
-def test_all_languages_have_valid_default_scan_profile():
-    """Each language plugin declares a valid default scan profile."""
-    for lang_name in available_langs():
-        cfg = get_lang(lang_name)
-        assert cfg.default_scan_profile in {"objective", "full", "ci"}
+def test_typescript_config_has_shared_core_phase_shape():
+    """Shared review/security phases stay canonical and ordered."""
+    cfg = default_lang()
+    labels = [phase.label for phase in cfg.phases]
+    assert labels.count("Test coverage") == 1
+    assert labels.count("Security") == 1
+    assert labels.count("Subjective review") == 1
+    assert labels.count("Duplicates") == 1
+    assert labels[-1] == "Duplicates"
+    assert cfg.phases[-1].slow is True
 
 
-def test_all_languages_have_shared_core_phase_shape():
-    """Every full language keeps shared review/security phases canonical and ordered."""
-    for lang_name in available_langs():
-        cfg = get_lang(lang_name)
-        if cfg.integration_depth != "full":
-            continue  # generic plugins have tool-only phases
-        labels = [phase.label for phase in cfg.phases]
-        assert labels.count("Test coverage") == 1
-        assert labels.count("Security") == 1
-        assert labels.count("Subjective review") == 1
-        assert labels.count("Duplicates") == 1
-        assert labels[-1] == "Duplicates"
-        assert cfg.phases[-1].slow is True
-
-
-def test_languages_do_not_expose_legacy_setting_keys():
-    """No language config should expose deprecated legacy setting-key aliases."""
-    for lang_name in available_langs():
-        cfg = get_lang(lang_name)
-        assert not hasattr(cfg, "legacy_setting_keys")
-
-
-# ── structural validation ────────────────────────────────────
-
-
-def _write_lang_layout(
-    root: Path,
-    *,
-    missing_files: set[str] | None = None,
-    missing_dirs: set[str] | None = None,
-    missing_dir_inits: set[str] | None = None,
-    include_tests: bool = True,
-):
-    missing_files = missing_files or set()
-    missing_dirs = missing_dirs or set()
-    missing_dir_inits = missing_dir_inits or set()
-
-    for filename in lang_mod.REQUIRED_FILES:
-        if filename in missing_files:
-            continue
-        (root / filename).write_text("\n")
-
-    for dirname in lang_mod.REQUIRED_DIRS:
-        if dirname in missing_dirs:
-            continue
-        d = root / dirname
-        d.mkdir(parents=True, exist_ok=True)
-        if dirname not in missing_dir_inits:
-            (d / "__init__.py").write_text("\n")
-        if dirname == "tests" and include_tests:
-            (d / "test_smoke.py").write_text("def test_smoke():\n    assert True\n")
-
-
-def test_validate_lang_structure_missing_file(tmp_path):
-    lang_dir = tmp_path / "dummy_lang"
-    lang_dir.mkdir()
-    _write_lang_layout(lang_dir, missing_files={"extractors.py"})
-
-    with pytest.raises(ValueError, match="missing required file: extractors.py"):
-        lang_mod.validate_lang_structure(lang_dir, "dummy")
-
-
-def test_validate_lang_structure_missing_dir(tmp_path):
-    lang_dir = tmp_path / "dummy_lang"
-    lang_dir.mkdir()
-    _write_lang_layout(lang_dir, missing_dirs={"detectors"})
-
-    with pytest.raises(ValueError, match=r"missing required directory: detectors/"):
-        lang_mod.validate_lang_structure(lang_dir, "dummy")
-
-
-def test_validate_lang_structure_missing_dir_init(tmp_path):
-    lang_dir = tmp_path / "dummy_lang"
-    lang_dir.mkdir()
-    _write_lang_layout(lang_dir, missing_dir_inits={"fixers"})
-
-    with pytest.raises(ValueError, match=r"missing fixers/__init__\.py"):
-        lang_mod.validate_lang_structure(lang_dir, "dummy")
-
-
-def test_validate_lang_structure_missing_tests_file(tmp_path):
-    lang_dir = tmp_path / "dummy_lang"
-    lang_dir.mkdir()
-    _write_lang_layout(lang_dir, include_tests=False)
-
-    with pytest.raises(
-        ValueError, match=r"tests directory must contain at least one test_\*\.py file"
-    ):
-        lang_mod.validate_lang_structure(lang_dir, "dummy")
-
-
-def test_validate_lang_structure_valid(tmp_path):
-    lang_dir = tmp_path / "dummy_lang"
-    lang_dir.mkdir()
-    _write_lang_layout(lang_dir)
-
-    lang_mod.validate_lang_structure(lang_dir, "dummy")
-
-
-def test_get_lang_rejects_invalid_contract():
-    class BadConfig(LangConfig):
-        def __init__(self):
-            super().__init__(
-                name="_bad_contract",
-                extensions=[".bad"],
-                exclusions=[],
-                default_src=".",
-                build_dep_graph=lambda _p: {},
-                entry_patterns=[],
-                barrel_names=set(),
-                phases=[],  # invalid: empty
-                fixers={},
-                detect_commands={},  # invalid: empty
-                extract_functions=None,  # invalid: not callable
-                file_finder=None,  # invalid: not callable
-                detect_markers=["bad.toml"],
-                zone_rules=[],
-            )
-
-    registry_state.register("_bad_contract", BadConfig)
-    try:
-        with pytest.raises(ValueError, match="invalid LangConfig contract"):
-            get_lang("_bad_contract")
-    finally:
-        registry_state.remove("_bad_contract")
-
-
-def test_get_lang_rejects_non_snake_case_detect_command_key():
-    class BadKeyConfig(LangConfig):
-        def __init__(self):
-            super().__init__(
-                name="_bad_key",
-                extensions=[".bad"],
-                exclusions=[],
-                default_src=".",
-                build_dep_graph=lambda _p: {},
-                entry_patterns=[],
-                barrel_names=set(),
-                phases=[DetectorPhase("phase", lambda _p, _l: ([], {}))],
-                fixers={},
-                detect_commands={"single-use": lambda _a: None},
-                extract_functions=lambda _p: [],
-                file_finder=lambda _p: [],
-                detect_markers=["bad.toml"],
-                zone_rules=[object()],
-            )
-
-    registry_state.register("_bad_key", BadKeyConfig)
-    try:
-        with pytest.raises(ValueError, match="snake_case"):
-            get_lang("_bad_key")
-    finally:
-        registry_state.remove("_bad_key")
-
-
-def test_load_all_surfaces_import_failures(monkeypatch, caplog):
-    original_registry = dict(registry_state.all_items())
-    original_attempted = registry_state.was_load_attempted()
-    original_errors = registry_state.get_load_errors()
-    real_import_module = importlib.import_module
-
-    def fake_import_module(name, package=None):
-        if name == ".typescript":
-            raise ImportError("simulated import failure")
-        return real_import_module(name, package)
-
-    monkeypatch.setattr(importlib, "import_module", fake_import_module)
-    registry_state.set_load_attempted(False)
-    registry_state.set_load_errors({})
-    registry_state.clear()
-
-    try:
-        import logging
-
-        with caplog.at_level(logging.WARNING):
-            load_all()
-        assert ".typescript" in caplog.text
-        assert "simulated import failure" in caplog.text
-        assert ".typescript" in registry_state.get_load_errors()
-    finally:
-        registry_state.clear()
-        for name, cfg in original_registry.items():
-            registry_state.register(name, cfg)
-        registry_state.set_load_attempted(original_attempted)
-        registry_state.set_load_errors(original_errors)
+def test_typescript_config_does_not_expose_legacy_setting_keys():
+    assert not hasattr(default_lang(), "legacy_setting_keys")

@@ -527,33 +527,26 @@ class TestConfigParser:
 
 
 class TestFixerHelpLines:
-    @patch("desloppify.app.cli_support.parser_groups_admin.load_lang_config")
-    def test_fixer_help_lines_with_fixers(self, mock_load_lang_config):
+    @patch("desloppify.app.cli_support.parser_groups_admin.lang_api.default_lang")
+    def test_fixer_help_line_with_fixers(self, mock_default_lang):
         mock_lang = MagicMock()
         mock_lang.fixers = {"unused": MagicMock(), "logs": MagicMock()}
-        mock_load_lang_config.return_value = mock_lang
+        mock_default_lang.return_value = mock_lang
 
-        lines = parser_admin_mod._fixer_help_lines(["python"])
-        assert len(lines) == 1  # one lang line
-        assert "logs, unused" in lines[0]
+        assert parser_admin_mod._fixer_help_line() == "fixers: logs, unused"
 
-    @patch("desloppify.app.cli_support.parser_groups_admin.load_lang_config")
-    def test_fixer_help_lines_import_error(self, mock_load_lang_config):
-        mock_load_lang_config.side_effect = ImportError("no such lang")
+    @patch("desloppify.app.cli_support.parser_groups_admin.lang_api.default_lang")
+    def test_fixer_help_line_import_error(self, mock_default_lang):
+        mock_default_lang.side_effect = ImportError("broken plugin")
 
-        lines = parser_admin_mod._fixer_help_lines(["bogus"])
-        assert "failed to load" in lines[0]
+        assert "failed to load" in parser_admin_mod._fixer_help_line()
 
 
 class TestFixParser:
     def test_fix_parser_args(self):
         parser = argparse.ArgumentParser()
         sub = parser.add_subparsers(dest="command")
-        with patch(
-            "desloppify.app.cli_support.parser_groups_admin.load_lang_config"
-        ) as mock_load:
-            mock_load.side_effect = ImportError()
-            parser_admin_mod._add_autofix_parser(sub, ["python"])
+        parser_admin_mod._add_autofix_parser(sub)
 
         args = parser.parse_args(
             ["autofix", "unused", "--path", "src", "--dry-run"]

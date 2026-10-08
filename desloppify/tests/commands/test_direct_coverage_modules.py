@@ -48,15 +48,13 @@ import desloppify.intelligence.integrity as subjective_review_integrity
 import desloppify.intelligence.review._context.structure as review_context_structure
 import desloppify.intelligence.review.dimensions.holistic as review_dimensions_holistic
 import desloppify.intelligence.review.dimensions.validation as review_dimensions_validation
-import desloppify.languages as lang_pkg
-import desloppify.languages._framework.registry.discovery as lang_discovery
+import desloppify.languages.framework as lang_framework
 import desloppify.languages.typescript.detectors.smells.detector_safety as ts_smell_detectors_safety
 import desloppify.languages.typescript.detectors.smells.helpers as ts_smell_helpers_mod
 import desloppify.languages.typescript.detectors.deps.runtime as ts_deps_runtime
 import desloppify.languages.typescript.extractors_components as ts_extractors_components
 from desloppify.engine._work_queue.models import QueueBuildOptions, QueueVisibility
 from desloppify.intelligence.review import prepare_batches_builders as review_prepare_batches
-from desloppify.languages._framework.registry import resolution as lang_resolution
 from desloppify.languages.typescript import review as ts_review
 
 
@@ -229,15 +227,11 @@ def test_work_queue_split_modules_have_direct_behavior(monkeypatch):
 
 
 def test_smoke_lang_plugins():
-    """Language plugin modules: package, discovery, resolution, per-lang."""
-    # lang package/discovery/resolution
+    """Language framework facade and the TypeScript plugin."""
     _assert_all_callables(
-        lang_pkg.register_lang,
-        lang_pkg.available_langs,
-        lang_discovery.load_all,
-        lang_discovery.raise_load_errors,
-        lang_resolution.make_lang_config,
-        lang_resolution.get_lang,
+        lang_framework.default_lang,
+        lang_framework.get_lang,
+        lang_framework.get_lang_hook,
     )
 
     # typescript

@@ -9,7 +9,7 @@ from desloppify.languages import framework as lang_mod
 from desloppify.app.commands.move.apply import apply_file_move
 from desloppify.app.commands.move.directory import run_directory_move
 from desloppify.app.commands.move.language import (
-    load_lang_move_module,
+    load_move_module,
     resolve_move_verify_hint,
 )
 from desloppify.app.commands.move.planning import (
@@ -47,7 +47,7 @@ def cmd_move(args: argparse.Namespace) -> None:
     dry_run = getattr(args, "dry_run", False)
 
     lang = lang_mod.default_lang()
-    move_mod = load_lang_move_module(lang.name)
+    move_mod = load_move_module()
 
     scan_path = move_graph_root(
         move_mod, Path(resolve_path(lang.default_src)), get_project_root()

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 
-from desloppify.app.commands.helpers.lang import load_lang_config
+from desloppify.languages import framework as lang_api
 from .parser_groups_admin_review import _add_review_parser  # noqa: F401 (re-export)
 
 logger = logging.getLogger(__name__)
@@ -106,27 +106,20 @@ def _add_directives_parser(sub) -> None:
     d_unset.add_argument("phase", type=str, help="Lifecycle phase name")
 
 
-def _fixer_help_lines(langs: list[str]) -> list[str]:
-    fixer_help_lines: list[str] = []
-    for lang_name in langs:
-        try:
-            fixer_names = sorted(load_lang_config(lang_name).fixers.keys())
-        except (ImportError, ValueError, TypeError, AttributeError) as exc:
-            logger.debug("Failed to load fixer metadata for %s: %s", lang_name, exc)
-            fixer_help_lines.append(
-                f"fixers ({lang_name}): language plugin failed to load ({exc})"
-            )
-            continue
-        fixer_list = ", ".join(fixer_names) if fixer_names else "none yet"
-        fixer_help_lines.append(f"fixers ({lang_name}): {fixer_list}")
-    return fixer_help_lines
+def _fixer_help_line() -> str:
+    try:
+        fixer_names = sorted(lang_api.default_lang().fixers.keys())
+    except (ImportError, ValueError, TypeError, AttributeError) as exc:
+        logger.debug("Failed to load fixer metadata: %s", exc)
+        return f"fixers: TypeScript plugin failed to load ({exc})"
+    return f"fixers: {', '.join(fixer_names) if fixer_names else 'none yet'}"
 
 
-def _add_autofix_parser(sub, langs: list[str]) -> None:
+def _add_autofix_parser(sub) -> None:
     p_autofix = sub.add_parser(
         "autofix",
         help="Auto-fix mechanical issues",
-        epilog="\n".join(_fixer_help_lines(langs)),
+        epilog=_fixer_help_line(),
     )
     p_autofix.add_argument("fixer", type=str, help="What to fix")
     p_autofix.add_argument("--path", type=str, default=None, help="Project root directory (default: auto-detected)")

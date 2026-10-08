@@ -15,18 +15,15 @@ import desloppify.app.commands.scan.workflow as scan_workflow_mod
 import desloppify.engine._scoring.state_coverage as state_coverage_mod
 import desloppify.engine._state.schema_types as state_schema_types_mod
 import desloppify.engine.planning.scan as planning_scan_mod
-import desloppify.languages as languages_mod
 import desloppify.languages.framework as public_framework_mod
 import desloppify.languages._framework as framework_root_mod
 import desloppify.languages._framework.commands.registry as registry_cmd_mod
-import desloppify.languages._framework.commands.scaffold as scaffold_mod
-import desloppify.languages._framework.registry.registration as framework_registration_mod
 import desloppify.languages._framework.runtime_support.accessors as accessors_mod
 import desloppify.languages.typescript.commands as ts_commands_mod
 import desloppify.languages.typescript.commands as ts_detector_cli_mod
 
 
-def test_scaffold_defaults_and_registry_builder() -> None:
+def test_standard_detect_registry_builder() -> None:
     registry = registry_cmd_mod.build_standard_detect_registry(
         cmd_deps=lambda _args: None,
         cmd_cycles=lambda _args: None,
@@ -43,10 +40,6 @@ def test_scaffold_defaults_and_registry_builder() -> None:
         "large",
         "complexity",
     }
-
-    assert scaffold_mod.scaffold_find_replacements("a", "b", {}) == {}
-    assert scaffold_mod.scaffold_find_self_replacements("a", "b", {}) == []
-    assert scaffold_mod.scaffold_verify_hint() == "desloppify detect deps"
 
 
 def test_framework_root_contract_is_types_only_and_explicit() -> None:
@@ -68,19 +61,9 @@ def test_framework_root_contract_is_types_only_and_explicit() -> None:
 def test_public_framework_facade_exposes_operational_accessors() -> None:
     source = inspect.getsource(public_framework_mod)
     assert "Public framework facade" in source
-    assert callable(public_framework_mod.load_all)
-    assert callable(public_framework_mod.make_lang_config)
+    assert callable(public_framework_mod.default_lang)
+    assert callable(public_framework_mod.get_lang_hook)
     assert callable(public_framework_mod.enable_parse_cache)
-    assert hasattr(public_framework_mod, "registry_state")
-
-
-def test_languages_registry_surface_keeps_legacy_exports_compat_only() -> None:
-    source = inspect.getsource(languages_mod)
-    assert "language registration api focused on canonical framework boundaries" in source.lower()
-    assert "desloppify.languages.framework" in source
-    assert "__getattr__" not in source
-    assert "registry_state" not in languages_mod.__all__
-    assert not hasattr(languages_mod, "registry_state")
 
 
 def test_app_and_engine_runtime_paths_use_public_framework_facade() -> None:
@@ -103,7 +86,7 @@ def test_languages_readme_documents_current_runtime_boundary() -> None:
     repo_root = Path(__file__).resolve().parents[3]
     readme_path = repo_root / "languages/README.md"
     source = readme_path.read_text(encoding="utf-8")
-    assert "register_full_plugin(...)" in source
+    assert "default_lang()" in source
     assert "`desloppify.languages.framework`" in source
 
 
@@ -115,12 +98,6 @@ def test_typescript_command_registry_uses_base_composition_pattern() -> None:
     ts_commands_source = inspect.getsource(ts_commands_mod)
     assert "build_standard_detect_registry(" in ts_commands_source
     assert "compose_detect_registry(" in ts_commands_source
-
-
-def test_framework_registration_owns_lang_class_registration_flow() -> None:
-    source = inspect.getsource(framework_registration_mod)
-    assert "def register_lang_class(" in source
-    assert "from desloppify.languages import register_lang" not in source
 
 
 def test_make_cmd_deps_json_and_text_paths(monkeypatch, tmp_path) -> None:

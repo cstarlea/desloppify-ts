@@ -7,7 +7,7 @@ from pathlib import Path
 from desloppify.languages import framework as lang_mod
 from desloppify.app.commands.move.apply import apply_directory_move
 from desloppify.app.commands.move.language import (
-    load_lang_move_module,
+    load_move_module,
     resolve_move_verify_hint,
 )
 from desloppify.app.commands.move.planning import (
@@ -35,7 +35,7 @@ def run_directory_move(args, source_abs: str, resolve_path_fn) -> None:
 
     lang = lang_mod.default_lang()
     lang_name = lang.name
-    move_mod = load_lang_move_module(lang_name)
+    move_mod = load_move_module()
 
     source_files = collect_source_files(source_path, list(lang.extensions))
     if not source_files:
