@@ -22,8 +22,14 @@ from desloppify.languages.typescript.detectors.deps.packages import workspace_en
 from desloppify.languages.typescript.detectors.deps.reexports import NAMESPACE, definition_files
 from desloppify.languages.typescript.detectors.deps.resolver import project_resolver
 from desloppify.languages.typescript.plugin_contract import TS_BARREL_NAMES
-from desloppify.languages.typescript.syntax.queries import descendants, imports
-from desloppify.languages.typescript.syntax.tree import ParsedSource, get_parser, grammar_for, parsed_file
+from desloppify.languages.typescript.syntax.queries import descendants, directive, imports
+from desloppify.languages.typescript.syntax.tree import (
+    ParsedSource,
+    get_parser,
+    grammar_for,
+    parse_text,
+    parsed_file,
+)
 
 TS_REEXPORT_RE = re.compile(
     r"""^export\s+(?:\{[^}]*\}|\*)\s+from\s+['\"]([^'\"]+)['\"]""", re.MULTILINE
@@ -101,11 +107,52 @@ def _relative_if_under_root(path_str: str) -> str:
         return path_str
 
 
+# Top-level statements that run no code: types, imports, ambient declarations.
+_TYPE_ONLY_STATEMENTS = frozenset(
+    {
+        "comment",
+        "hash_bang_line",
+        "empty_statement",
+        "import_statement",
+        "type_alias_declaration",
+        "interface_declaration",
+        "ambient_declaration",
+    }
+)
+
+
 def has_testable_logic(filepath: str, content: str) -> bool:
-    """Return True if a TypeScript file has runtime logic worth testing."""
+    """Return True if a TypeScript file has runtime logic worth testing.
+
+    Decided on the syntax tree when tree-sitter is available, so multi-line
+    type aliases (``type A =\\n  | B\\n  | C``) don't count as code; a
+    line heuristic is the fallback.
+    """
     if filepath.endswith(".d.ts"):
         return False
+    parsed = parse_text(content, filepath)
+    if parsed is not None:
+        return any(_is_runtime_statement(parsed, node) for node in parsed.root.named_children)
+    return _has_testable_logic_lines(content)
 
+
+def _is_runtime_statement(parsed: ParsedSource, node) -> bool:
+    if node.type in _TYPE_ONLY_STATEMENTS or directive(parsed, node) is not None:
+        return False
+    if node.type != "export_statement":
+        return True
+    if node.child_by_field_name("source") is not None:
+        return False  # re-export
+    declaration = node.child_by_field_name("declaration")
+    if declaration is not None:
+        return declaration.type not in _TYPE_ONLY_STATEMENTS
+    # ``export { a }`` forwards a binding; ``export default <expr>`` / ``export =`` run code.
+    return node.child_by_field_name("value") is not None or not any(
+        child.type == "export_clause" for child in node.named_children
+    )
+
+
+def _has_testable_logic_lines(content: str) -> bool:
     in_block_comment = False
     brace_context = False  # True when inside type/interface/import/export braces
     brace_depth = 0
