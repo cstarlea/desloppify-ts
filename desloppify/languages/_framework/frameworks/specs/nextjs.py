@@ -42,7 +42,13 @@ from desloppify.languages._framework.node.frameworks.nextjs.scanners import (
 )
 from desloppify.state_io import Issue
 
-from ..types import DetectionConfig, FrameworkSpec, ScannerRule, ToolIntegration
+from ..types import (
+    DetectionConfig,
+    EntryConventions,
+    FrameworkSpec,
+    ScannerRule,
+    ToolIntegration,
+)
 
 _NEXTJS_INFO_CACHE_PREFIX = "framework.nextjs.info"
 
@@ -540,6 +546,49 @@ def _next_lint_command(scan_root: Path) -> str | None:
     return None
 
 
+# Files Next.js loads from the file system. The orphaned detector treats them
+# as entry points in packages with a next.config at their root.
+NEXTJS_ENTRY_CONVENTIONS = EntryConventions(
+    config_files=("next.config.js", "next.config.mjs", "next.config.ts"),
+    extensions=frozenset({".ts", ".tsx", ".js", ".jsx"}),
+    # At the package root or in src/.
+    root_stems=frozenset(
+        {
+            "middleware",
+            "proxy",  # Next.js 16 renamed middleware to proxy
+            "mdx-components",
+            "instrumentation",
+            "instrumentation-client",
+        }
+    ),
+    # App Router files, anywhere inside an app/ directory.
+    route_dir="app",
+    route_stems=frozenset(
+        {
+            "page",
+            "layout",
+            "loading",
+            "error",
+            "not-found",
+            "global-error",
+            "route",
+            "template",
+            "default",
+            "opengraph-image",
+            "twitter-image",
+            "sitemap",
+            "robots",
+            "icon",
+            "apple-icon",
+            "forbidden",
+            "unauthorized",
+            "global-not-found",
+            "manifest",
+        }
+    ),
+)
+
+
 NEXTJS_SPEC = FrameworkSpec(
     id="nextjs",
     label="Next.js",
@@ -570,7 +619,8 @@ NEXTJS_SPEC = FrameworkSpec(
             confidence="high",
         ),
     ),
+    entry_conventions=NEXTJS_ENTRY_CONVENTIONS,
 )
 
 
-__all__ = ["NEXTJS_SPEC"]
+__all__ = ["NEXTJS_ENTRY_CONVENTIONS", "NEXTJS_SPEC"]

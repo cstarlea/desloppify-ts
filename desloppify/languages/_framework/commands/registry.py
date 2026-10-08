@@ -15,6 +15,7 @@ from desloppify.engine.detectors.orphaned import (
     OrphanedDetectionOptions,
     detect_orphaned_files,
 )
+from desloppify.languages._framework.frameworks.registry import framework_entry_conventions
 
 if TYPE_CHECKING:
     import argparse
@@ -181,6 +182,7 @@ def make_cmd_orphaned(
             options=OrphanedDetectionOptions(
                 extra_entry_patterns=extra_entry_patterns,
                 extra_barrel_names=extra_barrel_names,
+                entry_conventions=framework_entry_conventions(),
             ),
         )
 

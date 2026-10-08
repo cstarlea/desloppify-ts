@@ -7,14 +7,23 @@ from unittest.mock import patch
 
 from desloppify.engine.detectors.orphaned import (
     OrphanedDetectionOptions,
-    _detect_nextjs_project,
     _detect_react_router_project,
     _has_dunder_all,
     _is_dynamically_imported,
-    _is_nextjs_convention_entry,
     _is_react_router_convention_entry,
     detect_orphaned_files,
 )
+from desloppify.languages._framework.frameworks.registry import (
+    ensure_builtin_specs_loaded,
+    get_framework_spec,
+)
+from desloppify.languages._framework.frameworks.specs.nextjs import (
+    NEXTJS_ENTRY_CONVENTIONS,
+    NEXTJS_SPEC,
+)
+
+_detect_nextjs_project = NEXTJS_ENTRY_CONVENTIONS.applies_to
+_is_nextjs_convention_entry = NEXTJS_ENTRY_CONVENTIONS.is_entry
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -543,6 +552,13 @@ class TestDetectNextjsProject:
         assert _detect_nextjs_project(tmp_path) is False
 
 
+def test_nextjs_spec_declares_its_entry_conventions():
+    assert NEXTJS_SPEC.entry_conventions is NEXTJS_ENTRY_CONVENTIONS
+    ensure_builtin_specs_loaded()
+    spec = get_framework_spec("nextjs")
+    assert spec is not None and spec.entry_conventions is NEXTJS_ENTRY_CONVENTIONS
+
+
 class TestIsNextjsConventionEntry:
     """Unit tests for _is_nextjs_convention_entry."""
 
@@ -627,6 +643,10 @@ class TestIsNextjsConventionEntry:
         assert _is_nextjs_convention_entry("app/page.css") is False
 
 
+def _with_nextjs(**options) -> OrphanedDetectionOptions:
+    return OrphanedDetectionOptions(entry_conventions=(NEXTJS_ENTRY_CONVENTIONS,), **options)
+
+
 class TestNextjsIntegration:
     """Integration tests for Next.js orphan detection in detect_orphaned_files."""
 
@@ -650,11 +670,27 @@ class TestNextjsIntegration:
             "desloppify.engine.detectors.orphaned.rel",
             side_effect=lambda p: str(Path(p).relative_to(tmp_path)),
         ):
-            entries, total = detect_orphaned_files(tmp_path, graph, [".ts", ".tsx"])
+            entries, total = detect_orphaned_files(
+                tmp_path, graph, [".ts", ".tsx"], options=_with_nextjs()
+            )
 
         assert total == 4
         assert len(entries) == 1
         assert entries[0]["file"] == str(orphan)
+
+    def test_conventions_come_from_the_caller(self, tmp_path):
+        """The detector knows no framework itself: the language passes the conventions."""
+        (tmp_path / "next.config.js").write_text("module.exports = {}")
+        page = _write_file(tmp_path / "app" / "page.tsx", lines=30)
+        graph = {str(page): _graph_entry(importer_count=0)}
+
+        with patch(
+            "desloppify.engine.detectors.orphaned.rel",
+            side_effect=lambda p: str(Path(p).relative_to(tmp_path)),
+        ):
+            entries, _ = detect_orphaned_files(tmp_path, graph, [".tsx"])
+
+        assert len(entries) == 1
 
     def test_no_nextjs_config_no_exclusion(self, tmp_path):
         """Without next.config, convention files ARE reported as orphaned."""
@@ -669,7 +705,9 @@ class TestNextjsIntegration:
             "desloppify.engine.detectors.orphaned.rel",
             side_effect=lambda p: str(Path(p).relative_to(tmp_path)),
         ):
-            entries, total = detect_orphaned_files(tmp_path, graph, [".tsx"])
+            entries, total = detect_orphaned_files(
+                tmp_path, graph, [".tsx"], options=_with_nextjs()
+            )
 
         assert len(entries) == 1
 
@@ -690,7 +728,7 @@ class TestNextjsIntegration:
                 tmp_path,
                 graph,
                 [".tsx"],
-                options=OrphanedDetectionOptions(detect_frameworks=False),
+                options=_with_nextjs(detect_frameworks=False),
             )
 
         assert len(entries) == 1

@@ -15,6 +15,7 @@ from desloppify.engine.detectors import single_use as single_use_detector_mod
 from desloppify.engine._state.filtering import make_issue
 from desloppify.engine.policy.zones import adjust_potential, filter_entries
 from desloppify.languages._framework.base.types import LangRuntimeContract
+from desloppify.languages._framework.frameworks.registry import framework_entry_conventions
 from desloppify.languages._framework.issue_factories import (
     make_cycle_issues,
     make_facade_issues,
@@ -183,6 +184,7 @@ def detect_cycles_and_orphans(
             # already, so no suffix-matched dynamic import fallback here.
             entry_files=entries.all if entries else None,
             package_roots=[p.directory for p in packages or ()],
+            entry_conventions=framework_entry_conventions(),
         ),
     )
     orphan_entries = filter_entries(lang.zone_map, orphan_entries, "orphaned")

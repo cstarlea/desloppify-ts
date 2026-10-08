@@ -14,6 +14,7 @@ from desloppify.engine.detectors.orphaned import (
     OrphanedDetectionOptions,
     detect_orphaned_files,
 )
+from desloppify.languages._framework.frameworks.registry import framework_entry_conventions
 from desloppify.languages.typescript.detectors.deps.packages import (
     WorkspaceResolver,
     discover_packages,
@@ -300,7 +301,8 @@ def test_framework_conventions_detected_per_package(tmp_path):
         graph,
         [".ts", ".tsx"],
         OrphanedDetectionOptions(
-            package_roots=[tmp_path / "apps" / "site", tmp_path / "apps" / "api"]
+            package_roots=[tmp_path / "apps" / "site", tmp_path / "apps" / "api"],
+            entry_conventions=framework_entry_conventions(),
         ),
     )
     assert [e["file"] for e in entries] == [str(other_page.resolve())]

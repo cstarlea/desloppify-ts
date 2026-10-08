@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
-
-from .types import FrameworkSpec
+from .types import EntryConventions, FrameworkSpec
 
 FRAMEWORK_SPECS: dict[str, FrameworkSpec] = {}
 
@@ -49,9 +47,20 @@ def ensure_builtin_specs_loaded() -> None:
     _register_builtin_specs()
 
 
+def framework_entry_conventions(*, ecosystem: str = "node") -> tuple[EntryConventions, ...]:
+    """File-system entry conventions declared by the built-in framework specs."""
+    ensure_builtin_specs_loaded()
+    return tuple(
+        spec.entry_conventions
+        for spec in list_framework_specs(ecosystem=ecosystem).values()
+        if spec.entry_conventions is not None
+    )
+
+
 __all__ = [
     "FRAMEWORK_SPECS",
     "ensure_builtin_specs_loaded",
+    "framework_entry_conventions",
     "get_framework_spec",
     "list_framework_specs",
     "register_framework_spec",
