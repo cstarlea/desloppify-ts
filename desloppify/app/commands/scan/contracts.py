@@ -22,6 +22,7 @@ class ScanQueryPayload(TypedDict, total=False):
     objective_score: float | None
     strict_score: float | None
     verified_strict_score: float | None
+    headline: dict[str, object]
     prev_overall_score: float | None
     prev_objective_score: float | None
     prev_strict_score: float | None

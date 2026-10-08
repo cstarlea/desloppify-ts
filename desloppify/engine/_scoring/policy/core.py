@@ -233,6 +233,15 @@ def issue_counts_as_failure(issue: Mapping[str, Any], mode: ScoreMode) -> bool:
     return True
 
 
+def is_wontfix_debt(issue: Mapping[str, Any]) -> bool:
+    """Return True for a wontfix issue that strict still counts as debt.
+
+    A wontfix whose finding a scan has confirmed gone keeps its status but
+    no longer fails strict, so debt totals leave it out too.
+    """
+    return issue.get("status") == "wontfix" and issue_counts_as_failure(issue, "strict")
+
+
 # Tolerance for treating a subjective score as "on target" in integrity checks.
 # Scores within this band of the target are flagged as potential gaming.
 SUBJECTIVE_TARGET_MATCH_TOLERANCE = 0.05
@@ -324,6 +333,7 @@ __all__ = [
     "ScoreMode",
     "detector_policy",
     "is_loc_weighted_dimension",
+    "is_wontfix_debt",
     "issue_counts_as_failure",
     "matches_target_score",
     "register_scoring_policy",

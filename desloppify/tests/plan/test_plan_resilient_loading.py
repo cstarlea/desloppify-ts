@@ -38,6 +38,45 @@ def _skip(issue_id: str, **overrides) -> dict:
     return entry
 
 
+def _superseded(issue_id: str, **overrides) -> dict:
+    entry = {
+        "original_id": issue_id,
+        "status": "superseded",
+        "superseded_at": "2026-01-01T00:00:00+00:00",
+        "remapped_to": None,
+        "candidates": [],
+    }
+    entry.update(overrides)
+    return entry
+
+
+def _log_entry(**overrides) -> dict:
+    entry = {
+        "timestamp": "2026-01-01T00:00:00+00:00",
+        "action": "resolve",
+        "issue_ids": ["unused::src/a.ts::join"],
+        "cluster_name": None,
+        "actor": "user",
+        "note": None,
+        "detail": {},
+    }
+    entry.update(overrides)
+    return entry
+
+
+def _commit(**overrides) -> dict:
+    record = {
+        "sha": "abc1234def",
+        "branch": "main",
+        "issue_ids": ["unused::src/a.ts::join"],
+        "recorded_at": "2026-01-01T00:00:00+00:00",
+        "note": None,
+        "cluster_name": None,
+    }
+    record.update(overrides)
+    return record
+
+
 def _plan_with(**fields) -> dict:
     plan = {
         "version": PLAN_VERSION,
@@ -128,6 +167,66 @@ def _on_disk(path) -> dict:
             "bad",
             "is a int, not an object",
         ),
+        (
+            {"superseded": {"good": _superseded("good"), "bad": "oops"}},
+            "superseded",
+            "bad",
+            "is a str, not an object",
+        ),
+        (
+            {"superseded": {"good": _superseded("good"), "bad": _superseded("bad", candidates="x")}},
+            "superseded",
+            "bad",
+            "malformed candidates",
+        ),
+        (
+            {"promoted_ids": ["a", {"id": "b"}]},
+            "promoted_ids",
+            1,
+            "is a dict, not an ID string",
+        ),
+        (
+            {"uncommitted_issues": [7, "a"]},
+            "uncommitted_issues",
+            0,
+            "is a int, not an ID string",
+        ),
+        (
+            {"execution_log": [_log_entry(), "garbage"]},
+            "execution_log",
+            1,
+            "is a str, not an object",
+        ),
+        (
+            {"execution_log": [_log_entry(timestamp=5), _log_entry()]},
+            "execution_log",
+            0,
+            "malformed timestamp 5",
+        ),
+        (
+            {"execution_log": [_log_entry(issue_ids="abc")]},
+            "execution_log",
+            0,
+            "malformed issue_ids",
+        ),
+        (
+            {"execution_log": [{"timestamp": "2026-01-01T00:00:00+00:00"}]},
+            "execution_log",
+            0,
+            "has no action",
+        ),
+        (
+            {"commit_log": [_commit(), _commit(sha=1234567)]},
+            "commit_log",
+            1,
+            "malformed sha 1234567",
+        ),
+        (
+            {"commit_log": [_commit(issue_ids=[{"id": "x"}])]},
+            "commit_log",
+            0,
+            "malformed issue_ids",
+        ),
     ],
 )
 def test_one_bad_entry_is_quarantined_and_the_rest_load(
@@ -157,6 +256,26 @@ def test_one_bad_entry_is_quarantined_and_the_rest_load(
     err = capsys.readouterr().err
     assert err.count("malformed plan entry") == 1
     assert "1 malformed plan entry(s)" in err
+
+
+def test_well_formed_log_entries_load_untouched(tmp_path):
+    path = tmp_path / "plan.json"
+    minimal_log = {"timestamp": "2026-01-01T00:00:00+00:00", "action": "focus"}
+    fields = {
+        "superseded": {"gone": {"status": "superseded"}},
+        "promoted_ids": ["a"],
+        "uncommitted_issues": ["b"],
+        "execution_log": [_log_entry(), minimal_log],
+        "commit_log": [_commit(), {"sha": "abc"}],
+    }
+    _write(path, _plan_with(**fields))
+
+    plan = load_plan(path)
+
+    assert "quarantined_entries" not in plan
+    assert plan["superseded"]["gone"]["original_id"] == "gone"
+    for section in ("promoted_ids", "uncommitted_issues", "execution_log", "commit_log"):
+        assert plan[section] == fields[section]
 
 
 def test_queued_and_skipped_id_keeps_the_skip(tmp_path):

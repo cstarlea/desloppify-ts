@@ -92,6 +92,9 @@ class StateStats(TypedDict, total=False):
     false_positive: int
     deferred: int
     triaged_out: int
+    # wontfix issues strict still fails (not confirmed gone by a scan)
+    wontfix_debt: int
+    wontfix_debt_by_tier: dict[str, int]
     by_tier: dict[str, TierStats]
 
 

@@ -8,6 +8,7 @@ from desloppify.app.commands.helpers.query import write_query
 from desloppify.base.output.terminal import colorize, print_table
 from desloppify.engine._state.filtering import open_scope_breakdown
 from desloppify.engine._scoring.results.core import compute_health_breakdown
+from desloppify.state_scoring import headline_score
 
 
 def _status_plan_payload(plan: dict | None) -> dict:
@@ -34,14 +35,18 @@ def _suppression_style(last_pct: float) -> str:
     return "dim"
 
 
-def show_tier_progress_table(by_tier: dict) -> None:
+def show_tier_progress_table(by_tier: dict, debt_by_tier: dict | None = None) -> None:
     """Fallback display when dimension scores are unavailable."""
     rows = []
     for tier_num in [1, 2, 3, 4]:
         ts = by_tier.get(str(tier_num), {})
         t_open = ts.get("open", 0)
         t_fixed = ts.get("fixed", 0) + ts.get("auto_resolved", 0)
-        t_wontfix = ts.get("wontfix", 0)
+        t_debt = (
+            debt_by_tier.get(str(tier_num), 0)
+            if debt_by_tier is not None
+            else ts.get("wontfix", 0)
+        )
         t_total = sum(ts.values())
         strict_pct = round((t_fixed + ts.get("false_positive", 0)) / t_total * 100) if t_total else 100
         bar_len = 20
@@ -54,7 +59,7 @@ def show_tier_progress_table(by_tier: dict) -> None:
                 f"{strict_pct}%",
                 str(t_open),
                 str(t_fixed),
-                str(t_wontfix),
+                str(t_debt),
             ]
         )
     print_table(
@@ -116,6 +121,7 @@ def write_status_query(request: StatusQueryRequest) -> None:
             "objective_score": objective_score,
             "strict_score": strict_score,
             "verified_strict_score": verified_strict_score,
+            "headline": headline_score(state)._asdict(),
             "dimension_scores": dim_scores,
             "scorecard_dimensions": scorecard_dims,
             "subjective_measures": subjective_measures,

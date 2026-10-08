@@ -13,6 +13,7 @@ from desloppify.languages.typescript.detectors.smells import detect_smells
 from desloppify.languages.typescript.syntax.queries import (
     calls,
     classes,
+    definitions,
     descendants,
     exports,
     function_info,
@@ -20,6 +21,7 @@ from desloppify.languages.typescript.syntax.queries import (
     imports,
     jsx_elements,
     module_statements,
+    type_declarations,
 )
 from desloppify.languages.typescript.syntax.tree import parse_text, parsed_file
 
@@ -154,6 +156,55 @@ def test_overloads_are_signatures():
 def test_nested_functions_in_source_order():
     names = [f.name for f in functions(_parse("function outer() {\n  function inner() {}\n  const x = () => 1;\n}\n"))]
     assert names == ["outer", "inner", "x"]
+
+
+def _definitions(source: str, path: str = "a.ts"):
+    return [(d.name, d.line, d.object_member) for d in definitions(_parse(source, path))]
+
+
+def test_definitions_name_object_members_by_their_path():
+    source = (
+        "const api = {\n"
+        "  get() {},\n"
+        "  post: async () => 1,\n"
+        "  put: function () {},\n"
+        "  nested: { deep() {} },\n"
+        "  'kebab-key': () => 1,\n"
+        "  [Symbol.iterator]() {},\n"
+        "  get size() { return 1; },\n"
+        "} as const;\n"
+        "module.exports = { handler() {} };\n"
+        "const cfg = ({ load() {} }) satisfies Config;\n"
+        "export default { fetch() {} };\n"
+        "register({ onError(err) {} });\n"
+        "class C { m() {} }\n"
+    )
+    assert _definitions(source) == [
+        ("api.get", 2, True),
+        ("api.post", 3, True),
+        ("api.put", 4, True),
+        ("api.nested.deep", 5, True),
+        ("api.kebab-key", 6, True),
+        ("api[Symbol.iterator]", 7, True),
+        ("api.size", 8, True),
+        ("module.exports.handler", 10, True),
+        ("cfg.load", 11, True),
+        ("default.fetch", 12, True),
+        ("onError", 13, True),
+        ("C.m", 14, False),
+    ]
+
+
+def test_definitions_include_anonymous_default_exports():
+    assert _definitions("export default function () {}\n") == [("default", 1, False)]
+    assert _definitions("export default async () => {};\n") == [("default", 1, False)]
+    defs = definitions(_parse("export default function () {}\n"))
+    assert defs[0].function.default_export
+
+
+def test_definitions_leave_out_callbacks_and_object_values():
+    source = "items.map((x) => x);\nconst o = { a: 1, b: [() => 1], c: f(() => 2) };\n"
+    assert _definitions(source) == []
 
 
 def test_function_info_for_a_callback():
@@ -380,6 +431,25 @@ def test_calls_filter_by_callee():
 def test_descendants_in_source_order():
     parsed = _parse("a(); b(c());\n")
     assert [parsed.text(n) for n in descendants(parsed.root, {"call_expression"})] == ["a()", "b(c())", "c()"]
+
+
+# ── Type declarations ───────────────────────────────────────
+
+
+def test_type_declarations():
+    parsed = _parse(
+        "export interface A<T, U = T> extends B<T>, C { a: T }\n"
+        "type D = A<string> & { d: 1 };\n"
+        "namespace N { interface E {} }\n"
+    )
+    found = {d.name: d for d in type_declarations(parsed)}
+    assert list(found) == ["A", "D", "E"]
+    a, d = found["A"], found["D"]
+    assert (a.kind, a.type_parameters, a.exported, a.line) == ("interface", ("T", "U"), True, 1)
+    assert [parsed.text(n) for n in a.extends] == ["B<T>", "C"]
+    assert a.value.type == "interface_body"
+    assert (d.kind, d.exported, d.extends, d.value.type) == ("alias", False, (), "intersection_type")
+    assert a.span.start_byte == 0  # from ``export``
 
 
 # ── Parse once per scan ─────────────────────────────────────

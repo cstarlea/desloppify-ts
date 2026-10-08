@@ -18,28 +18,42 @@ def score_summary_lines(
     strict_score: float | None,
     verified_strict_score: float | None,
     target_strict: float | None = None,
+    provisional: bool = False,
 ) -> list[tuple[str, str]]:
-    """Return formatted top-line score summary rows."""
+    """Return formatted top-line score summary rows.
+
+    ``provisional`` (no subjective dimension assessed yet) leads with the
+    objective score.
+    """
     if (
         overall_score is not None
         and objective_score is not None
         and strict_score is not None
         and verified_strict_score is not None
     ):
-        lines: list[tuple[str, str]] = [
-            (
-                f"\n  Scores: overall {overall_score:.1f}/100 · "
-                f"objective {objective_score:.1f}/100 · "
-                f"strict {strict_score:.1f}/100 · "
-                f"verified {verified_strict_score:.1f}/100",
-                "bold",
-            ),
-            (
-                "  Score guide: overall (lenient) · objective (mechanical only) · "
-                "strict (penalizes wontfix) · verified (scan-confirmed only)",
-                "dim",
-            ),
-        ]
+        scores_line = (
+            f"  Scores: overall {overall_score:.1f}/100 · "
+            f"objective {objective_score:.1f}/100 · "
+            f"strict {strict_score:.1f}/100 · "
+            f"verified {verified_strict_score:.1f}/100"
+        )
+        lines: list[tuple[str, str]] = (
+            [
+                (
+                    f"\n  Score: {objective_score:.1f}/100 objective "
+                    "(provisional until the subjective dimensions are assessed)",
+                    "bold",
+                ),
+                (scores_line, "dim"),
+            ]
+            if provisional
+            else [("\n" + scores_line, "bold")]
+        )
+        lines.append((
+            "  Score guide: overall (lenient) · objective (mechanical only) · "
+            "strict (penalizes wontfix) · verified (scan-confirmed only)",
+            "dim",
+        ))
         if target_strict is not None:
             gap = round(target_strict - strict_score, 1)
             if gap > 0:

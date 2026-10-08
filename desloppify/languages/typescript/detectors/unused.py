@@ -21,6 +21,7 @@ from desloppify.base.discovery.paths import get_project_root
 from desloppify.base.discovery.source import find_ts_and_js_files
 from desloppify.base.output.terminal import colorize, print_table
 from desloppify.languages._framework.base.types import DetectorCoverageStatus
+from desloppify.languages.typescript.detectors.deps.resolve import find_nearest_tsconfig
 from desloppify.languages.typescript.detectors.unused_fallback import (
     _contains_deno_markers,
     _extract_import_names,
@@ -119,26 +120,6 @@ def _run_tsc_unused_check(
     )
 
 
-def _find_nearest_tsconfig(path: Path) -> Path | None:
-    """Return the closest TypeScript config that owns ``path``.
-
-    Prefer an application config when both conventional config names exist in
-    the same directory. Walking upward keeps scans of monorepo projects scoped
-    to that project's config instead of assuming the repository root is a
-    single application.
-    """
-    current = path.resolve()
-    if current.is_file():
-        current = current.parent
-
-    for directory in (current, *current.parents):
-        for config_name in ("tsconfig.app.json", "tsconfig.json"):
-            candidate = directory / config_name
-            if candidate.is_file():
-                return candidate
-    return None
-
-
 def _reduced(summary: str, *, reason: str, confidence: float) -> DetectorCoverageStatus:
     return DetectorCoverageStatus(
         detector="unused",
@@ -187,7 +168,7 @@ def detect_unused_result(
         entries, total = _detect_unused_fallback(path, category)
         return entries, total, None
 
-    base_tsconfig = _find_nearest_tsconfig(path)
+    base_tsconfig = find_nearest_tsconfig(path)
     if base_tsconfig is None:
         entries, total = _detect_unused_fallback(path, category)
         return entries, total, _reduced(

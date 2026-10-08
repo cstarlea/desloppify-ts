@@ -240,6 +240,20 @@ def _print_subjective_integrity_warning(
     )
 
 
+def _print_provisional_headline(state: StateModel) -> None:
+    """Lead with the objective score while no subjective dimension is assessed."""
+    headline = state_mod.headline_score(state)
+    if not headline.provisional or headline.score is None:
+        return
+    print(
+        colorize(
+            f"  Score: {headline.score:.1f}/100 objective "
+            "(provisional until the subjective dimensions are assessed)",
+            "bold",
+        )
+    )
+
+
 def _print_score_quartet(
     new: state_mod.ScoreSnapshot,
     prev_overall: float | None,
@@ -327,6 +341,7 @@ def show_score_delta(
 
     _show_score_reveal(state, new, target_strict=target_strict)
 
+    _print_provisional_headline(state)
     _print_score_quartet(
         new, prev_overall, prev_objective, prev_strict, prev_verified,
         non_comparable_reason,
@@ -335,7 +350,7 @@ def show_score_delta(
     _unscored_subjective_callout(state)
 
     gap = (new.overall or 0) - (new.strict or 0)
-    _print_wontfix_gap(stats.get("wontfix", 0), gap)
+    _print_wontfix_gap(stats.get("wontfix_debt", stats.get("wontfix", 0)), gap)
     _print_score_legend(state, gap)
 
     if target_strict is not None and new.strict is not None:

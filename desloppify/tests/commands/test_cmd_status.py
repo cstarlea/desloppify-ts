@@ -68,6 +68,22 @@ class TestStatusModuleSanity:
         assert "Score guide:" in lines[1][0]
         assert "north star" in lines[2][0]
 
+    def test_score_summary_lines_provisional_leads_with_objective(self):
+        lines = score_summary_lines(
+            overall_score=23.1,
+            objective_score=92.3,
+            strict_score=23.1,
+            verified_strict_score=92.3,
+            provisional=True,
+        )
+        assert lines[0] == (
+            "\n  Score: 92.3/100 objective "
+            "(provisional until the subjective dimensions are assessed)",
+            "bold",
+        )
+        assert lines[1][0].startswith("  Scores: overall 23.1/100")
+        assert lines[1][1] == "dim"
+
     def test_score_summary_lines_unavailable(self):
         """score_summary_lines returns fallback when scores are None."""
         lines = score_summary_lines(

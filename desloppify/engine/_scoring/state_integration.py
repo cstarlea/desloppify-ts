@@ -10,7 +10,10 @@ from __future__ import annotations
 
 from desloppify.base.enums import issue_status_tokens
 from desloppify.engine._scoring.detection import merge_potentials
-from desloppify.engine._scoring.policy.core import CARRIED_FORWARD_MAX_SCANS
+from desloppify.engine._scoring.policy.core import (
+    CARRIED_FORWARD_MAX_SCANS,
+    is_wontfix_debt,
+)
 from desloppify.engine._scoring.results.core import (
     compute_health_score,
     compute_score_bundle,
@@ -61,6 +64,19 @@ def _count_issues(issues: dict) -> tuple[dict[str, int], dict[int, dict[str, int
         tier_counter[status] = tier_counter.get(status, 0) + 1
 
     return counters, tier_stats
+
+
+def _count_wontfix_debt(issues: dict) -> tuple[int, dict[str, int]]:
+    """Count wontfix issues strict still fails, in total and per tier."""
+    total = 0
+    by_tier: dict[str, int] = {}
+    for issue in issues.values():
+        if issue.get("suppressed") or not is_wontfix_debt(issue):
+            continue
+        total += 1
+        tier = str(issue.get("tier", 3))
+        by_tier[tier] = by_tier.get(tier, 0) + 1
+    return total, dict(sorted(by_tier.items()))
 
 
 def _aggregate_scores(dim_scores: dict) -> dict[str, float]:
@@ -238,9 +254,12 @@ def recompute_stats(
     ensure_state_defaults(state)
     issues = path_scoped_issues(state.get("work_items") or state.get("issues", {}), scan_path)
     counters, tier_stats = _count_issues(issues)
+    wontfix_debt, wontfix_debt_by_tier = _count_wontfix_debt(issues)
     state["stats"] = {
         "total": sum(counters.values()),
         **counters,
+        "wontfix_debt": wontfix_debt,
+        "wontfix_debt_by_tier": wontfix_debt_by_tier,
         "by_tier": {
             str(tier): tier_counts for tier, tier_counts in sorted(tier_stats.items())
         },

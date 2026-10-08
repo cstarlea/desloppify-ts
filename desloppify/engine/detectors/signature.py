@@ -109,7 +109,7 @@ def detect_signature_variance(
             continue
         if fn.name.startswith("test_"):
             continue  # Skip test functions
-        if getattr(fn, "default_export", False):
+        if getattr(fn, "default_export", False) or getattr(fn, "object_member", False):
             continue
         for key in _signature_group_keys(fn.name):
             by_group[key].append(fn)

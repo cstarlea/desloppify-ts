@@ -174,6 +174,16 @@ def test_default_exports_skipped():
     assert entries == []
 
 
+def test_object_members_skipped():
+    """An object-literal member's parameters are set by the shape its object fills."""
+    functions = [
+        FunctionInfo("onError", f"{d}/server.ts", 1, 5, 5, "", params=p, object_member=True)
+        for d, p in (("a", []), ("b", ["err"]), ("c", ["opts"]))
+    ]
+    entries, _ = detect_signature_variance(functions)
+    assert entries == []
+
+
 def test_route_handler_methods_allowlisted():
     functions = [
         _fn("GET", "a/route.ts", []),

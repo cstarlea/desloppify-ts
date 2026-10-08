@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import re
 from typing import NamedTuple
 
 from desloppify.base.text_utils import strip_c_style_comments
+from desloppify.languages._framework.node.js_text import code_text as _code_text
 from desloppify.languages.typescript.syntax.scanner import scan_code
 
 
@@ -64,6 +66,17 @@ def _ts_match_is_in_string(line: str, match_start: int) -> bool:
         i += 1
 
     return False
+
+
+def _regex_line_matches(ctx: _FileContext, pattern: str):
+    """``(index, line)`` for each line whose first match of ``pattern`` is code,
+    lines inside block comments and template literals left out."""
+    for index, line in enumerate(ctx.lines):
+        if index in ctx.line_state:
+            continue
+        match = re.search(pattern, line)
+        if match and not _ts_match_is_in_string(line, match.start()):
+            yield index, line
 
 
 # ---------------------------------------------------------------------------
@@ -126,34 +139,6 @@ def _content_line_info(content: str, pos: int) -> tuple[int, str]:
     if line_end == -1:
         line_end = len(content)
     return line_no, content[line_start:line_end].strip()[:100]
-
-
-def _code_text(text: str) -> str:
-    """Blank string literals and ``//`` comments to spaces, preserving positions."""
-    out = list(text)
-    in_line_comment = False
-    prev_code_idx = -2
-    prev_code_ch = ""
-    for i, ch, in_s in scan_code(text):
-        if ch == "\n":
-            in_line_comment = False
-            prev_code_ch = ""
-            continue
-        if in_line_comment:
-            out[i] = " "
-            continue
-        if in_s:
-            out[i] = " "
-            continue
-        if ch == "/" and prev_code_ch == "/" and prev_code_idx == i - 1:
-            out[prev_code_idx] = " "
-            out[i] = " "
-            in_line_comment = True
-            prev_code_ch = ""
-            continue
-        prev_code_idx = i
-        prev_code_ch = ch
-    return "".join(out)
 
 
 # ---------------------------------------------------------------------------
@@ -266,6 +251,7 @@ __all__ = [
     "_content_line_info",
     "_extract_block_body",
     "_find_block_end",
+    "_regex_line_matches",
     "_scan_code_line",
     "_scan_template_content",
     "_strip_ts_comments",
