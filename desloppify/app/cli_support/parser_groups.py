@@ -58,7 +58,7 @@ examples:
   desloppify scan --force-resolve""",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    p_scan.add_argument("--path", type=str, default=None, help="Project root directory (default: auto-detected)")
+    p_scan.add_argument("--path", type=str, default=None, help="Directory to scan (default: the last scan's path, else src/)")
     p_scan.add_argument("--state", type=str, default=None, help="Path to state file")
     p_scan.add_argument(
         "--reset-subjective",
@@ -120,7 +120,7 @@ def _add_status_parser(sub) -> None:
 
 def _add_tree_parser(sub) -> None:
     p_tree = sub.add_parser("tree", help="Annotated codebase tree (text)")
-    p_tree.add_argument("--path", type=str, default=None, help="Project root directory (default: auto-detected)")
+    p_tree.add_argument("--path", type=str, default=None, help="Directory to scan (default: the last scan's path, else src/)")
     p_tree.add_argument("--state", type=str, default=None, help="Path to state file")
     p_tree.add_argument("--depth", type=int, default=2, help="Max depth (default: 2)")
     p_tree.add_argument(
