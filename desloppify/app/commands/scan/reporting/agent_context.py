@@ -256,6 +256,13 @@ def print_llm_summary(
     if has_plan:
         _print_living_plan_notice(plan_snapshot)
 
+    headline = state_mod.headline_score(state)
+    if headline.provisional and headline.score is not None:
+        print(
+            f"Headline score:  {headline.score:.1f}/100 objective, PROVISIONAL: no subjective "
+            "dimension is assessed yet, so overall and strict count them as 0.\n"
+            "Lead with this score, say it is provisional, and offer `desloppify review --prepare`."
+        )
     _print_score_lines(
         overall_score=scores.overall,
         objective_score=scores.objective,

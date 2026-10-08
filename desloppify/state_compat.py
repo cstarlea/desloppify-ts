@@ -65,13 +65,16 @@ from desloppify.engine._state.schema_scores import (
     get_verified_strict_score,
 )
 from desloppify.state_score_snapshot import (
+    HeadlineScore,
     ScoreSnapshot,
+    headline_score,
     score_snapshot,
     suppression_metrics,
 )
 
 __all__ = [
     "ConcernDismissal",
+    "HeadlineScore",
     "CURRENT_VERSION",
     "DEFAULT_ISSUE_NOISE_BUDGET",
     "DEFAULT_ISSUE_NOISE_GLOBAL_BUDGET",
@@ -118,6 +121,7 @@ __all__ = [
     "scan_reconstructed_issue_count",
     "scan_source",
     "score_snapshot",
+    "headline_score",
     "state_lock",
     "suppression_metrics",
     "upsert_issues",

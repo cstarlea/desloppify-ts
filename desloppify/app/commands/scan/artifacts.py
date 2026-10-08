@@ -21,7 +21,7 @@ from desloppify.base.discovery.paths import get_project_root
 from desloppify.engine._scoring.results.core import compute_health_breakdown
 from desloppify.engine._state.filtering import open_scope_breakdown
 from desloppify.engine.plan_state import load_plan
-from desloppify.state_scoring import score_snapshot
+from desloppify.state_scoring import headline_score, score_snapshot
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +50,7 @@ def build_scan_query_payload(
         "objective_score": scores.objective,
         "strict_score": scores.strict,
         "verified_strict_score": scores.verified,
+        "headline": headline_score(state)._asdict(),
         "prev_overall_score": merge.prev_overall,
         "prev_objective_score": merge.prev_objective,
         "prev_strict_score": merge.prev_strict,

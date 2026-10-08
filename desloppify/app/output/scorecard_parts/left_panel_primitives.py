@@ -71,11 +71,11 @@ def draw_left_panel_strict(
     strict_value_bbox,
     font_strict_label,
     font_strict_val,
+    strict_label: str = "strict",
 ) -> None:
-    strict_label = "strict"
     label_width = draw.textlength(strict_label, font=font_strict_label)
     value_width = draw.textlength(strict_text, font=font_strict_val)
-    gap = scale(5)
+    gap = scale(5) if strict_text else 0
     strict_x = center_x - (label_width + gap + value_width) / 2
     draw.text(
         (strict_x, strict_y - strict_label_bbox[1]),
@@ -83,6 +83,8 @@ def draw_left_panel_strict(
         fill=DIM,
         font=font_strict_label,
     )
+    if not strict_text:
+        return
     draw.text(
         (strict_x + label_width + gap, strict_y - strict_value_bbox[1]),
         strict_text,
