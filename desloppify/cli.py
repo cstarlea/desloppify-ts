@@ -13,6 +13,7 @@ from typing import Any
 
 from desloppify.app.cli_support.parser import create_parser as _create_parser
 from desloppify.app.commands.helpers.lang import resolve_lang
+from desloppify.app.commands.helpers.command_lock import command_lock
 from desloppify.app.commands.helpers.command_runtime import CommandRuntime
 from desloppify.app.commands.helpers.state import state_path
 from desloppify.app.commands.registry import CommandHandler, get_command_handlers
@@ -329,10 +330,13 @@ def main() -> None:
                 handler = _resolve_handler(args.command)
                 handler(args)
             else:
-                _resolve_default_path(args)
-                _load_shared_runtime(args)
-                handler = _resolve_handler(args.command)
-                handler(args)
+                # Commands that may save hold the state and plan locks from
+                # before the first load until they return (CE-4).
+                with command_lock(args):
+                    _resolve_default_path(args)
+                    _load_shared_runtime(args)
+                    handler = _resolve_handler(args.command)
+                    handler(args)
     except CommandError as exc:
         print(colorize(f"  {exc.message}", "red"), file=sys.stderr)
         sys.exit(exc.exit_code)

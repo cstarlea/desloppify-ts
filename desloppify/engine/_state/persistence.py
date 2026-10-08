@@ -3,33 +3,30 @@
 from __future__ import annotations
 
 import contextlib
-import errno
 import json
 import logging
-import os
-import shutil
 import sys
-import time
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 from pathlib import Path
 from typing import cast
-
-try:
-    import fcntl
-except ImportError:
-    fcntl = None  # type: ignore[assignment]
 
 from desloppify.base.exception_sets import (
     CORRUPT_JSON_FILE_EXCEPTIONS,
     PLAN_LOAD_EXCEPTIONS,
 )
 __all__ = [
+    "STATE_LOCK_RANK",
+    "hold_state_lock",
     "load_state",
     "save_state",
     "state_lock",
+    "state_lock_path",
 ]
 
 from desloppify.base.discovery.file_paths import (
+    LockOrderError,
+    exclusive_file_lock,
+    safe_copy_file,
     safe_write_text,
     set_aside_corrupted as _set_aside_corrupted,
 )
@@ -61,11 +58,11 @@ STATE_FILE = _STATE_FILE_SENTINEL
 
 from desloppify.engine._state import _recompute_stats
 
-_LOCK_RETRY_ERRNOS = {
-    errno.EACCES,
-    errno.EAGAIN,
-    getattr(errno, "EDEADLK", errno.EACCES),
-}
+# Lock order: state (10) before plan (20) before progression (30).
+STATE_LOCK_RANK = 10
+# How long a load waits for the lock before recovering a corrupt file in
+# memory only (leaving the files on disk alone).
+_RECOVERY_LOCK_TIMEOUT = 5.0
 
 
 def _default_state_file() -> Path:
@@ -78,28 +75,31 @@ def _default_state_file() -> Path:
     return get_state_file()
 
 
-def _acquire_state_lock(lock_fd: int) -> None:
-    if sys.platform == "win32":
-        import msvcrt
-
-        msvcrt.locking(lock_fd, msvcrt.LK_NBLCK, 1)
-        return
-
-    import fcntl
-
-    fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+def state_lock_path(state_path: Path) -> Path:
+    """Return the lock file guarding ``state_path``."""
+    return state_path.with_suffix(".json.lock")
 
 
-def _release_state_lock(lock_fd: int) -> None:
-    if sys.platform == "win32":
-        import msvcrt
+@contextlib.contextmanager
+def hold_state_lock(
+    path: Path | None = None,
+    *,
+    timeout: float | None = 30.0,
+    on_wait: Callable[[], None] | None = None,
+) -> Generator[None, None, None]:
+    """Hold the state file's exclusive lock (no load or save).
 
-        msvcrt.locking(lock_fd, msvcrt.LK_UNLCK, 1)
-        return
-
-    import fcntl
-
-    fcntl.flock(lock_fd, fcntl.LOCK_UN)
+    Re-entrant within a thread. Raises TimeoutError if it cannot be taken
+    within ``timeout`` seconds.
+    """
+    state_path = path or _default_state_file()
+    with exclusive_file_lock(
+        state_lock_path(state_path),
+        timeout=timeout,
+        rank=STATE_LOCK_RANK,
+        on_wait=on_wait,
+    ):
+        yield
 
 
 # State files whose on-disk content did not load cleanly. ``save_state`` does
@@ -228,7 +228,8 @@ def load_state(path: Path | None = None) -> StateModel:
     - Malformed work items are quarantined; the rest of the state loads.
     - A file that cannot be used at all is renamed to ``.corrupted`` and the
       ``.bak`` copy is loaded (and copied into its place), else the state
-      starts fresh.
+      starts fresh. The rename and restore happen under the state lock; if
+      the lock stays busy, the backup is loaded without touching disk.
     - After anything but a clean load, the next ``save_state`` to this path
       leaves ``.bak`` alone.
     """
@@ -246,10 +247,19 @@ def load_state(path: Path | None = None) -> StateModel:
 
     try:
         state, quarantined = _read_state_file(state_path)
-    except (*CORRUPT_JSON_FILE_EXCEPTIONS, OSError) as ex:
+    except OSError as ex:
+        # Unreadable is not corrupt: nothing on disk changes.
         _unclean_state_files.add(rotation_key)
-        return _load_state_after_failure(state_path, ex)
+        return _load_state_after_failure(state_path, ex, set_aside=False)
+    except CORRUPT_JSON_FILE_EXCEPTIONS as ex:
+        return _recover_corrupt_state(state_path, ex)
+    return _finish_state_load(state_path, state, quarantined)
 
+
+def _finish_state_load(
+    state_path: Path, state: StateModel, quarantined: int
+) -> StateModel:
+    rotation_key = _rotation_key(state_path)
     if quarantined:
         _unclean_state_files.add(rotation_key)
         _warn_quarantined(state_path, quarantined)
@@ -258,14 +268,51 @@ def load_state(path: Path | None = None) -> StateModel:
     return _reconstruct_from_saved_plan_if_available(state_path, state)
 
 
-def _load_state_after_failure(state_path: Path, ex: Exception) -> StateModel:
-    """Set aside an unusable state file, then fall back to ``.bak`` or empty."""
+def _recover_corrupt_state(state_path: Path, ex: Exception) -> StateModel:
+    """Recover from a corrupt state file, touching disk only under the lock.
+
+    Two loads of the same corrupt file must not both rename it and restore
+    ``.bak``. Under the lock the file is read again (a concurrent load may
+    already have restored it). If the lock is busy, recover in memory only.
+    """
+    rotation_key = _rotation_key(state_path)
+    try:
+        with hold_state_lock(state_path, timeout=_RECOVERY_LOCK_TIMEOUT):
+            if not state_path.exists():
+                _unclean_state_files.add(rotation_key)
+                return _load_state_after_failure(state_path, ex, set_aside=False)
+            try:
+                state, quarantined = _read_state_file(state_path)
+            except (*CORRUPT_JSON_FILE_EXCEPTIONS, OSError) as again:
+                _unclean_state_files.add(rotation_key)
+                return _load_state_after_failure(state_path, again, set_aside=True)
+            return _finish_state_load(state_path, state, quarantined)
+    except (TimeoutError, LockOrderError) as lock_ex:
+        logger.warning(
+            "State lock unavailable while recovering %s (%s); "
+            "recovering in memory only",
+            state_path,
+            lock_ex,
+        )
+        _unclean_state_files.add(rotation_key)
+        return _load_state_after_failure(state_path, ex, set_aside=False)
+
+
+def _load_state_after_failure(
+    state_path: Path, ex: Exception, *, set_aside: bool
+) -> StateModel:
+    """Fall back to ``.bak`` or empty after a failed load.
+
+    With ``set_aside`` (only under the state lock), a corrupt file is renamed
+    to ``.corrupted`` and a good backup is copied into its place.
+    """
     moved_to: Path | None = None
     if isinstance(ex, OSError):
         # Unreadable is not corrupt: leave the file where it is.
         problem = f"State file could not be read ({ex})"
     else:
         problem = f"State file corrupted ({ex})"
+    if set_aside and not isinstance(ex, OSError):
         moved_to = _set_aside_corrupted(state_path)
         if moved_to is not None:
             problem += f"; moved to {moved_to.name}"
@@ -298,7 +345,7 @@ def _load_state_after_failure(state_path: Path, ex: Exception) -> StateModel:
                 # Put the backup in place so later loads in this run (and the
                 # next command, if nothing saves) see it, not a missing file.
                 try:
-                    shutil.copy2(str(backup), str(state_path))
+                    safe_copy_file(backup, state_path)
                 except OSError as copy_ex:
                     logger.debug(
                         "Failed to restore %s from %s: %s", state_path, backup, copy_ex
@@ -369,7 +416,7 @@ def save_state(
     if state_path.exists() and rotation_key not in _unclean_state_files:
         backup = state_path.with_suffix(".json.bak")
         try:
-            shutil.copy2(str(state_path), str(backup))
+            safe_copy_file(state_path, backup)
         except OSError as backup_ex:
             logger.debug(
                 "Failed to create state backup %s: %s",
@@ -405,26 +452,14 @@ def state_lock(
         # state is saved automatically on clean exit
     """
     state_path = path or _default_state_file()
-    lock_path = state_path.with_suffix(".json.lock")
-    lock_path.parent.mkdir(parents=True, exist_ok=True)
-
-    lock_fd = os.open(str(lock_path), os.O_CREAT | os.O_RDWR)
-    try:
-        deadline = time.monotonic() + timeout
-        while True:
-            try:
-                _acquire_state_lock(lock_fd)
-                break
-            except OSError as exc:
-                if exc.errno not in _LOCK_RETRY_ERRNOS:
-                    raise
-                if time.monotonic() >= deadline:
-                    raise TimeoutError(
-                        f"Could not acquire state lock within {timeout}s. "
-                        "Another desloppify command may be running."
-                    ) from None
-                time.sleep(0.1)
-
+    with contextlib.ExitStack() as stack:
+        try:
+            stack.enter_context(hold_state_lock(state_path, timeout=timeout))
+        except TimeoutError:
+            raise TimeoutError(
+                f"Could not acquire state lock within {timeout}s. "
+                "Another desloppify command may be running."
+            ) from None
         # Reload state inside the lock to get the latest version.
         state = load_state(state_path)
         yield state
@@ -433,10 +468,3 @@ def state_lock(
             state_path,
             subjective_integrity_target=subjective_integrity_target,
         )
-    finally:
-        try:
-            _release_state_lock(lock_fd)
-        except OSError:
-            pass
-        with contextlib.suppress(OSError):
-            os.close(lock_fd)

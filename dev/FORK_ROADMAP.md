@@ -60,6 +60,7 @@ The fork (`cstarlea/desloppify`) is a **TypeScript/JavaScript-only** code-health
 | #30 | Fixer round-trip property tests; fixes for mixed line endings in `fixer_io` and `byte_offset` after CR/U+2028/U+2029 (2.4) |
 | #32 | AST dead-useeffect fixer, the last line-based fixer (2.3, FX-17) |
 | #33 | `dead_useeffect` smell on the syntax tree; reports `function () {}` and bare `return;` callbacks (2.11) |
+| #35 | State and plan read-modify-writes under the locks; corrupt-file recovery under the lock; atomic progression trim (2.20) |
 
 ---
 
@@ -106,7 +107,7 @@ Every adversarial input in the original review broke one of the line-regex fixer
 |---|---|---|---|
 | 2.18 | Strict score: scan-confirmed resolutions (`auto_resolved`) stop counting as failures; add a test that full remediation reaches 100 in every mode; make scoring.md, README and SKILL.md agree | S | CE-2 |
 | 2.19 | **Done for `state.json` (#25) and `plan.json` (#29).** Resilient loading: quarantine invalid issues and plan entries instead of discarding the whole file; rename the bad file to `.corrupted`; don't rotate `.bak` after a failed load; coerce the version field | S | CE-3 |
-| 2.20 | **Still open.** Put every state and plan read-modify-write under the existing `state_lock`/`plan_lock`; trim progression atomically. Plain `load_state`/`save_state` callers don't hold the lock, and since #25/#29 a load can rename a corrupt file and restore `.bak`, so two unlocked loads of a corrupt file can race | M | CE-4 |
+| 2.20 | **Done (#35).** Every mutating command holds the state lock, then the plan lock, from its first load to its return; read-only commands load unlocked, and the corrupt-file rename and `.bak` restore run under the lock (or in memory if it stays busy). One re-entrant, ranked file lock backs `state_lock`, `plan_lock` and the progression log, whose trim now runs under the append lock. `plan triage --run-stages` and `review --run-batches`/`--scan-after-import` stay unlocked because they wait on desloppify subprocesses | M | CE-4 |
 | 2.21 | Auto-resolve deferred, triaged_out and wontfix issues when a scan confirms they're gone | S | CE-5 |
 | 2.22 | Rewrite `docs/scoring.md` and `dev/QUEUE_LIFECYCLE.md` from the code | S | CE-6 |
 | 2.23 | First run: headline the objective score (marked provisional) until subjective dimensions are assessed; `--profile ci` prints plain output with a threshold exit code; move `cycles` out of the Security dimension | M | CE-12 |
@@ -265,7 +266,7 @@ Status key: **done** (with PR), **partial** (what's left is in §2), **open**, *
 | CE-1 | high | One plan.json across languages | dropped |
 | CE-2 | high | Strict never recovers from real fixes | open → 2.18 |
 | CE-3 | medium | One bad issue loses the whole state | done (#25, #29); plan sections → 2.30 |
-| CE-4 | medium | Unlocked read-modify-write | open → 2.20 |
+| CE-4 | medium | Unlocked read-modify-write | done (#35) |
 | CE-5 | medium | Deferred, triaged_out and wontfix never auto-resolve | open → 2.21 |
 | CE-6 | medium | scoring.md and QUEUE_LIFECYCLE contradict code | open → 2.22 |
 | CE-7 | low | Subjective scores taken as-is | open |
