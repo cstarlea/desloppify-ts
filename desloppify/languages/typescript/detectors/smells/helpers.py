@@ -25,7 +25,7 @@ class _FileContext(NamedTuple):
 
 
 def _file_context(filepath: str, content: str) -> _FileContext:
-    source = SourceText(content)
+    source = SourceText(content, filepath)
     return _FileContext(filepath, content, source.lines, source)
 
 

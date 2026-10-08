@@ -17,6 +17,7 @@ from desloppify.languages._framework.base.types import (
 )
 from desloppify.languages._framework.frameworks.phases import framework_phases
 from desloppify.languages.typescript import test_coverage as ts_test_coverage_hooks
+from desloppify.languages.typescript.detectors.security import hooks as ts_security_hooks
 from desloppify.languages.typescript._fixers import get_ts_fixers
 import desloppify.languages.typescript.commands as ts_commands_mod
 import desloppify.languages.typescript.detectors.deps as deps_detector_mod
@@ -145,7 +146,10 @@ class TypeScriptConfig(LangConfig):
 
 
 # Hook modules that shared detectors look up by name (see ``get_lang_hook``).
-LANG_HOOKS: dict[str, object] = {"test_coverage": ts_test_coverage_hooks}
+LANG_HOOKS: dict[str, object] = {
+    "security": ts_security_hooks,
+    "test_coverage": ts_test_coverage_hooks,
+}
 
 
 __all__ = [

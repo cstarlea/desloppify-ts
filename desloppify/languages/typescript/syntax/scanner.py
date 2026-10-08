@@ -6,9 +6,15 @@ import re
 from bisect import bisect_right
 from collections.abc import Generator, Iterator
 from functools import cached_property
+from pathlib import Path
 
 from desloppify.languages._framework.node.js_text import blank_spans, code_text, literal_spans
+from desloppify.languages._framework.treesitter import PARSE_INIT_ERRORS
+from desloppify.languages._framework.treesitter.parsing import _make_query, _run_query
 from desloppify.languages.typescript.syntax.lines import line_at, line_starts, split_lines
+from desloppify.languages.typescript.syntax.tree import grammar_for, parse_text, parsed_file
+
+_JSX_TEXT_QUERIES: dict[int, object] = {}
 
 
 def scan_code(
@@ -26,17 +32,60 @@ def scan_code(
         yield (start + offset, ch, code[offset] != ch)
 
 
+def jsx_text_spans(text: str, path: str | Path | None) -> list[tuple[int, int]]:
+    """The ``(start, end)`` offsets in ``text`` of each JSX text run, from the syntax tree.
+
+    Empty for ``.ts`` files (no JSX), without a path, or without tree-sitter.
+    ``path`` picks the grammar; its parse is reused when it holds ``text``.
+    """
+    if path is None or grammar_for(path) != "tsx" or ("</" not in text and "/>" not in text):
+        return []
+    source = text.encode("utf-8")
+    parsed = parsed_file(path)
+    if parsed is None or parsed.source != source:
+        parsed = parse_text(text, path)
+    if parsed is None:
+        return []
+    language = parsed.tree.language
+    query = _JSX_TEXT_QUERIES.get(id(language))
+    if query is None:
+        try:
+            query = _JSX_TEXT_QUERIES[id(language)] = _make_query(language, "(jsx_text) @text")
+        except PARSE_INIT_ERRORS:
+            return []
+    nodes = sorted(
+        (node for _pattern, captures in _run_query(query, parsed.root) for node in captures["text"]),
+        key=lambda node: node.start_byte,
+    )
+    if len(source) == len(text):
+        return [(node.start_byte, node.end_byte) for node in nodes]
+    offsets = [0] * (len(source) + 1)  # byte offset -> character offset
+    byte = 0
+    for index, ch in enumerate(text):
+        width = len(ch.encode("utf-8", "surrogatepass"))
+        offsets[byte : byte + width] = [index] * width
+        byte += width
+    offsets[byte] = len(text)
+    return [(offsets[node.start_byte], offsets[node.end_byte]) for node in nodes]
+
+
+def file_code_text(text: str, path: str | Path | None) -> str:
+    """``code_text`` for a file's contents, its JSX text blanked too."""
+    return code_text(text, jsx_text_spans(text, path))
+
+
 class SourceText:
     """A file's lines, with each offset known to be code or inside a comment or literal.
 
     ``lines`` and ``code_lines`` line up one to one; ``code_lines`` has every
     comment and string, template and regex literal blanked to spaces, the code
-    inside ``${...}`` kept.
+    inside ``${...}`` kept. Given the file's ``path``, JSX text in a ``.tsx`` or
+    ``.jsx`` file is blanked too (kind ``jsx``).
     """
 
-    def __init__(self, text: str) -> None:
+    def __init__(self, text: str, path: str | Path | None = None) -> None:
         self.text = text
-        self.spans = list(literal_spans(text))
+        self.spans = list(literal_spans(text, jsx_text_spans(text, path)))
         self._span_starts = [start for start, _end, _kind in self.spans]
         self.lines = split_lines(text)
         self.line_starts = line_starts(text)[: len(self.lines)]
@@ -67,7 +116,7 @@ class SourceText:
         return line_at(self.line_starts, offset)
 
     def kind_at(self, offset: int) -> str | None:
-        """``comment``, ``string``, ``template`` or ``regex`` when ``offset`` is inside one, None for code."""
+        """``comment``, ``string``, ``template``, ``regex`` or ``jsx`` when ``offset`` is inside one, None for code."""
         index = bisect_right(self._span_starts, offset) - 1
         if index >= 0:
             start, end, kind = self.spans[index]

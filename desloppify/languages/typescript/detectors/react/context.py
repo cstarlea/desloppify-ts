@@ -25,7 +25,7 @@ def detect_context_nesting(path: Path) -> tuple[list[dict], int]:
         try:
             p = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
             content = p.read_text()
-            lines = SourceText(content).code_lines
+            lines = SourceText(content, p).code_lines
         except (OSError, UnicodeDecodeError) as exc:
             logger.debug(
                 "Skipping unreadable TSX file %s in context-nesting pass: %s",

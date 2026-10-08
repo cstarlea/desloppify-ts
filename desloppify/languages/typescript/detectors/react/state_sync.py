@@ -8,7 +8,7 @@ from pathlib import Path
 
 from desloppify.base.discovery.paths import get_project_root
 from desloppify.base.discovery.source import find_tsx_and_jsx_files
-from desloppify.languages._framework.node.js_text import code_text
+from desloppify.languages.typescript.syntax.scanner import file_code_text
 from desloppify.languages.typescript.syntax.lines import line_number, split_lines
 from desloppify.languages.typescript.detectors.smells.helpers import (
     _strip_ts_comments,
@@ -33,7 +33,7 @@ def detect_state_sync(path: Path) -> tuple[list[dict], int]:
             logger.debug("Skipping unreadable TSX file %s in state-sync pass: %s", filepath, exc)
             continue
 
-        code = code_text(content)
+        code = file_code_text(content, p)
         setters = {m.group(1) for m in re.finditer(r"const\s+\[\w+,\s*(set\w+)\]\s*=\s*useState", code)}
         if not setters:
             continue
