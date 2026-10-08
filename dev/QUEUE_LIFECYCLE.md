@@ -113,7 +113,7 @@ Issues outside the scan's `--path` are never confirmed, and nothing about them c
 | `fixed` | Stays `fixed`. Once confirmed, it gets `resolution_attestation.scan_verified`, and its note is kept | Reopened as `open`, with `reopen_count` + 1 and the attestation dropped |
 | `auto_resolved` | No change | Reopened as `open` |
 
-A scan never changes a `wontfix` or `false_positive` status: both are user judgements about the finding itself, so the finding still being reported doesn't overturn them. `plan unskip` is how a user takes one back. `scan_verified` is what lets a gone wontfix stop counting against strict and verified, and a gone `fixed` or `false_positive` stop counting against verified (`issue_counts_as_failure`). A scan that confirms an already-marked issue again leaves it alone. Separately, the scan adds a `stale_wontfix` work item for a wontfix whose finding is still present when either:
+A scan never changes a `wontfix` or `false_positive` status: both are user judgements about the finding itself, so the finding still being reported doesn't overturn them. `plan unskip` is how a user takes one back. `scan_verified` is what lets a gone wontfix stop counting against strict and verified, and leaves it out of the wontfix debt totals (`is_wontfix_debt`, `stats.wontfix_debt`). It also lets a gone `fixed` or `false_positive` stop counting against verified (`issue_counts_as_failure`). A scan that confirms an already-marked issue again leaves it alone. Separately, the scan adds a `stale_wontfix` work item for a wontfix whose finding is still present when either:
 
 - `wontfix_decay_scans` scans (config, default 20) have passed since it was marked wontfix;
 - a structural finding has grown by at least 10 complexity or 50 LOC.
@@ -142,7 +142,7 @@ The primitive is `exclusive_file_lock()` (`base/discovery/file_paths.py`). It is
 
 ### Quarantine and corrupt files
 
-`load_state()` (`engine/_state/persistence.py`) moves a malformed work item to `state["quarantined_work_items"]` and loads the rest. `load_plan()` (`engine/_plan/persistence.py`, `schema/quarantine.py`) does the same for a malformed queue entry, skip, cluster or override, moving it to `plan["quarantined_entries"]`.
+`load_state()` (`engine/_state/persistence.py`) moves a malformed work item to `state["quarantined_work_items"]` and loads the rest. `load_plan()` (`engine/_plan/persistence.py`, `schema/quarantine.py`) does the same for a malformed entry of any plan collection, moving it to `plan["quarantined_entries"]`. The collections are the queue, skips, clusters, overrides, superseded entries, the execution log, the commit log, and the promoted and uncommitted ID lists. Each entry is checked against the fields its readers use, e.g. an execution-log record needs string `timestamp` and `action`, and a commit record needs a string `sha`.
 
 A file that can't be used is handled like this:
 
