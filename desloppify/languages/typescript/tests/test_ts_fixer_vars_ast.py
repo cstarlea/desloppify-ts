@@ -160,6 +160,7 @@ def test_remove_unused_vars(source, targets, expected):
             "const { a: x } = p;\nuse(x);\n",
             id="same-name-as-key-elsewhere",
         ),
+        pytest.param("const [a] = arr;\nuse(1);\n", ("a", 1, 7), "use(1);\n", id="array"),
     ],
 )
 def test_lone_pattern_element_reported_at_pattern(source, target, expected):
@@ -180,7 +181,6 @@ def test_lone_pattern_element_reported_at_pattern(source, target, expected):
         pytest.param(
             "const { a } = f();\n", ("a", 1, 7), "would_empty_pattern", id="call-initializer"
         ),
-        pytest.param("const [a] = arr;\n", ("a", 1, 7), "array_destructuring", id="array"),
         pytest.param("const h = ({ p }) => 1;\nh({});\n", ("p", 1, 12), "function_param", id="param"),
         pytest.param("const { a } = o;\n", ("zzz", 1, 7), "not_found", id="other-name"),
     ],
@@ -211,9 +211,6 @@ def test_pattern_position_skips(source, target, reason):
         ),
         pytest.param(
             "const { a, ...r } = o;\nuse(r);\n", ("a", 1, 9), "rest_element", id="rest-sibling"
-        ),
-        pytest.param(
-            "const { a: { b } } = o;\n", ("b", 1, 14), "would_empty_pattern", id="nested-emptied"
         ),
         pytest.param(
             "const [a, b] = f();\nuse(b);\n", ("a", 1, 8), "array_destructuring", id="array"

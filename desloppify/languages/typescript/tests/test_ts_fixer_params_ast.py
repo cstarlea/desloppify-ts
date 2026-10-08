@@ -189,6 +189,12 @@ def test_pattern_position_skips(source, target, reason):
             id="nested-and-rest",
         ),
         pytest.param(
+            "f(({ x, a: { b, c } }) => x);\n",
+            12,
+            "f(({ x, a: { b: _b, c: _c } }) => x);\n",
+            id="inner-pattern",
+        ),
+        pytest.param(
             "try {} catch ({ message, stack }) {}\n",
             15,
             "try {} catch ({ message: _message, stack: _stack }) {}\n",
