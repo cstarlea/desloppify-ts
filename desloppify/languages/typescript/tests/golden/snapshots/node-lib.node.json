@@ -104,7 +104,10 @@
     "smells": 9,
     "structural": 9,
     "test_coverage": 26,
+    "type_error": 8,
     "unused": 9
   },
-  "reduced_coverage": []
+  "reduced_coverage": [
+    "type_error: partial"
+  ]
 }

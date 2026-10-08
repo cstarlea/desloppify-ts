@@ -5,15 +5,17 @@ from __future__ import annotations
 from collections import defaultdict
 from pathlib import Path
 
+from desloppify.base.discovery.file_paths import rel
 from desloppify.base.output.terminal import log
 from desloppify.engine._state.filtering import make_issue
-from desloppify.engine.policy.zones import adjust_potential
+from desloppify.engine.policy.zones import EXCLUDED_ZONES, Zone, adjust_potential
 from desloppify.languages._framework.base.shared_phases_helpers import record_reduced_coverage
 from desloppify.languages._framework.base.types import LangRuntimeContract
 from desloppify.languages._framework.issue_factories import make_unused_issues
 import desloppify.languages.typescript.detectors.deprecated as deprecated_detector_mod
 import desloppify.languages.typescript.detectors.exports as exports_detector_mod
 import desloppify.languages.typescript.detectors.logs as logs_detector_mod
+import desloppify.languages.typescript.detectors.type_errors as type_errors_detector_mod
 import desloppify.languages.typescript.detectors.unused as unused_detector_mod
 from desloppify.state_io import Issue
 
@@ -54,6 +56,45 @@ def phase_unused(path: Path, lang: LangRuntimeContract) -> tuple[list[Issue], di
     return make_unused_issues(entries, log), {
         "unused": adjust_potential(lang.zone_map, total_files),
     }
+
+
+def phase_type_errors(
+    path: Path, lang: LangRuntimeContract
+) -> tuple[list[Issue], dict[str, int]]:
+    result = type_errors_detector_mod.detect_type_errors_result(path, cache=lang.runtime_cache)
+    record_reduced_coverage(lang, result.coverage)
+    if result.checked_files is None:
+        log("         skipped (tsc did not check this scan)")
+        return [], {}
+
+    def zone(filepath: str) -> Zone:
+        return lang.zone_map.get(rel(filepath)) if lang.zone_map is not None else Zone.PRODUCTION
+
+    results = []
+    for entry in result.entries:
+        if zone(entry["file"]) in (Zone.GENERATED, Zone.VENDOR):
+            continue
+        first_line = entry["message"].splitlines()[0]
+        results.append(
+            make_issue(
+                "type_error",
+                entry["file"],
+                f"{entry['code']}::{entry['line']}",
+                tier=2 if entry["confidence"] == "high" else 3,
+                confidence=entry["confidence"],
+                summary=f"{entry['code']}: {first_line[:200]}",
+                detail={
+                    "line": entry["line"],
+                    "cols": entry["cols"],
+                    "code": entry["code"],
+                    "message": entry["message"],
+                    "count": entry["count"],
+                },
+            )
+        )
+    potential = sum(zone(filepath) not in EXCLUDED_ZONES for filepath in result.checked_files)
+    log(f"         {len(result.entries)} errors → {len(results)} issues ({potential} files scored)")
+    return results, {"type_error": potential}
 
 
 def phase_exports(path: Path, lang: LangRuntimeContract) -> tuple[list[Issue], dict[str, int]]:
@@ -123,5 +164,6 @@ __all__ = [
     "phase_deprecated",
     "phase_exports",
     "phase_logs",
+    "phase_type_errors",
     "phase_unused",
 ]

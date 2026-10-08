@@ -84,6 +84,7 @@ _MECHANICAL_SCORECARD_DIMENSIONS: tuple[str, ...] = (
     "Duplication",
     "Test health",
     "Security",
+    "Type checks",
 )
 
 

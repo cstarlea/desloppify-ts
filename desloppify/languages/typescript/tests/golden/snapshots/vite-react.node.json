@@ -216,7 +216,10 @@
     "smells": 18,
     "structural": 18,
     "test_coverage": 54,
+    "type_error": 9,
     "unused": 18
   },
-  "reduced_coverage": []
+  "reduced_coverage": [
+    "type_error: partial"
+  ]
 }

@@ -472,6 +472,15 @@ DETECTORS: dict[str, DetectorMeta] = {
         tier=3,
         subjective_dimensions=("incomplete_migration",),
     ),
+    "type_error": DetectorMeta(
+        "type_error",
+        "type errors",
+        "Type checks",
+        "manual_fix",
+        "fix the type errors tsc reports (`npx tsc --noEmit` shows them in context)",
+        tier=2,
+        subjective_dimensions=("type_safety",),
+    ),
     "stale_exclude": DetectorMeta(
         "stale_exclude",
         "stale exclude",

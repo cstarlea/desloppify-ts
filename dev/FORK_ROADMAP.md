@@ -167,7 +167,7 @@ Every adversarial input in the original review broke one of the line-regex fixer
 
 | # | Item | Effort | Findings |
 |---|---|---|---|
-| 3.1 | **tsc `type_error` detector**: run tsc once and share its output with unused; stable IDs `TS####::line`; scored under type safety | M | TL-3 |
+| 3.1 | **Done (#75, #76).** `detectors/tsc.py` runs tsc once per scan (cached in the runtime cache) and both `unused` and the new `type_error` detector read it; forcing `noUnusedLocals`/`noUnusedParameters` adds only the TS6133 family, so the other diagnostics are identical (checked on ky, commerce, zod, trpc) (#75). `type_error` reports one issue per code and line (`type_error::<file>::TS####::<line>`) under a new mechanical **Type checks** dimension, file-based over the files tsc checked (`--listFiles`). Only files owned by the tsconfig that ran are reported: a monorepo root config isn't the config a package is checked with (trpc's root reports 146 errors in one example that its own config reports 35 for), so other tsconfigs' files are left out and named in reduced coverage. Config errors (TS5xxx/TS6xxx) aren't issues; a bare-specifier `Cannot find module`, missing `@types` or JSX types marks its file as environment noise (not reported, not counted); with dependencies declared and no `node_modules`, the detector skips. Strictness- and config-sensitive codes (implicit any, TS4111, TS2686, TS1479, TS2304, TS2578, ...) are medium confidence. No potential when tsc doesn't run, so the dimension carries forward and old issues aren't auto-resolved (#76) | M | TL-3 |
 | 3.2 | **ESLint/Biome/oxlint**, chosen by which config is present; keep `ruleId` and severity; tier the type-aware typescript-eslint rules | M | TL-4 |
 | 3.3 | **`tsconfig_health`**: strict off, missing `noUncheckedIndexedAccess`/`noImplicitOverride`/`verbatimModuleSyntax`, drift between packages; feed strictness into the review context | S | DT-13 |
 | 3.4 | Knip's other categories: unused files (cross-checked with orphaned), unused/unlisted dependencies, unresolved imports, enum members, duplicates | M | TL-2 |
@@ -266,7 +266,7 @@ Status key: **done** (with PR), **partial** (what's left is in §2), **open**, *
 |---|---|---|---|
 | TL-1 | high | tsc: bogus `npx tsc`, hard-coded tsconfig.app.json, unchecked rc, temp file in repo, dropped codes | done (#1) |
 | TL-2 | high | Knip runs in the wrong dir, uses `pos` as line, silent when missing; drops categories | done (#1); categories → 3.4 |
-| TL-3 | high | tsc type errors never reported | open → 3.1 |
+| TL-3 | high | tsc type errors never reported | done (#75, #76) |
 | TL-4 | high | No ESLint/Biome/oxlint | open → 3.2 |
 | TL-5 | high | `next lint` removed in Next 16 | done (#1, upstream #760) |
 

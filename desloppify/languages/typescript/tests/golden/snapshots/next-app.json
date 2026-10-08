@@ -110,6 +110,7 @@
   "reduced_coverage": [
     "exports: knip_not_installed",
     "next_lint: tool_not_found",
+    "type_error: tsc_missing",
     "unused: tsc_missing"
   ]
 }
