@@ -37,6 +37,7 @@ from desloppify.engine._state.recovery import (
 )
 from desloppify.engine._state.schema import (
     CURRENT_VERSION,
+    QuarantinedWorkItem,
     StateModel,
     empty_state,
     ensure_state_defaults,
@@ -95,20 +96,112 @@ def _release_state_lock(lock_fd: int) -> None:
     fcntl.flock(lock_fd, fcntl.LOCK_UN)
 
 
+# Errors that mean a state file's contents are unusable (as opposed to the
+# file being unreadable, which is an OSError).
+_CORRUPT_STATE_ERRORS = (
+    json.JSONDecodeError,
+    UnicodeDecodeError,
+    ValueError,
+    TypeError,
+    AttributeError,
+)
+
+# State files whose on-disk content did not load cleanly. ``save_state`` does
+# not rotate such a file over ``.bak``, which may be the last good copy.
+_unclean_state_files: set[Path] = set()
+_quarantine_warnings_shown: set[tuple[Path, int, int]] = set()
+
+
+def _rotation_key(path: Path) -> Path:
+    return path.absolute()
+
+
 def _load_json(path: Path) -> dict[str, object]:
-    data = json.loads(path.read_text())
+    data = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(data, dict):
         raise ValueError("state file root must be a JSON object")
     return data
 
 
-def _normalize_loaded_state(data: object) -> dict[str, object]:
+def _normalize_loaded_state(
+    data: object,
+    quarantine: list[QuarantinedWorkItem] | None = None,
+) -> StateModel:
     if not isinstance(data, dict):
         raise ValueError("state file root must be a JSON object")
-    ensure_state_defaults(data)
+    ensure_state_defaults(data, quarantine=quarantine)
     normalized = cast(StateModel, data)
     validate_state_invariants(normalized)
     return normalized
+
+
+def _read_state_file(path: Path) -> tuple[StateModel, int]:
+    """Parse and normalize one state file; return it with its quarantine count.
+
+    Malformed work items are moved to ``quarantined_work_items`` (replacing
+    an older entry with the same id). Raises on anything that makes the file
+    as a whole unusable.
+    """
+    data = _load_json(path)
+    quarantined: list[QuarantinedWorkItem] = []
+    state = _normalize_loaded_state(data, quarantined)
+    if quarantined:
+        new_ids = {entry["id"] for entry in quarantined if entry["id"] is not None}
+        kept = [
+            entry
+            for entry in state.get("quarantined_work_items", [])
+            if not (isinstance(entry, dict) and entry.get("id") in new_ids)
+        ]
+        state["quarantined_work_items"] = kept + quarantined
+    version = state["version"]
+    if version > CURRENT_VERSION:
+        print(
+            "  ⚠ State file version "
+            f"{version} is newer than supported ({CURRENT_VERSION}). "
+            "Some features may not work correctly.",
+            file=sys.stderr,
+        )
+    return state, len(quarantined)
+
+
+def _warn_quarantined(path: Path, count: int) -> None:
+    logger.debug("Quarantined %d malformed work item(s) from %s", count, path)
+    # Commands may load the same file several times; warn once per version.
+    try:
+        warning_key = (path.absolute(), path.stat().st_mtime_ns, count)
+    except OSError:
+        warning_key = (path.absolute(), 0, count)
+    if warning_key in _quarantine_warnings_shown:
+        return
+    _quarantine_warnings_shown.add(warning_key)
+    print(
+        f"  ⚠ {count} malformed work item(s) in {path.name} were set aside; "
+        "they are kept under 'quarantined_work_items' in the state file.",
+        file=sys.stderr,
+    )
+
+
+def _corrupted_path(state_path: Path) -> Path:
+    """Return a free ``<name>.corrupted[.N]`` path next to ``state_path``."""
+    base = state_path.with_suffix(".json.corrupted")
+    candidate = base
+    suffix = 1
+    while candidate.exists():
+        candidate = base.with_name(f"{base.name}.{suffix}")
+        suffix += 1
+    return candidate
+
+
+def _set_aside_corrupted(state_path: Path) -> Path | None:
+    target = _corrupted_path(state_path)
+    try:
+        state_path.rename(target)
+    except OSError as rename_ex:
+        logger.debug(
+            "Failed to rename corrupted state file %s: %s", state_path, rename_ex
+        )
+        return None
+    return target
 
 
 def _reconstruct_from_saved_plan_if_available(
@@ -157,9 +250,19 @@ def _saved_plan_load_status(state_path: Path) -> PlanLoadStatus:
 
 
 def load_state(path: Path | None = None) -> StateModel:
-    """Load state from disk, or return empty state on missing/corruption."""
+    """Load state from disk, degrading gracefully on corruption.
+
+    - Malformed work items are quarantined; the rest of the state loads.
+    - A file that cannot be used at all is renamed to ``.corrupted`` and the
+      ``.bak`` copy is loaded (and copied into its place), else the state
+      starts fresh.
+    - After anything but a clean load, the next ``save_state`` to this path
+      leaves ``.bak`` alone.
+    """
     state_path = path or _default_state_file()
+    rotation_key = _rotation_key(state_path)
     if not state_path.exists():
+        _unclean_state_files.discard(rotation_key)
         plan_path = plan_path_for_state(state_path)
         if plan_path.exists():
             print(
@@ -169,92 +272,77 @@ def load_state(path: Path | None = None) -> StateModel:
         return _reconstruct_from_saved_plan_if_available(state_path, empty_state())
 
     try:
-        data = _load_json(state_path)
-    except (json.JSONDecodeError, UnicodeDecodeError, OSError, ValueError) as ex:
-        backup = state_path.with_suffix(".json.bak")
-        if backup.exists():
-            logger.warning(
-                "Primary state load failed for %s; attempting backup %s: %s",
-                state_path,
-                backup,
-                ex,
-            )
-            try:
-                backup_data = _load_json(backup)
-                logger.warning(
-                    "Recovered state from backup %s after primary load failure at %s",
-                    backup,
-                    state_path,
-                )
-                print(
-                    f"  ⚠ State file corrupted ({ex}), loaded from backup.",
-                    file=sys.stderr,
-                )
-                normalized_backup = _normalize_loaded_state(backup_data)
-                return _reconstruct_from_saved_plan_if_available(
-                    state_path,
-                    normalized_backup,
-                )
-            except (
-                json.JSONDecodeError,
-                UnicodeDecodeError,
-                OSError,
-                ValueError,
-                TypeError,
-                AttributeError,
-            ) as backup_ex:
-                logger.warning(
-                    "Backup state load failed from %s after corruption in %s: %s",
-                    backup,
-                    state_path,
-                    backup_ex,
-                )
-                logger.debug("Backup state load failed from %s: %s", backup, backup_ex)
+        state, quarantined = _read_state_file(state_path)
+    except (*_CORRUPT_STATE_ERRORS, OSError) as ex:
+        _unclean_state_files.add(rotation_key)
+        return _load_state_after_failure(state_path, ex)
 
+    if quarantined:
+        _unclean_state_files.add(rotation_key)
+        _warn_quarantined(state_path, quarantined)
+    else:
+        _unclean_state_files.discard(rotation_key)
+    return _reconstruct_from_saved_plan_if_available(state_path, state)
+
+
+def _load_state_after_failure(state_path: Path, ex: Exception) -> StateModel:
+    """Set aside an unusable state file, then fall back to ``.bak`` or empty."""
+    moved_to: Path | None = None
+    if isinstance(ex, OSError):
+        # Unreadable is not corrupt: leave the file where it is.
+        problem = f"State file could not be read ({ex})"
+    else:
+        problem = f"State file corrupted ({ex})"
+        moved_to = _set_aside_corrupted(state_path)
+        if moved_to is not None:
+            problem += f"; moved to {moved_to.name}"
+
+    backup = state_path.with_suffix(".json.bak")
+    if backup.exists():
         logger.warning(
-            "State file load failed for %s and backup recovery was unavailable. "
-            "Falling back to empty state: %s",
+            "Primary state load failed for %s; attempting backup %s: %s",
             state_path,
+            backup,
             ex,
         )
-        print(f"  ⚠ State file corrupted ({ex}). Starting fresh.", file=sys.stderr)
-        rename_failed = False
         try:
-            state_path.rename(state_path.with_suffix(".json.corrupted"))
-        except OSError as rename_ex:
-            rename_failed = True
-            logger.debug(
-                "Failed to rename corrupted state file %s: %s", state_path, rename_ex
+            backup_state, quarantined = _read_state_file(backup)
+        except (*_CORRUPT_STATE_ERRORS, OSError) as backup_ex:
+            logger.warning(
+                "Backup state load failed from %s after corruption in %s: %s",
+                backup,
+                state_path,
+                backup_ex,
             )
-        if rename_failed:
-            logger.debug(
-                "Corrupted state file retained at original path: %s", state_path
+            problem += f". Backup {backup.name} is unusable too ({backup_ex})"
+        else:
+            logger.warning(
+                "Recovered state from backup %s after primary load failure at %s",
+                backup,
+                state_path,
             )
-        return _reconstruct_from_saved_plan_if_available(state_path, empty_state())
+            if moved_to is not None:
+                # Put the backup in place so later loads in this run (and the
+                # next command, if nothing saves) see it, not a missing file.
+                try:
+                    shutil.copy2(str(backup), str(state_path))
+                except OSError as copy_ex:
+                    logger.debug(
+                        "Failed to restore %s from %s: %s", state_path, backup, copy_ex
+                    )
+            print(f"  ⚠ {problem}. Loaded from {backup.name}.", file=sys.stderr)
+            if quarantined:
+                _warn_quarantined(backup, quarantined)
+            return _reconstruct_from_saved_plan_if_available(state_path, backup_state)
 
-    version = data.get("version", 1)
-    if version > CURRENT_VERSION:
-        print(
-            "  ⚠ State file version "
-            f"{version} is newer than supported ({CURRENT_VERSION}). "
-            "Some features may not work correctly.",
-            file=sys.stderr,
-        )
-
-    try:
-        normalized = _normalize_loaded_state(data)
-        return _reconstruct_from_saved_plan_if_available(state_path, normalized)
-    except (ValueError, TypeError, AttributeError) as normalize_ex:
-        logger.warning(
-            "State invariants invalid for %s; falling back to empty state: %s",
-            state_path,
-            normalize_ex,
-        )
-        print(
-            f"  ⚠ State invariants invalid ({normalize_ex}). Starting fresh.",
-            file=sys.stderr,
-        )
-        return _reconstruct_from_saved_plan_if_available(state_path, empty_state())
+    logger.warning(
+        "State file load failed for %s and backup recovery was unavailable. "
+        "Falling back to empty state: %s",
+        state_path,
+        ex,
+    )
+    print(f"  ⚠ {problem}. Starting fresh.", file=sys.stderr)
+    return _reconstruct_from_saved_plan_if_available(state_path, empty_state())
 
 
 def _coerce_integrity_target(value: object) -> float | None:
@@ -304,14 +392,15 @@ def save_state(
     serialized_state["work_items"] = dict((state.get("work_items") or state.get("issues", {})))
     content = json.dumps(serialized_state, indent=2, default=json_default) + "\n"
 
-    if state_path.exists():
+    rotation_key = _rotation_key(state_path)
+    if state_path.exists() and rotation_key not in _unclean_state_files:
         backup = state_path.with_suffix(".json.bak")
         try:
             shutil.copy2(str(state_path), str(backup))
         except OSError as backup_ex:
             logger.debug(
                 "Failed to create state backup %s: %s",
-                state_path.with_suffix(".json.bak"),
+                backup,
                 backup_ex,
             )
 
@@ -320,6 +409,8 @@ def save_state(
     except OSError as ex:
         print(f"  Warning: Could not save state: {ex}", file=sys.stderr)
         raise
+    # The file on disk is now one we wrote; it may rotate on the next save.
+    _unclean_state_files.discard(rotation_key)
 
 
 @contextlib.contextmanager

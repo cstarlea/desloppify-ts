@@ -25,6 +25,7 @@ from desloppify.engine._state.schema_types import (
     Issue,
     WorkItem,
     LangCapability,
+    QuarantinedWorkItem,
     ReviewCacheModel,
     ScanMetadataModel,
     ScanDiff,
@@ -55,6 +56,7 @@ __all__ = [
     "SubjectiveAssessmentJudgment",
     "SubjectiveIntegrity",
     "LangCapability",
+    "QuarantinedWorkItem",
     "ReviewCacheModel",
     "IgnoreIntegrityModel",
     "ScanMetadataModel",
@@ -63,6 +65,7 @@ __all__ = [
     "get_state_dir",
     "get_state_file",
     "CURRENT_VERSION",
+    "coerce_state_version",
     "utc_now",
     "empty_state",
     "ensure_state_defaults",
@@ -131,6 +134,25 @@ def _as_non_negative_int(value: Any, default: int = 0) -> int:
     return parsed if parsed >= 0 else 0
 
 
+def coerce_state_version(value: object) -> int | None:
+    """Return ``value`` as an integral state version, or None if it is not one.
+
+    Hand-edited or foreign state files may carry ``"3"`` or ``3.0``.
+    """
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str):
+        try:
+            value = float(value.strip())
+        except ValueError:
+            return None
+    if isinstance(value, float) and value.is_integer():
+        return int(value)
+    return None
+
+
 def _rename_key(d: dict, old: str, new: str) -> bool:
     if old not in d:
         return False
@@ -182,22 +204,87 @@ def _normalize_scan_metadata(state: StateModel | dict[str, Any]) -> None:
     state["scan_metadata"] = normalized
 
 
-def ensure_state_defaults(state: StateModel | dict) -> None:
-    """Normalize loose/legacy state payloads to a valid base shape in-place."""
+def _normalize_issue(state: StateModel | dict, issue_id: str, issue: dict) -> None:
+    issue.setdefault("id", issue_id)
+    issue.setdefault("detector", "unknown")
+    ensure_work_item_semantics(issue)
+    issue.setdefault("file", "")
+    issue.setdefault("tier", 3)
+    issue.setdefault("confidence", "low")
+    issue.setdefault("summary", "")
+    issue.setdefault("detail", {})
+    issue.setdefault("status", Status.OPEN)
+    issue["status"] = canonical_issue_status(
+        issue.get("status"),
+        default=Status.OPEN,
+    )
+    issue.setdefault("note", None)
+    issue.setdefault("first_seen", state.get("created") or utc_now())
+    issue.setdefault("last_seen", issue["first_seen"])
+    issue.setdefault("resolved_at", None)
+    issue["reopen_count"] = _as_non_negative_int(
+        issue.get("reopen_count", 0), default=0
+    )
+    issue.setdefault("suppressed", False)
+    issue.setdefault("suppressed_at", None)
+    issue.setdefault("suppression_pattern", None)
+
+
+def _quarantine_reason(state: StateModel | dict, issue_id: str, issue: object) -> str | None:
+    """Normalize one loaded issue in place; return why it is unusable, if it is."""
+    if not isinstance(issue, dict):
+        return f"issue {issue_id!r} is a {type(issue).__name__}, not an object"
+    try:
+        _normalize_issue(state, issue_id, issue)
+    except (TypeError, ValueError, AttributeError) as exc:
+        return f"issue {issue_id!r} could not be normalized: {exc}"
+    error = issue_invariant_error(issue_id, issue)
+    if error is not None:
+        return error
+    # Commands index these without guards (e.g. ``issue["file"].startswith``).
+    for field in ("detector", "file", "summary"):
+        if not isinstance(issue.get(field), str):
+            return f"issue {issue_id!r} has non-string {field} {issue.get(field)!r}"
+    if not isinstance(issue.get("detail"), dict):
+        return f"issue {issue_id!r} has non-object detail {issue.get('detail')!r}"
+    return None
+
+
+def ensure_state_defaults(
+    state: StateModel | dict,
+    *,
+    quarantine: list[QuarantinedWorkItem] | None = None,
+) -> None:
+    """Normalize loose/legacy state payloads to a valid base shape in-place.
+
+    With ``quarantine``, malformed work items (and a ``work_items`` value that
+    is not an object) are moved into that list instead of being silently
+    dropped or left to fail ``validate_state_invariants``. Loading passes it;
+    saving does not, so code that builds a bad issue still fails loudly.
+    """
     migrate_state_keys(state)
 
     mutable_state = cast(dict[str, Any], state)
     for key, value in empty_state().items():
         mutable_state.setdefault(key, value)
-    version = mutable_state.get("version")
-    if not isinstance(version, int):
-        mutable_state["version"] = CURRENT_VERSION
-    elif version < CURRENT_VERSION:
-        mutable_state["version"] = CURRENT_VERSION
+    version = coerce_state_version(mutable_state.get("version"))
+    if version is None or version < CURRENT_VERSION:
+        version = CURRENT_VERSION
+    mutable_state["version"] = version
 
     if not isinstance(state.get("work_items"), dict):
+        bad_items = state.get("work_items")
         legacy_items = state.get("issues")
         state["work_items"] = legacy_items if isinstance(legacy_items, dict) else {}
+        if quarantine is not None and bad_items is not None:
+            quarantine.append(
+                {
+                    "id": None,
+                    "reason": f"work_items is a {type(bad_items).__name__}, not an object",
+                    "quarantined_at": utc_now(),
+                    "item": bad_items,
+                }
+            )
     # Keep the legacy alias available in-memory while internal call sites
     # migrate, but make ``work_items`` the canonical storage.
     state["issues"] = state["work_items"]
@@ -216,36 +303,31 @@ def ensure_state_defaults(state: StateModel | dict) -> None:
     all_issues = state["work_items"]
     to_remove: list[str] = []
     for issue_id, issue in all_issues.items():
-        if not isinstance(issue, dict):
-            to_remove.append(issue_id)
+        if quarantine is None:
+            if isinstance(issue, dict):
+                _normalize_issue(state, issue_id, issue)
+            else:
+                to_remove.append(issue_id)
             continue
-
-        issue.setdefault("id", issue_id)
-        issue.setdefault("detector", "unknown")
-        ensure_work_item_semantics(issue)
-        issue.setdefault("file", "")
-        issue.setdefault("tier", 3)
-        issue.setdefault("confidence", "low")
-        issue.setdefault("summary", "")
-        issue.setdefault("detail", {})
-        issue.setdefault("status", Status.OPEN)
-        issue["status"] = canonical_issue_status(
-            issue.get("status"),
-            default=Status.OPEN,
-        )
-        issue.setdefault("note", None)
-        issue.setdefault("first_seen", state.get("created") or utc_now())
-        issue.setdefault("last_seen", issue["first_seen"])
-        issue.setdefault("resolved_at", None)
-        issue["reopen_count"] = _as_non_negative_int(
-            issue.get("reopen_count", 0), default=0
-        )
-        issue.setdefault("suppressed", False)
-        issue.setdefault("suppressed_at", None)
-        issue.setdefault("suppression_pattern", None)
+        # Quarantine the item as it was on disk, not half-normalized.
+        original = dict(issue) if isinstance(issue, dict) else issue
+        reason = _quarantine_reason(state, issue_id, issue)
+        if reason is not None:
+            to_remove.append(issue_id)
+            quarantine.append(
+                {
+                    "id": issue_id,
+                    "reason": reason,
+                    "quarantined_at": utc_now(),
+                    "item": original,
+                }
+            )
 
     for issue_id in to_remove:
         all_issues.pop(issue_id, None)
+
+    if not isinstance(state.get("quarantined_work_items", []), list):
+        state["quarantined_work_items"] = []
 
     for entry in state["scan_history"]:
         if not isinstance(entry, dict):
@@ -279,34 +361,34 @@ def validate_state_invariants(state: StateModel) -> None:
 
     all_issues = state["work_items"]
     for issue_id, issue in all_issues.items():
-        if not isinstance(issue, dict):
-            raise ValueError(f"issue {issue_id!r} must be a dict")
-        if issue.get("id") != issue_id:
-            raise ValueError(f"issue id mismatch for {issue_id!r}")
-        issue_kind = issue.get("work_item_kind", issue.get("issue_kind"))
-        if issue_kind not in WORK_ITEM_KINDS:
-            raise ValueError(
-                f"issue {issue_id!r} has invalid work_item_kind {issue_kind!r}"
-            )
-        origin = issue.get("origin")
-        if origin not in WORK_ITEM_ORIGINS:
-            raise ValueError(
-                f"issue {issue_id!r} has invalid origin {origin!r}"
-            )
-        if issue.get("status") not in _ALLOWED_ISSUE_STATUSES:
-            raise ValueError(
-                f"issue {issue_id!r} has invalid status {issue.get('status')!r}"
-            )
+        error = issue_invariant_error(issue_id, issue)
+        if error is not None:
+            raise ValueError(error)
 
-        tier = issue.get("tier")
-        if not isinstance(tier, int) or tier < 1 or tier > 4:
-            raise ValueError(f"issue {issue_id!r} has invalid tier {tier!r}")
 
-        reopen_count = issue.get("reopen_count")
-        if not isinstance(reopen_count, int) or reopen_count < 0:
-            raise ValueError(
-                f"issue {issue_id!r} has invalid reopen_count {reopen_count!r}"
-            )
+def issue_invariant_error(issue_id: str, issue: object) -> str | None:
+    """Return why one issue violates the state invariants, or None."""
+    if not isinstance(issue, dict):
+        return f"issue {issue_id!r} must be a dict"
+    if issue.get("id") != issue_id:
+        return f"issue id mismatch for {issue_id!r}"
+    issue_kind = issue.get("work_item_kind", issue.get("issue_kind"))
+    if issue_kind not in WORK_ITEM_KINDS:
+        return f"issue {issue_id!r} has invalid work_item_kind {issue_kind!r}"
+    origin = issue.get("origin")
+    if origin not in WORK_ITEM_ORIGINS:
+        return f"issue {issue_id!r} has invalid origin {origin!r}"
+    if issue.get("status") not in _ALLOWED_ISSUE_STATUSES:
+        return f"issue {issue_id!r} has invalid status {issue.get('status')!r}"
+
+    tier = issue.get("tier")
+    if not isinstance(tier, int) or tier < 1 or tier > 4:
+        return f"issue {issue_id!r} has invalid tier {tier!r}"
+
+    reopen_count = issue.get("reopen_count")
+    if not isinstance(reopen_count, int) or reopen_count < 0:
+        return f"issue {issue_id!r} has invalid reopen_count {reopen_count!r}"
+    return None
 
 
 def _coerce_scan_source(
