@@ -1,6 +1,6 @@
 # desloppify fork roadmap
 
-_Last updated 2026-10-07. Originally built from a multi-agent review of upstream v1.0 (`3a7735d5`) on 2026-10-05; the appendix keeps that review's findings with their current status._
+_Last updated 2026-10-08. Originally built from a multi-agent review of upstream v1.0 (`3a7735d5`) on 2026-10-05; the appendix keeps that review's findings with their current status._
 
 The fork (`cstarlea/desloppify`) is a **TypeScript/JavaScript-only** code-health scanner. Upstream (`peteromallet/desloppify`) is unmaintained and is treated as read-only: something we may cherry-pick from, nothing more. The last multi-language commit is tagged `pre-ts-only`.
 
@@ -12,7 +12,7 @@ The fork (`cstarlea/desloppify`) is a **TypeScript/JavaScript-only** code-health
 
 **Accuracy.** The resolver and graph work (Milestones 0 and 1) removed most of the false positives that made upstream v1.0 untrustworthy on real repos:
 
-- Fixers that still edit by line need `--unsafe`. unused-imports and unused-vars edit syntax-tree ranges and run without it; every fixer and `move` refuses to write output that parses worse than its input.
+- unused-imports, unused-vars, unused-params, debug-logs and empty-if-chain edit syntax-tree nodes and run without `--unsafe`; no fixer is marked unsafe now. dead-useeffect still edits by line and was never behind the gate (2.3). Every fixer and `move` refuses to write output that parses worse than its input, and round-trip property tests cover every fixer (#30).
 - tsc and knip run correctly and report reduced coverage instead of silent zeros.
 - Imports come from the tree-sitter syntax tree.
 - One `ModuleResolver` handles tsconfig `paths`/`extends`/`references`, workspaces and package `exports`, and is shared by the graph, test coverage and `move`.
@@ -21,7 +21,7 @@ The fork (`cstarlea/desloppify`) is a **TypeScript/JavaScript-only** code-health
 
 **Measurement.** These guard regressions:
 - **Golden fixtures** (`languages/typescript/tests/golden/`): vite-react, next-app, node-lib and pnpm-monorepo. Each has `must_find`/`must_not_find` expectations and strict known-false-positive lists. They run in two layers: hermetic, and node with pinned tsc and knip.
-- **Real repos:** the issue counts on ky, zod, trpc and vercel/commerce (currently 146 / 680 / 1121 / 79). Every PR is diffed against these.
+- **Real repos:** the issue counts on ky, zod, trpc and vercel/commerce (currently 146 / 686 / 1124 / 79; the facade rewrite in #22 added 9 true positives). Every PR is diffed against these.
 
 **CI.** These jobs run on every PR: lint, typecheck, arch-contracts, ci-contracts, tests-core, tests-full, tests-golden-node and package-smoke. Publishing to PyPI and release tweets are switched off behind repository variables.
 
@@ -47,6 +47,17 @@ The fork (`cstarlea/desloppify`) is a **TypeScript/JavaScript-only** code-health
 | #17 | Shared tree-sitter parsing helper; AST unused-imports fixer, no longer unsafe (2.1, 2.3) |
 | #18 | Autofix resolves exactly the issue IDs it fixed (2.5) |
 | #19 | AST unused-vars fixer, no longer unsafe (2.3) |
+| #20 | AST unused-params fixer, no longer unsafe (2.3) |
+| #21 | Commands with `--path` default to the last scan's path (2.25) |
+| #22 | Facade detector on the syntax tree (2.9) |
+| #23 | AST debug-logs fixer removes standalone statements only, no longer unsafe (2.3) |
+| #24 | AST empty-if-chain fixer, no longer unsafe (2.3) |
+| #25 | Resilient `state.json` loading: quarantine, `.corrupted`, no `.bak` rotation after a bad load, version coercion (2.19) |
+| #26 | Unused findings categorised on the syntax tree, with a `params` category (2.13) |
+| #27 | Fixers resolve a lone pattern element that tsc reports at the pattern's `{` (2.3) |
+| #28 | Params fixer renames every name of an "(all destructured elements)" pattern (2.3) |
+| #29 | Resilient `plan.json` loading, the plan counterpart of #25 (2.19) |
+| #30 | Fixer round-trip property tests; fixes for mixed line endings in `fixer_io` and `byte_offset` after CR/U+2028/U+2029 (2.4) |
 
 ---
 
@@ -56,15 +67,17 @@ Effort: S < 1 day, M a few days, L 1–2 weeks, XL multi-week. IDs in brackets r
 
 ### 2A. AST-based fixers: remove the `--unsafe` gate (Milestone 2)
 
-The fixers are the biggest remaining gap. They're safe now only because they won't write without `--unsafe`. They still edit with line regexes, and every adversarial input in the original review broke one of them.
+Every adversarial input in the original review broke one of the line-regex fixers. Five of the six now edit syntax-tree nodes and no longer need `--unsafe` (#17, #19, #20, #23, #24). The flag and gate stay for future fixers. dead-useeffect is the one line-based fixer left, and it was never behind the gate.
 
 | # | Item | Effort | Findings |
 |---|---|---|---|
 | 2.1 | Shared typed TS AST helper: parse once per file through the parse cache; queries for functions, classes, imports and JSX; regex kept only as a fallback without tree-sitter | L | AR-2 |
 | 2.2 | **Done (#16)**, except `--verify`. Output validation gate for every fixer and `move`: parse before and after, refuse to write if the parse-error count rises, and show a real unified diff in `--dry-run`. Optional `--verify` runs `tsc --noEmit` and reverts on new errors | M | FX-11 |
-| 2.3 | **unused-imports (#17) and unused-vars (#19) done.** Rewrite the fixers on AST ranges: import-specifier deletion that keeps formatting and never touches side-effect imports; declarator-matched var removal; destructuring patterns; log removal limited to standalone statements; `name: _name` for params; if-chain removal scoped to all-empty chains. Then drop the `unsafe` flag per fixer as each one passes the round-trip tests | L | FX-2…FX-10, FX-17, FX-18 |
-| 2.4 | Fixer round-trip property tests: output parses, a second run is a no-op, CRLF/BOM/mode are preserved, and no new `tsc` errors appear. Seed them with the adversarial cases in the appendix | M | FX-19 |
+| 2.3 | **Done for unused-imports (#17), unused-vars (#19), unused-params (#20, #27, #28), debug-logs (#23) and empty-if-chain (#24); none needs `--unsafe`.** Outstanding: **dead-useeffect** (`fixers/useeffect.py`) still deletes whole lines found by brace counting, and it was never marked unsafe, so it writes without `--unsafe` today. Known bugs, strict xfails in `test_ts_fixer_roundtrip.py` since #30: it edits `useEffect` text inside template strings, and `useEffect(...); const later = 1;` loses the whole line. It also deletes the `//` line above an effect (FX-17). Rewrite it on the syntax tree, matching the other fixers | M | FX-17 |
+| 2.4 | **Done (#30).** Fixer round-trip property tests: output parses, a second run is a no-op, CRLF/BOM/mode are preserved, and no new `tsc` errors appear. Seeded with the adversarial cases in the appendix. They found and fixed mixed-line-ending rewrites in `fixer_io` and `byte_offset` miscounting lines after CR/U+2028/U+2029 | M | FX-19 |
 | 2.5 | **Done (#18).** Fixers return the exact issue IDs they fixed, so autofix resolves the right issues | S | FX-16 |
+| 2.26 | unused-vars: nested patterns. `const { a: { b } } = o` with `b` unused is skipped as `would_empty_pattern`, because the emptied inner pattern isn't a declarator. Remove the enclosing `a: { … }` member instead | S | FX-8 |
+| 2.27 | Define the "(all destructured elements)" name once. It is spelled out in `detectors/unused.py`, `fixers/params.py` and `fixers/vars.py` | S | — |
 
 ### 2B. Detector accuracy (rest of Milestone 2, plus M0 and M1 leftovers)
 
@@ -73,28 +86,33 @@ The fixers are the biggest remaining gap. They're safe now only because they won
 | 2.6 | Port the function extractor and `_extract_function_body` to the AST: async, default, methods, multi-line params, concise arrows | M | DT-3 |
 | 2.7 | Type-safety smells as queries: non-null `!`, `as unknown as`, `any`, `@ts-ignore` in block comments, a separate undocumented `@ts-expect-error`; report per-file density | M | DT-9 |
 | 2.8 | Props detector: count properties; include extends, generics and intersections; match names on word boundaries | M | DT-4 |
-| 2.9 | Facade: every top-level statement is a re-export (directives and comments allowed); cover multi-line, `export * as`, `export type *` | S | DT-6 |
+| 2.9 | **Done (#22).** Facade: every top-level statement is a re-export (directives and comments allowed); cover multi-line, `export * as`, `export type *` | S | DT-6 |
 | 2.10 | Deprecated: attach JSDoc to the AST node; count importers from the graph plus uses in the same file; skip `.d.ts` | M | DT-5 |
 | 2.11 | Skip comment and string spans in the remaining line-regex detectors (security, smells, logs) | M | DT-7, FX-4 |
 | 2.12 | Zones: `@generated` headers; directory-level issues classified by zone | S | DT-11 |
-| 2.13 | A separate `params` category for unused symbols | S | FX-15 |
+| 2.13 | **Done (#26).** A separate `params` category for unused symbols, with every category decided on the syntax tree | S | FX-15 |
 | 2.14 | package.json `imports` (`#subpath`) in the resolver. The vite-react golden pins this as a known false positive | S | GR-1 |
 | 2.15 | Move the `_NEXTJS_*` constants out of `engine/detectors/orphaned.py` into `FrameworkSpec.entry_conventions` | S | GR-6 |
 | 2.16 | Test coverage follows re-export chains of any depth (it stops after one barrel hop today; see trpc `parseTRPCMessage.ts`) | M | DT-12 |
 | 2.17 | Test-health score: count coverage through a tested public entry as covered, and fix the "production files" and "checks" labels | M | DT-12 |
+| 2.28 | **Open question for the maintainer (#22).** Should a `'use client'` file that only re-exports (`'use client'; export { Carousel } from 'lib'`) count as a facade? It marks a client boundary rather than adding indirection. #22 counts it, as 2.9 specified; none appear in the four repos | S | DT-6 |
+| 2.29 | Line numbers in the logs and smells detectors: they split lines with `str.splitlines()`, which also breaks at U+2028/U+2029, CR, VT, FF and U+0085, while the debug-logs and empty-if-chain fixers match on tree-sitter rows, which count only LF. After such a character the fixer looks at the wrong row. #30 fixed the same class of bug for tsc positions in `byte_offset` | S | — |
 
 ### 2C. Engine and state correctness
 
 | # | Item | Effort | Findings |
 |---|---|---|---|
 | 2.18 | Strict score: scan-confirmed resolutions (`auto_resolved`) stop counting as failures; add a test that full remediation reaches 100 in every mode; make scoring.md, README and SKILL.md agree | S | CE-2 |
-| 2.19 | Resilient state loading: quarantine invalid issues instead of discarding the whole state; rename the bad file to `.corrupted`; don't rotate `.bak` after a failed load; coerce the version field | S | CE-3 |
-| 2.20 | Put every state and plan read-modify-write under the existing `state_lock`/`plan_lock`; trim progression atomically | M | CE-4 |
+| 2.19 | **Done for `state.json` (#25) and `plan.json` (#29).** Resilient loading: quarantine invalid issues and plan entries instead of discarding the whole file; rename the bad file to `.corrupted`; don't rotate `.bak` after a failed load; coerce the version field | S | CE-3 |
+| 2.20 | **Still open.** Put every state and plan read-modify-write under the existing `state_lock`/`plan_lock`; trim progression atomically. Plain `load_state`/`save_state` callers don't hold the lock, and since #25/#29 a load can rename a corrupt file and restore `.bak`, so two unlocked loads of a corrupt file can race | M | CE-4 |
 | 2.21 | Auto-resolve deferred, triaged_out and wontfix issues when a scan confirms they're gone | S | CE-5 |
 | 2.22 | Rewrite `docs/scoring.md` and `dev/QUEUE_LIFECYCLE.md` from the code | S | CE-6 |
 | 2.23 | First run: headline the objective score (marked provisional) until subjective dimensions are assessed; `--profile ci` prints plain output with a threshold exit code; move `cycles` out of the Security dimension | M | CE-12 |
 | 2.24 | Expire carried-forward subjective dimensions; concerns ignore suppressed issues | S | CE-9, CE-10 |
-| 2.25 | Commands with `--path` (autofix, detect, …) default to the last scan's path, as `review` already does. Today they fall back to `src/`, so `autofix` finds nothing in repos without one | S | — |
+| 2.25 | **Done (#21).** Commands with `--path` (autofix, detect, …) default to the last scan's path, as `review` already does, and fall back to `src/` only without one. A bare `scan` re-scans the last scope too | S | — |
+| 2.30 | Plan quarantine coverage: #29 checks the entries of `queue_order`, `skipped`, `clusters` and `overrides`, but only the container type of `superseded`, `execution_log`, `commit_log` and `promoted_ids`. A malformed entry in those still loads as is | S | CE-3 |
+| 2.31 | `tree` and `viz` label the root node "src" whatever path was scanned (`app/output/visualize_data.py`, `visualize.py`), noticed in #21 | S | — |
+| 2.32 | CLI logging isn't configured, so the `logger.warning` lines in the state-load fallback print raw to stderr (noted in #25; predates it) | S | — |
 
 ### 2D. New capabilities (Milestone 3)
 
@@ -167,31 +185,31 @@ These findings no longer apply, because the code they describe is gone:
 
 ## 4. Appendix: original review findings and status
 
-Status key: **done** (with PR), **partial** (what's left is in §2), **open**, **gated** (the fixer needs `--unsafe` until §2A lands), **dropped** (§3). Severities are from the 2026-10-05 review.
+Status key: **done** (with PR), **partial** (what's left is in §2), **open**, **dropped** (§3). The **gated** status (fixer behind `--unsafe`) is retired: since #24 no fixer is gated. Severities are from the 2026-10-05 review.
 
 ### Fixers and move
 
 | ID | Sev | Title | Status |
 |---|---|---|---|
 | FX-1 | critical | Logs fixer deletes side-effecting declarations and the first line of multi-line declarations | done (#1) |
-| FX-2 | high | Line-granular log removal deletes neighbours, changes control flow, breaks JSX and ternaries | gated → 2.3 |
-| FX-3 | high | File-wide empty-block removal deletes `.catch(()=>{})` and declarations | gated → 2.3 |
+| FX-2 | high | Line-granular log removal deletes neighbours, changes control flow, breaks JSX and ternaries | done (#23) |
+| FX-3 | high | File-wide empty-block removal deletes `.catch(()=>{})` and declarations | done (#23) |
 | FX-4 | high | `detect logs --fix` removes the first line only; tag regex matches strings, comments and `${}` | partial (#1 removed the line deletion) → 2.11 |
 | FX-5 | high | Import collector swallows the next import; deletes side-effect imports | done (#17) |
 | FX-6 | high | `}` or comma in a comment drops bindings; alias handling deletes used names | done (#17) |
 | FX-7 | high | unused-vars removes the wrong declaration or declarators | done (#19) |
 | FX-8 | high | Destructuring split breaks syntax and changes strings | done (#19) |
-| FX-9 | high | `_`-prefix renames destructured props; `c_onst` corruption | gated → 2.3 |
-| FX-10 | high | empty-if-chain deletes a non-empty else | gated → 2.3 |
+| FX-9 | high | `_`-prefix renames destructured props; `c_onst` corruption | done (#20) |
+| FX-10 | high | empty-if-chain deletes a non-empty else | done (#24) |
 | FX-11 | high | No parse gate before writing; dry-run shows no "after" | done (#16); `--verify` → 2.2 |
 | FX-12 | high | move breaks sibling imports, `.js` specifiers, importers outside src | done (#1, #8) |
 | FX-13 | medium | Chained `str.replace` double-rewrites and touches strings | done (#1, #8) |
 | FX-14 | medium | Write path loses CRLF, symlinks, mode, encoding | done (#1) |
-| FX-15 | medium | `_categorize_unused` defaults to "imports" | partial (#1 defaults to vars) → 2.13 |
+| FX-15 | medium | `_categorize_unused` defaults to "imports" | done (#1, #26) |
 | FX-16 | low | Autofix resolves the wrong issue IDs | done (#18) |
 | FX-17 | low | dead-useeffect deletes the preceding `//` line | open → 2.3 |
-| FX-18 | low | BOM hides the line-1 import (fails safe) | open → 2.3 |
-| FX-19 | medium | No adversarial or round-trip fixer tests | open → 2.4 |
+| FX-18 | low | BOM hides the line-1 import (fails safe) | done (#1 strips the BOM before fixing; #30 adds a round-trip case) |
+| FX-19 | medium | No adversarial or round-trip fixer tests | done (#30) |
 
 ### External tools
 
@@ -226,7 +244,7 @@ Status key: **done** (with PR), **partial** (what's left is in §2), **open**, *
 | DT-3 | low | Function extractor misses async/default/methods | open → 2.6 |
 | DT-4 | medium | Props detector counts lines, skips extends/generics/intersections | open → 2.8 |
 | DT-5 | medium | Deprecated detector false positives; "safe to delete" on public API | partial (#1) → 2.10 |
-| DT-6 | low | Facade misses multi-line, `export * as`, `'use client'` | partial (#5 exempts package entries) → 2.9 |
+| DT-6 | low | Facade misses multi-line, `export * as`, `'use client'` | done (#5, #22); `'use client'` question → 2.28 |
 | DT-7 | medium | eval/innerHTML false positives; comments not stripped | partial (#1, #11) → 2.11 |
 | DT-9 | medium | Non-null, block `@ts-ignore`, double-cast gaps | open → 2.7 |
 | DT-10 | medium | Author-specific heuristics | open → 3.5 |
@@ -244,7 +262,7 @@ Status key: **done** (with PR), **partial** (what's left is in §2), **open**, *
 |---|---|---|---|
 | CE-1 | high | One plan.json across languages | dropped |
 | CE-2 | high | Strict never recovers from real fixes | open → 2.18 |
-| CE-3 | medium | One bad issue loses the whole state | open → 2.19 |
+| CE-3 | medium | One bad issue loses the whole state | done (#25, #29); plan sections → 2.30 |
 | CE-4 | medium | Unlocked read-modify-write | open → 2.20 |
 | CE-5 | medium | Deferred, triaged_out and wontfix never auto-resolve | open → 2.21 |
 | CE-6 | medium | scoring.md and QUEUE_LIFECYCLE contradict code | open → 2.22 |
