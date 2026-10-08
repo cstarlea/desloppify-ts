@@ -15,6 +15,7 @@ from desloppify.languages.typescript.detectors.security.patterns import (
     _SERVE_ASYNC_RE,
 )
 from desloppify.base.signal_patterns import AUTH_LOOKUP_TOKEN_RE
+from desloppify.languages.typescript.syntax.scanner import SourceText
 
 _AUTH_DENIAL_RE = re.compile(
     r"\b(?:401|403|unauthori[sz]ed|forbidden)\b"
@@ -32,14 +33,15 @@ def _file_level_security_issues(
     *,
     filepath: str,
     normalized_path: str,
-    lines: list[str],
-    content: str,
+    source: SourceText,
 ) -> list[dict[str, object]]:
     """Detect file-level security patterns and return issues."""
     file_issues: list[dict[str, object]] = []
+    content = source.text
+    lines = source.lines
 
-    if _looks_like_edge_handler(normalized_path, content):
-        if not _handler_has_auth_check(content):
+    if _looks_like_edge_handler(normalized_path, source.code):
+        if not _handler_has_auth_check(source):
             file_issues.append(
                 _make_security_entry(
                     filepath,
@@ -53,7 +55,7 @@ def _file_level_security_issues(
                 )
             )
 
-    _check_json_parse_unguarded(filepath, lines, file_issues)
+    _check_json_parse_unguarded(filepath, source, file_issues)
     if filepath.endswith(".sql"):
         _check_rls_bypass(filepath, content, lines, file_issues)
     return file_issues
@@ -68,34 +70,39 @@ def _looks_like_edge_handler(normalized_path: str, content: str) -> bool:
     return in_edge_tree and has_edge_entrypoint
 
 
-def _extract_handler_body(content: str) -> str | None:
-    """Extract body of first serve() or exported handler function."""
-    match = _SERVE_ASYNC_RE.search(content) or _EDGE_ENTRYPOINT_RE.search(content)
+def _extract_handler_body(source: SourceText) -> str | None:
+    """Body of the first serve() or exported handler function, comments blanked.
+
+    Found and brace-matched on the code, so braces and keywords in strings
+    and comments don't count.
+    """
+    code = source.code
+    match = _SERVE_ASYNC_RE.search(code) or _EDGE_ENTRYPOINT_RE.search(code)
     if not match:
         return None
 
     start = match.end()
-    brace_pos = content.find("{", start)
+    brace_pos = code.find("{", start)
     if brace_pos == -1:
         return None
 
     depth = 0
-    for i in range(brace_pos, len(content)):
-        ch = content[i]
+    for i in range(brace_pos, len(code)):
+        ch = code[i]
         if ch == "{":
             depth += 1
         elif ch == "}":
             depth -= 1
             if depth == 0:
-                return content[brace_pos : i + 1]
+                return source.uncommented[brace_pos : i + 1]
     return None
 
 
-def _handler_has_auth_check(content: str) -> bool:
+def _handler_has_auth_check(source: SourceText) -> bool:
     """Check if auth patterns exist inside handler body, not just file-level."""
-    handler_body = _extract_handler_body(content)
+    handler_body = _extract_handler_body(source)
     if handler_body is None:
-        return _has_auth_enforcement(content)
+        return _has_auth_enforcement(source.uncommented)
     return _has_auth_enforcement(handler_body)
 
 
@@ -125,24 +132,20 @@ def _is_in_try_scope(lines: list[str], target_line: int) -> bool:
 
 def _check_json_parse_unguarded(
     filepath: str,
-    lines: list[str],
+    source: SourceText,
     entries: list[dict[str, object]],
 ) -> None:
-    """Check for JSON.parse not inside a try block."""
-    for line_num, line in enumerate(lines, 1):
-        if not _JSON_PARSE_RE.search(line):
-            continue
-        stripped = line.lstrip()
-        if stripped.startswith("//"):
-            continue
+    """Check for JSON.parse calls in code that aren't inside a try block."""
+    for index, _match in source.line_matches(_JSON_PARSE_RE):
+        line = source.lines[index]
         if _JSON_DEEP_CLONE_RE.search(line):
             continue
-        if _is_in_try_scope(lines, line_num):
+        if _is_in_try_scope(source.code_lines, index + 1):
             continue
         entries.append(
             _make_security_entry(
                 filepath,
-                line_num,
+                index + 1,
                 line,
                 check_id="json_parse_unguarded",
                 summary="JSON.parse() without try/catch - may throw on malformed input",

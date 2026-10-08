@@ -19,6 +19,7 @@ from desloppify.languages.typescript.detectors.security.file_checks import (
 from desloppify.languages.typescript.detectors.security.line_checks import (
     _line_security_issues,
 )
+from desloppify.languages.typescript.syntax.scanner import SourceText
 
 logger = logging.getLogger(__name__)
 
@@ -58,36 +59,18 @@ def detect_ts_security(
         scanned += 1
         normalized_path = filepath.replace("\\", "/")
         is_server_only = is_server_only_path(normalized_path)
-        lines = content.splitlines()
+        source = SourceText(content)
         has_dev_guard = "__IS_DEV_ENV__" in content or "isDev" in content
 
-        in_block_comment = False
-        for line_num, line in enumerate(lines, 1):
-            stripped = line.lstrip()
-            # Whole-line comments are prose, not code: skip `//` lines and the
-            # lines of a `/* ... */` or JSDoc block, so wording like
-            # "allow eval (HMR)" in a doc comment isn't reported as a call.
-            # Code after a block comment closes on the same line is scanned.
-            if in_block_comment:
-                if "*/" not in line:
-                    continue
-                in_block_comment = False
-                if not line.split("*/", 1)[1].strip():
-                    continue
-            elif stripped.startswith("//"):
-                continue
-            elif stripped.startswith("/*"):
-                _comment, closer, rest = stripped[2:].partition("*/")
-                in_block_comment = not closer
-                if in_block_comment or not rest.strip():
-                    continue
+        # Only matches that start in code count: "allow eval (HMR)" in a doc
+        # comment or `<div dangerouslySetInnerHTML>` in a string isn't a call.
+        for line_num in range(1, len(source.lines) + 1):
             entries.extend(
                 _line_security_issues(
                     filepath=filepath,
                     normalized_path=normalized_path,
-                    lines=lines,
+                    source=source,
                     line_num=line_num,
-                    line=line,
                     is_server_only=is_server_only,
                     has_dev_guard=has_dev_guard,
                 )
@@ -97,8 +80,7 @@ def detect_ts_security(
             _file_level_security_issues(
                 filepath=filepath,
                 normalized_path=normalized_path,
-                lines=lines,
-                content=content,
+                source=source,
             )
         )
 

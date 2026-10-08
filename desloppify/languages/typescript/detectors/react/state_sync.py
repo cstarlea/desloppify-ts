@@ -8,6 +8,7 @@ from pathlib import Path
 
 from desloppify.base.discovery.paths import get_project_root
 from desloppify.base.discovery.source import find_tsx_and_jsx_files
+from desloppify.languages._framework.node.js_text import code_text
 from desloppify.languages.typescript.detectors.smells.helpers import (
     _strip_ts_comments,
     scan_code,
@@ -31,13 +32,14 @@ def detect_state_sync(path: Path) -> tuple[list[dict], int]:
             logger.debug("Skipping unreadable TSX file %s in state-sync pass: %s", filepath, exc)
             continue
 
-        setters = {m.group(1) for m in re.finditer(r"const\s+\[\w+,\s*(set\w+)\]\s*=\s*useState", content)}
+        code = code_text(content)
+        setters = {m.group(1) for m in re.finditer(r"const\s+\[\w+,\s*(set\w+)\]\s*=\s*useState", code)}
         if not setters:
             continue
 
-        total_effects += len(re.findall(r"useEffect\s*\(", content))
+        total_effects += len(re.findall(r"useEffect\s*\(", code))
         effect_re = re.compile(r"useEffect\s*\(\s*\(\s*\)\s*=>\s*\{")
-        for match in effect_re.finditer(content):
+        for match in effect_re.finditer(code):
             brace_start = match.end() - 1
             depth = 0
             body_end = None

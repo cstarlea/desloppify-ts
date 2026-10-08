@@ -5,10 +5,22 @@ from __future__ import annotations
 import desloppify.languages.typescript.detectors.security.entries as entries_mod
 import desloppify.languages.typescript.detectors.security.file_checks as file_checks_mod
 import desloppify.languages.typescript.detectors.security.line_checks as line_checks_mod
+from desloppify.languages.typescript.syntax.scanner import SourceText
 
 
 def _kinds(entries: list[dict[str, object]]) -> set[str]:
     return {str(item.get("detail", {}).get("kind", "")) for item in entries}
+
+
+def _line_issues(lines: list[str], line_num: int, filepath: str, normalized_path: str, *, has_dev_guard: bool = False):
+    return line_checks_mod._line_security_issues(
+        filepath=filepath,
+        normalized_path=normalized_path,
+        source=SourceText("\n".join(lines)),
+        line_num=line_num,
+        is_server_only=False,
+        has_dev_guard=has_dev_guard,
+    )
 
 
 def test_entries_make_security_entry_wraps_security_rule_payload() -> None:
@@ -36,13 +48,14 @@ def test_file_checks_cover_edge_auth_json_parse_and_rls_detection() -> None:
         "  return new Response(payload)\n"
         "})\n"
     )
-    edge_lines = edge_content.splitlines()
+    edge_source = SourceText(edge_content)
 
     assert file_checks_mod._looks_like_edge_handler("/src/functions/handler.ts", edge_content)
     assert not file_checks_mod._looks_like_edge_handler("/src/web/handler.ts", edge_content)
-    assert file_checks_mod._extract_handler_body(edge_content) is not None
-    assert not file_checks_mod._handler_has_auth_check(edge_content)
-    assert file_checks_mod._handler_has_auth_check("requireAuth(user)")
+    assert file_checks_mod._extract_handler_body(edge_source) is not None
+    assert not file_checks_mod._handler_has_auth_check(edge_source)
+    assert file_checks_mod._handler_has_auth_check(SourceText("requireAuth(user)"))
+    assert not file_checks_mod._handler_has_auth_check(SourceText("// requireAuth(user)"))
 
     json_lines = [
         "async function parse() {",
@@ -60,7 +73,7 @@ def test_file_checks_cover_edge_auth_json_parse_and_rls_detection() -> None:
     assert file_checks_mod._is_in_try_scope(json_lines, 7) is False
 
     json_entries: list[dict[str, object]] = []
-    file_checks_mod._check_json_parse_unguarded("src/parse.ts", json_lines, json_entries)
+    file_checks_mod._check_json_parse_unguarded("src/parse.ts", SourceText("\n".join(json_lines)), json_entries)
     assert _kinds(json_entries) == {"json_parse_unguarded"}
     assert json_entries[0]["detail"]["line"] == 7
 
@@ -82,16 +95,14 @@ def test_file_checks_cover_edge_auth_json_parse_and_rls_detection() -> None:
     combined = file_checks_mod._file_level_security_issues(
         filepath="/src/functions/handler.ts",
         normalized_path="/src/functions/handler.ts",
-        lines=edge_lines,
-        content=edge_content,
+        source=edge_source,
     )
     assert {"edge_function_missing_auth", "json_parse_unguarded"} <= _kinds(combined)
 
     sql_combined = file_checks_mod._file_level_security_issues(
         filepath="db/schema.sql",
         normalized_path="db/schema.sql",
-        lines=sql_lines,
-        content=sql_content,
+        source=SourceText(sql_content),
     )
     assert "rls_bypass_views" in _kinds(sql_combined)
 
@@ -101,87 +112,31 @@ def test_line_checks_report_expected_security_kinds() -> None:
         "const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY",
         "const client = createClient(url, serviceRole)",
     ]
-    service_role_issues = line_checks_mod._line_security_issues(
-        filepath="src/client.ts",
-        normalized_path="/src/client.ts",
-        lines=service_role_lines,
-        line_num=2,
-        line=service_role_lines[1],
-        is_server_only=False,
-        has_dev_guard=False,
-    )
+    service_role_issues = _line_issues(service_role_lines, 2, "src/client.ts", "/src/client.ts")
     assert "service_role_on_client" in _kinds(service_role_issues)
 
     eval_line = "const fn = new Function('a', body)"
-    eval_issues = line_checks_mod._line_security_issues(
-        filepath="src/eval.ts",
-        normalized_path="/src/eval.ts",
-        lines=[eval_line],
-        line_num=1,
-        line=eval_line,
-        is_server_only=False,
-        has_dev_guard=False,
-    )
+    eval_issues = _line_issues([eval_line], 1, "src/eval.ts", "/src/eval.ts")
     assert "eval_injection" in _kinds(eval_issues)
 
     html_line = "node.innerHTML = payload.dangerouslySetInnerHTML"
-    html_issues = line_checks_mod._line_security_issues(
-        filepath="src/dom.ts",
-        normalized_path="/src/dom.ts",
-        lines=[html_line],
-        line_num=1,
-        line=html_line,
-        is_server_only=False,
-        has_dev_guard=False,
-    )
+    html_issues = _line_issues([html_line], 1, "src/dom.ts", "/src/dom.ts")
     assert {"dangerously_set_inner_html", "innerHTML_assignment"} <= _kinds(html_issues)
 
     dev_cred_line = "const token = import.meta.env.VITE_API_TOKEN"
-    dev_cred_issues = line_checks_mod._line_security_issues(
-        filepath="src/app.ts",
-        normalized_path="/src/app.ts",
-        lines=[dev_cred_line],
-        line_num=1,
-        line=dev_cred_line,
-        is_server_only=False,
-        has_dev_guard=False,
-    )
+    dev_cred_issues = _line_issues([dev_cred_line], 1, "src/app.ts", "/src/app.ts")
     assert "dev_credentials_env" in _kinds(dev_cred_issues)
 
-    guarded_dev_issues = line_checks_mod._line_security_issues(
-        filepath="src/dev.client.ts",
-        normalized_path="/src/dev/client.ts",
-        lines=[dev_cred_line],
-        line_num=1,
-        line=dev_cred_line,
-        is_server_only=False,
-        has_dev_guard=True,
-    )
+    guarded_dev_issues = _line_issues([dev_cred_line], 1, "src/dev.client.ts", "/src/dev/client.ts", has_dev_guard=True)
     assert guarded_dev_issues == []
 
     redirect_line = "window.location = data.nextUrl"
-    redirect_issues = line_checks_mod._line_security_issues(
-        filepath="src/redirect.ts",
-        normalized_path="/src/redirect.ts",
-        lines=[redirect_line],
-        line_num=1,
-        line=redirect_line,
-        is_server_only=False,
-        has_dev_guard=False,
-    )
+    redirect_issues = _line_issues([redirect_line], 1, "src/redirect.ts", "/src/redirect.ts")
     assert "open_redirect" in _kinds(redirect_issues)
 
     jwt_lines = [
         "const payload = token.split('.')",
         "const decoded = atob(payload[1])",
     ]
-    jwt_issues = line_checks_mod._line_security_issues(
-        filepath="src/auth.ts",
-        normalized_path="/src/auth.ts",
-        lines=jwt_lines,
-        line_num=2,
-        line=jwt_lines[1],
-        is_server_only=False,
-        has_dev_guard=False,
-    )
+    jwt_issues = _line_issues(jwt_lines, 2, "src/auth.ts", "/src/auth.ts")
     assert "unverified_jwt_decode" in _kinds(jwt_issues)

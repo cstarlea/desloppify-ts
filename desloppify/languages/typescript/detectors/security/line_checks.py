@@ -6,6 +6,7 @@ from pathlib import Path
 
 from desloppify.base.signal_patterns import SERVICE_ROLE_TOKEN_RE
 from desloppify.languages.typescript.detectors.security.entries import _make_security_entry
+from desloppify.languages.typescript.syntax.scanner import SourceText
 from desloppify.languages.typescript.detectors.security.patterns import (
     _ATOB_JWT_RE,
     _CREATE_CLIENT_RE,
@@ -22,18 +23,25 @@ def _line_security_issues(
     *,
     filepath: str,
     normalized_path: str,
-    lines: list[str],
+    source: SourceText,
     line_num: int,
-    line: str,
     is_server_only: bool,
     has_dev_guard: bool,
 ) -> list[dict[str, object]]:
-    """Detect per-line security patterns and return issues."""
+    """Detect per-line security patterns that start in code and return issues."""
     line_issues: list[dict[str, object]] = []
+    index = line_num - 1
+    line = source.lines[index]
 
-    if _CREATE_CLIENT_RE.search(line):
-        context = "\n".join(lines[max(0, line_num - 3) : min(len(lines), line_num + 3)])
-        if SERVICE_ROLE_TOKEN_RE.search(context) and not is_server_only:
+    def found(pattern, anchor: str = "code") -> bool:
+        return source.search(pattern, index, anchor) is not None
+
+    def context() -> str:
+        """The lines around this one, comments blanked."""
+        return "\n".join(source.uncommented_lines[max(0, index - 2) : index + 3])
+
+    if found(_CREATE_CLIENT_RE):
+        if SERVICE_ROLE_TOKEN_RE.search(context()) and not is_server_only:
             line_issues.append(
                 _make_security_entry(
                     filepath,
@@ -47,7 +55,7 @@ def _line_security_issues(
                 )
             )
 
-    if _EVAL_PATTERNS.search(line):
+    if found(_EVAL_PATTERNS):
         line_issues.append(
             _make_security_entry(
                 filepath,
@@ -61,7 +69,7 @@ def _line_security_issues(
             )
         )
 
-    if _DANGEROUS_HTML_RE.search(line):
+    if found(_DANGEROUS_HTML_RE):
         line_issues.append(
             _make_security_entry(
                 filepath,
@@ -75,7 +83,7 @@ def _line_security_issues(
             )
         )
 
-    if _INNER_HTML_RE.search(line):
+    if found(_INNER_HTML_RE):
         line_issues.append(
             _make_security_entry(
                 filepath,
@@ -89,7 +97,7 @@ def _line_security_issues(
             )
         )
 
-    if _DEV_CRED_RE.search(line):
+    if found(_DEV_CRED_RE, "uncommented"):
         is_dev_file = "/dev/" in normalized_path or "dev." in Path(filepath).name
         if not (is_dev_file and has_dev_guard):
             line_issues.append(
@@ -105,7 +113,7 @@ def _line_security_issues(
                 )
             )
 
-    if _OPEN_REDIRECT_RE.search(line):
+    if found(_OPEN_REDIRECT_RE):
         line_issues.append(
             _make_security_entry(
                 filepath,
@@ -119,9 +127,8 @@ def _line_security_issues(
             )
         )
 
-    if _ATOB_JWT_RE.search(line):
-        context = "\n".join(lines[max(0, line_num - 3) : min(len(lines), line_num + 3)])
-        if _JWT_PAYLOAD_RE.search(context):
+    if found(_ATOB_JWT_RE):
+        if _JWT_PAYLOAD_RE.search(context()):
             line_issues.append(
                 _make_security_entry(
                     filepath,

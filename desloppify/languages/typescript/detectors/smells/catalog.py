@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+# A line pattern counts where its match starts in code, or with an
+# ``anchor``, where it opens a string literal or is in a comment (see
+# ``SourceText.search``). Checks without a pattern have their own detectors.
 TS_SMELL_CHECKS = [
     {
         "id": "empty_catch",
         "label": "Empty catch blocks",
-        "pattern": r"catch\s*\([^)]*\)\s*\{\s*\}",
+        "pattern": None,
         "severity": "high",
     },
     {
@@ -31,6 +34,7 @@ TS_SMELL_CHECKS = [
         "id": "ts_nocheck",
         "label": "@ts-nocheck disables all type checking",
         "pattern": r"^\s*//\s*@ts-nocheck",
+        "anchor": "comment",
         "severity": "high",
     },
     {
@@ -91,18 +95,21 @@ TS_SMELL_CHECKS = [
         "id": "hardcoded_url",
         "label": "Hardcoded URL in source code",
         "pattern": r"""(?:['\"])https?://[^\s'\"]+(?:['\"])""",
+        "anchor": "literal",
         "severity": "medium",
     },
     {
         "id": "todo_fixme",
         "label": "TODO/FIXME/HACK comments",
         "pattern": r"//\s*(?:TODO|FIXME|HACK|XXX)",
+        "anchor": "comment",
         "severity": "low",
     },
     {
         "id": "debug_tag",
         "label": "Vestigial debug tag in log/print",
         "pattern": r"""(?:['"`])\[([A-Z][A-Z0-9_]{2,})\]\s""",
+        "anchor": "literal",
         "severity": "low",
     },
     {
@@ -120,7 +127,7 @@ TS_SMELL_CHECKS = [
     {
         "id": "voided_symbol",
         "label": "Dead internal code (void-suppressed unused symbol)",
-        "pattern": r"^\s*void\s+[a-zA-Z_]\w*\s*;?\s*$",
+        "pattern": None,
         "severity": "medium",
     },
     {
@@ -133,6 +140,7 @@ TS_SMELL_CHECKS = [
         "id": "workaround_tag",
         "label": "Workaround tag in comment ([PascalCaseTag])",
         "pattern": r"//.*\[([A-Z][a-z]+(?:[A-Z][a-z]+)+)\]",
+        "anchor": "comment",
         "severity": "low",
     },
     {
@@ -156,7 +164,7 @@ TS_SMELL_CHECKS = [
     {
         "id": "sort_no_comparator",
         "label": ".sort() without comparator function",
-        "pattern": r"\.sort\(\s*\)",
+        "pattern": None,
         "severity": "medium",
     },
     {

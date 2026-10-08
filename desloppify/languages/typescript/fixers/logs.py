@@ -34,6 +34,7 @@ from collections import defaultdict
 
 from desloppify.base.output.terminal import colorize
 from desloppify.languages._framework.base.types import FixResult
+from desloppify.languages.typescript.detectors.logs import tagged_console_calls
 from desloppify.languages.typescript.syntax.tree import (
     ParsedSource,
     get_parser,
@@ -44,10 +45,6 @@ from .edits import apply_edits, whole_statement_range
 from .fixer_io import apply_fixer
 from desloppify.languages.typescript.syntax.nodes import FUNCTIONS, STATEMENT_PARENTS, asi_hazards, node_key, reads_only
 
-_LOG_METHODS = frozenset({"log", "warn", "info", "debug"})
-_TAGGED_FIRST_ARG_RE = re.compile(
-    r"""^['"`].{0,4}\[|^`\$\{\w*(?:TAG|DEBUG|LOG)\w*\}""", re.IGNORECASE
-)
 # A `//` comment directly above a removed log that only explains the log.
 _DEBUG_COMMENT_RE = re.compile(r"\b(?:debug|temp|log|logging|trace)\b", re.IGNORECASE)
 _LOGGER_NAMES = frozenset(
@@ -97,7 +94,7 @@ def remove_debug_logs(
 ) -> tuple[bytes, list[dict], list[str]]:
     """Return the edited source, the fixed entries and a skip reason per skipped entry."""
     calls_by_row: dict[int, list] = defaultdict(list)
-    for call in _console_calls(parsed):
+    for call in tagged_console_calls(parsed):
         calls_by_row[call.start_point[0]].append(call)
 
     planned: dict[tuple, object] = {}  # statement key -> statement
@@ -156,30 +153,6 @@ def _log_range(source: bytes, statement) -> tuple[int, int]:
         start = line_start
         comment = comment.prev_sibling
     return start, end
-
-
-def _console_calls(parsed: ParsedSource) -> list:
-    """Tagged ``console.log/warn/info/debug`` calls in the file."""
-    calls = []
-    stack = [parsed.root]
-    while stack:
-        node = stack.pop()
-        stack.extend(node.named_children)
-        if node.type != "call_expression":
-            continue
-        function = node.child_by_field_name("function")
-        if function is None or function.type != "member_expression":
-            continue
-        obj, prop = function.child_by_field_name("object"), function.child_by_field_name("property")
-        if obj is None or prop is None or parsed.text(obj) != "console":
-            continue
-        if parsed.text(prop) not in _LOG_METHODS:
-            continue
-        args = node.child_by_field_name("arguments")
-        first = next((a for a in args.named_children if a.type != "comment"), None) if args else None
-        if first is not None and _TAGGED_FIRST_ARG_RE.match(parsed.text(first)):
-            calls.append(node)
-    return calls
 
 
 def _removable_statement(parsed: ParsedSource, call):

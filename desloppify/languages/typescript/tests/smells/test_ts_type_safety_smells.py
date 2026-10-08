@@ -10,10 +10,7 @@ from desloppify.languages.typescript.detectors.smells.detector_types import (
     TYPE_SAFETY_SMELLS,
     _detect_type_safety,
 )
-from desloppify.languages.typescript.detectors.smells.helpers import (
-    _FileContext,
-    _build_ts_line_state,
-)
+from desloppify.languages.typescript.detectors.smells.helpers import _file_context
 from desloppify.languages.typescript.phases_smells import _add_density
 
 needs_treesitter = pytest.mark.skipif(
@@ -26,8 +23,7 @@ def _smells(tmp_path, content: str, name: str = "a.ts") -> dict[str, list[int]]:
     """Smell id -> matched lines, for one file."""
     path = tmp_path / name
     path.write_text(content, encoding="utf-8", newline="")
-    lines = content.splitlines()
-    ctx = _FileContext(str(path), content, lines, _build_ts_line_state(lines))
+    ctx = _file_context(str(path), content)
     counts: dict[str, list[dict]] = {smell: [] for smell in TYPE_SAFETY_SMELLS}
     _detect_type_safety(ctx, counts)
     return {smell: [m["line"] for m in matches] for smell, matches in counts.items() if matches}

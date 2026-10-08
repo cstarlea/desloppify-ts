@@ -55,7 +55,26 @@ def code_text(text: str) -> str:
     ``${...}``. A quote or regex not closed on its own line ends at the line
     break, so a stray apostrophe (in JSX text, say) hides at most that line.
     """
+    return blank_spans(text, literal_spans(text))
+
+
+def blank_spans(text: str, spans) -> str:
+    """``text`` with each ``(start, end, kind)`` span blanked to spaces, newlines kept."""
     out = list(text)
+    for start, end, _kind in spans:
+        for k in range(start, end):
+            if text[k] != "\n":
+                out[k] = " "
+    return "".join(out)
+
+
+def literal_spans(text: str) -> Generator[tuple[int, int, str], None, None]:
+    """``(start, end, kind)`` for each comment and literal, in order (see ``code_text``).
+
+    ``kind`` is ``comment``, ``string``, ``template`` or ``regex``. A template
+    with substitutions gives one span per piece of text around its ``${...}``,
+    each piece's delimiters included.
+    """
     n = len(text)
     templates: list[int] = []  # open ``{`` count inside each enclosing ``${``
     prev = ""  # the last code character that isn't whitespace
@@ -65,18 +84,25 @@ def code_text(text: str) -> str:
         nxt = text[i + 1] if i + 1 < n else ""
         if ch == "/" and nxt == "/":
             end = text.find("\n", i)
-            i = _blank(out, text, i, n if end == -1 else end)
+            end = n if end == -1 else end
+            yield i, end, "comment"
+            i = end
         elif ch == "/" and nxt == "*":
             end = text.find("*/", i + 2)
-            i = _blank(out, text, i, n if end == -1 else end + 2)
+            end = n if end == -1 else end + 2
+            yield i, end, "comment"
+            i = end
         elif ch in "'\"":
-            i = _blank(out, text, i, _quote_end(text, i))
+            end = _quote_end(text, i)
+            yield i, end, "string"
+            i = end
             prev = "a"
         elif ch == "`" or (ch == "}" and templates and templates[-1] == 0):
             if ch == "}":
                 templates.pop()
             end, substitution = _template_end(text, i + 1)
-            i = _blank(out, text, i, end)
+            yield i, end, "template"
+            i = end
             if substitution:
                 templates.append(0)
                 prev = "{"
@@ -88,7 +114,8 @@ def code_text(text: str) -> str:
                 prev = ch
                 i += 1
             else:
-                i = _blank(out, text, i, end)
+                yield i, end, "regex"
+                i = end
                 prev = "a"
         else:
             if templates and ch == "{":
@@ -98,15 +125,6 @@ def code_text(text: str) -> str:
             if not ch.isspace():
                 prev = ch
             i += 1
-    return "".join(out)
-
-
-def _blank(out: list[str], text: str, start: int, end: int) -> int:
-    """Blank ``text[start:end]`` in ``out``, newlines kept; returns ``end``."""
-    for k in range(start, end):
-        if text[k] != "\n":
-            out[k] = " "
-    return end
 
 
 def _quote_end(text: str, start: int) -> int:
@@ -181,7 +199,9 @@ def _regex_end(text: str, start: int) -> int | None:
 
 
 __all__ = [
+    "blank_spans",
     "code_text",
+    "literal_spans",
     "scan_code",
     "strip_js_ts_comments",
 ]
