@@ -27,7 +27,6 @@ _FACADES = [
     pytest.param("export type * from './t';\n", ["./t"], id="type-star"),
     pytest.param("export type * as T from './t';\n", ["./t"], id="type-star-as"),
     pytest.param("export { default } from './d';\n", ["./d"], id="default"),
-    pytest.param("'use client';\n\nexport { Button } from './button';\n", ["./button"], id="use-client"),
     pytest.param('"use strict"\nexport * from "./x"\n', ["./x"], id="use-strict-no-semicolons"),
     pytest.param("#!/usr/bin/env node\nexport * from './x';\n", ["./x"], id="hashbang"),
     pytest.param(
@@ -47,6 +46,17 @@ _NOT_FACADES = [
     pytest.param("export * from './x';\nexport default function f() {}\n", id="default-function"),
     pytest.param("import './polyfill';\nexport * from './x';\n", id="side-effect-import"),
     pytest.param("export * from './x';\n'use client';\n", id="late-directive"),
+    # A file opening with a Next.js boundary directive is load-bearing (roadmap 2.28).
+    pytest.param("'use client';\n\nexport { Button } from './button';\n", id="use-client"),
+    pytest.param('"use server"\nexport * from "./actions"\n', id="use-server"),
+    pytest.param(
+        "// Client boundary.\n/* see docs */\n'use client';\nexport * from './x';\n",
+        id="comments-before-use-client",
+    ),
+    pytest.param(
+        "'use strict';\n// note\n\"use client\"\nexport { Button } from './button';\n",
+        id="use-client-later-in-prologue",
+    ),
     pytest.param("export * from './x';\nsetup();\n", id="call"),
     pytest.param("export { a };\n", id="local-export-without-import"),
 ]
@@ -104,6 +114,7 @@ def test_import_then_export_is_facade(tmp_path, source, sources):
         pytest.param("import { a } from './x';\n", id="import-only"),
         pytest.param("import x = require('./x');\nexport = x;\n", id="import-require"),
         pytest.param("export * from './x'\nexport type * from\n", id="syntax-error"),
+        pytest.param("'use client';\nimport { a } from './x';\nexport { a };\n", id="use-client"),
     ],
 )
 def test_import_then_export_non_facades(tmp_path, source):
