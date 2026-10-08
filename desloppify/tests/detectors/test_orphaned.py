@@ -548,8 +548,16 @@ class TestDetectNextjsProject:
         (tmp_path / "next.config.ts").write_text("export default {}")
         assert _detect_nextjs_project(tmp_path) is True
 
+    def test_next_config_cjs(self, tmp_path):
+        (tmp_path / "next.config.cjs").write_text("module.exports = {}")
+        assert _detect_nextjs_project(tmp_path) is True
+
     def test_no_next_config(self, tmp_path):
         assert _detect_nextjs_project(tmp_path) is False
+
+
+def test_entry_conventions_match_framework_detection():
+    assert set(NEXTJS_ENTRY_CONVENTIONS.config_files) == set(NEXTJS_SPEC.detection.config_files)
 
 
 def test_nextjs_spec_declares_its_entry_conventions():

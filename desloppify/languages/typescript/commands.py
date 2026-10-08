@@ -10,11 +10,11 @@ from pathlib import Path
 from desloppify.base.discovery.file_paths import rel
 from desloppify.base.discovery.paths import get_src_path
 from desloppify.base.discovery.source import find_ts_and_js_files
-from desloppify.base.output.terminal import colorize, display_entries, print_table
+from desloppify.base.output.terminal import colorize, display_entries, plural, print_table
 from desloppify.engine.detectors import coupling as coupling_detector_mod
 from desloppify.engine.detectors import dupes as dupes_detector_mod
 from desloppify.engine.detectors import gods as gods_detector_mod
-from desloppify.engine.detectors import orphaned as orphaned_detector_mod
+from desloppify.engine.policy.zones import FileZoneMap
 from desloppify.languages._framework.commands.base import (
     make_cmd_complexity,
     make_cmd_facade,
@@ -28,7 +28,6 @@ from desloppify.languages._framework.commands.registry import (
     build_standard_detect_registry,
     compose_detect_registry,
 )
-from desloppify.languages._framework.frameworks.registry import framework_entry_conventions
 from desloppify.languages.typescript.detectors.deps import (
     build_dep_graph,
 )
@@ -48,6 +47,7 @@ from desloppify.languages.typescript.extractors_components import (
     extract_ts_components,
 )
 from desloppify.languages.typescript.extractors_functions import extract_ts_functions
+from desloppify.languages.typescript.phases_coupling import find_orphans, package_context
 from desloppify.languages.typescript.phases_config import (
     TS_COMPLEXITY_SIGNALS,
     TS_GOD_RULES,
@@ -56,8 +56,6 @@ from desloppify.languages.typescript.phases_config import (
 )
 from desloppify.languages.typescript.plugin_contract import (
     TS_BARREL_NAMES,
-    TS_ENTRY_PATTERNS,
-    TS_EXTENSIONS,
     TS_LARGE_THRESHOLD,
 )
 
@@ -122,24 +120,33 @@ def cmd_gods(args: argparse.Namespace) -> None:
 
 
 def cmd_orphaned(args: argparse.Namespace) -> None:
-    graph = build_dep_graph(Path(args.path))
-    entries, _ = orphaned_detector_mod.detect_orphaned_files(
-        Path(args.path),
-        graph,
-        extensions=TS_EXTENSIONS,
-        options=orphaned_detector_mod.OrphanedDetectionOptions(
-            extra_entry_patterns=TS_ENTRY_PATTERNS,
-            extra_barrel_names=TS_BARREL_NAMES,
-            entry_conventions=framework_entry_conventions(),
-        ),
+    """Orphaned files exactly as ``scan`` reports them: same zones, entries, confidence."""
+    from desloppify.languages.framework import get_lang, make_lang_run
+
+    path = Path(args.path)
+    lang = make_lang_run(get_lang("typescript"))
+    config = getattr(getattr(args, "runtime", None), "config", None) or {}
+    lang.zone_map = FileZoneMap(
+        lang.file_finder(path),
+        lang.zone_rules,
+        rel_fn=rel,
+        overrides=config.get("zone_overrides") or None,
     )
+    graph = build_dep_graph(path)
+    packages, package_entries = package_context(path, graph)
+    entries, _ = find_orphans(path, graph, lang, packages, package_entries)
     if getattr(args, "json", False):
         print(
             json.dumps(
                 {
                     "count": len(entries),
                     "entries": [
-                        {"file": rel(e["file"]), "loc": e["loc"]} for e in entries
+                        {
+                            "file": rel(e["file"]),
+                            "loc": e["loc"],
+                            "confidence": e.get("confidence", "medium"),
+                        }
+                        for e in entries
                     ],
                 },
                 indent=2,
@@ -150,7 +157,7 @@ def cmd_orphaned(args: argparse.Namespace) -> None:
         print(colorize("\nNo orphaned files found.", "green"))
         return
     total_loc = sum(e["loc"] for e in entries)
-    print(colorize(f"\nOrphaned files: {len(entries)} files, {total_loc} LOC\n", "bold"))
+    print(colorize(f"\nOrphaned files: {plural(len(entries), 'file')}, {total_loc} LOC\n", "bold"))
     top = getattr(args, "top", 20)
     rows = [[rel(e["file"]), str(e["loc"])] for e in entries[:top]]
     print_table(["File", "LOC"], rows, [80, 6])

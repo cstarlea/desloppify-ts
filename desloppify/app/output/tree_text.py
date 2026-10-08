@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from desloppify.base.output.terminal import plural
+
 
 def _aggregate(node: dict) -> dict:
     """Compute aggregate stats for a tree node."""
@@ -72,7 +74,7 @@ def _render_branch_node(
 
     lines.append(
         f"{prefix}{node['name']}/  "
-        f"({agg['files']} files, {agg['loc']:,} LOC, {agg['issues']} issues)"
+        f"({plural(agg['files'], 'file')}, {agg['loc']:,} LOC, {plural(agg['issues'], 'issue')})"
     )
     if indent >= max_depth:
         return True

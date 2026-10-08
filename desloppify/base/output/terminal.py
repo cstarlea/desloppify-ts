@@ -42,6 +42,11 @@ def colorize(text: str, color: str) -> str:
     return f"{COLORS.get(color, '')}{text}{COLORS['reset']}"
 
 
+def plural(count: int, noun: str) -> str:
+    """``1 file``, ``2 files``."""
+    return f"{count} {noun}" if count == 1 else f"{count} {noun}s"
+
+
 def log(msg: str) -> None:
     """Print a dim status message to stderr."""
     print(colorize(msg, "dim"), file=sys.stderr)
@@ -101,5 +106,6 @@ __all__ = [
     "display_entries",
     "log",
     "no_color_enabled",
+    "plural",
     "print_table",
 ]
