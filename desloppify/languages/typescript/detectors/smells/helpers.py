@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import NamedTuple
 
 from desloppify.base.text_utils import strip_c_style_comments
@@ -64,6 +65,17 @@ def _ts_match_is_in_string(line: str, match_start: int) -> bool:
         i += 1
 
     return False
+
+
+def _regex_line_matches(ctx: _FileContext, pattern: str):
+    """``(index, line)`` for each line whose first match of ``pattern`` is code,
+    lines inside block comments and template literals left out."""
+    for index, line in enumerate(ctx.lines):
+        if index in ctx.line_state:
+            continue
+        match = re.search(pattern, line)
+        if match and not _ts_match_is_in_string(line, match.start()):
+            yield index, line
 
 
 # ---------------------------------------------------------------------------
@@ -266,6 +278,7 @@ __all__ = [
     "_content_line_info",
     "_extract_block_body",
     "_find_block_end",
+    "_regex_line_matches",
     "_scan_code_line",
     "_scan_template_content",
     "_strip_ts_comments",

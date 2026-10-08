@@ -23,10 +23,11 @@ from .detector_safety import (
     _detect_switch_no_default,
     _detect_window_globals,
 )
+from .detector_types import TYPE_SAFETY_SMELLS, _detect_type_safety
 from .helpers import (
     _FileContext,
     _build_ts_line_state,
-    _ts_match_is_in_string,
+    _regex_line_matches,
 )
 from .assets import (
     detect_non_ts_asset_smells,
@@ -54,6 +55,7 @@ _MULTI_LINE_DETECTORS = (
     _detect_stub_functions,
     _detect_swallowed_errors,
     _detect_switch_no_default,
+    _detect_type_safety,
     _detect_window_globals,
 )
 
@@ -63,6 +65,7 @@ def detect_smells(path: Path) -> tuple[list[dict], int]:
     checks = TS_SMELL_CHECKS
     smell_counts: dict[str, list[dict]] = {s["id"]: [] for s in checks}
     files = iter_typescript_sources(path)
+    loc: dict[str, int] = {}
 
     for filepath in files:
         try:
@@ -76,17 +79,11 @@ def detect_smells(path: Path) -> tuple[list[dict], int]:
         line_state = _build_ts_line_state(lines)
         ctx = _FileContext(filepath, content, lines, line_state)
 
+        loc[filepath] = len(lines)
         for check in checks:
             if check["pattern"] is None:
                 continue
-            for i, line in enumerate(lines):
-                if i in line_state:
-                    continue
-                m = re.search(check["pattern"], line)
-                if not m:
-                    continue
-                if _ts_match_is_in_string(line, m.start()):
-                    continue
+            for i, line in _regex_line_matches(ctx, check["pattern"]):
                 if check["id"] == "hardcoded_url" and re.match(
                     r"^(?:export\s+)?(?:const|let|var)\s+[A-Z_][A-Z0-9_]*\s*=",
                     line.strip(),
@@ -109,16 +106,17 @@ def detect_smells(path: Path) -> tuple[list[dict], int]:
     for check in checks:
         matches = smell_counts[check["id"]]
         if matches:
-            entries.append(
-                {
-                    "id": check["id"],
-                    "label": check["label"],
-                    "severity": check["severity"],
-                    "count": len(matches),
-                    "files": len(set(m["file"] for m in matches)),
-                    "matches": matches,
-                }
-            )
+            entry = {
+                "id": check["id"],
+                "label": check["label"],
+                "severity": check["severity"],
+                "count": len(matches),
+                "files": len(set(m["file"] for m in matches)),
+                "matches": matches,
+            }
+            if check["id"] in TYPE_SAFETY_SMELLS:
+                entry["loc"] = {m["file"]: loc[m["file"]] for m in matches if m["file"] in loc}
+            entries.append(entry)
     entries.sort(key=lambda e: (SEVERITY_ORDER.get(e["severity"], 9), -e["count"]))
     return entries, len(files) + non_ts_files
 

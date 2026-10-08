@@ -26,6 +26,7 @@ def phase_smells(path: Path, lang: LangRuntimeContract) -> tuple[list[Issue], di
         [entry.to_mapping() for entry in normalized_smells],
         log,
     )
+    _add_density(results, smell_entries)
 
     react_entries, total_effects = react_state_sync_mod.detect_state_sync(path)
     for entry in react_entries:
@@ -112,6 +113,23 @@ def phase_smells(path: Path, lang: LangRuntimeContract) -> tuple[list[Issue], di
     }
 
     return results, potentials
+
+
+def _add_density(issues: list[Issue], entries: list[dict]) -> None:
+    """Per-file density (matches per 1,000 lines) for the smells that report it."""
+    loc_by_smell = {entry["id"]: entry["loc"] for entry in entries if "loc" in entry}
+    if not loc_by_smell:
+        return
+    for issue in issues:
+        detail = issue["detail"]
+        loc = loc_by_smell.get(detail.get("smell_id"), {}).get(issue["file"])
+        if not loc:
+            continue
+        density = round(1000 * detail["count"] / loc, 2)
+        detail["loc"] = loc
+        detail["density"] = density
+        shown = f"{density:.0f}" if density >= 100 else f"{density:.2g}"
+        issue["summary"] += f", {shown} per 1,000 lines"
 
 
 __all__ = ["phase_smells"]
