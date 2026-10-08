@@ -71,7 +71,6 @@ def get_ts_fixers() -> dict[str, FixerConfig]:
             "unused",
             removed,
             would_remove,
-            unsafe=True,
         ),
         "debug-logs": FixerConfig(
             "tagged debug logs",
