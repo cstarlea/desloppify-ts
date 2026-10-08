@@ -70,20 +70,20 @@ def remove_empty_if_chains(
     parsed: ParsedSource, file_entries: list[dict]
 ) -> tuple[bytes, list[dict], list[str]]:
     """Return the edited source, the fixed entries and a skip reason per skipped entry."""
-    heads_by_row: dict[int, list] = defaultdict(list)
+    heads_by_line: dict[int, list] = defaultdict(list)
     stack = [parsed.root]
     while stack:
         node = stack.pop()
         stack.extend(node.named_children)
         if node.type == "if_statement" and (node.parent is None or node.parent.type != "else_clause"):
-            heads_by_row[node.start_point[0]].append(node)
+            heads_by_line[parsed.line(node)].append(node)
 
     planned: dict[tuple, object] = {}
     entry_keys: list[tuple[dict, tuple]] = []
     skipped: list[str] = []
     for entry in file_entries:
         line = entry.get("line")
-        heads = heads_by_row.get(line - 1, []) if isinstance(line, int) else []
+        heads = heads_by_line.get(line, []) if isinstance(line, int) else []
         if not heads:
             skipped.append("not_found")
             continue

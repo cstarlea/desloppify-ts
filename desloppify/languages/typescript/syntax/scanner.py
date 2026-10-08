@@ -8,6 +8,7 @@ from collections.abc import Generator, Iterator
 from functools import cached_property
 
 from desloppify.languages._framework.node.js_text import blank_spans, code_text, literal_spans
+from desloppify.languages.typescript.syntax.lines import line_at, line_starts, split_lines
 
 
 def scan_code(
@@ -37,12 +38,8 @@ class SourceText:
         self.text = text
         self.spans = list(literal_spans(text))
         self._span_starts = [start for start, _end, _kind in self.spans]
-        self.lines = text.splitlines()
-        self.line_starts: list[int] = []
-        offset = 0
-        for line in text.splitlines(keepends=True):
-            self.line_starts.append(offset)
-            offset += len(line)
+        self.lines = split_lines(text)
+        self.line_starts = line_starts(text)[: len(self.lines)]
 
     @cached_property
     def code(self) -> str:
@@ -64,6 +61,10 @@ class SourceText:
     def _split(self, text: str) -> list[str]:
         """``text`` (the same length as the source) cut where the source's lines are."""
         return [text[start : start + len(line)] for start, line in zip(self.line_starts, self.lines)]
+
+    def line_of(self, offset: int) -> int:
+        """The 1-based line holding ``offset``."""
+        return line_at(self.line_starts, offset)
 
     def kind_at(self, offset: int) -> str | None:
         """``comment``, ``string``, ``template`` or ``regex`` when ``offset`` is inside one, None for code."""
@@ -106,6 +107,8 @@ class SourceText:
             if self._anchored(offset, anchor):
                 return match
             position = match.start() + 1
+            if position > len(line):  # search() clamps a later start, so an empty match would repeat
+                break
         return None
 
     def _anchored(self, offset: int, anchor: str) -> bool:

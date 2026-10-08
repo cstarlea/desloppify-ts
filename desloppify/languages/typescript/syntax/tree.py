@@ -14,13 +14,16 @@ Typed queries over the result live in ``syntax.queries``.
 from __future__ import annotations
 
 import logging
+from bisect import bisect_right
 from dataclasses import dataclass
+from functools import cached_property
 from pathlib import Path
 
 from desloppify.base.discovery.file_paths import resolve_path
 from desloppify.languages._framework.treesitter import PARSE_INIT_ERRORS, is_available
 from desloppify.languages._framework.treesitter.cache import get_or_parse_tree
 from desloppify.languages._framework.treesitter.parsing import _get_parser
+from desloppify.languages.typescript.syntax.lines import LINE_BREAK_BYTES, byte_line_starts
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +65,32 @@ class ParsedSource:
 
     def text(self, node) -> str:
         return self.source[node.start_byte : node.end_byte].decode("utf-8", errors="replace")
+
+    @cached_property
+    def _line_starts(self) -> list[int] | None:
+        return byte_line_starts(self.source)
+
+    def line(self, node) -> int:
+        """The 1-based line where ``node`` starts (see ``syntax.lines``)."""
+        if self._line_starts is None:
+            return node.start_point[0] + 1
+        return bisect_right(self._line_starts, node.start_byte)
+
+    def end_line(self, node) -> int:
+        """The 1-based line where ``node`` ends."""
+        if self._line_starts is None:
+            return node.end_point[0] + 1
+        return bisect_right(self._line_starts, node.end_byte)
+
+    def line_text(self, node) -> str:
+        """The text of the line where ``node`` starts, line break left out."""
+        if self._line_starts is None:
+            start = self.source.rfind(b"\n", 0, node.start_byte) + 1
+        else:
+            start = self._line_starts[self.line(node) - 1]
+        match = LINE_BREAK_BYTES.search(self.source, node.start_byte)
+        end = len(self.source) if match is None else match.start()
+        return self.source[start:end].decode("utf-8", "replace")
 
 
 def parse_text(text: str, path: str | Path) -> ParsedSource | None:

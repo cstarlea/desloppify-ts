@@ -93,16 +93,16 @@ def remove_debug_logs(
     parsed: ParsedSource, file_entries: list[dict]
 ) -> tuple[bytes, list[dict], list[str]]:
     """Return the edited source, the fixed entries and a skip reason per skipped entry."""
-    calls_by_row: dict[int, list] = defaultdict(list)
+    calls_by_line: dict[int, list] = defaultdict(list)
     for call in tagged_console_calls(parsed):
-        calls_by_row[call.start_point[0]].append(call)
+        calls_by_line[parsed.line(call)].append(call)
 
     planned: dict[tuple, object] = {}  # statement key -> statement
     entry_statements: list[tuple[dict, list[tuple]]] = []
     skipped: list[str] = []
     for entry in file_entries:
         line = entry.get("line")
-        calls = calls_by_row.get(line - 1, []) if isinstance(line, int) else []
+        calls = calls_by_line.get(line, []) if isinstance(line, int) else []
         if not calls:
             skipped.append("not_found")
             continue

@@ -80,7 +80,7 @@ def remove_unused_imports(
     for statement in parsed.root.named_children:
         if statement.type != "import_statement":
             continue
-        first, last = statement.start_point[0] + 1, statement.end_point[0] + 1
+        first, last = parsed.line(statement), parsed.end_line(statement)
         wanted: set[str] = set()
         for line in range(first, last + 1):
             wanted |= names_by_line.get(line, set())

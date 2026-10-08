@@ -15,6 +15,7 @@ from desloppify.languages.typescript.detectors.security.patterns import (
     _SERVE_ASYNC_RE,
 )
 from desloppify.base.signal_patterns import AUTH_LOOKUP_TOKEN_RE
+from desloppify.languages.typescript.syntax.lines import line_number
 from desloppify.languages.typescript.syntax.scanner import SourceText
 
 _AUTH_DENIAL_RE = re.compile(
@@ -46,7 +47,7 @@ def _file_level_security_issues(
                 _make_security_entry(
                     filepath,
                     1,
-                    content.splitlines()[0] if lines else "",
+                    lines[0] if lines else "",
                     check_id="edge_function_missing_auth",
                     summary="Edge function serves requests without authentication check",
                     severity="high",
@@ -164,7 +165,7 @@ def _check_rls_bypass(
 ) -> None:
     """Check for CREATE VIEW without security_invoker in SQL files."""
     for match in _CREATE_VIEW_RE.finditer(content):
-        line_num = content[: match.start()].count("\n") + 1
+        line_num = line_number(content, match.start())
         view_block = content[match.start() : match.start() + 500]
         if _SECURITY_INVOKER_RE.search(view_block):
             continue

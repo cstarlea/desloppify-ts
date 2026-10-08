@@ -80,7 +80,7 @@ def remove_dead_effects(
     parsed: ParsedSource, file_entries: list[dict]
 ) -> tuple[bytes, list[dict], list[str]]:
     """Return the edited source, the fixed entries and a skip reason per skipped entry."""
-    calls_by_row: dict[int, list] = defaultdict(list)
+    calls_by_line: dict[int, list] = defaultdict(list)
     stack = [parsed.root]
     while stack:
         node = stack.pop()
@@ -88,14 +88,14 @@ def remove_dead_effects(
         if node.type == "call_expression":
             function = node.child_by_field_name("function")
             if function is not None and parsed.text(function) in _EFFECT_CALLEES:
-                calls_by_row[node.start_point[0]].append(node)
+                calls_by_line[parsed.line(node)].append(node)
 
     planned: dict[tuple, object] = {}
     entry_keys: list[tuple[dict, tuple]] = []
     skipped: list[str] = []
     for entry in file_entries:
         line = entry.get("line")
-        calls = calls_by_row.get(line - 1, []) if isinstance(line, int) else []
+        calls = calls_by_line.get(line, []) if isinstance(line, int) else []
         candidates = [c for c in calls if node_key(c.parent) not in planned]
         if not candidates:
             skipped.append("not_found")

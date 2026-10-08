@@ -6,6 +6,7 @@ from typing import NamedTuple
 
 from desloppify.base.text_utils import strip_c_style_comments
 from desloppify.languages._framework.node.js_text import code_text as _code_text
+from desloppify.languages.typescript.syntax.lines import line_number, split_lines
 from desloppify.languages.typescript.syntax.scanner import SourceText, scan_code
 
 
@@ -99,12 +100,8 @@ def _extract_block_body(
 
 def _content_line_info(content: str, pos: int) -> tuple[int, str]:
     """Return ``(line_no, stripped snippet[:100])`` for a position in content."""
-    line_no = content[:pos].count("\n") + 1
-    line_start = content.rfind("\n", 0, pos) + 1
-    line_end = content.find("\n", pos)
-    if line_end == -1:
-        line_end = len(content)
-    return line_no, content[line_start:line_end].strip()[:100]
+    line_no = line_number(content, pos)
+    return line_no, split_lines(content)[line_no - 1].strip()[:100]
 
 
 __all__ = [

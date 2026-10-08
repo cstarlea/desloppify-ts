@@ -128,9 +128,8 @@ def _detect_dead_useeffects(ctx, smell_counts: dict[str, list[dict]]) -> None:
 
 
 def _dead_effects_tree(parsed: ParsedSource) -> list[tuple[int, str]]:
-    """(row, line text) of each dead effect; rows count ``\\n`` only, as the fixer's do."""
+    """(0-based line, line text) of each dead effect."""
     found: dict[int, str] = {}
-    source = parsed.source
     for call in calls(parsed, _EFFECT_CALLEES):
         callback = function_info(parsed, call.arguments[0]) if call.arguments else None
         if (
@@ -145,10 +144,7 @@ def _dead_effects_tree(parsed: ParsedSource) -> list[tuple[int, str]]:
         if not body or (
             len(body) == 1 and body[0].type == "return_statement" and not body[0].named_children
         ):
-            start = source.rfind(b"\n", 0, call.span.start_byte) + 1
-            end = source.find(b"\n", call.span.start_byte)
-            line = source[start : len(source) if end == -1 else end]
-            found[call.line - 1] = line.decode("utf-8", "replace")
+            found[call.line - 1] = parsed.line_text(call.node)
     return sorted(found.items())
 
 

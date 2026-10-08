@@ -38,6 +38,7 @@ from desloppify.languages.typescript.syntax.nodes import (
     pattern_at,
     same,
 )
+from desloppify.languages.typescript.syntax.lines import split_lines
 from desloppify.languages.typescript.syntax.tree import parse_text
 
 TS6133_RE = re.compile(
@@ -257,7 +258,7 @@ def _categorize_entries(entries: list[dict]) -> None:
         by_file[entry["file"]].append(entry)
     for filepath, file_entries in by_file.items():
         text = _read_source(filepath)
-        lines = text.splitlines() if text is not None else None
+        lines = split_lines(text) if text is not None else None
         parsed = parse_text(text, filepath) if text is not None else None
         names = NameIndex(parsed) if parsed is not None else None
         for entry in file_entries:
@@ -304,7 +305,7 @@ def _in_catch_parameter(node) -> bool:
 def _categorize_unused(filepath: str, lineno: int) -> str:
     """Categorize one finding from its source line alone (no syntax tree)."""
     text = _read_source(filepath)
-    return _categorize_line(text.splitlines(), lineno) if text is not None else "vars"
+    return _categorize_line(split_lines(text), lineno) if text is not None else "vars"
 
 
 def _categorize_line(lines: list[str], lineno: int) -> str:
