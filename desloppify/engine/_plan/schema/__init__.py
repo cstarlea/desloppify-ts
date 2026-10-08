@@ -317,9 +317,11 @@ def ensure_plan_defaults(
 
     Runtime contract is v8-only. Legacy payloads are upgraded in-place once.
 
-    With ``quarantine``, malformed queue entries, skip entries, clusters and
-    overrides (and top-level containers of the wrong type) are moved into
-    that list instead of being silently reset or failing ``validate_plan``.
+    With ``quarantine``, malformed entries of the plan's collections (queue,
+    skips, clusters, overrides, superseded, the execution and commit logs,
+    promoted and uncommitted IDs) and top-level containers of the wrong type
+    are moved into that list instead of being silently reset, failing
+    ``validate_plan`` or crashing a later reader.
     Loading passes it; saving does not, so code that builds a bad entry
     still fails loudly.
     """
