@@ -62,7 +62,7 @@ The fork (`cstarlea/desloppify`) is a **TypeScript/JavaScript-only** code-health
 | #33 | `dead_useeffect` smell on the syntax tree; reports `function () {}` and bare `return;` callbacks (2.11) |
 | #34 | Unused-vars fixer removes nested destructuring patterns that end up empty; one `ALL_DESTRUCTURED` constant (2.26, 2.27) |
 | #35 | State and plan read-modify-writes under the locks; corrupt-file recovery under the lock; atomic progression trim (2.20) |
-| #36 | Facade detector exempts files opening with `'use client'`/`'use server'` (2.28) |
+| #36 | Facade detector exempts files with `'use client'`/`'use server'` in the directive prologue (2.28) |
 
 ---
 
@@ -100,7 +100,7 @@ Every adversarial input in the original review broke one of the line-regex fixer
 | 2.15 | Move the `_NEXTJS_*` constants out of `engine/detectors/orphaned.py` into `FrameworkSpec.entry_conventions` | S | GR-6 |
 | 2.16 | Test coverage follows re-export chains of any depth (it stops after one barrel hop today; see trpc `parseTRPCMessage.ts`) | M | DT-12 |
 | 2.17 | Test-health score: count coverage through a tested public entry as covered, and fix the "production files" and "checks" labels | M | DT-12 |
-| 2.28 | **Done (#36).** A file whose first statement is a `'use client'` or `'use server'` directive (comments before it allowed) is not a facade, even if it only re-exports: in Next.js it marks a client or server boundary. One later in the prologue doesn't count. None appear in the four repos | S | DT-6 |
+| 2.28 | **Done (#36).** A file whose directive prologue holds `'use client'` or `'use server'` (after `'use strict'` or comments too) is not a facade, even if it only re-exports: in Next.js it marks a client or server boundary. None appear in the four repos | S | DT-6 |
 | 2.29 | Line numbers in the logs and smells detectors: they split lines with `str.splitlines()`, which also breaks at U+2028/U+2029, CR, VT, FF and U+0085, while the debug-logs and empty-if-chain fixers match on tree-sitter rows, which count only LF. After such a character the fixer looks at the wrong row. #30 fixed the same class of bug for tsc positions in `byte_offset` | S | — |
 
 ### 2C. Engine and state correctness
