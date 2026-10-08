@@ -875,9 +875,29 @@ class TestFunctionShapeOnSyntaxTree:
         content = "async function* items() {\n  yield 1;\n}\n"
         assert _messages(_detect_async_no_await, content, "async_no_await") == []
 
-    def test_callbacks_and_object_members_are_not_named_functions(self):
-        content = "items.forEach(async (x) => {\n  log(x);\n});\nconst api = { async get() { return 1; } };\n"
+    def test_callbacks_are_not_named_functions(self):
+        content = "items.forEach(async (x) => {\n  log(x);\n});\n"
         assert _messages(_detect_async_no_await, content, "async_no_await") == []
+
+    def test_object_members_get_the_shape_smells_but_not_stub_or_async(self):
+        body = "\n".join(f"    const x{i} = {i};" for i in range(160))
+        content = (
+            f"export const api = {{\n  async load() {{\n{body}\n  }},\n"
+            "  noop() {},\n"
+            "  fetch: async () => cached,\n"
+            "};\n"
+        )
+        assert _messages(_detect_monster_functions, content, "monster_function") == [
+            (2, "api.load() — 162 LOC")
+        ]
+        assert _messages(_detect_async_no_await, content, "async_no_await") == []
+        assert _messages(_detect_stub_functions, content, "stub_function") == []
+
+    def test_anonymous_default_export_is_a_function(self):
+        content = "export default async function () {\n  return 1;\n}\n"
+        assert _messages(_detect_async_no_await, content, "async_no_await") == [
+            (1, "async default has no await")
+        ]
 
     def test_multi_line_params_with_braces_do_not_hide_the_body(self):
         content = (

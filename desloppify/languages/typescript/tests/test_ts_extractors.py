@@ -324,6 +324,34 @@ def test_extract_forms_the_line_regex_missed(tmp_path):
     assert "const inner" in funcs[0].body
 
 
+@pytest.mark.skipif(
+    importlib.util.find_spec("tree_sitter_language_pack") is None,
+    reason="the syntax-tree extractor needs tree-sitter",
+)
+def test_extract_object_members_and_anonymous_default_export(tmp_path):
+    ts_file = tmp_path / "members.ts"
+    ts_file.write_text(
+        textwrap.dedent("""\
+        export const v1 = {
+          toStream(result) {
+            const body = encode(result);
+            return body;
+          },
+        };
+
+        export default function () {
+          setup();
+          return run();
+        }
+    """)
+    )
+    funcs = extract_ts_functions(str(ts_file))
+    assert [(f.name, f.line, f.object_member, f.default_export) for f in funcs] == [
+        ("v1.toStream", 2, True, False),
+        ("default", 8, False, True),
+    ]
+
+
 def test_extract_falls_back_to_regex_without_tree_sitter(tmp_path, monkeypatch):
     import desloppify.languages.typescript.extractors_functions as functions_mod
 

@@ -22,6 +22,8 @@ class FunctionInfo:
     return_annotation: str | None = None
     # Importers choose a default export's name, so it isn't an API name.
     default_export: bool = False
+    # An object-literal member's signature is set by the shape its object fills.
+    object_member: bool = False
 
 
 @dataclass
