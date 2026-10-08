@@ -19,8 +19,11 @@ from desloppify.languages.typescript.detectors.deps.imports import (
     ImportExtractor,
 )
 from desloppify.languages.typescript.detectors.deps.packages import workspace_entries
+from desloppify.languages.typescript.detectors.deps.reexports import NAMESPACE, definition_files
 from desloppify.languages.typescript.detectors.deps.resolver import project_resolver
 from desloppify.languages.typescript.plugin_contract import TS_BARREL_NAMES
+from desloppify.languages.typescript.syntax.queries import descendants, imports
+from desloppify.languages.typescript.syntax.tree import ParsedSource, parsed_file
 
 TS_REEXPORT_RE = re.compile(
     r"""^export\s+(?:\{[^}]*\}|\*)\s+from\s+['\"]([^'\"]+)['\"]""", re.MULTILINE
@@ -243,6 +246,70 @@ def resolve_barrel_reexports(filepath: str, production_files: set[str]) -> set[s
         if resolved:
             results.add(resolved)
     return results
+
+
+def imported_definitions(test_path: str, production_files: set[str]) -> set[str]:
+    """Production files defining the names a test imports, through re-export chains.
+
+    ``import { parse } from '@pkg/rpc'`` credits the file that declares
+    ``parse``, however many barrels sit between. Namespace imports
+    (``import * as z``) follow the members the test uses (``z.string``).
+    """
+    parsed = parsed_file(test_path)
+    if parsed is None:
+        return set()
+    resolver = project_resolver(get_project_root())
+
+    def resolve(spec: str, from_file: str) -> str | None:
+        try:
+            return resolver.resolve(spec, from_file)
+        except OSError as exc:
+            log_best_effort_failure(logger, f"resolve {spec} from {from_file}", exc)
+            return None
+
+    found: set[str] = set()
+    namespaces: dict[str, str] = {}
+    for info in imports(parsed):
+        if info.type_only or info.kind == "side_effect":
+            continue
+        module = resolve(info.source, test_path)
+        if module is None:
+            continue
+        for binding in info.bindings:
+            if binding.type_only:
+                continue
+            if binding.imported in (NAMESPACE, "="):
+                namespaces[binding.local] = module
+            else:
+                found |= definition_files(module, (binding.imported,), resolve)
+    for local, members in _namespace_members(parsed, set(namespaces)):
+        found |= definition_files(namespaces[local], members, resolve)
+    return {key for path in found if (key := _production_key(path, production_files))}
+
+
+def _namespace_members(parsed: ParsedSource, names: set[str]) -> set[tuple[str, tuple[str, ...]]]:
+    """``(ns, ("a", "b"))`` for each ``ns.a.b`` member chain on a namespace binding."""
+    chains: set[tuple[str, tuple[str, ...]]] = set()
+    if not names:
+        return chains
+    for node in descendants(parsed.root, ("member_expression",)):
+        obj = node.child_by_field_name("object")
+        if obj is None or obj.type != "identifier" or parsed.text(obj) not in names:
+            continue
+        members: list[str] = []
+        current = node
+        while current is not None and current.type == "member_expression":
+            prop = current.child_by_field_name("property")
+            if prop is None or prop.type != "property_identifier":
+                break
+            members.append(parsed.text(prop))
+            parent = current.parent
+            if parent is None or parent.child_by_field_name("object") != current:
+                break
+            current = parent
+        if members:
+            chains.add((parsed.text(obj), tuple(members)))
+    return chains
 
 
 _TS_SOURCE_EXTENSIONS = (".ts", ".tsx", ".js", ".jsx")

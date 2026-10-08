@@ -10,7 +10,7 @@ ORDERING: plan["queue_order"] is the durable ordering source.
 VISIBILITY: Phase gate re-resolved from items every build.
 AUTO-PROMOTE: Detectors with auto_queue=True in the registry auto-inject.
 The auto_queue decision lives in cluster_semantics.infer_cluster_execution_policy().
-See snapshot.py for computation, docs/QUEUE_LIFECYCLE.md for lifecycle.
+See snapshot.py for computation, dev/QUEUE_LIFECYCLE.md for lifecycle.
 """
 
 from __future__ import annotations

@@ -58,12 +58,19 @@ The fork (`cstarlea/desloppify`) is a **TypeScript/JavaScript-only** code-health
 | #28 | Params fixer renames every name of an "(all destructured elements)" pattern (2.3) |
 | #29 | Resilient `plan.json` loading, the plan counterpart of #25 (2.19) |
 | #30 | Fixer round-trip property tests; fixes for mixed line endings in `fixer_io` and `byte_offset` after CR/U+2028/U+2029 (2.4) |
+| #31 | Roadmap catch-up for #20–#30 |
 | #32 | AST dead-useeffect fixer, the last line-based fixer (2.3, FX-17) |
 | #33 | `dead_useeffect` smell on the syntax tree; reports `function () {}` and bare `return;` callbacks (2.11) |
 | #34 | Unused-vars fixer removes nested destructuring patterns that end up empty; one `ALL_DESTRUCTURED` constant (2.26, 2.27) |
 | #35 | State and plan read-modify-writes under the locks; corrupt-file recovery under the lock; atomic progression trim (2.20) |
 | #36 | Facade detector exempts files with `'use client'`/`'use server'` in the directive prologue (2.28) |
+| #37 | package.json `imports` (`#subpath`) in the resolver; the vite-react `analytics.ts` false positive is gone (2.14) |
+| #38 | Fix and rescan reaches 100 in every mode: strict ignores `auto_resolved`, verified credits a scan-confirmed `fixed`/`false_positive`, no carry-forward for a dimension whose detectors ran (2.18) |
+| #39 | Next.js entry conventions move to `NEXTJS_SPEC.entry_conventions`; behaviour unchanged (2.15) |
 | #40 | Shared typed syntax-tree helper: `parsed_file` parses once per scan; typed queries for functions, classes, imports/exports, JSX and calls; facade and `dead_useeffect` migrated (2.1) |
+| #41 | `tree`/`viz` label the root node with the scanned path (2.31) |
+| #42 | Scan-confirmed absence auto-resolves deferred and triaged_out issues and marks wontfix `scan_verified`; reconcile supersedes their skip entries (2.21) |
+| #43 | CLI logging: `  WARNING: …` lines on stderr, coloured on a terminal, `DESLOPPIFY_LOG_LEVEL` (2.32) |
 
 ---
 
@@ -77,13 +84,14 @@ Every adversarial input in the original review broke one of the line-regex fixer
 
 | # | Item | Effort | Findings |
 |---|---|---|---|
-| 2.1 | **Done (#40).** Shared typed TS AST helper: `syntax.tree.parsed_file` parses each file once per scan through the parse cache (grammar by extension); `syntax.queries` returns dataclasses for functions (incl. overload signatures), classes and members, imports, exports, JSX elements and calls. Facade and the `dead_useeffect` smell use it; regex stays only as each caller's fallback without tree-sitter. Cohesion and `deps/imports` still parse .ts files with `tsx`, and cohesion keys the cache by relative path, so those parses aren't shared yet | L | AR-2 |
+| 2.1 | **Done (#40).** Shared typed TS AST helper: `syntax.tree.parsed_file` parses each file once per scan through the parse cache (grammar by extension); `syntax.queries` returns dataclasses for functions (incl. overload signatures), classes and members, imports, exports, JSX elements and calls. Facade and the `dead_useeffect` smell use it; regex stays only as each caller's fallback without tree-sitter. Cohesion and `deps/imports` still parse .ts files with `tsx`, and cohesion keys the cache by relative path, so those parses aren't shared yet (→ 2.33) | L | AR-2 |
 | 2.2 | **Done (#16)**, except `--verify`. Output validation gate for every fixer and `move`: parse before and after, refuse to write if the parse-error count rises, and show a real unified diff in `--dry-run`. Optional `--verify` runs `tsc --noEmit` and reverts on new errors | M | FX-11 |
 | 2.3 | **Done for unused-imports (#17), unused-vars (#19), unused-params (#20, #27, #28), debug-logs (#23), empty-if-chain (#24) and dead-useeffect (#32); none needs `--unsafe`.** Every fixer now edits syntax-tree nodes. dead-useeffect removes only a standalone `useEffect`/`React.useEffect` statement with an empty, comment-free callback and deps that only read values; it leaves template strings, code sharing the line and the `//` line above alone (FX-17) | M | FX-17 |
 | 2.4 | **Done (#30).** Fixer round-trip property tests: output parses, a second run is a no-op, CRLF/BOM/mode are preserved, and no new `tsc` errors appear. Seeded with the adversarial cases in the appendix. They found and fixed mixed-line-ending rewrites in `fixer_io` and `byte_offset` miscounting lines after CR/U+2028/U+2029 | M | FX-19 |
 | 2.5 | **Done (#18).** Fixers return the exact issue IDs they fixed, so autofix resolves the right issues | S | FX-16 |
 | 2.26 | **Done (#34).** unused-vars: nested patterns. An emptied inner pattern (`b` unused in `const { a: { b } } = o`) removes the pair or element holding it, cascading outward to the declarator, which still goes only with a pure initializer. TS6198 on a nested pattern cascades the same way. An array pattern whose elements all go is removed whole; a single array element still isn't | S | FX-8 |
 | 2.27 | **Done (#34).** The "(all destructured elements)" name is defined once, as `ALL_DESTRUCTURED` in `syntax/nodes.py`, and imported by `detectors/unused.py`, `fixers/params.py` and `fixers/vars.py` | S | — |
+| 2.33 | Share the remaining parses (#40 follow-up): cohesion keys the parse cache by relative path while `deps/imports` uses the resolved path, and both parse `.ts` with the tsx grammar, so neither shares `parsed_file`'s parse | S | AR-2 |
 
 ### 2B. Detector accuracy (rest of Milestone 2, plus M0 and M1 leftovers)
 
@@ -99,10 +107,13 @@ Every adversarial input in the original review broke one of the line-regex fixer
 | 2.13 | **Done (#26).** A separate `params` category for unused symbols, with every category decided on the syntax tree | S | FX-15 |
 | 2.14 | **Done (#37).** package.json `imports` (`#subpath`) in the resolver: the importer's nearest package.json is the scope; exact and `*` keys, condition objects and fallback arrays in order; bare targets resolve when they name a workspace package. The vite-react golden's `analytics.ts` false positive is gone | S | GR-1 |
 | 2.15 | **Done (#39).** The `_NEXTJS_*` constants left `engine/detectors/orphaned.py` for `NEXTJS_SPEC.entry_conventions`; the language passes the specs' conventions to the detector through `OrphanedDetectionOptions`, since detectors may not import the language layer. Behaviour unchanged (commerce issue IDs identical) | S | GR-6 |
-| 2.16 | Test coverage follows re-export chains of any depth (it stops after one barrel hop today; see trpc `parseTRPCMessage.ts`) | M | DT-12 |
+| 2.16 | **Done (#45).** Test coverage follows each imported name through re-export chains of any depth (`export { } from`, `export *`, `export * as ns`, import-then-export) to the file that defines it, via `syntax.queries`; namespace imports follow the members the test uses; type-only names aren't followed. trpc `parseTRPCMessage.ts` is directly tested. The one-hop name-blind barrel and facade expansions remain | M | DT-12 |
 | 2.17 | **Done (#48).** A module reached through the import graph from a directly tested public entry (package.json `exports`/`main`/`types`...) counts as covered, not `transitive_only`; reached only from a tested internal module, it stays transitive. The scan line reports scored files and the √LOC weight separately; `status` and the plan table mark Test health's Checks with `*` (√LOC-weighted), and `next` reports weighted failures instead of "of N checks". trpc test health 36.0% → 42.4%, zod 73.4% → 74.5% | M | DT-12 |
 | 2.28 | **Done (#36).** A file whose directive prologue holds `'use client'` or `'use server'` (after `'use strict'` or comments too) is not a facade, even if it only re-exports: in Next.js it marks a client or server boundary. None appear in the four repos | S | DT-6 |
 | 2.29 | Line numbers in the logs and smells detectors: they split lines with `str.splitlines()`, which also breaks at U+2028/U+2029, CR, VT, FF and U+0085, while the debug-logs and empty-if-chain fixers match on tree-sitter rows, which count only LF. After such a character the fixer looks at the wrong row. #30 fixed the same class of bug for tsc positions in `byte_offset` | S | — |
+| 2.34 | A `#x` import whose target is an npm package (not a workspace package) still counts as unresolved; it should count as external like a bare import (#37 follow-up) | S | GR-1 |
+| 2.35 | `detect orphaned` reports `next.config.ts` as orphaned while `scan` does not, and the tree output says "1 files" (seen while checking #39) | S | GR-6 |
+| 2.36 | The Next.js entry conventions check `next.config.{js,mjs,ts}`, while the framework detection list also has `next.config.cjs` (#39 kept the old list on purpose) | S | GR-6 |
 
 ### 2C. Engine and state correctness
 
@@ -112,13 +123,17 @@ Every adversarial input in the original review broke one of the line-regex fixer
 | 2.19 | **Done for `state.json` (#25) and `plan.json` (#29).** Resilient loading: quarantine invalid issues and plan entries instead of discarding the whole file; rename the bad file to `.corrupted`; don't rotate `.bak` after a failed load; coerce the version field | S | CE-3 |
 | 2.20 | **Done (#35).** Every mutating command holds the state lock, then the plan lock, from its first load to its return; read-only commands load unlocked, and the corrupt-file rename and `.bak` restore run under the lock (or in memory if it stays busy). One re-entrant, ranked file lock backs `state_lock`, `plan_lock` and the progression log, whose trim now runs under the append lock. `plan triage --run-stages` and `review --run-batches`/`--scan-after-import` stay unlocked because they wait on desloppify subprocesses | M | CE-4 |
 | 2.21 | **Done (#42).** Deferred and triaged_out issues auto-resolve when a scan confirms they're gone, under the same conditions as open issues, and reconcile supersedes their skip entries. Wontfix stays wontfix: the scan marks it `scan_verified`, so it stops failing strict and verified, and clears the mark if the finding returns; its skip entry is kept. A superseded entry is dropped once its issue reappears so a fresh skip or queue entry isn't stripped | S | CE-5 |
-| 2.22 | Rewrite `docs/scoring.md` and `dev/QUEUE_LIFECYCLE.md` from the code | S | CE-6 |
+| 2.22 | **Done (#44).** `docs/scoring.md` (and its bundled copy) and `dev/QUEUE_LIFECYCLE.md` rewritten from the code, citing the functions behind each rule; the lifecycle doc lists the gaps found as 2.38–2.40 | S | CE-6 |
 | 2.23 | First run: headline the objective score (marked provisional) until subjective dimensions are assessed; `--profile ci` prints plain output with a threshold exit code; move `cycles` out of the Security dimension | M | CE-12 |
 | 2.24 | Expire carried-forward subjective dimensions; concerns ignore suppressed issues | S | CE-9, CE-10 |
 | 2.25 | **Done (#21).** Commands with `--path` (autofix, detect, …) default to the last scan's path, as `review` already does, and fall back to `src/` only without one. A bare `scan` re-scans the last scope too | S | — |
 | 2.30 | Plan quarantine coverage: #29 checks the entries of `queue_order`, `skipped`, `clusters` and `overrides`, but only the container type of `superseded`, `execution_log`, `commit_log` and `promoted_ids`. A malformed entry in those still loads as is | S | CE-3 |
 | 2.31 | **Done (#41).** `tree` and `viz` label the root node with the scanned path relative to the project root (the project's directory name for a whole-project scan) and strip only that prefix, so `--path .` no longer merges `src/` into the root; `--focus` takes scan- or project-relative paths | S | — |
 | 2.32 | **Done (#43).** `cli.main()` configures logging once: a stderr handler on the `desloppify` logger prints `  WARNING: message`, yellow (red for errors) on a terminal unless `NO_COLOR` is set. No global verbosity flag exists, so `DESLOPPIFY_LOG_LEVEL` (e.g. `DEBUG`) sets the threshold | S | — |
+| 2.37 | Wontfix debt totals in the stats and `status` still include wontfix issues a scan confirmed gone (`scan_verified`), though the scores exclude them (#42 follow-up) | S | CE-5 |
+| 2.38 | `plan skip --permanent` on a deferred issue leaves its state status `deferred`: `resolve_issues()` only matches `open` issues, so the plan entry becomes permanent but the issue keeps failing lenient. The deferred-disposition item suggests this exact command (found in the 2.22 pass) | S | CE-5 |
+| 2.39 | `verify_disappeared` marks a `fixed`/`false_positive` issue `scan_verified` on any absence, including when its detector didn't run or the file is outside `--path`, so verified can credit an unconfirmed fix. Open, deferred, triaged_out and wontfix need a confirmed absence (found in the 2.22 pass) | S | CE-2 |
+| 2.40 | Reconcile marks an active cluster done when all its issues are `fixed`, `auto_resolved` or `wontfix`, but not `false_positive` (found in the 2.22 pass) | S | — |
 
 ### 2D. New capabilities (Milestone 3)
 
@@ -231,12 +246,12 @@ Status key: **done** (with PR), **partial** (what's left is in §2), **open**, *
 
 | ID | Sev | Title | Status |
 |---|---|---|---|
-| GR-1 | high | tsconfig: JSONC, references, extends, baseUrl, `@/` fallback | done (#1, #5, #8); `#subpath` imports → 2.14 |
+| GR-1 | high | tsconfig: JSONC, references, extends, baseUrl, `@/` fallback | done (#1, #5, #8, #37); npm `#x` targets → 2.34 |
 | GR-2 | high | Workspaces and package exports not modelled | done (#5) |
 | GR-3 | high | Missing require / import=require / triple-slash; `.mts`/`.cts` ignored | done (#3, #10) |
 | GR-4 | medium | Comment and string imports create edges; `import type` creates false cycles | done (#3) |
 | GR-5 | medium | Files with no imports never enter the graph | done (#1) |
-| GR-6 | medium | No package.json or framework entries; loose dynamic match; Next 16 `proxy.ts` | done (#1, #3, #5); refactor → 2.15 |
+| GR-6 | medium | No package.json or framework entries; loose dynamic match; Next 16 `proxy.ts` | done (#1, #3, #5, #39); follow-ups → 2.35, 2.36 |
 | GR-8 | medium | Separate regex and tree-sitter graphs | dropped |
 | GR-9 | medium | Results depend on the cwd | done (#6) |
 | GR-10 | critical | Shared tree-sitter graph had zero edges | dropped (fixed in #1, deleted in #12) |
@@ -255,7 +270,7 @@ Status key: **done** (with PR), **partial** (what's left is in §2), **open**, *
 | DT-9 | medium | Non-null, block `@ts-ignore`, double-cast gaps | open → 2.7 |
 | DT-10 | medium | Author-specific heuristics | open → 3.5 |
 | DT-11 | medium | test-d, bench, e2e, config, generated not zoned | partial (#1) → 2.12 |
-| DT-12 | high | Jest-only assertions; inverted test-health; cross-package basename mapping | partial (#1, #8, #48) → 2.16, 3.11 |
+| DT-12 | high | Jest-only assertions; inverted test-health; cross-package basename mapping | partial (#1, #8, #45, #48) → 3.11 |
 | DT-13 | medium | tsconfig strictness never read | open → 3.3 |
 | DT-14 | high | No framework support beyond Next.js (React Router entries only); SFCs unanalysed | open → 3.6, 3.7 |
 | DT-15 | medium | No server-action auth, raw-SQL or child_process checks | open → 3.8 |
@@ -271,7 +286,7 @@ Status key: **done** (with PR), **partial** (what's left is in §2), **open**, *
 | CE-3 | medium | One bad issue loses the whole state | done (#25, #29); plan sections → 2.30 |
 | CE-4 | medium | Unlocked read-modify-write | done (#35) |
 | CE-5 | medium | Deferred, triaged_out and wontfix never auto-resolve | done (#42) |
-| CE-6 | medium | scoring.md and QUEUE_LIFECYCLE contradict code | open → 2.22 |
+| CE-6 | medium | scoring.md and QUEUE_LIFECYCLE contradict code | done (#44) |
 | CE-7 | low | Subjective scores taken as-is | open |
 | CE-8 | low | Plan subsystem complexity | open → §2E |
 | CE-9 | low | Carried-forward dimensions never expire | open → 2.24 |
@@ -306,7 +321,7 @@ Status key: **done** (with PR), **partial** (what's left is in §2), **open**, *
 | PK-3 | medium | Wheel omits elixir/php/r review data | dropped |
 | PK-4 | medium | Fork inherits PyPI name and upstream URLs | partial (#4 gated publish) → §2F |
 | AR-1 | medium | New TS detector touches 6–8 files | open → §2E |
-| AR-2 | medium | Regex-based TS plugin | partial (#3 imports on tree-sitter) → 2.1 |
+| AR-2 | medium | Regex-based TS plugin | partial (#3 imports on tree-sitter, #40 shared helper) → 2.33 |
 | AR-3 | medium | Plugin guide describes nonexistent files | done (#14) |
 | AR-4 | low | Dead compat shims, `dev test-hermes` | partial (#12 removed the shims) → §2E |
 | UP-1 | high | Upstream abandoned | — |
