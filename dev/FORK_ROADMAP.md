@@ -63,6 +63,7 @@ The fork (`cstarlea/desloppify`) is a **TypeScript/JavaScript-only** code-health
 | #34 | Unused-vars fixer removes nested destructuring patterns that end up empty; one `ALL_DESTRUCTURED` constant (2.26, 2.27) |
 | #35 | State and plan read-modify-writes under the locks; corrupt-file recovery under the lock; atomic progression trim (2.20) |
 | #36 | Facade detector exempts files with `'use client'`/`'use server'` in the directive prologue (2.28) |
+| #41 | `tree`/`viz` root node labelled with the scanned path (2.31) |
 
 ---
 
@@ -116,7 +117,7 @@ Every adversarial input in the original review broke one of the line-regex fixer
 | 2.24 | Expire carried-forward subjective dimensions; concerns ignore suppressed issues | S | CE-9, CE-10 |
 | 2.25 | **Done (#21).** Commands with `--path` (autofix, detect, …) default to the last scan's path, as `review` already does, and fall back to `src/` only without one. A bare `scan` re-scans the last scope too | S | — |
 | 2.30 | Plan quarantine coverage: #29 checks the entries of `queue_order`, `skipped`, `clusters` and `overrides`, but only the container type of `superseded`, `execution_log`, `commit_log` and `promoted_ids`. A malformed entry in those still loads as is | S | CE-3 |
-| 2.31 | `tree` and `viz` label the root node "src" whatever path was scanned (`app/output/visualize_data.py`, `visualize.py`), noticed in #21 | S | — |
+| 2.31 | **Done (#41).** `tree` and `viz` label the root node with the scanned path relative to the project root (the project's directory name for a whole-project scan) and strip only that prefix, so `--path .` no longer merges `src/` into the root; `--focus` takes scan- or project-relative paths | S | — |
 | 2.32 | CLI logging isn't configured, so the `logger.warning` lines in the state-load fallback print raw to stderr (noted in #25; predates it) | S | — |
 
 ### 2D. New capabilities (Milestone 3)
