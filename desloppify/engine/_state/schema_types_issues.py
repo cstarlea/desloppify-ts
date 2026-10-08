@@ -64,6 +64,15 @@ class WorkItem(TypedDict):
 Issue = WorkItem
 
 
+class QuarantinedWorkItem(TypedDict):
+    """A malformed work item set aside on state load instead of dropped."""
+
+    id: str | None
+    reason: str
+    quarantined_at: str
+    item: Any
+
+
 class TierStats(TypedDict, total=False):
     open: int
     fixed: int
@@ -144,6 +153,7 @@ class ScanHistoryEntry(TypedDict, total=False):
 __all__ = [
     "WorkItem",
     "Issue",
+    "QuarantinedWorkItem",
     "TierStats",
     "StateStats",
     "DimensionScore",
