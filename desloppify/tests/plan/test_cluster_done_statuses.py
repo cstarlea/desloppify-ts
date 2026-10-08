@@ -24,8 +24,8 @@ def _plan_with_cluster() -> dict:
     plan = empty_plan()
     create_cluster(plan, "anys")
     add_to_cluster(plan, "anys", [_P, _Q])
-    # The CLI logs the add; plan normalization recovers members from this
-    # log, so resolved members stay listed in the cluster.
+    # As the CLI does. Already-resolved members can still be listed (a skip
+    # keeps cluster membership), so completion goes by state status.
     append_log_entry(plan, "cluster_add", issue_ids=[_P, _Q], cluster_name="anys")
     return plan
 

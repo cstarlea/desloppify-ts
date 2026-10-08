@@ -151,3 +151,7 @@ A file that can't be used is handled like this:
 3. `.bak` isn't rotated again until a clean file has been written.
 
 The rename and restore run under the file's lock, or in memory only if the lock stays busy for 5 s. A quarantined issue drops out of the scores at the next save, since every save recomputes them. A rescan that still finds the issue adds it back.
+
+### Cluster membership
+
+A cluster's members are its `issue_ids`. Every command that adds or removes members updates that list directly. Resolving (`purge_ids`) and superseding remove members without logging a removal. `normalize_cluster_defaults()` (`engine/_plan/schema/normalize.py`) runs on every load. It re-adds members from overrides that still name the cluster, but it replays the execution log's `cluster_add` entries only when upgrading a legacy plan (`recover_from_log`). Otherwise every load would bring removed members back.
