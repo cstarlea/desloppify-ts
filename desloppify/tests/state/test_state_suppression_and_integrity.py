@@ -178,16 +178,15 @@ class TestScoreAntiGaming:
         # verified_strict_score should NOT improve (fixed still counts as failing)
         assert st["verified_strict_score"] == before_verified
 
-        # Scan confirms absence — issue gets scan-verified metadata but keeps
-        # its "fixed" status.  verified_strict still treats "fixed" as failing,
-        # so the score stays unchanged; however the attestation records that the
-        # scan corroborated the manual resolution.
+        # Scan confirms absence — the issue keeps its "fixed" status and gains
+        # scan-verified metadata, which is what verified_strict waits for.
         merge_scan(
             st,
             [],
             MergeScanOptions(lang="python", potentials={"unused": 1}, force_resolve=True),
         )
-        assert st["verified_strict_score"] == before_verified
+        assert st["issues"]["unused::a.py::x"]["status"] == "fixed"
+        assert st["verified_strict_score"] > before_verified
         attestation = st["issues"]["unused::a.py::x"].get("resolution_attestation", {})
         assert attestation.get("scan_verified") is True
 

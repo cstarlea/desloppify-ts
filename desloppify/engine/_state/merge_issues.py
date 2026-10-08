@@ -62,14 +62,18 @@ def _mark_scan_verified(
     issue: dict,
     now: str,
     *,
-    note: str,
+    note: str | None,
     attestation_text: str,
 ) -> None:
-    """Record scan corroboration without changing the manual disposition."""
+    """Record scan corroboration without changing the manual disposition.
+
+    ``note=None`` keeps the issue's note (a wontfix keeps its justification).
+    """
     issue["suppressed"] = False
     issue["suppressed_at"] = None
     issue["suppression_pattern"] = None
-    issue["note"] = note
+    if note is not None:
+        issue["note"] = note
     existing = issue.get("resolution_attestation")
     if not isinstance(existing, dict):
         existing = {}
@@ -77,6 +81,49 @@ def _mark_scan_verified(
     existing["scan_verified"] = True
     existing["scan_verified_at"] = now
     existing["scan_verification_text"] = attestation_text
+
+
+# Statuses that leave the finding itself unresolved: the issue is still open,
+# or its work was deferred or triaged out. A scan that confirms the finding is
+# gone resolves all of them the same way.
+_AUTO_RESOLVABLE_STATUSES = frozenset({"open", "deferred", "triaged_out"})
+
+# Statuses that only change on a confirmed absence: the auto-resolvable ones,
+# plus wontfix, which keeps its status and is marked scan-verified instead.
+# A wontfix decision is kept if the finding later comes back.
+_CONFIRMED_ABSENCE_STATUSES = _AUTO_RESOLVABLE_STATUSES | {"wontfix"}
+
+
+def _is_scan_verified(issue: dict) -> bool:
+    attestation = issue.get("resolution_attestation")
+    return isinstance(attestation, dict) and attestation.get("scan_verified") is True
+
+
+def _clear_scan_verified(issue: dict) -> None:
+    attestation = issue.get("resolution_attestation")
+    if not isinstance(attestation, dict):
+        return
+    attestation["scan_verified"] = False
+    attestation.pop("scan_verified_at", None)
+    attestation.pop("scan_verification_text", None)
+
+
+def _mark_auto_resolved(
+    issue: dict,
+    now: str,
+    *,
+    reason: str,
+    previous_status: str,
+) -> None:
+    issue["status"] = "auto_resolved"
+    issue["resolved_at"] = now
+    # The attestation belonged to the skip decision; the scan, not a person,
+    # resolved the issue.
+    issue.pop("resolution_attestation", None)
+    note = f"Auto-resolved: {reason}"
+    if previous_status != "open":
+        note += f" (was {previous_status})"
+    issue["note"] = note
 
 
 def verify_disappeared(
@@ -95,9 +142,12 @@ def verify_disappeared(
     """Update scan corroboration for issues absent from scan.
 
     Returns (resolved_count, skipped_other_lang, resolved_out_of_scope, changed_detectors).
-    Queue-tracked work stays user-controlled unless the detector is known to
-    have run in the current scan or the source file no longer exists. Manually
-    resolved items can be marked as scan-verified when they remain absent.
+    An absence is confirmed when the detector is known to have run in the
+    current scan, the zone policy now skips it, or the source file no longer
+    exists. Open, deferred and triaged_out issues then become
+    ``auto_resolved``; wontfix issues keep their status and are marked
+    scan-verified. Manually resolved items (fixed, false_positive) keep their
+    status and are marked scan-verified when they remain absent.
     """
     resolved = skipped_other_lang = resolved_out_of_scope = 0
     resolved_detectors: set[str] = set()
@@ -105,10 +155,7 @@ def verify_disappeared(
     for issue_id, previous in existing.items():
         previous_status = previous.get("status")
         if issue_id in current_ids or previous_status not in (
-            "open",
-            "wontfix",
-            "fixed",
-            "false_positive",
+            _CONFIRMED_ABSENCE_STATUSES | {"fixed", "false_positive"}
         ):
             continue
 
@@ -129,7 +176,7 @@ def verify_disappeared(
                 not previous["file"].startswith(prefix)
                 and previous["file"] != scan_path
             ):
-                if previous_status != "open":
+                if previous_status not in _CONFIRMED_ABSENCE_STATUSES:
                     scope_note = f"Still absent in current scan scope ({scan_path})"
                     _mark_scan_verified(
                         previous,
@@ -144,7 +191,7 @@ def verify_disappeared(
         if exclude and any(matches_exclusion(previous["file"], ex) for ex in exclude):
             continue
 
-        if previous_status == "open":
+        if previous_status in _CONFIRMED_ABSENCE_STATUSES:
             # If the source file no longer exists on disk, auto-resolve:
             # the issue cannot be actionable for a deleted file.
             file_path = previous.get("file", "")
@@ -158,37 +205,36 @@ def verify_disappeared(
             # Bug reported by @claytona500 in PR #478.
             detector = previous.get("detector", "")
             if zone_map and file_path and should_skip_issue(zone_map, file_path, detector):
-                previous["status"] = "auto_resolved"
-                previous["resolved_at"] = now
-                previous["note"] = f"Auto-resolved: zone policy now skips {detector} for this file"
+                reason = f"zone policy now skips {detector} for this file"
+            elif file_deleted:
+                reason = "source file no longer exists"
+            elif detector and confirmed_detectors is not None and detector in confirmed_detectors:
+                reason = "absent from latest detector output"
+            else:
+                continue
+            if previous_status == "wontfix":
+                if _is_scan_verified(previous):
+                    continue
+                _mark_scan_verified(
+                    previous,
+                    now,
+                    note=None,
+                    attestation_text=f"Scan confirmed the finding is gone: {reason}",
+                )
                 resolved_detectors.add(detector or "unknown")
                 resolved += 1
                 continue
-            if file_deleted:
-                previous["status"] = "auto_resolved"
-                previous["resolved_at"] = now
-                previous["note"] = "Auto-resolved: source file no longer exists"
-                resolved_detectors.add(previous.get("detector", "unknown"))
-                resolved += 1
-                continue
-            if detector and confirmed_detectors is not None and detector in confirmed_detectors:
-                previous["status"] = "auto_resolved"
-                previous["resolved_at"] = now
-                previous["note"] = "Auto-resolved: absent from latest detector output"
-                resolved_detectors.add(detector)
-                resolved += 1
-                continue
+            _mark_auto_resolved(
+                previous, now, reason=reason, previous_status=previous_status
+            )
+            resolved_detectors.add(detector or "unknown")
+            resolved += 1
             continue
 
-        verification_note = (
-            "Still absent from scan after manual wontfix"
-            if previous_status == "wontfix"
-            else "Still absent from scan after manual resolution"
-        )
         _mark_scan_verified(
             previous,
             now,
-            note=verification_note,
+            note="Still absent from scan after manual resolution",
             attestation_text="Absent from detector output in latest scan",
         )
         resolved_detectors.add(previous.get("detector", "unknown"))
@@ -270,6 +316,12 @@ def upsert_issues(
         previous["suppressed"] = False
         previous["suppressed_at"] = None
         previous["suppression_pattern"] = None
+
+        if previous["status"] == "wontfix" and _is_scan_verified(previous):
+            # The accepted finding is back: it stays wontfix and counts again.
+            _clear_scan_verified(previous)
+            changed_detectors.add(detector)
+            continue
 
         if previous["status"] in ("fixed", "auto_resolved", "false_positive"):
             # Review-request issues are condition-based. When just

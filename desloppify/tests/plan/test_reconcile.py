@@ -196,6 +196,66 @@ def test_reconcile_supersedes_resolved_action_references():
     assert "b" in plan["promoted_ids"]
 
 
+def test_reconcile_supersedes_skips_of_auto_resolved_issues():
+    """A scan-confirmed resolution clears the skip, as it clears queue entries.
+
+    Deferred and triaged_out skips whose issue is now auto_resolved are
+    superseded; a temporary skip past its review_after does not resurface
+    into the queue. Skips of issues still deferred, marked false_positive, or
+    wontfix (even once a scan confirms the finding is gone) stay.
+    """
+    plan = empty_plan()
+    ensure_plan_defaults(plan)
+    kinds = {
+        "deferred_gone": ("temporary", "auto_resolved"),
+        "wontfix_gone": ("permanent", "wontfix"),
+        "triaged_gone": ("triaged_out", "auto_resolved"),
+        "deferred_kept": ("temporary", "deferred"),
+        "false_positive": ("false_positive", "false_positive"),
+    }
+    state = _state_with_issues()
+    for fid, (kind, status) in kinds.items():
+        plan["skipped"][fid] = {
+            "issue_id": fid,
+            "kind": kind,
+            "skipped_at_scan": 1,
+            "review_after": 1 if kind == "temporary" else None,
+        }
+        state["issues"][fid] = {**_state_with_issues(fid)["issues"][fid], "status": status}
+    state["issues"]["wontfix_gone"]["resolution_attestation"] = {"scan_verified": True}
+    # deferred_kept is due to resurface (scan_count 5 >= 1 + 1).
+
+    result = reconcile_plan_after_scan(plan, state)
+
+    gone = {"deferred_gone", "triaged_gone"}
+    assert gone <= set(result.superseded)
+    assert set(plan["superseded"]) == gone
+    assert set(plan["skipped"]) == {"wontfix_gone", "false_positive"}
+    assert plan["skipped"]["wontfix_gone"]["kind"] == "permanent"
+    assert plan["queue_order"] == ["deferred_kept"]
+    assert result.resurfaced == ["deferred_kept"]
+    assert state["issues"]["deferred_kept"]["status"] == "open"
+
+
+def test_reconcile_keeps_new_skip_of_issue_that_came_back():
+    """A superseded issue that reappears can be skipped or queued again."""
+    plan = empty_plan()
+    ensure_plan_defaults(plan)
+    plan["skipped"]["a"] = {"issue_id": "a", "kind": "temporary", "skipped_at_scan": 1}
+    state = _state_with_issues("a", status="auto_resolved")
+    reconcile_plan_after_scan(plan, state)
+    assert "a" in plan["superseded"]
+
+    # The finding comes back (reopened), and the user skips it again.
+    state["issues"]["a"]["status"] = "deferred"
+    plan["skipped"]["a"] = {"issue_id": "a", "kind": "temporary", "skipped_at_scan": 5}
+
+    reconcile_plan_after_scan(plan, state)
+
+    assert "a" not in plan["superseded"]
+    assert plan["skipped"]["a"]["kind"] == "temporary"
+
+
 # ---------------------------------------------------------------------------
 # Active clusters completed when all items resolved
 # ---------------------------------------------------------------------------

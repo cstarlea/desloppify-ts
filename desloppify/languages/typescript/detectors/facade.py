@@ -28,7 +28,8 @@ from pathlib import Path
 
 from desloppify.base.discovery.file_paths import resolve_path
 from desloppify.languages._framework.facade_common import detect_reexport_facades_common
-from desloppify.languages.typescript.syntax.tree import ParsedSource, parse_text
+from desloppify.languages.typescript.syntax.queries import directive, export_info, import_info
+from desloppify.languages.typescript.syntax.tree import ParsedSource, parsed_file
 
 _BOUNDARY_DIRECTIVES = frozenset({"use client", "use server"})
 
@@ -44,7 +45,7 @@ def is_ts_facade(filepath: str) -> dict | None:
     if "export" not in content or "from" not in content:
         return None
 
-    parsed = parse_text(content, filepath)
+    parsed = parsed_file(filepath)
     if parsed is None:
         imports_from = _reexport_sources_regex(content)
     else:
@@ -68,28 +69,29 @@ def _reexport_sources_tree(parsed: ParsedSource) -> list[str] | None:
         kind = node.type
         if kind in ("comment", "hash_bang_line"):
             continue
-        if in_prologue and _is_directive(node):
-            if _string_value(parsed, node.named_children[0]) in _BOUNDARY_DIRECTIVES:
+        if in_prologue and (value := directive(parsed, node)) is not None:
+            if value in _BOUNDARY_DIRECTIVES:
                 return None
             continue
         in_prologue = False
 
         if kind == "import_statement":
-            bindings = _import_bindings(parsed, node)
-            if bindings is None:
+            # Side-effect imports, ``import x = require()`` and broken imports
+            # aren't forwarding material.
+            imp = import_info(parsed, node)
+            if imp is None or imp.kind != "static" or imp.has_error:
                 return None
-            imported.update(bindings)
+            imported.update((binding.local, imp.source) for binding in imp.bindings)
         elif kind == "export_statement":
-            source = node.child_by_field_name("source")
-            if source is not None:
-                if not _is_plain_reexport(node):
-                    return None
-                reexported.append(_string_value(parsed, source))
-                continue
-            names = _local_export_names(parsed, node)
-            if names is None:
+            exp = export_info(parsed, node)
+            if exp.has_error:
                 return None
-            local_exports.extend(names)
+            if exp.source is not None:
+                reexported.append(exp.source)
+            elif exp.kind == "named" or (exp.kind == "default" and exp.bindings):
+                local_exports.extend(b.name for b in exp.bindings if b.name is not None)
+            else:
+                return None
         else:
             return None
 
@@ -100,84 +102,6 @@ def _reexport_sources_tree(parsed: ParsedSource) -> list[str] | None:
         if imported[name] not in forwarded:
             forwarded.append(imported[name])
     return forwarded or None
-
-
-def _is_directive(node) -> bool:
-    """``'use client';`` — an expression statement holding only a string."""
-    if node.type != "expression_statement":
-        return False
-    named = node.named_children
-    return len(named) == 1 and named[0].type == "string"
-
-
-def _is_plain_reexport(node) -> bool:
-    """``export ... from`` without unexpected parse errors.
-
-    The grammar doesn't know ``export type *`` yet and wraps the ``type``
-    keyword in an ERROR node; that is the only error accepted.
-    """
-    for child in node.children:
-        if child.type == "ERROR":
-            if [c.type for c in child.children] != ["type"]:
-                return False
-        elif child.is_missing or child.has_error:
-            return False
-    return True
-
-
-def _string_value(parsed: ParsedSource, string_node) -> str:
-    return parsed.text(string_node)[1:-1]
-
-
-def _import_bindings(parsed: ParsedSource, node) -> dict[str, str] | None:
-    """Local names an import statement binds, mapped to its source.
-
-    None for imports that aren't forwarding material: side-effect imports,
-    ``import x = require()`` and anything that failed to parse.
-    """
-    source = node.child_by_field_name("source")
-    clause = next((c for c in node.named_children if c.type == "import_clause"), None)
-    if source is None or clause is None or node.has_error:
-        return None
-    module = _string_value(parsed, source)
-    bindings: dict[str, str] = {}
-    for part in clause.named_children:
-        if part.type == "identifier":  # default import
-            bindings[parsed.text(part)] = module
-        elif part.type == "namespace_import":
-            for ident in part.named_children:
-                bindings[parsed.text(ident)] = module
-        elif part.type == "named_imports":
-            for spec in part.named_children:
-                if spec.type != "import_specifier":
-                    continue
-                local = spec.child_by_field_name("alias") or spec.child_by_field_name("name")
-                if local is not None:
-                    bindings[parsed.text(local)] = module
-    return bindings
-
-
-def _local_export_names(parsed: ParsedSource, node) -> list[str] | None:
-    """Names a source-less export forwards: ``export { a, b as c }`` or
-    ``export default a``. None for any export that declares something."""
-    if node.has_error:
-        return None
-    named = node.named_children
-    if len(named) == 1 and named[0].type == "export_clause":
-        names = []
-        for spec in named[0].named_children:
-            if spec.type != "export_specifier":
-                continue
-            name = spec.child_by_field_name("name")
-            if name is None:
-                return None
-            names.append(parsed.text(name))
-        return names
-    value = node.child_by_field_name("value")
-    is_default = any(c.type == "default" for c in node.children)
-    if is_default and value is not None and value.type == "identifier" and len(named) == 1:
-        return [parsed.text(value)]
-    return None
 
 
 # ── Regex fallback ──────────────────────────────────────────

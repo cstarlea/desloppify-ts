@@ -20,6 +20,7 @@ from desloppify.languages.typescript.detectors.deps.packages import (
     discover_packages,
     package_entries,
 )
+from desloppify.languages.typescript.detectors.deps.resolver import ModuleResolver
 
 _BODY = "".join(f"export const v{i} = {i};\n" for i in range(12))
 
@@ -179,6 +180,117 @@ def test_longest_package_name_wins(tmp_path):
     _write(tmp_path, "packages/ui/index.ts")
     _write(tmp_path, "packages/ui-kit/index.ts")
     assert _resolver(tmp_path).resolve("@acme/ui-kit") == _key(tmp_path, "packages/ui-kit/index.ts")
+
+
+# ── package.json imports (#subpath) ──────────────────────────
+
+
+def _module_resolver(root: Path) -> ModuleResolver:
+    return ModuleResolver(root, root)
+
+
+def test_imports_exact_keys(tmp_path):
+    _manifest(tmp_path, "", name="app", imports={"#config": "./src/config/index.ts"})
+    _write(tmp_path, "src/config/index.ts")
+    resolver = _module_resolver(tmp_path)
+    main = _key(tmp_path, "src/main.ts")
+    assert resolver.resolve("#config", main) == _key(tmp_path, "src/config/index.ts")
+    # An exact key does not match its subpaths, and unknown keys stay unresolved.
+    assert resolver.resolve("#config/extra", main) is None
+    assert resolver.resolve("#missing", main) is None
+
+
+def test_imports_wildcard_keys(tmp_path):
+    _manifest(
+        tmp_path,
+        "",
+        name="app",
+        imports={"#lib/*": "./src/lib/*.ts", "#lib/internal/*": "./src/private/*.ts"},
+    )
+    _write(tmp_path, "src/lib/format.ts")
+    _write(tmp_path, "src/lib/nested/deep.ts")
+    _write(tmp_path, "src/private/secret.ts")
+    resolver = _module_resolver(tmp_path)
+    main = _key(tmp_path, "src/main.ts")
+    assert resolver.resolve("#lib/format", main) == _key(tmp_path, "src/lib/format.ts")
+    # ``*`` spans directories, as in Node.
+    assert resolver.resolve("#lib/nested/deep", main) == _key(tmp_path, "src/lib/nested/deep.ts")
+    # The longest matching prefix wins.
+    assert resolver.resolve("#lib/internal/secret", main) == _key(tmp_path, "src/private/secret.ts")
+
+
+def test_imports_wildcard_target_without_extension(tmp_path):
+    _manifest(tmp_path, "", name="app", imports={"#components/*": "./src/components/*"})
+    _write(tmp_path, "src/components/Button.tsx")
+    resolver = _module_resolver(tmp_path)
+    assert resolver.resolve("#components/Button", _key(tmp_path, "main.ts")) == _key(
+        tmp_path, "src/components/Button.tsx"
+    )
+
+
+def test_imports_condition_objects(tmp_path):
+    _manifest(
+        tmp_path,
+        "",
+        name="app",
+        imports={
+            "#types": {"types": "./dist/types.d.ts", "default": "./dist/types.js"},
+            "#db": {"node": {"import": "./src/db/node.ts"}, "default": "./src/db/browser.ts"},
+            "#fallback": {"import": "./src/missing.ts", "default": "./src/fallback.ts"},
+            "#dep": {"default": "some-npm-package"},
+        },
+    )
+    _write(tmp_path, "src/types.ts")
+    _write(tmp_path, "src/db/node.ts")
+    _write(tmp_path, "src/db/browser.ts")
+    _write(tmp_path, "src/fallback.ts")
+    resolver = _module_resolver(tmp_path)
+    main = _key(tmp_path, "src/main.ts")
+    # ``types`` points at build output; it maps back to the source file.
+    assert resolver.resolve("#types", main) == _key(tmp_path, "src/types.ts")
+    # Nested conditions resolve in order.
+    assert resolver.resolve("#db", main) == _key(tmp_path, "src/db/node.ts")
+    # A target that does not exist falls through to the next condition.
+    assert resolver.resolve("#fallback", main) == _key(tmp_path, "src/fallback.ts")
+    # A bare package target is not a file in the project.
+    assert resolver.resolve("#dep", main) is None
+
+
+def test_imports_bare_target_naming_a_workspace_package(tmp_path):
+    _workspace(tmp_path)
+    _manifest(tmp_path, "packages/ui", name="@acme/ui", exports="./src/index.ts")
+    _write(tmp_path, "packages/ui/src/index.ts")
+    _manifest(tmp_path, "packages/app", name="app", imports={"#ui": "@acme/ui"})
+    resolver = _module_resolver(tmp_path)
+    assert resolver.resolve("#ui", _key(tmp_path, "packages/app/src/main.ts")) == _key(
+        tmp_path, "packages/ui/src/index.ts"
+    )
+
+
+def test_imports_come_from_the_nearest_package_json(tmp_path):
+    _manifest(tmp_path, "", name="root", imports={"#util": "./shared/util.ts"})
+    # A nested package.json is its own scope, even outside any workspace...
+    _manifest(tmp_path, "tools/cli", name="cli", imports={"#util": "./lib/util.ts"})
+    # ...and hides the parent's imports even when it has none, as in Node.
+    _manifest(tmp_path, "vendor/lib", name="lib")
+    _write(tmp_path, "shared/util.ts")
+    _write(tmp_path, "tools/cli/lib/util.ts")
+    resolver = _module_resolver(tmp_path)
+    assert resolver.resolve("#util", _key(tmp_path, "src/main.ts")) == _key(tmp_path, "shared/util.ts")
+    assert resolver.resolve("#util", _key(tmp_path, "tools/cli/src/run.ts")) == _key(
+        tmp_path, "tools/cli/lib/util.ts"
+    )
+    assert resolver.resolve("#util", _key(tmp_path, "vendor/lib/index.ts")) is None
+
+
+def test_imports_are_graph_edges(tmp_path):
+    _manifest(tmp_path, "", name="app", imports={"#lib/*": "./src/lib/*.ts"})
+    _write(tmp_path, "src/lib/analytics.ts")
+    _write(tmp_path, "src/main.ts", "import { x } from '#lib/analytics';\n")
+    graph = deps_detector_mod.build_dep_graph(tmp_path)
+    main = graph[_key(tmp_path, "src/main.ts")]
+    assert main["imports"] == {_key(tmp_path, "src/lib/analytics.ts")}
+    assert not main.get("unresolved_imports")
 
 
 # ── graph edges ──────────────────────────────────────────────

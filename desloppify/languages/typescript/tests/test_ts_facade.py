@@ -126,7 +126,7 @@ class TestWithoutTreeSitter:
 
     @pytest.fixture(autouse=True)
     def _no_parser(self, monkeypatch):
-        monkeypatch.setattr(facade_mod, "parse_text", lambda _text, _path: None)
+        monkeypatch.setattr(facade_mod, "parsed_file", lambda _path: None)
 
     @pytest.mark.parametrize(("source", "sources"), _FACADES)
     def test_reexport_forms_are_facades(self, tmp_path, source, sources):
