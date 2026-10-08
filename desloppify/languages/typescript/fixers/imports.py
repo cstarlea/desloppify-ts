@@ -23,6 +23,7 @@ from desloppify.languages.typescript.syntax.tree import (
     parse_text,
 )
 
+from .edits import apply_edits, comma_list_edits, whole_statement_range
 from .fixer_io import apply_fixer
 
 ENTIRE_IMPORT = "(entire import)"
@@ -89,11 +90,8 @@ def remove_unused_imports(
         edits.extend(statement_edits)
         removed_at |= {(line, name) for line in range(first, last + 1) for name in statement_removed}
 
-    source = parsed.source
-    for start, end in sorted(edits, reverse=True):
-        source = source[:start] + source[end:]
     fixed = [e for e in file_entries if (e.get("line"), e.get("name")) in removed_at]
-    return source, fixed
+    return apply_edits(parsed.source, edits), fixed
 
 
 def _statement_edits(
@@ -108,7 +106,7 @@ def _statement_edits(
     remove = wanted & binding_names
     if ENTIRE_IMPORT in wanted or remove == binding_names:
         removed = remove | ({ENTIRE_IMPORT} if ENTIRE_IMPORT in wanted else set())
-        return [_whole_statement_range(parsed.source, statement)], removed
+        return [whole_statement_range(parsed.source, statement)], removed
     if not remove:
         return [], set()
 
@@ -159,49 +157,10 @@ def _bindings(parsed: ParsedSource, statement) -> tuple[list[_Binding], list[_Bi
 
 
 def _list_edits(items: list[_Binding], remove: set[str]) -> list[tuple[int, int]]:
-    """Byte ranges that delete removed items from a comma-separated list.
-
-    A run of removed items followed by a kept one is deleted up to that kept
-    item's start; a trailing run is deleted from the previous kept item's end,
-    which also takes the separating comma.
-    """
-    edits: list[tuple[int, int]] = []
-    index = 0
-    while index < len(items):
-        if items[index].local not in remove:
-            index += 1
-            continue
-        run_start = index
-        while index < len(items) and items[index].local in remove:
-            index += 1
-        first, last = items[run_start].node, items[index - 1].node
-        if index < len(items):
-            edits.append((first.start_byte, items[index].node.start_byte))
-        elif run_start > 0:
-            edits.append((items[run_start - 1].node.end_byte, last.end_byte))
-    return edits
-
-
-def _whole_statement_range(source: bytes, statement) -> tuple[int, int]:
-    """The statement's bytes, widened to whole lines when it has them to itself."""
-    start, end = statement.start_byte, statement.end_byte
-    line_start = source.rfind(b"\n", 0, start) + 1
-    newline = source.find(b"\n", end)
-    line_end = len(source) if newline == -1 else newline
-    rest = source[end:line_end].strip()
-    if source[line_start:start].strip() or (rest and not rest.startswith(b"//")):
-        # Shares its line with other code: remove just the statement.
-        while end < line_end and source[end : end + 1] in (b" ", b"\t"):
-            end += 1
-        return start, end
-
-    remove_end = len(source) if newline == -1 else newline + 1
-    previous_blank = line_start == 0 or source[:line_start].endswith(b"\n\n")
-    next_newline = source.find(b"\n", remove_end)
-    next_line = source[remove_end : len(source) if next_newline == -1 else next_newline]
-    if previous_blank and remove_end < len(source) and not next_line.strip():
-        remove_end = len(source) if next_newline == -1 else next_newline + 1
-    return line_start, remove_end
+    return comma_list_edits(
+        [item.node for item in items],
+        {index for index, item in enumerate(items) if item.local in remove},
+    )
 
 
 __all__ = ["ENTIRE_IMPORT", "fix_unused_imports", "remove_unused_imports"]

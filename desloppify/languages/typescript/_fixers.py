@@ -100,7 +100,6 @@ def get_ts_fixers() -> dict[str, FixerConfig]:
             "unused",
             removed,
             would_remove,
-            unsafe=True,
         ),
         "unused-params": FixerConfig(
             "unused params",

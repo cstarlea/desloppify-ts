@@ -12,7 +12,7 @@ The fork (`cstarlea/desloppify`) is a **TypeScript/JavaScript-only** code-health
 
 **Accuracy.** The resolver and graph work (Milestones 0 and 1) removed most of the false positives that made upstream v1.0 untrustworthy on real repos:
 
-- Code-rewriting fixers need `--unsafe`.
+- Fixers that still edit by line need `--unsafe`. unused-imports and unused-vars edit syntax-tree ranges and run without it; every fixer and `move` refuses to write output that parses worse than its input.
 - tsc and knip run correctly and report reduced coverage instead of silent zeros.
 - Imports come from the tree-sitter syntax tree.
 - One `ModuleResolver` handles tsconfig `paths`/`extends`/`references`, workspaces and package `exports`, and is shared by the graph, test coverage and `move`.
@@ -42,6 +42,11 @@ The fork (`cstarlea/desloppify`) is a **TypeScript/JavaScript-only** code-health
 | #12 | Remove the generic tree-sitter and tool-plugin layers |
 | #13 | Single `state.json` with legacy migration; drop `--lang`, auto-detect, `langs`, `scaffold-lang`, `--by-language` |
 | #14 | Replace the plugin registry with a direct TypeScript config |
+| #15 | This roadmap |
+| #16 | Syntax gate for fixers and `move`; real `--dry-run` diffs (2.2) |
+| #17 | Shared tree-sitter parsing helper; AST unused-imports fixer, no longer unsafe (2.1, 2.3) |
+| #18 | Autofix resolves exactly the issue IDs it fixed (2.5) |
+| #19 | AST unused-vars fixer, no longer unsafe (2.3) |
 
 ---
 
@@ -56,10 +61,10 @@ The fixers are the biggest remaining gap. They're safe now only because they won
 | # | Item | Effort | Findings |
 |---|---|---|---|
 | 2.1 | Shared typed TS AST helper: parse once per file through the parse cache; queries for functions, classes, imports and JSX; regex kept only as a fallback without tree-sitter | L | AR-2 |
-| 2.2 | Output validation gate for every fixer and `move`: parse before and after, refuse to write if the parse-error count rises, and show a real unified diff in `--dry-run`. Optional `--verify` runs `tsc --noEmit` and reverts on new errors | M | FX-11 |
-| 2.3 | Rewrite the fixers on AST ranges: import-specifier deletion that keeps formatting and never touches side-effect imports; declarator-matched var removal; destructuring patterns; log removal limited to standalone statements; `name: _name` for params; if-chain removal scoped to all-empty chains. Then drop the `unsafe` flag per fixer as each one passes the round-trip tests | L | FX-2…FX-10, FX-17, FX-18 |
+| 2.2 | **Done (#16)**, except `--verify`. Output validation gate for every fixer and `move`: parse before and after, refuse to write if the parse-error count rises, and show a real unified diff in `--dry-run`. Optional `--verify` runs `tsc --noEmit` and reverts on new errors | M | FX-11 |
+| 2.3 | **unused-imports (#17) and unused-vars (#19) done.** Rewrite the fixers on AST ranges: import-specifier deletion that keeps formatting and never touches side-effect imports; declarator-matched var removal; destructuring patterns; log removal limited to standalone statements; `name: _name` for params; if-chain removal scoped to all-empty chains. Then drop the `unsafe` flag per fixer as each one passes the round-trip tests | L | FX-2…FX-10, FX-17, FX-18 |
 | 2.4 | Fixer round-trip property tests: output parses, a second run is a no-op, CRLF/BOM/mode are preserved, and no new `tsc` errors appear. Seed them with the adversarial cases in the appendix | M | FX-19 |
-| 2.5 | Fixers return the exact issue IDs they fixed, so autofix resolves the right issues | S | FX-16 |
+| 2.5 | **Done (#18).** Fixers return the exact issue IDs they fixed, so autofix resolves the right issues | S | FX-16 |
 
 ### 2B. Detector accuracy (rest of Milestone 2, plus M0 and M1 leftovers)
 
@@ -89,6 +94,7 @@ The fixers are the biggest remaining gap. They're safe now only because they won
 | 2.22 | Rewrite `docs/scoring.md` and `dev/QUEUE_LIFECYCLE.md` from the code | S | CE-6 |
 | 2.23 | First run: headline the objective score (marked provisional) until subjective dimensions are assessed; `--profile ci` prints plain output with a threshold exit code; move `cycles` out of the Security dimension | M | CE-12 |
 | 2.24 | Expire carried-forward subjective dimensions; concerns ignore suppressed issues | S | CE-9, CE-10 |
+| 2.25 | Commands with `--path` (autofix, detect, …) default to the last scan's path, as `review` already does. Today they fall back to `src/`, so `autofix` finds nothing in repos without one | S | — |
 
 ### 2D. New capabilities (Milestone 3)
 
@@ -171,18 +177,18 @@ Status key: **done** (with PR), **partial** (what's left is in §2), **open**, *
 | FX-2 | high | Line-granular log removal deletes neighbours, changes control flow, breaks JSX and ternaries | gated → 2.3 |
 | FX-3 | high | File-wide empty-block removal deletes `.catch(()=>{})` and declarations | gated → 2.3 |
 | FX-4 | high | `detect logs --fix` removes the first line only; tag regex matches strings, comments and `${}` | partial (#1 removed the line deletion) → 2.11 |
-| FX-5 | high | Import collector swallows the next import; deletes side-effect imports | gated → 2.3 |
-| FX-6 | high | `}` or comma in a comment drops bindings; alias handling deletes used names | gated → 2.3 |
-| FX-7 | high | unused-vars removes the wrong declaration or declarators | gated → 2.3 |
-| FX-8 | high | Destructuring split breaks syntax and changes strings | gated → 2.3 |
+| FX-5 | high | Import collector swallows the next import; deletes side-effect imports | done (#17) |
+| FX-6 | high | `}` or comma in a comment drops bindings; alias handling deletes used names | done (#17) |
+| FX-7 | high | unused-vars removes the wrong declaration or declarators | done (#19) |
+| FX-8 | high | Destructuring split breaks syntax and changes strings | done (#19) |
 | FX-9 | high | `_`-prefix renames destructured props; `c_onst` corruption | gated → 2.3 |
 | FX-10 | high | empty-if-chain deletes a non-empty else | gated → 2.3 |
-| FX-11 | high | No parse gate before writing; dry-run shows no "after" | open → 2.2 |
+| FX-11 | high | No parse gate before writing; dry-run shows no "after" | done (#16); `--verify` → 2.2 |
 | FX-12 | high | move breaks sibling imports, `.js` specifiers, importers outside src | done (#1, #8) |
 | FX-13 | medium | Chained `str.replace` double-rewrites and touches strings | done (#1, #8) |
 | FX-14 | medium | Write path loses CRLF, symlinks, mode, encoding | done (#1) |
 | FX-15 | medium | `_categorize_unused` defaults to "imports" | partial (#1 defaults to vars) → 2.13 |
-| FX-16 | low | Autofix resolves the wrong issue IDs | open → 2.5 |
+| FX-16 | low | Autofix resolves the wrong issue IDs | done (#18) |
 | FX-17 | low | dead-useeffect deletes the preceding `//` line | open → 2.3 |
 | FX-18 | low | BOM hides the line-1 import (fails safe) | open → 2.3 |
 | FX-19 | medium | No adversarial or round-trip fixer tests | open → 2.4 |
