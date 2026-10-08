@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import fnmatch
+import logging
 import os
 import tempfile
 from pathlib import Path
 
 from desloppify.base.discovery.paths import get_project_root
+
+logger = logging.getLogger(__name__)
 
 
 def matches_exclusion(rel_path: str, exclusion: str) -> bool:
@@ -109,6 +112,31 @@ def safe_write_text(filepath: str | Path, content: str) -> None:
         if os.path.exists(tmp):
             os.unlink(tmp)
         raise
+
+
+def corrupted_path(path: Path) -> Path:
+    """Return a free ``<name>.corrupted[.N]`` path next to ``path``."""
+    base = path.with_name(f"{path.name}.corrupted")
+    candidate = base
+    suffix = 1
+    while candidate.exists():
+        candidate = base.with_name(f"{base.name}.{suffix}")
+        suffix += 1
+    return candidate
+
+
+def set_aside_corrupted(path: Path) -> Path | None:
+    """Rename an unusable file to ``<name>.corrupted[.N]``; return where it went.
+
+    Returns None (and leaves the file in place) if the rename fails.
+    """
+    target = corrupted_path(path)
+    try:
+        path.rename(target)
+    except OSError as rename_ex:
+        logger.debug("Failed to rename corrupted file %s: %s", path, rename_ex)
+        return None
+    return target
 
 
 def count_lines(path: Path) -> int:

@@ -13,14 +13,16 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import cast
 
-from desloppify.base.exception_sets import PLAN_LOAD_EXCEPTIONS
-from desloppify.base.discovery.file_paths import safe_write_text
+from desloppify.base.exception_sets import CORRUPT_JSON_FILE_EXCEPTIONS
+from desloppify.base.discovery.file_paths import safe_write_text, set_aside_corrupted
 from desloppify.base.output.fallbacks import log_best_effort_failure
 from desloppify.engine._plan.schema import (
     PLAN_VERSION,
     PlanModel,
+    QuarantinedPlanEntry,
     empty_plan,
     ensure_plan_defaults,
+    merge_quarantined_entries,
     validate_plan,
 )
 from desloppify.engine._plan.refresh_lifecycle import migrate_legacy_phase
@@ -45,6 +47,7 @@ class PlanLoadStatus:
     degraded: bool
     error_kind: str | None = None
     recovery: str | None = None
+    quarantined: int = 0
 
 
 def get_plan_file() -> Path:
@@ -91,13 +94,33 @@ def plan_lock(path: Path | None = None) -> Iterator[None]:
         os.close(fd)
 
 
-def _load_validated_plan(plan_path: Path) -> PlanModel:
-    """Load, normalize, and validate one plan payload from disk."""
-    data = json.loads(plan_path.read_text())
+# Plan files whose on-disk content did not load cleanly. ``save_plan`` does
+# not rotate such a file over ``.bak``, which may be the last good copy.
+_unclean_plan_files: set[Path] = set()
+_quarantine_warnings_shown: set[tuple[Path, int, int]] = set()
+
+
+def _rotation_key(path: Path) -> Path:
+    return path.absolute()
+
+
+def _load_validated_plan(plan_path: Path) -> tuple[PlanModel, int]:
+    """Load, normalize, and validate one plan file; return it with its quarantine count.
+
+    Malformed entries are moved to ``quarantined_entries``. Raises on anything
+    that makes the file as a whole unusable.
+    """
+    data = json.loads(plan_path.read_text(encoding="utf-8"))
     if not isinstance(data, dict):
         raise ValueError("Plan file root must be a JSON object.")
 
-    version = data.get("version", 1)
+    quarantined: list[QuarantinedPlanEntry] = []
+    ensure_plan_defaults(data, quarantine=quarantined)
+    migrate_legacy_phase(cast(PlanModel, data))
+    validate_plan(data)
+    merge_quarantined_entries(data, quarantined)
+
+    version = data["version"]
     if version > PLAN_VERSION:
         logger.warning("Plan file version %d > supported %d.", version, PLAN_VERSION)
         print(
@@ -105,62 +128,122 @@ def _load_validated_plan(plan_path: Path) -> PlanModel:
             f"({PLAN_VERSION}). Some features may not work correctly.",
             file=sys.stderr,
         )
+    return cast(PlanModel, data), len(quarantined)
 
-    ensure_plan_defaults(data)
-    migrate_legacy_phase(data)
-    validate_plan(data)
-    return cast(PlanModel, data)
+
+def _warn_quarantined(path: Path, count: int) -> None:
+    logger.debug("Quarantined %d malformed plan entry(s) from %s", count, path)
+    # Commands may load the same file several times; warn once per version.
+    try:
+        warning_key = (path.absolute(), path.stat().st_mtime_ns, count)
+    except OSError:
+        warning_key = (path.absolute(), 0, count)
+    if warning_key in _quarantine_warnings_shown:
+        return
+    _quarantine_warnings_shown.add(warning_key)
+    print(
+        f"  Warning: {count} malformed plan entry(s) in {path.name} were set aside; "
+        "they are kept under 'quarantined_entries' in the plan file.",
+        file=sys.stderr,
+    )
 
 
 def resolve_plan_load_status(path: Path | None = None) -> PlanLoadStatus:
-    """Load a plan with explicit degraded-mode metadata."""
+    """Load a plan with explicit degraded-mode metadata.
+
+    - Malformed entries are quarantined; the rest of the plan loads and the
+      load is not degraded.
+    - A file that cannot be used at all is renamed to ``.corrupted`` and the
+      ``.bak`` copy is loaded (and copied into its place), else the plan
+      starts fresh. Both are degraded loads.
+    - After anything but a clean load, the next ``save_plan`` to this path
+      leaves ``.bak`` alone.
+    """
     plan_path = path or _default_plan_file()
+    rotation_key = _rotation_key(plan_path)
     if not plan_path.exists():
+        _unclean_plan_files.discard(rotation_key)
         return PlanLoadStatus(plan=None, degraded=False, error_kind=None, recovery=None)
     try:
-        return PlanLoadStatus(
-            plan=_load_validated_plan(plan_path),
-            degraded=False,
-            error_kind=None,
-            recovery=None,
-        )
-    except PLAN_LOAD_EXCEPTIONS as exc:
-        backup = plan_path.with_suffix(".json.bak")
-        if backup.exists():
-            try:
-                plan = _load_validated_plan(backup)
-                logger.warning(
-                    "Plan file load degraded for %s (%s); recovered from backup %s.",
-                    plan_path,
-                    exc,
-                    backup,
-                )
-                print(
-                    f"  Warning: Plan file load degraded ({exc}); recovered from backup.",
-                    file=sys.stderr,
-                )
-                return PlanLoadStatus(
-                    plan=plan,
-                    degraded=True,
-                    error_kind=exc.__class__.__name__,
-                    recovery="backup",
-                )
-            except PLAN_LOAD_EXCEPTIONS as backup_exc:
-                logger.warning(
-                    "Plan file and backup both failed for %s: %s / %s",
-                    plan_path,
-                    exc,
-                    backup_exc,
-                )
+        plan, quarantined = _load_validated_plan(plan_path)
+    except (*CORRUPT_JSON_FILE_EXCEPTIONS, OSError) as exc:
+        _unclean_plan_files.add(rotation_key)
+        return _load_plan_after_failure(plan_path, exc)
 
-        logger.warning("Plan file load degraded for %s (%s); starting fresh.", plan_path, exc)
-        print(f"  Warning: Plan file load degraded ({exc}); starting fresh.", file=sys.stderr)
-        return PlanLoadStatus(
-            plan=empty_plan(),
-            degraded=True,
-            error_kind=exc.__class__.__name__,
-            recovery="fresh_start",
-        )
+    if quarantined:
+        _unclean_plan_files.add(rotation_key)
+        _warn_quarantined(plan_path, quarantined)
+    else:
+        _unclean_plan_files.discard(rotation_key)
+    return PlanLoadStatus(
+        plan=plan,
+        degraded=False,
+        error_kind=None,
+        recovery=None,
+        quarantined=quarantined,
+    )
+
+
+def _load_plan_after_failure(plan_path: Path, exc: Exception) -> PlanLoadStatus:
+    """Set aside an unusable plan file, then fall back to ``.bak`` or empty."""
+    moved_to: Path | None = None
+    if isinstance(exc, OSError):
+        # Unreadable is not corrupt: leave the file where it is.
+        problem = f"Plan file could not be read ({exc})"
+    else:
+        problem = f"Plan file corrupted ({exc})"
+        moved_to = set_aside_corrupted(plan_path)
+        if moved_to is not None:
+            problem += f"; moved to {moved_to.name}"
+
+    backup = plan_path.with_suffix(".json.bak")
+    if backup.exists():
+        try:
+            plan, quarantined = _load_validated_plan(backup)
+        except (*CORRUPT_JSON_FILE_EXCEPTIONS, OSError) as backup_exc:
+            logger.warning(
+                "Plan file and backup both failed for %s: %s / %s",
+                plan_path,
+                exc,
+                backup_exc,
+            )
+            problem += f". Backup {backup.name} is unusable too ({backup_exc})"
+        else:
+            logger.warning(
+                "Plan file load degraded for %s (%s); recovered from backup %s.",
+                plan_path,
+                exc,
+                backup,
+            )
+            if moved_to is not None:
+                # Put the backup in place so later loads in this run (and the
+                # next command, if nothing saves) see it, not a missing file.
+                try:
+                    shutil.copy2(str(backup), str(plan_path))
+                except OSError as copy_ex:
+                    log_best_effort_failure(logger, "restore plan from backup", copy_ex)
+            print(
+                f"  Warning: {problem}; recovered from backup {backup.name}.",
+                file=sys.stderr,
+            )
+            if quarantined:
+                _warn_quarantined(backup, quarantined)
+            return PlanLoadStatus(
+                plan=plan,
+                degraded=True,
+                error_kind=exc.__class__.__name__,
+                recovery="backup",
+                quarantined=quarantined,
+            )
+
+    logger.warning("Plan file load degraded for %s (%s); starting fresh.", plan_path, exc)
+    print(f"  Warning: {problem}; starting fresh.", file=sys.stderr)
+    return PlanLoadStatus(
+        plan=empty_plan(),
+        degraded=True,
+        error_kind=exc.__class__.__name__,
+        recovery="fresh_start",
+    )
 
 
 def load_plan(path: Path | None = None) -> PlanModel:
@@ -180,7 +263,8 @@ def save_plan(plan: PlanModel | dict, path: Path | None = None) -> None:
 
     content = json.dumps(plan, indent=2, default=json_default) + "\n"
 
-    if plan_path.exists():
+    rotation_key = _rotation_key(plan_path)
+    if plan_path.exists() and rotation_key not in _unclean_plan_files:
         backup = plan_path.with_suffix(".json.bak")
         try:
             shutil.copy2(str(plan_path), str(backup))
@@ -192,6 +276,8 @@ def save_plan(plan: PlanModel | dict, path: Path | None = None) -> None:
     except OSError as ex:
         print(f"  Warning: Could not save plan: {ex}", file=sys.stderr)
         raise
+    # The file on disk is now one we wrote; it may rotate on the next save.
+    _unclean_plan_files.discard(rotation_key)
 
 
 def plan_path_for_state(state_path: Path) -> Path:

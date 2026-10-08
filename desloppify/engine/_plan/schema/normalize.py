@@ -27,26 +27,30 @@ def _ensure_container(
         plan[key] = default_factory()
 
 
+# Top-level plan keys and the container type each must hold.
+CONTAINER_TYPES: tuple[tuple[str, type[list] | type[dict]], ...] = (
+    ("queue_order", list),
+    ("deferred", list),
+    ("skipped", dict),
+    ("overrides", dict),
+    ("clusters", dict),
+    ("superseded", dict),
+    ("promoted_ids", list),
+    ("plan_start_scores", dict),
+    ("refresh_state", dict),
+    ("execution_log", list),
+    ("epic_triage_meta", dict),
+    ("commit_log", list),
+    ("uncommitted_issues", list),
+)
+
+
 def ensure_container_types(plan: dict[str, Any]) -> None:
     """Normalize top-level container keys onto their runtime shapes."""
-    for key, expected_type, default_factory in (
-        ("queue_order", list, list),
-        ("deferred", list, list),
-        ("skipped", dict, dict),
-        ("overrides", dict, dict),
-        ("clusters", dict, dict),
-        ("superseded", dict, dict),
-        ("promoted_ids", list, list),
-        ("plan_start_scores", dict, dict),
-        ("refresh_state", dict, dict),
-        ("execution_log", list, list),
-        ("epic_triage_meta", dict, dict),
-    ):
-        _ensure_container(plan, key, expected_type, default_factory)
-    _rename_key(plan["epic_triage_meta"], "finding_snapshot_hash", "issue_snapshot_hash")
-    _ensure_container(plan, "commit_log", list, list)
     _rename_key(plan, "uncommitted_findings", "uncommitted_issues")
-    _ensure_container(plan, "uncommitted_issues", list, list)
+    for key, expected_type in CONTAINER_TYPES:
+        _ensure_container(plan, key, expected_type, expected_type)
+    _rename_key(plan["epic_triage_meta"], "finding_snapshot_hash", "issue_snapshot_hash")
     if "commit_tracking_branch" not in plan:
         plan["commit_tracking_branch"] = None
 
@@ -266,6 +270,7 @@ def _normalized_cluster_issue_ids(
 
 
 __all__ = [
+    "CONTAINER_TYPES",
     "ensure_container_types",
     "normalize_cluster_defaults",
 ]

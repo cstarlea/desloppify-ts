@@ -39,7 +39,19 @@ PLAN_LOAD_EXCEPTIONS = (
     json.JSONDecodeError,
 )
 
+# Errors that mean a persisted JSON file's contents are unusable (as opposed
+# to the file being unreadable, which is an OSError). Normalizing a loaded
+# payload can raise the last three on wrongly-typed values.
+CORRUPT_JSON_FILE_EXCEPTIONS = (
+    json.JSONDecodeError,
+    UnicodeDecodeError,
+    ValueError,
+    TypeError,
+    AttributeError,
+)
+
 __all__ = [
+    "CORRUPT_JSON_FILE_EXCEPTIONS",
     "CommandError",
     "PLAN_LOAD_EXCEPTIONS",
     "PacketValidationError",
