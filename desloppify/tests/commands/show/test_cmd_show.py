@@ -497,7 +497,7 @@ class TestCmdShowBackendIntegration:
                         "score": 100.0,
                         "strict": 100.0,
                         "failing": 0,
-                        "detectors": {"security": {}, "cycles": {}},
+                        "detectors": {"security": {}},
                     },
                 },
             },
@@ -526,15 +526,15 @@ class TestCmdShowBackendIntegration:
         assert "subjective dimension" not in out
 
     def test_show_mechanical_dimension_with_issues(self, monkeypatch, capsys):
-        """show security with open issues from security AND cycles detectors shows both."""
-        security_issue = {
-            "id": "security::src/a.py::xss",
+        """show code quality with open issues from smells AND cycles detectors shows both."""
+        smells_issue = {
+            "id": "smells::src/a.py::empty_catch",
             "kind": "issue",
-            "detector": "security",
+            "detector": "smells",
             "file": "src/a.py",
-            "tier": 4,
+            "tier": 3,
             "confidence": "high",
-            "summary": "XSS vulnerability",
+            "summary": "Empty catch",
             "detail": {},
             "status": "open",
         }
@@ -554,7 +554,7 @@ class TestCmdShowBackendIntegration:
             state={
                 "last_scan": "2026-01-01",
                 "issues": {
-                    "security::src/a.py::xss": security_issue,
+                    "smells::src/a.py::empty_catch": smells_issue,
                     "cycles::src/b.py::cycle": cycles_issue,
                 },
                 "scan_path": ".",
@@ -568,15 +568,15 @@ class TestCmdShowBackendIntegration:
         def fake_queue(_state, **kwargs):
             call_count["n"] += 1
             scope = kwargs.get("options", kwargs).scope
-            if scope == "security":
-                return {"items": [security_issue]}
+            if scope == "smells":
+                return {"items": [smells_issue]}
             if scope == "cycles":
                 return {"items": [cycles_issue]}
             return {"items": []}
 
         monkeypatch.setattr(show_scope_mod, "build_work_queue", fake_queue)
         args = SimpleNamespace(
-            pattern="security",
+            pattern="code quality",
             status="open",
             chronic=False,
             code=False,
@@ -588,7 +588,7 @@ class TestCmdShowBackendIntegration:
         cmd_show(args)
         out = capsys.readouterr().out
         # Should render issues from both detectors
-        assert "2 open issues matching 'Security'" in out
+        assert "2 open issues matching 'Code quality'" in out
         assert "subjective dimension" not in out
 
 
@@ -599,7 +599,11 @@ class TestResolveEntity:
         entity = resolve_entity("security", {})
         assert entity.kind == "dimension"
         assert entity.is_subjective is False
-        assert "security" in entity.detectors
+        assert tuple(entity.detectors) == ("security",)
+
+    def test_cycles_belong_to_code_quality(self):
+        entity = resolve_entity("code quality", {})
+        assert entity.kind == "dimension"
         assert "cycles" in entity.detectors
 
     def test_naming_quality_is_subjective_dimension(self):
