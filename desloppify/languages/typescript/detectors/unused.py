@@ -30,6 +30,7 @@ from desloppify.languages.typescript.detectors.unused_fallback import (
     should_use_deno_fallback,
 )
 from desloppify.languages.typescript.syntax.nodes import (
+    ALL_DESTRUCTURED,
     NameIndex,
     is_parameter,
     parameter_owner,
@@ -51,12 +52,11 @@ _TS_UNUSED_RE = re.compile(
 _QUOTED_NAME_RE = re.compile(r"'([^']+)'")
 _AGGREGATE_NAMES = {
     "TS6192": "(entire import)",
-    "TS6198": "(all destructured elements)",
+    "TS6198": ALL_DESTRUCTURED,
     "TS6199": "(all variables)",
     "TS6205": "(all type parameters)",
 }
 ENTIRE_IMPORT = _AGGREGATE_NAMES["TS6192"]
-ALL_DESTRUCTURED = _AGGREGATE_NAMES["TS6198"]
 # Statements whose names are imports: `import ...` (including
 # `import x = require(...)`) and `import x = N.y`.
 _IMPORT_STATEMENTS = frozenset({"import_statement", "import_alias"})

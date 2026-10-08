@@ -7,11 +7,14 @@ fixer removes:
 - a declarator (``const a = 1``, or ``b`` in ``let a = 1, b = 2``) whose
   initializer has no side effects, and the statement once it's empty;
 - a member of an object destructuring pattern (``{ a, b: c, d = 1 }``);
+- the member or element holding a nested pattern that ends up empty
+  (``a: { b }``), outward as far as the declarator;
 - a local function, type alias or interface, with a JSDoc block directly above.
 
 It skips what it can't remove without changing behaviour: initializers or
 defaults that may run code, patterns with ``...rest`` (whose contents would
-change), patterns that would end up empty, array destructuring, and names that
+change), declarators whose pattern would end up empty but whose initializer
+may run code, array elements unless the whole array pattern goes, and names that
 appear anywhere else in their scope (tsc reports variables that are written
 but never read, and removing the declaration would leave those writes
 dangling). Parameters are left to the unused-params fixer.
@@ -28,6 +31,7 @@ from dataclasses import dataclass, field
 from desloppify.base.output.terminal import colorize
 from desloppify.languages._framework.base.types import FixResult
 from desloppify.languages.typescript.syntax.nodes import (
+    ALL_DESTRUCTURED,
     FUNCTIONS,
     STATEMENT_PARENTS,
     NameIndex,
@@ -48,7 +52,6 @@ from desloppify.languages.typescript.syntax.tree import (
 from .edits import apply_edits, comma_list_edits, whole_statement_range
 from .fixer_io import apply_fixer
 
-ALL_DESTRUCTURED = "(all destructured elements)"
 ALL_VARIABLES = "(all variables)"
 
 _DECLARATIONS = frozenset({"lexical_declaration", "variable_declaration"})
@@ -199,11 +202,15 @@ class _Planner:
         if is_parameter(node):
             return "function_param"
         declarator = node.parent
-        if declarator.type != "variable_declarator" or not same(
+        if declarator.type == "variable_declarator" and same(
             declarator.child_by_field_name("name"), node
         ):
+            return self._plan_declarator(entry, declarator, binding_names(node))
+        # tsc reports a nested pattern, like `{ b, c }` in `{ a: { b, c } }`, on its own.
+        items = _list_items(node)
+        if _pattern_member(node)[0] is None or not items:
             return "other"
-        return self._plan_declarator(entry, declarator, binding_names(node))
+        return self._plan_in_pattern(entry, node, items, binding_names(node), node)
 
     def _plan_statement(self, entry: dict, statement, names: list) -> str | None:
         if statement.parent is None or statement.parent.type not in STATEMENT_PARENTS:
@@ -228,14 +235,16 @@ class _Planner:
     def _plan_member(self, entry: dict, node) -> str | None:
         member, default = _pattern_member(node)
         if member is None:
-            return "array_destructuring" if _in_array_pattern(node) else "other"
-        pattern = member.parent
-        if any(c.type == "rest_pattern" for c in pattern.named_children):
-            return "rest_element"
-        key = member.child_by_field_name("key") if member.type == "pair_pattern" else None
-        if not _is_pure(default) or (key is not None and key.type == "computed_property_name"):
-            return "side_effects"
+            return "other"
+        reason = _member_blocker(member, default)
+        if reason is not None:
+            return reason
+        return self._plan_in_pattern(entry, member.parent, [member], [node], member)
 
+    def _plan_in_pattern(
+        self, entry: dict, pattern, items: list, names: list, removed
+    ) -> str | None:
+        """Plan removing ``items`` (within ``removed``, binding ``names``) from ``pattern``."""
         top = pattern
         while top.parent is not None and top.parent.type in _PATTERN_WRAPPERS:
             top = top.parent
@@ -248,9 +257,11 @@ class _Planner:
         if isinstance(statement, str):
             return statement
         function_scoped = _kind(declarator.parent) == "var"
-        if self._used_elsewhere([node], declarator.parent, member, function_scoped=function_scoped):
+        if self._used_elsewhere(names, declarator.parent, removed, function_scoped=function_scoped):
             return "written_elsewhere"
-        self._add(self._patterns, pattern, member, [entry])
+        for item in items:
+            self._add(self._patterns, pattern, item, [])
+        self._add(self._patterns, pattern, items[0], [entry])
         return None
 
     @staticmethod
@@ -281,24 +292,23 @@ class _Planner:
 
     def resolve(self) -> list[tuple[int, int]]:
         edits: list[tuple[int, int]] = []
-        for pattern, members in self._patterns.values():
+        # Innermost patterns first: one that empties goes from the pattern around it.
+        while self._patterns:
+            key = max(self._patterns, key=lambda k: _depth(self._patterns[k][0]))
+            pattern, members = self._patterns.pop(key)
             items = _list_items(pattern)
             remove = {i for i, item in enumerate(items) if node_key(item) in members}
             entries = [e for target in members.values() for e in target.entries]
             if len(remove) < len(items):
-                edits.extend(comma_list_edits(items, remove))
-                self.fixed.extend(entries)
+                if pattern.type == "array_pattern":
+                    self.skipped.extend(["array_destructuring"] * len(entries))
+                else:
+                    edits.extend(comma_list_edits(items, remove))
+                    self.fixed.extend(entries)
                 continue
-            declarator = pattern.parent
-            if (
-                declarator.type == "variable_declarator"
-                and same(declarator.child_by_field_name("name"), pattern)
-                and _declarator_blocker(declarator) is None
-            ):
-                # Every member goes, so the declarator goes with them.
-                self._add(self._declarations, declarator.parent, declarator, entries)
-            else:
-                self.skipped.extend(["would_empty_pattern"] * len(entries))
+            reason = self._remove_emptied(pattern, entries)
+            if reason is not None:
+                self.skipped.extend([reason] * len(entries))
 
         for declaration, declarators in self._declarations.values():
             items = _list_items(declaration)
@@ -320,6 +330,25 @@ class _Planner:
             edits.append(whole_statement_range(source, target.node, leading_jsdoc=True))
             self.fixed.extend(target.entries)
         return edits
+
+    def _remove_emptied(self, pattern, entries: list[dict]) -> str | None:
+        """Remove ``pattern``'s declarator or enclosing member, or say why not."""
+        declarator = pattern.parent
+        if declarator.type == "variable_declarator" and same(
+            declarator.child_by_field_name("name"), pattern
+        ):
+            if _declarator_blocker(declarator) is not None:
+                return "would_empty_pattern"
+            self._add(self._declarations, declarator.parent, declarator, entries)
+            return None
+        member, default = _pattern_member(pattern)
+        if member is None:
+            return "would_empty_pattern"
+        reason = _member_blocker(member, default)
+        if reason is not None:
+            return reason
+        self._add(self._patterns, member.parent, member, entries)
+        return None
 
 
 def _declarator_blocker(declarator) -> str | None:
@@ -362,7 +391,7 @@ def _list_items(container) -> list:
 
 
 def _pattern_member(node):
-    """The object-pattern member that binds ``node``, and its default value."""
+    """The pattern member that binds ``node`` (a name or nested pattern), and its default."""
     parent = node.parent
     if node.type == "shorthand_property_identifier_pattern":
         if parent.type == "object_pattern":
@@ -370,26 +399,36 @@ def _pattern_member(node):
         if parent.type == "object_assignment_pattern" and parent.parent.type == "object_pattern":
             return parent, parent.child_by_field_name("right")
         return None, None
-    if node.type != "identifier":
+    if node.type not in ("identifier", "object_pattern", "array_pattern"):
         return None, None
+    default = None
+    if parent.type == "assignment_pattern" and same(parent.child_by_field_name("left"), node):
+        node, default, parent = parent, parent.child_by_field_name("right"), parent.parent
     if parent.type == "pair_pattern" and same(parent.child_by_field_name("value"), node):
-        return parent, None
-    if (
-        parent.type == "assignment_pattern"
-        and same(parent.child_by_field_name("left"), node)
-        and parent.parent.type == "pair_pattern"
-    ):
-        return parent.parent, parent.child_by_field_name("right")
+        return parent, default
+    if parent.type == "array_pattern":
+        return node, default
     return None, None
 
 
-def _in_array_pattern(node) -> bool:
-    parent = node.parent
-    while parent is not None and parent.type in ("assignment_pattern", "array_pattern"):
-        if parent.type == "array_pattern":
-            return True
-        parent = parent.parent
-    return False
+def _member_blocker(member, default) -> str | None:
+    """Why removing ``member`` from its pattern could change behaviour, or None."""
+    pattern = member.parent
+    if pattern.type == "object_pattern" and any(
+        c.type == "rest_pattern" for c in pattern.named_children
+    ):
+        return "rest_element"
+    key = member.child_by_field_name("key") if member.type == "pair_pattern" else None
+    if not _is_pure(default) or (key is not None and key.type == "computed_property_name"):
+        return "side_effects"
+    return None
+
+
+def _depth(node) -> int:
+    depth = 0
+    while node.parent is not None:
+        node, depth = node.parent, depth + 1
+    return depth
 
 
 def _scope(node, *, function_scoped: bool):

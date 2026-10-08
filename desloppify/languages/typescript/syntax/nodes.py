@@ -28,6 +28,8 @@ FUNCTIONS = frozenset(
     }
 )
 PARAMETERS = frozenset({"required_parameter", "optional_parameter"})
+# The name the unused detector gives tsc's TS6198, "All destructured elements are unused".
+ALL_DESTRUCTURED = "(all destructured elements)"
 _DECLARATIONS = frozenset({"lexical_declaration", "variable_declaration"})
 # Nodes whose children are statements that can be deleted outright.
 STATEMENT_PARENTS = frozenset({"program", "statement_block", "switch_case", "switch_default"})
@@ -387,6 +389,7 @@ def _is_binding(node) -> bool:
 
 
 __all__ = [
+    "ALL_DESTRUCTURED",
     "asi_hazards",
     "binding_names",
     "FUNCTIONS",

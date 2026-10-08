@@ -26,6 +26,7 @@ from collections import defaultdict
 from desloppify.base.output.terminal import colorize
 from desloppify.languages._framework.base.types import FixResult
 from desloppify.languages.typescript.syntax.nodes import (
+    ALL_DESTRUCTURED,
     PARAMETERS,
     NameIndex,
     binding_names,
@@ -44,7 +45,6 @@ from desloppify.languages.typescript.syntax.tree import (
 from .edits import apply_replacements
 from .fixer_io import apply_fixer
 
-ALL_DESTRUCTURED = "(all destructured elements)"
 _PROPERTY_MODIFIERS = frozenset({"accessibility_modifier", "override_modifier", "readonly"})
 
 
