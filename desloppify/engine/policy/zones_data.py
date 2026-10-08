@@ -23,6 +23,8 @@ SKIP_ALL_DETECTORS = frozenset(
         "dict_keys",
         "test_coverage",
         "security",
+        "responsibility_cohesion",
+        "signature",
     }
 )
 
