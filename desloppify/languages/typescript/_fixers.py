@@ -123,7 +123,6 @@ def get_ts_fixers() -> dict[str, FixerConfig]:
             "smells",
             removed,
             would_remove,
-            unsafe=True,
         ),
     }
 
