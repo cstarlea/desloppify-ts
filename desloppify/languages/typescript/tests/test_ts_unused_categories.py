@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 
+import desloppify.languages.typescript.detectors.tsc as tsc_mod
 import desloppify.languages.typescript.detectors.unused as unused_mod
 from desloppify.languages.typescript.detectors.unused import (
     _categorize_entries,
@@ -211,7 +212,7 @@ def test_detect_unused_filters_by_category(tmp_path, monkeypatch, category, name
         returncode = 2
 
     monkeypatch.setattr(unused_mod, "find_ts_and_js_files", lambda _path: [str(src / "app.ts")])
-    monkeypatch.setattr(unused_mod, "_run_tsc_unused_check", lambda *a, **k: _Result())
+    monkeypatch.setattr(tsc_mod, "run_tsc_check", lambda *a, **k: _Result())
     entries, _total = detect_unused(tmp_path, category)
     assert [e["name"] for e in entries] == names
     assert all(category in ("all", e["category"]) for e in entries)

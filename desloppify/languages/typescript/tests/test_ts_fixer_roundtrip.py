@@ -45,7 +45,7 @@ from pathlib import Path
 
 import pytest
 
-import desloppify.languages.typescript.detectors.unused as unused_mod
+import desloppify.languages.typescript.detectors.tsc as tsc_mod
 from desloppify.base.discovery.source import clear_source_file_cache_for_tests
 from desloppify.base.runtime_state import RuntimeContext, runtime_scope
 from desloppify.languages.typescript._fixers import get_ts_fixers
@@ -582,7 +582,7 @@ class _Tsc:
     def __init__(self, root: Path, monkeypatch: pytest.MonkeyPatch, *, available: bool) -> None:
         self.root = root
         self.outputs: list[str] = []
-        original = unused_mod._run_tsc_unused_check
+        original = tsc_mod.run_tsc_check
 
         def resolve(*_start_dirs: Path) -> list[str]:
             if not available or TSC is None:
@@ -594,13 +594,13 @@ class _Tsc:
             self.outputs.append(f"{result.stdout}\n{result.stderr}")
             return result
 
-        monkeypatch.setattr(unused_mod, "_resolve_tsc_command", resolve)
-        monkeypatch.setattr(unused_mod, "_run_tsc_unused_check", run)
+        monkeypatch.setattr(tsc_mod, "resolve_tsc_command", resolve)
+        monkeypatch.setattr(tsc_mod, "run_tsc_check", run)
 
     def diagnostics(self, since: int) -> Counter:
         """Errors from the first run after ``since`` runs, running tsc if the detector didn't."""
         if len(self.outputs) <= since:
-            unused_mod._run_tsc_unused_check(self.root, self.root / "tsconfig.json")
+            tsc_mod.run_tsc_check(self.root, self.root / "tsconfig.json")
         return _other_diagnostics(self.outputs[since])
 
 
