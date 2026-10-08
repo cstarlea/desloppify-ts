@@ -49,20 +49,6 @@ class TestDetectModuleSanity:
 class TestCmdDetect:
     """Test cmd_detect dispatch and validation."""
 
-    def test_no_lang_exits(self, monkeypatch):
-        """When no language is specified, cmd_detect should exit."""
-        monkeypatch.setattr(detect_mod, "resolve_lang", lambda args: None)
-
-        class FakeArgs:
-            detector = "unused"
-            lang = None
-            path = "."
-            threshold = None
-
-        with pytest.raises(CommandError) as exc_info:
-            cmd_detect(FakeArgs())
-        assert exc_info.value.exit_code == 1
-
     def test_unknown_detector_exits(self, monkeypatch):
         """When detector name is invalid for the language, should exit."""
 

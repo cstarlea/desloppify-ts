@@ -16,7 +16,6 @@ from desloppify.app.cli_support.parser_groups import (
     _add_dev_parser,
     _add_exclude_parser,
     _add_autofix_parser,
-    _add_langs_parser,
     _add_move_parser,
     _add_next_parser,
     _add_review_parser,
@@ -56,7 +55,6 @@ improve:
 configure:
   zone       Show/set zone classifications
   config     Project configuration
-  langs      List language plugins
   dev        Developer utilities
   setup         Install bundled global AI skill files
   update-skill  Install/update agent skill document
@@ -94,19 +92,11 @@ def _cli_version_string() -> str:
 
 def create_parser(*, langs: list[str], detector_names: list[str]) -> argparse.ArgumentParser:
     """Build top-level CLI parser with all subcommands."""
-    lang_help = ", ".join(langs) if langs else "registered languages"
-
     parser = _NoAbbrevArgumentParser(
         prog="desloppify",
         description="Desloppify — codebase health tracker",
         epilog=USAGE_EXAMPLES,
         formatter_class=argparse.RawDescriptionHelpFormatter,
-    )
-    parser.add_argument(
-        "--lang",
-        type=str,
-        default=None,
-        help=f"Language to scan ({lang_help}). Auto-detected if omitted.",
     )
     parser.add_argument(
         "--exclude",
@@ -146,7 +136,6 @@ def create_parser(*, langs: list[str], detector_names: list[str]) -> argparse.Ar
     _add_zone_parser(sub)
     _add_config_parser(sub)
     _add_directives_parser(sub)
-    _add_langs_parser(sub)
     _add_dev_parser(sub)
     _add_setup_parser(sub)
     _add_update_skill_parser(sub)

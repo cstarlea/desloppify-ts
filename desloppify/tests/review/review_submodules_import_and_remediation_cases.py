@@ -227,7 +227,7 @@ class TestEmptyPlan:
 
 class TestGenerateRemediationPlan:
     def test_empty_issues(self, empty_state):
-        result = generate_remediation_plan(empty_state, "typescript")
+        result = generate_remediation_plan(empty_state)
         assert "No open holistic issues" in result
 
     def test_with_issues(self, empty_state):
@@ -251,7 +251,7 @@ class TestGenerateRemediationPlan:
         empty_state["objective_score"] = 85.0
         empty_state["strict_score"] = 84.0
         empty_state["potentials"] = {"typescript": {"review": 50}}
-        result = generate_remediation_plan(empty_state, "typescript")
+        result = generate_remediation_plan(empty_state)
         assert "God module detected" in result
         assert "Priority 1" in result
         assert "Evidence" in result
@@ -260,5 +260,5 @@ class TestGenerateRemediationPlan:
     def test_writes_to_file(self, empty_state, tmp_path):
         out = tmp_path / "plan.md"
         with patch("desloppify.intelligence.review._prepare.remediation_engine.safe_write_text") as mock_write:
-            generate_remediation_plan(empty_state, "python", output_path=out)
+            generate_remediation_plan(empty_state, output_path=out)
             mock_write.assert_called_once()

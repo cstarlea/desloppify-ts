@@ -238,7 +238,6 @@ def test_smoke_lang_plugins():
         lang_discovery.raise_load_errors,
         lang_resolution.make_lang_config,
         lang_resolution.get_lang,
-        lang_resolution.auto_detect_lang,
     )
 
     # typescript

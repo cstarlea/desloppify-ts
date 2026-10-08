@@ -91,7 +91,7 @@ def test_run_scan_generation_uses_planning_scan_surface(monkeypatch) -> None:
             {"loc": 10},
         )[1],
     )
-    monkeypatch.setattr(scan_workflow_mod, "warn_explicit_lang_with_no_files", lambda *_a, **_k: None)
+    monkeypatch.setattr(scan_workflow_mod, "warn_no_source_files", lambda *_a, **_k: None)
     monkeypatch.setattr(scan_workflow_mod, "get_exclusions", lambda: [])
     monkeypatch.setattr(scan_workflow_mod, "_augment_stale_wontfix_impl", lambda issues, **_k: (issues, 0))
 

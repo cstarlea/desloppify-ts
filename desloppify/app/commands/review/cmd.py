@@ -74,12 +74,6 @@ def _enable_live_review_output() -> None:
             _ = exc
 
 
-def _require_lang(lang) -> None:
-    if lang:
-        return
-    raise CommandError("Error: could not detect language. Use --lang.", exit_code=1)
-
-
 def _mode_flags(opts: ReviewOptions) -> list[bool]:
     import_mode = bool(opts.import_file) and not opts.external_submit
     return [
@@ -220,7 +214,6 @@ def cmd_review(args: argparse.Namespace) -> None:
     state_file = runtime.state_path
     state = runtime.state
     lang = resolve_lang(args)
-    _require_lang(lang)
 
     opts = ReviewOptions.from_args(args)
     mode_flags = _mode_flags(opts)

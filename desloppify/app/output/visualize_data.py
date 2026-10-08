@@ -9,7 +9,6 @@ from typing import Any
 
 import desloppify.languages.framework as lang_api
 from desloppify.base.discovery.file_paths import rel, resolve_scan_file
-from desloppify.base.discovery.source import find_source_files
 from desloppify.base.output.fallbacks import (
     log_best_effort_failure,
     warn_best_effort,
@@ -17,92 +16,11 @@ from desloppify.base.output.fallbacks import (
 
 logger = logging.getLogger(__name__)
 
-_RECOVERABLE_LANG_RESOLUTION_ERRORS = (
-    ImportError,
-    ValueError,
-    TypeError,
-    AttributeError,
-    OSError,
-    RuntimeError,
-)
-
-
-def _resolve_visualization_lang(path: Path, lang):
-    """Resolve language config for visualization if not already provided."""
-    if lang:
-        return lang
-
-    search_roots = [path if path.is_dir() else path.parent]
-    search_roots.extend(search_roots[0].parents)
-    warned = False
-    for root in search_roots:
-        try:
-            detected = lang_api.auto_detect_lang(root)
-        except _RECOVERABLE_LANG_RESOLUTION_ERRORS as exc:
-            log_best_effort_failure(
-                logger,
-                f"auto-detect visualization language for {root}",
-                exc,
-            )
-            if not warned:
-                warned = True
-                warn_best_effort(
-                    "Could not auto-detect language plugins for visualization; "
-                    f"using fallback source discovery ({type(exc).__name__}: {exc})."
-                )
-            continue
-        if detected:
-            try:
-                return lang_api.get_lang(detected)
-            except _RECOVERABLE_LANG_RESOLUTION_ERRORS as exc:
-                log_best_effort_failure(
-                    logger,
-                    f"load visualization language plugin '{detected}'",
-                    exc,
-                )
-                if not warned:
-                    warned = True
-                    warn_best_effort(
-                        "Visualization language plugin failed to load; using fallback source discovery "
-                        f"({type(exc).__name__}: {exc})."
-                    )
-                continue
-    return None
-
-
-def _fallback_source_files(path: Path) -> list[str]:
-    """Collect source files using extensions from all registered language plugins."""
-    extensions: set[str] = set()
-    warned = False
-    for lang_name in lang_api.available_langs():
-        try:
-            cfg = lang_api.get_lang(lang_name)
-        except _RECOVERABLE_LANG_RESOLUTION_ERRORS as exc:
-            log_best_effort_failure(
-                logger,
-                f"load fallback visualization language plugin '{lang_name}'",
-                exc,
-            )
-            if not warned:
-                warned = True
-                warn_best_effort(
-                    "Some language plugins could not be loaded for visualization fallback; using available plugins only "
-                    f"({type(exc).__name__}: {exc})."
-                )
-            continue
-        extensions.update(cfg.extensions)
-    if not extensions:
-        return []
-    return find_source_files(path, sorted(extensions))
-
 
 def _collect_file_data(path: Path, lang=None) -> list[dict]:
     """Collect LOC for all source files using the language's file finder."""
-    resolved_lang = _resolve_visualization_lang(path, lang)
-    if resolved_lang and resolved_lang.file_finder:
-        source_files = resolved_lang.file_finder(path)
-    else:
-        source_files = _fallback_source_files(path)
+    resolved_lang = lang or lang_api.default_lang()
+    source_files = resolved_lang.file_finder(path)
     files = []
     warned_read_failure = False
     for filepath in source_files:
@@ -182,7 +100,7 @@ def _build_tree(files: list[dict], dep_graph: dict, issues_by_file: dict) -> dic
 
 def _build_dep_graph_for_path(path: Path, lang) -> dict:
     """Build dependency graph using the resolved language plugin."""
-    resolved_lang = _resolve_visualization_lang(path, lang)
+    resolved_lang = lang or lang_api.default_lang()
     if resolved_lang and resolved_lang.build_dep_graph:
         try:
             return resolved_lang.build_dep_graph(path)
@@ -214,7 +132,5 @@ __all__ = [
     "_build_dep_graph_for_path",
     "_build_tree",
     "_collect_file_data",
-    "_fallback_source_files",
     "_issues_by_file",
-    "_resolve_visualization_lang",
 ]

@@ -601,17 +601,14 @@ def do_import_run(
 
     # -- optional follow-up scan --
     if scan_after_import and not dry_run:
-        lang_name = getattr(lang, "name", None) or str(getattr(lang, "lang", ""))
-        if lang_name:
-            run_followup_scan(
-                lang_name=lang_name,
-                scan_path=scan_path,
-                deps=FollowupScanDeps(
-                    project_root=Path(state_file).parent.parent,
-                    timeout_seconds=FOLLOWUP_SCAN_TIMEOUT_SECONDS,
-                    python_executable=sys.executable,
-                    subprocess_run=subprocess.run,
-                    timeout_error=subprocess.TimeoutExpired,
-                    colorize_fn=colorize,
-                ),
-            )
+        run_followup_scan(
+            scan_path=scan_path,
+            deps=FollowupScanDeps(
+                project_root=Path(state_file).parent.parent,
+                timeout_seconds=FOLLOWUP_SCAN_TIMEOUT_SECONDS,
+                python_executable=sys.executable,
+                subprocess_run=subprocess.run,
+                timeout_error=subprocess.TimeoutExpired,
+                colorize_fn=colorize,
+            ),
+        )

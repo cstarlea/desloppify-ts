@@ -5,7 +5,6 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-from desloppify.languages import framework as lang_api
 from desloppify import state as state_mod
 from desloppify.base.discovery.source import (
     DEFAULT_EXCLUSIONS,
@@ -149,35 +148,13 @@ def _format_hidden_by_detector(hidden_by_detector: dict[str, int]) -> str:
     return ", ".join(f"{det}: +{count}" for det, count in hidden_by_detector.items())
 
 
-def warn_explicit_lang_with_no_files(
-    args, lang, path: Path, metrics: dict | None
-) -> None:
-    """Warn when user explicitly selected a language but scan found zero files."""
-    explicit_lang = getattr(args, "lang", None)
-    if not explicit_lang or not lang or not metrics:
+def warn_no_source_files(lang, path: Path, metrics: dict | None) -> None:
+    """Warn when the scan found no TypeScript or JavaScript files."""
+    if not lang or not metrics or metrics.get("total_files", 0) > 0:
         return
-    if metrics.get("total_files", 0) > 0:
-        return
-
-    suggestion = " Omit `--lang` to auto-detect."
-    root = path if path.is_dir() else path.parent
-    try:
-        detected = lang_api.auto_detect_lang(root)
-    except ValueError as exc:
-        detected = None
-        logger.debug(
-            "Auto-detect failed while warning for explicit lang on %s: %s", root, exc
-        )
-    else:
-        if detected and detected != lang.name:
-            suggestion = (
-                f" Detected `{detected}` for this path — use `--lang {detected}` "
-                "or omit `--lang`."
-            )
-
     print(
         colorize(
-            f"  ⚠ No {lang.name} source files found under `{path}`.{suggestion}",
+            f"  ⚠ No TypeScript or JavaScript source files found under `{path}`.",
             "yellow",
         )
     )
@@ -198,5 +175,5 @@ __all__ = [
     "format_delta",
     "_format_hidden_by_detector",
     "resolve_scan_profile",
-    "warn_explicit_lang_with_no_files",
+    "warn_no_source_files",
 ]

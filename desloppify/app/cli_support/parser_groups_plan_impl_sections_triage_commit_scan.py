@@ -188,7 +188,7 @@ def _add_repair_state_subparser(plan_sub) -> None:
         epilog="""\
 examples:
   desloppify plan repair-state
-  desloppify plan repair-state --state .desloppify/state-typescript.json""",
+  desloppify plan repair-state --state .desloppify/state.json""",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
 

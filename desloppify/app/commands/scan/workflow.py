@@ -31,7 +31,7 @@ from desloppify.app.commands.scan.helpers import (
     collect_codebase_metrics,
     effective_include_slow,
     resolve_scan_profile,
-    warn_explicit_lang_with_no_files,
+    warn_no_source_files,
 )
 from desloppify.app.commands.scan.wontfix import (
     augment_with_stale_wontfix_issues as _augment_stale_wontfix_impl,
@@ -410,9 +410,7 @@ def run_scan_generation(
             runtime.path,
             files=scanned_files,
         )
-        warn_explicit_lang_with_no_files(
-            runtime.args, runtime.lang, runtime.path, codebase_metrics
-        )
+        warn_no_source_files(runtime.lang, runtime.path, codebase_metrics)
         issues = _augment_with_stale_exclusion_issues(
             issues,
             runtime,

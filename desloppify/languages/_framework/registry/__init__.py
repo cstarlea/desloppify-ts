@@ -6,7 +6,7 @@ from .registration import (
     register_lang_class,
     register_lang_class_with,
 )
-from .resolution import auto_detect_lang, available_langs, get_lang, make_lang_config
+from .resolution import available_langs, get_lang, make_lang_config
 from .state import (
     all_items,
     all_keys,
@@ -29,7 +29,6 @@ from .state import (
 __all__ = [
     "all_items",
     "all_keys",
-    "auto_detect_lang",
     "available_langs",
     "clear",
     "clear_hooks",

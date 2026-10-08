@@ -26,13 +26,19 @@ from desloppify.languages._framework.runtime_support.runtime import (
     make_lang_run,
 )
 from desloppify.languages._framework.registry.resolution import (
-    auto_detect_lang,
     available_langs,
     get_lang,
     make_lang_config,
 )
 
 load_all = _discovery_mod.load_all
+
+DEFAULT_LANG = "typescript"
+
+
+def default_lang() -> LangConfig:
+    """The TypeScript language config (the only language plugin)."""
+    return get_lang(DEFAULT_LANG)
 
 
 def enable_parse_cache() -> None:
@@ -113,6 +119,7 @@ def clear_review_phase_prefetch(lang) -> None:
 
 __all__ = [
     "BoundaryRule",
+    "DEFAULT_LANG",
     "LangConfig",
     "LangRun",
     "LangRunOverrides",
@@ -123,9 +130,9 @@ __all__ = [
     "LangRuntimeContract",
     "LangSecurityResult",
     "ScanCoverageRecord",
-    "auto_detect_lang",
     "available_langs",
     "clear_review_phase_prefetch",
+    "default_lang",
     "disable_parse_cache",
     "enable_parse_cache",
     "get_lang",

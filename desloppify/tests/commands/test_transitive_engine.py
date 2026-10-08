@@ -582,50 +582,7 @@ class TestPlanAndVizParsers:
         assert args.output == "out.html"
 
 
-class TestDevParser:
-    def test_dev_scaffold_lang_defaults(self):
-        parser = argparse.ArgumentParser()
-        sub = parser.add_subparsers(dest="command")
-        parser_admin_mod._add_dev_parser(sub)
-
-        args = parser.parse_args(["dev", "scaffold-lang", "go"])
-        assert args.name == "go"
-        assert args.default_src == "src"
-        assert args.force is False
-        assert args.wire_pyproject is True
-        assert args.extension is None
-        assert args.marker is None
-
-    def test_dev_scaffold_lang_all_flags(self):
-        parser = argparse.ArgumentParser()
-        sub = parser.add_subparsers(dest="command")
-        parser_admin_mod._add_dev_parser(sub)
-
-        args = parser.parse_args([
-            "dev", "scaffold-lang", "go",
-            "--extension", ".go",
-            "--extension", ".gomod",
-            "--marker", "go.mod",
-            "--default-src", ".",
-            "--force",
-            "--no-wire-pyproject",
-        ])
-        assert args.extension == [".go", ".gomod"]
-        assert args.marker == ["go.mod"]
-        assert args.default_src == "."
-        assert args.force is True
-        assert args.wire_pyproject is False
-
-
-class TestLangsAndUpdateSkillParsers:
-    def test_langs_parser(self):
-        parser = argparse.ArgumentParser()
-        sub = parser.add_subparsers(dest="command")
-        parser_admin_mod._add_langs_parser(sub)
-
-        args = parser.parse_args(["langs"])
-        assert args.command == "langs"
-
+class TestUpdateSkillParser:
     def test_update_skill_parser_no_interface(self):
         parser = argparse.ArgumentParser()
         sub = parser.add_subparsers(dest="command")

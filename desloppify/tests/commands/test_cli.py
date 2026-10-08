@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
 
-import desloppify.app.commands.helpers.lang as lang_helpers_mod
 import desloppify.cli as cli_mod
 from desloppify.app.commands.helpers.lang import resolve_lang, resolve_lang_settings
 from desloppify.app.commands.helpers.runtime_options import (
@@ -23,6 +23,7 @@ from desloppify.cli import (
     create_parser,
     state_path,
 )
+from desloppify.base.runtime_state import RuntimeContext, runtime_scope
 from desloppify.languages._framework.base.types_shared import LangValueSpec
 from desloppify.languages.typescript import TypeScriptConfig
 
@@ -147,11 +148,7 @@ class TestCreateParser:
         with pytest.raises(SystemExit):
             parser.parse_args(["scan", "--roslyn-cmd", "legacy"])
 
-    def test_scan_with_lang(self, parser):
-        args = parser.parse_args(["--lang", "python", "scan"])
-        assert args.lang == "python"
-
-    def test_scan_rejects_subcommand_lang_position(self, parser, capsys):
+    def test_scan_rejects_lang_flag(self, parser, capsys):
         with pytest.raises(SystemExit):
             parser.parse_args(["scan", "--lang", "python"])
         err = capsys.readouterr().err
@@ -513,38 +510,6 @@ class TestCreateParser:
         assert args.zone_action == "clear"
         assert args.zone_path == "src/foo.py"
 
-    def test_dev_scaffold_lang(self, parser):
-        args = parser.parse_args(
-            [
-                "dev",
-                "scaffold-lang",
-                "ruby",
-                "--extension",
-                ".rb",
-                "--extension",
-                ".rake",
-                "--marker",
-                "Gemfile",
-                "--default-src",
-                "lib",
-                "--force",
-            ]
-        )
-        assert args.command == "dev"
-        assert args.dev_action == "scaffold-lang"
-        assert args.name == "ruby"
-        assert args.extension == [".rb", ".rake"]
-        assert args.marker == ["Gemfile"]
-        assert args.default_src == "lib"
-        assert args.force is True
-        assert args.wire_pyproject is True
-
-    def test_dev_scaffold_lang_no_wire_pyproject(self, parser):
-        args = parser.parse_args(
-            ["dev", "scaffold-lang", "go", "--extension", ".go", "--no-wire-pyproject"]
-        )
-        assert args.wire_pyproject is False
-
     def test_dev_requires_action(self, parser):
         with pytest.raises(SystemExit):
             parser.parse_args(["dev"])
@@ -610,101 +575,34 @@ class TestDetectorNames:
 
 
 class TestStatePath:
-    def test_auto_detects_lang_when_no_state_or_lang(self):
-        """state_path auto-detects language and returns lang-specific path."""
-        args = SimpleNamespace()
-        # When auto_detect_lang finds a language, state_path returns lang-specific path
-        with patch("desloppify.app.commands.helpers.state.auto_detect_lang_name", return_value="python"):
-            result = state_path(args)
-            assert result is not None
-            assert "state-python.json" in str(result)
-        # When auto_detect_lang finds nothing, state_path returns None
-        with patch("desloppify.app.commands.helpers.state.auto_detect_lang_name", return_value=None), \
-             patch("desloppify.app.commands.helpers.state._sole_existing_lang_state_file", return_value=None):
-            result = state_path(args)
-            assert result is None
-
     def test_returns_explicit_state_path(self):
         args = SimpleNamespace(state="/tmp/custom.json")
-        result = state_path(args)
-        assert result == Path("/tmp/custom.json")
+        assert state_path(args) == Path("/tmp/custom.json")
 
-    def test_returns_lang_based_path_when_lang_set(self):
-        args = SimpleNamespace(lang="python")
-        result = state_path(args)
-        assert result is not None
-        assert "state-python.json" in str(result)
-        assert ".desloppify" in str(result)
+    def test_defaults_to_state_json(self, tmp_path):
+        with runtime_scope(RuntimeContext(project_root=tmp_path)):
+            result = state_path(SimpleNamespace(state=None))
+        assert result == tmp_path / ".desloppify" / "state.json"
 
-    def test_explicit_state_takes_precedence_over_lang(self):
-        args = SimpleNamespace(state="/tmp/override.json", lang="python")
-        result = state_path(args)
-        assert result == Path("/tmp/override.json")
-
-    def test_non_scan_falls_back_to_sole_existing_lang_state(
-        self, monkeypatch, tmp_path
-    ):
+    def test_adopts_legacy_typescript_state(self, tmp_path):
         state_dir = tmp_path / ".desloppify"
         state_dir.mkdir()
-        existing = state_dir / "state-typescript.json"
-        existing.write_text("{}")
-        monkeypatch.setattr(
-            "desloppify.app.commands.helpers.state.get_project_root",
-            lambda: tmp_path,
-        )
+        (state_dir / "state-typescript.json").write_text('{"scan_count": 3}')
+        with runtime_scope(RuntimeContext(project_root=tmp_path)):
+            result = state_path(SimpleNamespace(state=None))
+        assert result == state_dir / "state.json"
+        assert json.loads(result.read_text()) == {"scan_count": 3}
+        assert not (state_dir / "state-typescript.json").exists()
 
-        args = SimpleNamespace(state=None, lang="python", command="status")
-        result = state_path(args)
-        assert result == existing
-
-    def test_scan_does_not_fallback_to_other_lang_state(self, monkeypatch, tmp_path):
+    def test_existing_state_json_is_not_replaced(self, tmp_path):
         state_dir = tmp_path / ".desloppify"
         state_dir.mkdir()
-        (state_dir / "state-typescript.json").write_text("{}")
-        monkeypatch.setattr(
-            "desloppify.app.commands.helpers.state.get_project_root",
-            lambda: tmp_path,
-        )
-
-        args = SimpleNamespace(state=None, lang="python", command="scan")
-        result = state_path(args)
-        assert result == state_dir / "state-python.json"
-
-    def test_non_scan_without_lang_uses_sole_existing_state(
-        self, monkeypatch, tmp_path
-    ):
-        state_dir = tmp_path / ".desloppify"
-        state_dir.mkdir()
-        existing = state_dir / "state-python.json"
-        existing.write_text("{}")
-        monkeypatch.setattr(
-            "desloppify.app.commands.helpers.state.get_project_root",
-            lambda: tmp_path,
-        )
-        monkeypatch.setattr(
-            "desloppify.app.commands.helpers.state.auto_detect_lang_name",
-            lambda _args: None,
-        )
-
-        args = SimpleNamespace(state=None, lang=None, command="status")
-        result = state_path(args)
-        assert result == existing
-
-    def test_non_scan_with_ambiguous_existing_states_keeps_resolved_lang_path(
-        self, monkeypatch, tmp_path
-    ):
-        state_dir = tmp_path / ".desloppify"
-        state_dir.mkdir()
-        (state_dir / "state-python.json").write_text("{}")
-        (state_dir / "state-typescript.json").write_text("{}")
-        monkeypatch.setattr(
-            "desloppify.app.commands.helpers.state.get_project_root",
-            lambda: tmp_path,
-        )
-
-        args = SimpleNamespace(state=None, lang="csharp", command="status")
-        result = state_path(args)
-        assert result == state_dir / "state-csharp.json"
+        (state_dir / "state.json").write_text('{"scan_count": 1}')
+        (state_dir / "state-typescript.json").write_text('{"scan_count": 3}')
+        with runtime_scope(RuntimeContext(project_root=tmp_path)):
+            result = state_path(SimpleNamespace(state=None))
+        assert json.loads(result.read_text()) == {"scan_count": 1}
+        assert (state_dir / "state-typescript.json").exists()
 
 
 class TestResolveDefaultPath:
@@ -724,10 +622,6 @@ class TestResolveDefaultPath:
         saved_state = {"scan_path": "."}  # scan was run with --path .
 
         monkeypatch.setattr(cli_mod, "get_project_root", lambda: project_root)
-        monkeypatch.setattr(
-            "desloppify.app.commands.helpers.state.get_project_root",
-            lambda: project_root,
-        )
 
         with (
             patch("desloppify.cli.state_path", return_value=tmp_path / "state.json"),
@@ -787,141 +681,9 @@ class TestResolveDefaultPath:
 
 
 class TestResolveLang:
-    def test_prefers_explicit_lang(self):
-        args = SimpleNamespace(lang="typescript", path="/tmp/somewhere")
-        lang = resolve_lang(args)
-        assert lang is not None
+    def test_always_typescript(self, tmp_path):
+        lang = resolve_lang(SimpleNamespace(path=str(tmp_path)))
         assert lang.name == "typescript"
-
-    def test_auto_detect_uses_path_when_it_looks_like_project_root(
-        self, tmp_path, monkeypatch
-    ):
-        # CWD-style project root is javascript.
-        cwd_root = tmp_path / "cwd_project"
-        cwd_root.mkdir()
-        (cwd_root / "package.json").write_text('{"name": "cwd"}\n')
-        js_src = cwd_root / "src"
-        js_src.mkdir()
-        (js_src / "main.js").write_text("console.log('x')\n")
-
-        # Target --path root is typescript.
-        target_root = tmp_path / "target_project"
-        target_root.mkdir()
-        (target_root / "package.json").write_text('{"name": "target"}\n')
-        ts_src = target_root / "src"
-        ts_src.mkdir()
-        (ts_src / "index.ts").write_text("export const x = 1\n")
-
-        monkeypatch.setattr(lang_helpers_mod, "get_project_root", lambda: cwd_root)
-        args = SimpleNamespace(lang=None, path=str(target_root))
-        lang = resolve_lang(args)
-        assert lang is not None
-        assert lang.name == "typescript"
-
-    def test_auto_detect_falls_back_to_project_root_for_subdir_path(
-        self, tmp_path, monkeypatch
-    ):
-        root = tmp_path / "project"
-        root.mkdir()
-        (root / "package.json").write_text('{"name": "project"}\n')
-        src = root / "src"
-        src.mkdir()
-        (src / "main.js").write_text("console.log('x')\n")
-
-        monkeypatch.setattr(lang_helpers_mod, "get_project_root", lambda: root)
-        args = SimpleNamespace(lang=None, path=str(src))
-        lang = resolve_lang(args)
-        assert lang is not None
-        assert lang.name == "typescript"
-
-    def test_auto_detect_walks_up_from_external_subdir_path(
-        self, tmp_path, monkeypatch
-    ):
-        # CWD-style project root is javascript.
-        cwd_root = tmp_path / "cwd_project"
-        cwd_root.mkdir()
-        (cwd_root / "package.json").write_text('{"name": "cwd"}\n')
-        (cwd_root / "local.js").write_text("console.log('local')\n")
-
-        # External target is typescript, and --path points to target/src.
-        target_root = tmp_path / "target_project"
-        target_root.mkdir()
-        (target_root / "package.json").write_text('{"name":"target"}\n')
-        target_src = target_root / "src"
-        target_src.mkdir()
-        (target_src / "index.ts").write_text("export const x = 1\n")
-
-        monkeypatch.setattr(lang_helpers_mod, "get_project_root", lambda: cwd_root)
-        args = SimpleNamespace(lang=None, path=str(target_src))
-        lang = resolve_lang(args)
-        assert lang is not None
-        assert lang.name == "typescript"
-
-    def test_lang_config_markers_include_plugin_markers(self, monkeypatch):
-        class DummyCfg:
-            detect_markers = ["deno.json", "custom.lock"]
-
-        monkeypatch.setattr("desloppify.languages.framework.available_langs", lambda: ["dummy"])
-        monkeypatch.setattr("desloppify.languages.framework.get_lang", lambda _name: DummyCfg())
-
-        markers = lang_helpers_mod._lang_config_markers()
-        assert "deno.json" in markers
-        assert "custom.lock" in markers
-
-    def test_lang_config_markers_skips_broken_plugin(self, monkeypatch):
-        monkeypatch.setattr("desloppify.languages.framework.available_langs", lambda: ["dummy"])
-        monkeypatch.setattr(
-            "desloppify.languages.framework.get_lang",
-            lambda _name: (_ for _ in ()).throw(ImportError("broken plugin")),
-        )
-
-        markers = lang_helpers_mod._lang_config_markers()
-        assert "deno.json" not in markers
-        assert "custom.lock" not in markers
-
-    def test_lang_config_markers_refresh_after_plugin_change(self, monkeypatch):
-        class FirstCfg:
-            detect_markers = ["deno.json"]
-
-        class SecondCfg:
-            detect_markers = ["bun.lockb"]
-
-        current_cfg = FirstCfg
-
-        monkeypatch.setattr("desloppify.languages.framework.available_langs", lambda: ["dummy"])
-        monkeypatch.setattr(
-            "desloppify.languages.framework.get_lang",
-            lambda _name: current_cfg(),
-        )
-
-        first_markers = lang_helpers_mod._lang_config_markers()
-        assert "deno.json" in first_markers
-        assert "bun.lockb" not in first_markers
-
-        current_cfg = SecondCfg
-        second_markers = lang_helpers_mod._lang_config_markers()
-        assert "bun.lockb" in second_markers
-        assert "deno.json" not in second_markers
-
-    def test_resolve_detection_root_uses_plugin_marker(self, tmp_path, monkeypatch):
-        cwd_root = tmp_path / "cwd_project"
-        cwd_root.mkdir()
-        (cwd_root / "pyproject.toml").write_text("[tool.pytest]\n")
-
-        target_root = tmp_path / "target_project"
-        target_root.mkdir()
-        (target_root / "deno.json").write_text("{}\n")
-        target_src = target_root / "src"
-        target_src.mkdir()
-
-        monkeypatch.setattr(lang_helpers_mod, "get_project_root", lambda: cwd_root)
-        monkeypatch.setattr(
-            lang_helpers_mod, "_lang_config_markers", lambda: ("deno.json",)
-        )
-
-        args = SimpleNamespace(path=str(target_src))
-        resolved = lang_helpers_mod.resolve_detection_root(args)
-        assert resolved == target_root
 
 
 # ===========================================================================
@@ -1043,3 +805,15 @@ class TestProjectRootFromScanPath:
         target = tmp_path / "app" / "main.ts"
         target.write_text("export {};\n")
         assert _project_root_from_scan_path(target, tmp_path / "cwd") == tmp_path / "app"
+
+
+class TestRemovedLangFlag:
+    @pytest.mark.parametrize("argv", [["--lang", "typescript", "scan"], ["scan", "--lang=python"]])
+    def test_explains_removal(self, argv, capsys):
+        with pytest.raises(SystemExit) as exc:
+            cli_mod._reject_removed_lang_flag(argv)
+        assert exc.value.code == 2
+        assert "--lang was removed" in capsys.readouterr().err
+
+    def test_ignores_lang_opt_and_args_after_separator(self):
+        cli_mod._reject_removed_lang_flag(["scan", "--lang-opt", "tsc_cmd=x", "--", "--lang"])

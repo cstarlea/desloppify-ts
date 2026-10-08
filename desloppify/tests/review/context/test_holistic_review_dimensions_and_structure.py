@@ -121,7 +121,7 @@ class TestGenerateRemediationPlan:
             ),
         )
 
-        plan = generate_remediation_plan(state, "python")
+        plan = generate_remediation_plan(state)
 
         assert "# Holistic Review: Remediation Plan" in plan
         assert "God module found" in plan
@@ -145,7 +145,7 @@ class TestGenerateRemediationPlan:
             ),
         )
 
-        plan = generate_remediation_plan(state, "python")
+        plan = generate_remediation_plan(state)
 
         # High confidence should come first (Priority 1)
         high_pos = plan.index("High impact thing")
@@ -162,7 +162,7 @@ class TestGenerateRemediationPlan:
             ),
         )
 
-        plan = generate_remediation_plan(state, "python")
+        plan = generate_remediation_plan(state)
 
         # Should show estimated impact in pts
         assert "pts" in plan
@@ -173,7 +173,7 @@ class TestGenerateRemediationPlan:
             (fid, "high", "cross_module_architecture", "Issue X"),
         )
 
-        plan = generate_remediation_plan(state, "python")
+        plan = generate_remediation_plan(state)
 
         assert f'resolve fixed "{fid}"' in plan
 
@@ -187,7 +187,7 @@ class TestGenerateRemediationPlan:
             ),
         )
 
-        plan = generate_remediation_plan(state, "python")
+        plan = generate_remediation_plan(state)
 
         assert "`src/a.py`" in plan
         assert "`src/b.py`" in plan
@@ -202,7 +202,7 @@ class TestGenerateRemediationPlan:
             ),
         )
 
-        plan = generate_remediation_plan(state, "python")
+        plan = generate_remediation_plan(state)
 
         assert "Re-evaluate" in plan
         assert "review --prepare" in plan
@@ -218,7 +218,7 @@ class TestGenerateRemediationPlan:
             ),
         )
 
-        plan = generate_remediation_plan(state, "python")
+        plan = generate_remediation_plan(state)
 
         assert "How to use this plan" in plan
         assert "priority order" in plan
@@ -227,7 +227,7 @@ class TestGenerateRemediationPlan:
         state = empty_state()
         state["objective_score"] = 95.0
 
-        plan = generate_remediation_plan(state, "python")
+        plan = generate_remediation_plan(state)
 
         assert "No open holistic issues" in plan
         assert "95.0/100" in plan
@@ -252,7 +252,7 @@ class TestGenerateRemediationPlan:
             "summary": "Resolved issue",
         }
 
-        plan = generate_remediation_plan(state, "python")
+        plan = generate_remediation_plan(state)
 
         assert "Open one" in plan
         assert "Resolved issue" not in plan
@@ -268,13 +268,13 @@ class TestGenerateRemediationPlan:
         )
         output = tmp_path / "plan.md"
 
-        plan = generate_remediation_plan(state, "python", output_path=output)
+        plan = generate_remediation_plan(state, output_path=output)
 
         assert output.exists()
         assert output.read_text() == plan
         assert "Issue" in output.read_text()
 
-    def test_lang_name_in_commands(self):
+    def test_commands_take_no_lang_flag(self):
         state = _state_with_holistic_issues(
             (
                 "review::.::holistic::arch::abc",
@@ -284,9 +284,10 @@ class TestGenerateRemediationPlan:
             ),
         )
 
-        plan = generate_remediation_plan(state, "typescript")
+        plan = generate_remediation_plan(state)
 
-        assert "--lang typescript" in plan
+        assert "desloppify review --prepare" in plan
+        assert "--lang" not in plan
 
 
 # ===================================================================

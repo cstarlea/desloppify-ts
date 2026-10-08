@@ -27,8 +27,8 @@ Three phases, repeated as a cycle.
 If the workspace contains multiple programs (e.g., frontend + backend in sibling folders), scan each one separately — do not scan the parent directory:
 
 ```bash
-desloppify --lang typescript scan --path ./frontend
-desloppify --lang python scan --path ./backend
+desloppify scan --path ./web
+desloppify scan --path ./admin
 ```
 
 Each `--path` target should be a single coherent project. Scanning a parent that contains multiple programs mixes state and path context, producing unreliable results.

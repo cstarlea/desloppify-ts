@@ -214,7 +214,6 @@ def run_codex_batch(
 
 def run_followup_scan(
     *,
-    lang_name: str,
     scan_path: str,
     deps: FollowupScanDeps,
     force_queue_bypass: bool = False,
@@ -224,8 +223,6 @@ def run_followup_scan(
         deps.python_executable,
         "-m",
         "desloppify",
-        "--lang",
-        lang_name,
         "scan",
         "--path",
         scan_path,

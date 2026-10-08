@@ -7,13 +7,11 @@ import pytest
 import desloppify.app.commands.scan.artifacts as scan_artifacts_mod
 import desloppify.app.commands.scan.cmd as scan_cmd_mod
 import desloppify.app.commands.scan.preflight as scan_preflight_mod
-import desloppify.languages as lang_mod
 from desloppify.app.commands.scan.helpers import (
     audit_excluded_dirs,
     collect_codebase_metrics,
     effective_include_slow,
     resolve_scan_profile,
-    warn_explicit_lang_with_no_files,
     format_delta,
 )
 from desloppify.app.commands.scan.reporting.summary import (
@@ -42,7 +40,6 @@ class TestScanModuleSanity:
         assert callable(collect_codebase_metrics)
         assert callable(format_delta)
         assert callable(show_diff_summary)
-        assert callable(warn_explicit_lang_with_no_files)
 
 
 class TestCmdScanExecution:
@@ -137,23 +134,6 @@ class TestCmdScanExecution:
 
         assert captured["query"] == {"command": "scan", "ok": True}
         assert captured["llm_summary_called"] is True
-
-    def test_cmd_scan_by_language_runs_each_detected_language(self, monkeypatch):
-        calls: list[str] = []
-
-        monkeypatch.setattr(scan_cmd_mod, "detect_present_languages", lambda _path: ["python", "rust"])
-
-        def _single_scan(args):
-            calls.append(args.lang)
-
-        monkeypatch.setattr(scan_cmd_mod, "_cmd_scan_by_language", scan_cmd_mod._cmd_scan_by_language)
-        monkeypatch.setattr(scan_cmd_mod, "cmd_scan", _single_scan)
-
-        scan_cmd_mod._cmd_scan_by_language(
-            SimpleNamespace(path=".", by_language=True, lang=None, state="custom.json")
-        )
-
-        assert calls == ["python", "rust"]
 
     def test_cmd_scan_prints_coverage_preflight_warning(self, monkeypatch, capsys):
         monkeypatch.setattr(scan_preflight_mod, "scan_queue_preflight", lambda _: None)
@@ -560,55 +540,6 @@ class TestCollectCodebaseMetrics:
         assert result is not None
         assert result["total_files"] == 1
         assert result["total_loc"] == 2
-
-
-# ---------------------------------------------------------------------------
-# warn_explicit_lang_with_no_files
-# ---------------------------------------------------------------------------
-
-
-class TestWarnExplicitLangWithNoFiles:
-    def test_warns_for_explicit_lang_when_zero_files(
-        self, monkeypatch, capsys, tmp_path
-    ):
-        class FakeArgs:
-            lang = "typescript"
-
-        class FakeLang:
-            name = "typescript"
-
-        monkeypatch.setattr(lang_mod, "auto_detect_lang", lambda _root: "python")
-
-        warn_explicit_lang_with_no_files(
-            FakeArgs(), FakeLang(), tmp_path, {"total_files": 0}
-        )
-        out = capsys.readouterr().out
-        assert "No typescript source files found" in out
-        assert "Omit `--lang` to auto-detect." in out
-
-    def test_no_warning_when_not_explicit(self, capsys, tmp_path):
-        class FakeArgs:
-            lang = None
-
-        class FakeLang:
-            name = "typescript"
-
-        warn_explicit_lang_with_no_files(
-            FakeArgs(), FakeLang(), tmp_path, {"total_files": 0}
-        )
-        assert capsys.readouterr().out == ""
-
-    def test_no_warning_when_files_present(self, capsys, tmp_path):
-        class FakeArgs:
-            lang = "typescript"
-
-        class FakeLang:
-            name = "typescript"
-
-        warn_explicit_lang_with_no_files(
-            FakeArgs(), FakeLang(), tmp_path, {"total_files": 5}
-        )
-        assert capsys.readouterr().out == ""
 
 
 # ---------------------------------------------------------------------------

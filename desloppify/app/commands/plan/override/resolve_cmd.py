@@ -104,7 +104,6 @@ def cmd_plan_resolve(args: argparse.Namespace) -> None:
         confirm_batch_wontfix=False,
         force_resolve=bool(getattr(args, "force_resolve", False)),
         state=getattr(args, "state", None),
-        lang=getattr(args, "lang", None),
         path=getattr(args, "path", None),
         exclude=getattr(args, "exclude", None),
     )

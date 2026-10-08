@@ -665,21 +665,6 @@ class TestCmdReviewEntrypoint:
             cmd_review(args)
         assert exc_info.value.exit_code == 2
 
-    @patch("desloppify.app.commands.review.cmd.resolve_lang", return_value=None)
-    @patch("desloppify.app.commands.review.cmd.command_runtime")
-    def test_exits_when_no_lang(self, mock_runtime, mock_resolve_lang):
-        """When resolve_lang returns None, raises CommandError."""
-        rt = MagicMock()
-        rt.state = {"issues": {}}
-        rt.state_path = "/tmp/state.json"
-        rt.config = {}
-        mock_runtime.return_value = rt
-        args = argparse.Namespace()
-
-        with pytest.raises(CommandError) as exc_info:
-            cmd_review(args)
-        assert exc_info.value.exit_code == 1
-
 
 # ── 6. update_skill.py ──────────────────────────────────────────────────────
 

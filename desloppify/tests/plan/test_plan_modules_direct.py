@@ -186,15 +186,12 @@ def test_generate_issues_from_lang_filters_zone_skipped_phase_output(monkeypatch
     assert potentials == {"smells": 2, "structural": 1, "unused": 1}
 
 
-def test_resolve_lang_prefers_explicit_and_fallbacks(monkeypatch):
+def test_resolve_lang_prefers_explicit_and_defaults_to_typescript(monkeypatch):
     explicit = object()
-    assert plan_scan_mod._resolve_lang(explicit, Path(".")) is explicit
+    assert plan_scan_mod._resolve_lang(explicit) is explicit
 
-    monkeypatch.setattr(plan_scan_mod, "auto_detect_lang", lambda _root: None)
-    monkeypatch.setattr(plan_scan_mod, "available_langs", lambda: ["python", "typescript"])
-    monkeypatch.setattr(plan_scan_mod, "get_lang", lambda name: f"cfg:{name}")
-    resolved = plan_scan_mod._resolve_lang(None, Path("."))
-    assert resolved == "cfg:python"
+    monkeypatch.setattr(plan_scan_mod, "default_lang", lambda: "cfg:typescript")
+    assert plan_scan_mod._resolve_lang(None) == "cfg:typescript"
 
 
 def test_get_next_items_orders_by_tier_confidence_and_count():

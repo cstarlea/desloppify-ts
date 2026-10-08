@@ -107,10 +107,10 @@ def test_remediation_empty_plan_renders_scores_block():
         "version": 1,
         "created": "2026-01-01T00:00:00+00:00",
     }
-    content = render_empty_remediation_plan(state, "python")
+    content = render_empty_remediation_plan(state)
     assert "Holistic Review: Remediation Plan" in content
     assert (
-        "desloppify --lang python review --prepare --path <src>" in content
+        "desloppify review --prepare --path <src>" in content
     )
 
 

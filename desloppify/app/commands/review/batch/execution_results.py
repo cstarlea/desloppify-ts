@@ -205,7 +205,6 @@ def import_and_finalize(
 
     if getattr(args, "scan_after_import", False):
         followup_code = run_followup_scan_fn(
-            lang_name=lang.name,
             scan_path=str(args.path),
         )
         if followup_code != 0:

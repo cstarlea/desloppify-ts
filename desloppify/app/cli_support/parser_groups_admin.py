@@ -153,47 +153,7 @@ def _add_viz_parser(sub) -> None:
 def _add_dev_parser(sub) -> None:
     p_dev = sub.add_parser("dev", help="Developer utilities")
     dev_sub = p_dev.add_subparsers(dest="dev_action", required=True)
-    d_scaffold = dev_sub.add_parser(
-        "scaffold-lang", help="Generate a standardized language plugin scaffold"
-    )
-    d_scaffold.add_argument("name", type=str, help="Language name (snake_case)")
-    d_scaffold.add_argument(
-        "--extension",
-        action="append",
-        default=None,
-        metavar="EXT",
-        help="Source file extension (repeatable, e.g. --extension .go --extension .gomod)",
-    )
-    d_scaffold.add_argument(
-        "--marker",
-        action="append",
-        default=None,
-        metavar="FILE",
-        help="Project-root detection marker file (repeatable)",
-    )
-    d_scaffold.add_argument(
-        "--default-src",
-        type=str,
-        default="src",
-        metavar="DIR",
-        help="Default source directory for scans (default: src)",
-    )
-    d_scaffold.add_argument(
-        "--force", action="store_true", help="Overwrite existing scaffold files"
-    )
-    d_scaffold.add_argument(
-        "--no-wire-pyproject",
-        dest="wire_pyproject",
-        action="store_false",
-        help="Do not edit pyproject.toml testpaths array",
-    )
-    d_scaffold.set_defaults(wire_pyproject=True)
-
     dev_sub.add_parser("test-hermes", help="Test Hermes model switching (switch and switch back)")
-
-
-def _add_langs_parser(sub) -> None:
-    sub.add_parser("langs", help="List all available language plugins with depth and tools")
 
 
 def _add_update_skill_parser(sub) -> None:
