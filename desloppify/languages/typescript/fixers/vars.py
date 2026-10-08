@@ -35,7 +35,16 @@ from desloppify.languages.typescript.syntax.tree import (
 
 from .edits import apply_edits, byte_offset, comma_list_edits, whole_statement_range
 from .fixer_io import apply_fixer
-from .nodes import FUNCTIONS, NameIndex, is_parameter, node_key, same, within
+from .nodes import (
+    FUNCTIONS,
+    STATEMENT_PARENTS,
+    NameIndex,
+    asi_hazards,
+    is_parameter,
+    node_key,
+    same,
+    within,
+)
 
 ALL_DESTRUCTURED = "(all destructured elements)"
 ALL_VARIABLES = "(all variables)"
@@ -50,7 +59,6 @@ _NAMED_STATEMENTS = frozenset(
         "interface_declaration",
     }
 )
-_STATEMENT_PARENTS = frozenset({"program", "statement_block", "switch_case", "switch_default"})
 _LOOPS = frozenset({"for_statement", "for_in_statement"})
 _BLOCKS = frozenset({"program", "statement_block", "switch_body", *_LOOPS, *FUNCTIONS})
 _PATTERN_WRAPPERS = frozenset(
@@ -75,30 +83,6 @@ _PURE_LEAVES = frozenset(
 )
 _PURE_WRAPPERS = frozenset(
     {"parenthesized_expression", "as_expression", "satisfies_expression", "non_null_expression"}
-)
-# A statement starting with one of these continues a previous one with no semicolon.
-_ASI_HAZARD_STARTS = frozenset(b"([`+-/<")
-# Statements that end in a block, so nothing after them can continue them.
-_CLOSED_STATEMENTS = frozenset(
-    {
-        "function_declaration",
-        "generator_function_declaration",
-        "class_declaration",
-        "abstract_class_declaration",
-        "interface_declaration",
-        "enum_declaration",
-        "internal_module",
-        "module",
-        "if_statement",
-        "for_statement",
-        "for_in_statement",
-        "while_statement",
-        "do_statement",
-        "try_statement",
-        "switch_statement",
-        "statement_block",
-        "import_statement",
-    }
 )
 
 
@@ -220,7 +204,7 @@ class _Planner:
         return self._plan_declarator(entry, declarator, _binding_names(node))
 
     def _plan_statement(self, entry: dict, statement, names: list) -> str | None:
-        if statement.parent is None or statement.parent.type not in _STATEMENT_PARENTS:
+        if statement.parent is None or statement.parent.type not in STATEMENT_PARENTS:
             return "other"
         function_scoped = statement.type != "lexical_declaration"
         if self._used_elsewhere(names, statement, statement, function_scoped=function_scoped):
@@ -328,10 +312,8 @@ class _Planner:
 
         source = self.parsed.source
         removing = dict(self._statements)
-        # Keep one hazardous statement at a time, last first: keeping it can
-        # make its neighbours' removal safe again.
-        while hazards := [k for k, t in removing.items() if _asi_hazard(source, t.node, removing)]:
-            self.skipped.extend(["asi_hazard"] * len(removing.pop(max(hazards)).entries))
+        for key in asi_hazards(source, {k: t.node for k, t in removing.items()}):
+            self.skipped.extend(["asi_hazard"] * len(removing.pop(key).entries))
         for target in removing.values():
             edits.append(whole_statement_range(source, target.node, leading_jsdoc=True))
             self.fixed.extend(target.entries)
@@ -366,7 +348,7 @@ def _declaration_statement(declaration):
         statement = statement.parent
     if statement.parent is not None and statement.parent.type in _LOOPS:
         return "loop_variable"
-    if statement.parent is None or statement.parent.type not in _STATEMENT_PARENTS:
+    if statement.parent is None or statement.parent.type not in STATEMENT_PARENTS:
         return "other"
     return statement
 
@@ -481,30 +463,6 @@ def _is_pure(node) -> bool:
                 return False
         return True
     return False
-
-
-def _asi_hazard(source: bytes, statement, removing: dict) -> bool:
-    """Whether removing ``statement`` lets the next statement continue the previous one.
-
-    Without semicolons, ``a = b`` followed by ``(f)()`` reads as ``a = b(f)()``
-    once the statement that separated them is gone. Neighbours in
-    ``removing`` are going too, so they're looked past.
-    """
-    following = _neighbour(statement, removing, forward=True)
-    if following is None or source[following.start_byte] not in _ASI_HAZARD_STARTS:
-        return False
-    preceding = _neighbour(statement, removing, forward=False)
-    if preceding is None or preceding.type in _CLOSED_STATEMENTS:
-        return False
-    return not source[: preceding.end_byte].rstrip().endswith(b";")
-
-
-def _neighbour(statement, removing: dict, *, forward: bool):
-    sibling = statement
-    while True:
-        sibling = sibling.next_named_sibling if forward else sibling.prev_named_sibling
-        if sibling is None or (sibling.type != "comment" and node_key(sibling) not in removing):
-            return sibling
 
 
 __all__ = ["ALL_DESTRUCTURED", "ALL_VARIABLES", "fix_unused_vars", "remove_unused_vars"]

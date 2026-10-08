@@ -91,7 +91,6 @@ def get_ts_fixers() -> dict[str, FixerConfig]:
             "logs",
             removed,
             would_remove,
-            unsafe=True,
         ),
         "unused-vars": FixerConfig(
             "unused vars",
