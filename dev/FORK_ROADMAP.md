@@ -127,7 +127,7 @@ Every adversarial input in the original review broke one of the line-regex fixer
 | 2.23 | First run: headline the objective score (marked provisional) until subjective dimensions are assessed; `--profile ci` prints plain output with a threshold exit code; move `cycles` out of the Security dimension | M | CE-12 |
 | 2.24 | Expire carried-forward subjective dimensions; concerns ignore suppressed issues | S | CE-9, CE-10 |
 | 2.25 | **Done (#21).** Commands with `--path` (autofix, detect, …) default to the last scan's path, as `review` already does, and fall back to `src/` only without one. A bare `scan` re-scans the last scope too | S | — |
-| 2.30 | Plan quarantine coverage: #29 checks the entries of `queue_order`, `skipped`, `clusters` and `overrides`, but only the container type of `superseded`, `execution_log`, `commit_log` and `promoted_ids`. A malformed entry in those still loads as is | S | CE-3 |
+| 2.30 | **Done (#59).** Plan quarantine coverage: the entries of `superseded`, `execution_log`, `commit_log`, `promoted_ids` and `uncommitted_issues` are checked against the fields their readers use (record shape, string `timestamp`/`action`/`sha`, ID-string lists) and bad ones are quarantined like #29's sections; before, one bad entry crashed `plan`, `plan commit-log history` or `scan` | S | CE-3 |
 | 2.31 | **Done (#41).** `tree` and `viz` label the root node with the scanned path relative to the project root (the project's directory name for a whole-project scan) and strip only that prefix, so `--path .` no longer merges `src/` into the root; `--focus` takes scan- or project-relative paths | S | — |
 | 2.32 | **Done (#43).** `cli.main()` configures logging once: a stderr handler on the `desloppify` logger prints `  WARNING: message`, yellow (red for errors) on a terminal unless `NO_COLOR` is set. No global verbosity flag exists, so `DESLOPPIFY_LOG_LEVEL` (e.g. `DEBUG`) sets the threshold | S | — |
 | 2.37 | Wontfix debt totals in the stats and `status` still include wontfix issues a scan confirmed gone (`scan_verified`), though the scores exclude them (#42 follow-up) | S | CE-5 |
@@ -286,7 +286,7 @@ Status key: **done** (with PR), **partial** (what's left is in §2), **open**, *
 |---|---|---|---|
 | CE-1 | high | One plan.json across languages | dropped |
 | CE-2 | high | Strict never recovers from real fixes | done (#38) |
-| CE-3 | medium | One bad issue loses the whole state | done (#25, #29); plan sections → 2.30 |
+| CE-3 | medium | One bad issue loses the whole state | done (#25, #29, #59) |
 | CE-4 | medium | Unlocked read-modify-write | done (#35) |
 | CE-5 | medium | Deferred, triaged_out and wontfix never auto-resolve | done (#42) |
 | CE-6 | medium | scoring.md and QUEUE_LIFECYCLE contradict code | done (#44) |
