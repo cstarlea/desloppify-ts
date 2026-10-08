@@ -19,14 +19,20 @@ try:
 except ImportError:
     fcntl = None  # type: ignore[assignment]
 
-from desloppify.base.exception_sets import PLAN_LOAD_EXCEPTIONS
+from desloppify.base.exception_sets import (
+    CORRUPT_JSON_FILE_EXCEPTIONS,
+    PLAN_LOAD_EXCEPTIONS,
+)
 __all__ = [
     "load_state",
     "save_state",
     "state_lock",
 ]
 
-from desloppify.base.discovery.file_paths import safe_write_text
+from desloppify.base.discovery.file_paths import (
+    safe_write_text,
+    set_aside_corrupted as _set_aside_corrupted,
+)
 from desloppify.base.text_utils import is_numeric
 from desloppify.engine._plan.persistence import load_plan as load_plan_state
 from desloppify.engine._plan.persistence import plan_path_for_state
@@ -95,16 +101,6 @@ def _release_state_lock(lock_fd: int) -> None:
 
     fcntl.flock(lock_fd, fcntl.LOCK_UN)
 
-
-# Errors that mean a state file's contents are unusable (as opposed to the
-# file being unreadable, which is an OSError).
-_CORRUPT_STATE_ERRORS = (
-    json.JSONDecodeError,
-    UnicodeDecodeError,
-    ValueError,
-    TypeError,
-    AttributeError,
-)
 
 # State files whose on-disk content did not load cleanly. ``save_state`` does
 # not rotate such a file over ``.bak``, which may be the last good copy.
@@ -181,29 +177,6 @@ def _warn_quarantined(path: Path, count: int) -> None:
     )
 
 
-def _corrupted_path(state_path: Path) -> Path:
-    """Return a free ``<name>.corrupted[.N]`` path next to ``state_path``."""
-    base = state_path.with_suffix(".json.corrupted")
-    candidate = base
-    suffix = 1
-    while candidate.exists():
-        candidate = base.with_name(f"{base.name}.{suffix}")
-        suffix += 1
-    return candidate
-
-
-def _set_aside_corrupted(state_path: Path) -> Path | None:
-    target = _corrupted_path(state_path)
-    try:
-        state_path.rename(target)
-    except OSError as rename_ex:
-        logger.debug(
-            "Failed to rename corrupted state file %s: %s", state_path, rename_ex
-        )
-        return None
-    return target
-
-
 def _reconstruct_from_saved_plan_if_available(
     state_path: Path,
     state: StateModel,
@@ -273,7 +246,7 @@ def load_state(path: Path | None = None) -> StateModel:
 
     try:
         state, quarantined = _read_state_file(state_path)
-    except (*_CORRUPT_STATE_ERRORS, OSError) as ex:
+    except (*CORRUPT_JSON_FILE_EXCEPTIONS, OSError) as ex:
         _unclean_state_files.add(rotation_key)
         return _load_state_after_failure(state_path, ex)
 
@@ -307,7 +280,7 @@ def _load_state_after_failure(state_path: Path, ex: Exception) -> StateModel:
         )
         try:
             backup_state, quarantined = _read_state_file(backup)
-        except (*_CORRUPT_STATE_ERRORS, OSError) as backup_ex:
+        except (*CORRUPT_JSON_FILE_EXCEPTIONS, OSError) as backup_ex:
             logger.warning(
                 "Backup state load failed from %s after corruption in %s: %s",
                 backup,

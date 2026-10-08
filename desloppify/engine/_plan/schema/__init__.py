@@ -8,8 +8,15 @@ from desloppify.engine._plan.constants import SYNTHETIC_PREFIXES
 from desloppify.engine._plan.schema.migrations import (
     upgrade_plan_to_v8 as _upgrade_plan_to_v8,
 )
+from desloppify.engine._plan.schema.quarantine import (
+    QUARANTINE_KEY,
+    QuarantinedPlanEntry,
+    merge_quarantined_entries,
+    quarantine_invalid_entries,
+    quarantine_malformed_entries,
+)
 from desloppify.engine._plan.skip_policy import VALID_SKIP_KINDS
-from desloppify.engine._state.schema import utc_now
+from desloppify.engine._state.schema import coerce_state_version, utc_now
 
 PLAN_VERSION = 8
 
@@ -257,6 +264,7 @@ class PlanModel(TypedDict, total=False):
     uncommitted_issues: list[str]
     commit_tracking_branch: str | None
     completed_clusters: NotRequired[list[dict[str, Any]]]  # legacy snapshot key
+    quarantined_entries: NotRequired[list[QuarantinedPlanEntry]]  # set aside on load
 
 
 def empty_plan() -> PlanModel:
@@ -284,15 +292,51 @@ def empty_plan() -> PlanModel:
     }
 
 
-def ensure_plan_defaults(plan: dict[str, Any]) -> None:
+def _coerce_plan_version(plan: dict[str, Any]) -> int | None:
+    """Coerce a loaded ``version`` ("8", 8.0) in place; return it if newer.
+
+    An unusable version is treated like a missing one: as a legacy plan,
+    whose upgrades are no-ops on current payloads.
+    """
+    if "version" not in plan:
+        return None
+    version = coerce_state_version(plan["version"])
+    if version is None:
+        del plan["version"]
+        return None
+    plan["version"] = version
+    return version if version > PLAN_VERSION else None
+
+
+def ensure_plan_defaults(
+    plan: dict[str, Any],
+    *,
+    quarantine: list[QuarantinedPlanEntry] | None = None,
+) -> None:
     """Normalize a loaded plan to ensure all keys exist.
 
     Runtime contract is v8-only. Legacy payloads are upgraded in-place once.
+
+    With ``quarantine``, malformed queue entries, skip entries, clusters and
+    overrides (and top-level containers of the wrong type) are moved into
+    that list instead of being silently reset or failing ``validate_plan``.
+    Loading passes it; saving does not, so code that builds a bad entry
+    still fails loudly.
     """
+    newer_version = _coerce_plan_version(plan)
+    if quarantine is not None:
+        quarantine_malformed_entries(plan, quarantine)
     _upgrade_plan_to_v8(plan)
+    if newer_version is not None:
+        # Keep a newer plan's version so the next save does not stamp it down.
+        plan["version"] = newer_version
     defaults = empty_plan()
     for key, value in defaults.items():
         plan.setdefault(key, value)
+    if quarantine is not None:
+        quarantine_invalid_entries(plan, quarantine)
+    if not isinstance(plan.get(QUARANTINE_KEY, []), list):
+        plan[QUARANTINE_KEY] = []
     subjective_defer_meta = plan.get("subjective_defer_meta")
     if isinstance(subjective_defer_meta, dict):
         subjective_defer_meta.pop("force_visible_ids", None)
@@ -366,6 +410,12 @@ def validate_plan(plan: dict[str, Any]) -> None:
         raise ValueError("plan.version must be an int")
     if not isinstance(plan.get("queue_order"), list):
         raise ValueError("plan.queue_order must be a list")
+    for index, issue_id in enumerate(plan["queue_order"]):
+        if not isinstance(issue_id, str):
+            raise ValueError(f"plan.queue_order[{index}] must be a string")
+    for name, cluster in plan.get("clusters", {}).items():
+        if not isinstance(cluster, dict):
+            raise ValueError(f"plan.clusters[{name!r}] must be an object")
 
     # No ID should appear in both queue_order and skipped
     skipped_ids = set(plan.get("skipped", {}).keys())
@@ -401,6 +451,8 @@ __all__ = [
     "LastTriageSnapshot",
     "PlanModel",
     "PlanStartScores",
+    "QUARANTINE_KEY",
+    "QuarantinedPlanEntry",
     "RefreshState",
     "SkipEntry",
     "StrategistBriefing",
@@ -412,6 +464,7 @@ __all__ = [
     "ensure_plan_defaults",
     "executable_objective_ids",
     "live_planned_queue_ids",
+    "merge_quarantined_entries",
     "triage_clusters",
     "validate_plan",
 ]
