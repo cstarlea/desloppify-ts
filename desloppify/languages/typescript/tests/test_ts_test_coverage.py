@@ -144,6 +144,18 @@ def test_namespace_import_follows_the_members_used(tmp_path):
 
 
 @needs_treesitter
+def test_anonymous_default_export_is_a_definition(tmp_path):
+    files = {
+        "index": _touch(tmp_path, "src/index.ts", "export * as locales from './locales';\n"),
+        "locales": _touch(tmp_path, "src/locales.ts", "export { default as ka } from './ka';\nexport { default as ro } from './ro';\n"),
+        "ka": _touch(tmp_path, "src/ka.ts", "export default function () {\n  return 1;\n}\n"),
+        "ro": _touch(tmp_path, "src/ro.ts", "export default { ro: true };\n"),
+    }
+    test = _touch(tmp_path, "test/ka.test.ts", "import * as z from '../src';\nz.locales.ka();\nz.locales.ro;\n")
+    assert imported_definitions(test, set(files.values())) == {files["ka"], files["ro"]}
+
+
+@needs_treesitter
 def test_star_export_cycles_terminate(tmp_path):
     a = _touch(tmp_path, "src/a.ts", "export * from './b';\n")
     b = _touch(tmp_path, "src/b.ts", "export * from './a';\n")
