@@ -20,6 +20,7 @@ from desloppify.app.commands.registry import CommandHandler, get_command_handler
 from desloppify.base.config import load_config
 from desloppify.base.discovery.source import set_exclusions
 from desloppify.base.exception_sets import CommandError
+from desloppify.base.output.cli_logging import configure_cli_logging
 from desloppify.base.output.fallbacks import log_best_effort_failure
 from desloppify.base.output.terminal import colorize
 from desloppify.base.discovery.paths import get_default_scan_path, get_project_root
@@ -293,6 +294,7 @@ def _reject_removed_lang_flag(argv: list[str]) -> None:
 
 
 def main() -> None:
+    configure_cli_logging()
     # Ensure Unicode output works on Windows terminals (cp1252 etc.)
     for stream in (sys.stdout, sys.stderr):
         if hasattr(stream, "reconfigure"):
