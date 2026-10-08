@@ -293,6 +293,42 @@ def test_imports_are_graph_edges(tmp_path):
     assert not main.get("unresolved_imports")
 
 
+def test_imports_mapped_to_an_npm_package_are_external(tmp_path):
+    _manifest(
+        tmp_path,
+        "",
+        name="app",
+        dependencies={"node-fetch": "^3", "undici": "^6"},
+        imports={
+            "#fetch": {"node": "node-fetch", "default": "./src/fetch-browser.ts"},
+            "#http/*": "undici/*",
+            "#fs": "node:fs",
+            "#crypto": "crypto",
+            "#undeclared": "left-pad",
+            "#lib/*": "./src/lib/*.ts",
+        },
+    )
+    _write(tmp_path, "src/lib/polyfill.ts")
+    _write(
+        tmp_path,
+        "src/main.ts",
+        "import '#fetch';\nimport '#http/agent';\nimport '#fs';\nimport '#crypto';\n"
+        "import '#undeclared';\nimport '#lib/missing';\nimport '#nokey/polyfill';\n",
+    )
+    resolver = _module_resolver(tmp_path)
+    main = _key(tmp_path, "src/main.ts")
+    assert resolver.is_external("#fetch", main)
+    assert resolver.is_external("#http/agent", main)
+    assert resolver.is_external("#fs", main) and resolver.is_external("#crypto", main)
+    # Like a bare import, a package nothing declares is not external.
+    assert not resolver.is_external("#undeclared", main)
+    assert not resolver.is_external("#lib/missing", main)
+    assert not resolver.is_external("#fetch")
+
+    graph = deps_detector_mod.build_dep_graph(tmp_path)
+    assert graph[main]["unresolved_imports"] == {"#undeclared", "#lib/missing", "#nokey/polyfill"}
+
+
 # ── graph edges ──────────────────────────────────────────────
 
 

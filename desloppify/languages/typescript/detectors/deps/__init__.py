@@ -178,7 +178,7 @@ def build_dep_graph(
             if target is not None:
                 graph[source_resolved]["imports"].add(target)
                 graph[target]["importers"].add(source_resolved)
-            elif is_bare(module_path) and not resolver.is_external(module_path):
+            elif is_bare(module_path) and not resolver.is_external(module_path, source_resolved):
                 # Not a dependency and not resolved: probably an alias the
                 # resolver doesn't understand, so the file it names may look
                 # orphaned when it isn't.
