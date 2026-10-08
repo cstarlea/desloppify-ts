@@ -109,10 +109,11 @@ Issues outside the scan's `--path` are never confirmed, and nothing about them c
 |---|---|---|
 | `open`, `deferred`, `triaged_out` | `auto_resolved` once confirmed. The note records the old status | No change |
 | `wontfix` | Stays `wontfix`. Once confirmed, it gets `resolution_attestation.scan_verified`, and its note is kept | Stays `wontfix`. `scan_verified` is cleared, so strict and verified count it again |
-| `fixed`, `false_positive` | Stays as is. Once confirmed, it gets `resolution_attestation.scan_verified`, and its note is kept | Reopened as `open`, with `reopen_count` + 1 and the attestation dropped |
+| `false_positive` | Stays `false_positive`. Once confirmed, it gets `resolution_attestation.scan_verified`, and its note is kept | Stays `false_positive`, with its note and attestation. `scan_verified` is cleared, so verified counts it again |
+| `fixed` | Stays `fixed`. Once confirmed, it gets `resolution_attestation.scan_verified`, and its note is kept | Reopened as `open`, with `reopen_count` + 1 and the attestation dropped |
 | `auto_resolved` | No change | Reopened as `open` |
 
-A scan never changes a `wontfix` status. `scan_verified` is what lets a gone wontfix stop counting against strict and verified, and a gone `fixed` or `false_positive` stop counting against verified (`issue_counts_as_failure`). A scan that confirms an already-marked issue again leaves it alone. Separately, the scan adds a `stale_wontfix` work item for a wontfix whose finding is still present when either:
+A scan never changes a `wontfix` or `false_positive` status: both are user judgements about the finding itself, so the finding still being reported doesn't overturn them. `plan unskip` is how a user takes one back. `scan_verified` is what lets a gone wontfix stop counting against strict and verified, and a gone `fixed` or `false_positive` stop counting against verified (`issue_counts_as_failure`). A scan that confirms an already-marked issue again leaves it alone. Separately, the scan adds a `stale_wontfix` work item for a wontfix whose finding is still present when either:
 
 - `wontfix_decay_scans` scans (config, default 20) have passed since it was marked wontfix;
 - a structural finding has grown by at least 10 complexity or 50 LOC.
