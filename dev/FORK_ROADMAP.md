@@ -123,7 +123,7 @@ Every adversarial input in the original review broke one of the line-regex fixer
 | 2.19 | **Done for `state.json` (#25) and `plan.json` (#29).** Resilient loading: quarantine invalid issues and plan entries instead of discarding the whole file; rename the bad file to `.corrupted`; don't rotate `.bak` after a failed load; coerce the version field | S | CE-3 |
 | 2.20 | **Done (#35).** Every mutating command holds the state lock, then the plan lock, from its first load to its return; read-only commands load unlocked, and the corrupt-file rename and `.bak` restore run under the lock (or in memory if it stays busy). One re-entrant, ranked file lock backs `state_lock`, `plan_lock` and the progression log, whose trim now runs under the append lock. `plan triage --run-stages` and `review --run-batches`/`--scan-after-import` stay unlocked because they wait on desloppify subprocesses | M | CE-4 |
 | 2.21 | **Done (#42).** Deferred and triaged_out issues auto-resolve when a scan confirms they're gone, under the same conditions as open issues, and reconcile supersedes their skip entries. Wontfix stays wontfix: the scan marks it `scan_verified`, so it stops failing strict and verified, and clears the mark if the finding returns; its skip entry is kept. A superseded entry is dropped once its issue reappears so a fresh skip or queue entry isn't stripped | S | CE-5 |
-| 2.22 | Rewrite `docs/scoring.md` and `dev/QUEUE_LIFECYCLE.md` from the code | S | CE-6 |
+| 2.22 | **Done (#44).** `docs/scoring.md` (and its bundled copy) and `dev/QUEUE_LIFECYCLE.md` rewritten from the code, citing the functions behind each rule; the lifecycle doc lists the gaps found as 2.38–2.40 | S | CE-6 |
 | 2.23 | First run: headline the objective score (marked provisional) until subjective dimensions are assessed; `--profile ci` prints plain output with a threshold exit code; move `cycles` out of the Security dimension | M | CE-12 |
 | 2.24 | Expire carried-forward subjective dimensions; concerns ignore suppressed issues | S | CE-9, CE-10 |
 | 2.25 | **Done (#21).** Commands with `--path` (autofix, detect, …) default to the last scan's path, as `review` already does, and fall back to `src/` only without one. A bare `scan` re-scans the last scope too | S | — |
@@ -286,7 +286,7 @@ Status key: **done** (with PR), **partial** (what's left is in §2), **open**, *
 | CE-3 | medium | One bad issue loses the whole state | done (#25, #29); plan sections → 2.30 |
 | CE-4 | medium | Unlocked read-modify-write | done (#35) |
 | CE-5 | medium | Deferred, triaged_out and wontfix never auto-resolve | done (#42) |
-| CE-6 | medium | scoring.md and QUEUE_LIFECYCLE contradict code | open → 2.22 |
+| CE-6 | medium | scoring.md and QUEUE_LIFECYCLE contradict code | done (#44) |
 | CE-7 | low | Subjective scores taken as-is | open |
 | CE-8 | low | Plan subsystem complexity | open → §2E |
 | CE-9 | low | Carried-forward dimensions never expire | open → 2.24 |
