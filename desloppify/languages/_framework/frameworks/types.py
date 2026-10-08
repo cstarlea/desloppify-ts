@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from desloppify.engine.detectors.orphaned import EntryConventions
 from desloppify.languages._framework.base.types import LangRuntimeContract
 from desloppify.state_io import Issue
 
@@ -66,6 +67,7 @@ class FrameworkSpec:
     excludes: tuple[str, ...] = ()
     scanners: tuple[ScannerRule, ...] = ()
     tools: tuple[ToolIntegration, ...] = ()
+    entry_conventions: EntryConventions | None = None
 
 
 @dataclass(frozen=True)
@@ -81,6 +83,7 @@ class EcosystemFrameworkDetection:
 __all__ = [
     "DetectionConfig",
     "EcosystemFrameworkDetection",
+    "EntryConventions",
     "FrameworkEvidence",
     "FrameworkSpec",
     "ScannerRule",

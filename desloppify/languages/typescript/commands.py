@@ -28,6 +28,7 @@ from desloppify.languages._framework.commands.registry import (
     build_standard_detect_registry,
     compose_detect_registry,
 )
+from desloppify.languages._framework.frameworks.registry import framework_entry_conventions
 from desloppify.languages.typescript.detectors.deps import (
     build_dep_graph,
 )
@@ -129,6 +130,7 @@ def cmd_orphaned(args: argparse.Namespace) -> None:
         options=orphaned_detector_mod.OrphanedDetectionOptions(
             extra_entry_patterns=TS_ENTRY_PATTERNS,
             extra_barrel_names=TS_BARREL_NAMES,
+            entry_conventions=framework_entry_conventions(),
         ),
     )
     if getattr(args, "json", False):

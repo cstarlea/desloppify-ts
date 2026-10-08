@@ -27,6 +27,7 @@ from desloppify.languages._framework.base.structural import (
     merge_structural_signals,
 )
 from desloppify.languages._framework.base.types import LangRuntimeContract
+from desloppify.languages._framework.frameworks.registry import framework_entry_conventions
 from desloppify.languages._framework.issue_factories import (
     make_cycle_issues,
     make_orphaned_issues,
@@ -182,6 +183,7 @@ def run_coupling_phase(
             extra_entry_patterns=lang.entry_patterns,
             extra_barrel_names=lang.barrel_names,
             dynamic_import_finder=dynamic_import_finder,
+            entry_conventions=framework_entry_conventions(),
         ),
     )
     orphan_entries = filter_entries(zone_map, orphan_entries, "orphaned")
