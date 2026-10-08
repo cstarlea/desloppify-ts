@@ -485,6 +485,10 @@ class TestDirectoryZones:
     def test_unknown_directory_is_production(self, zone_map):
         assert zone_map.get("elsewhere/tests") == Zone.PRODUCTION
 
+    def test_absolute_paths_terminate(self):
+        zone_map = FileZoneMap(["/app/tests/a.ts"], COMMON_ZONE_RULES)
+        assert zone_map.get("/app/tests") == Zone.TEST
+
 
 # ── Zone / EXCLUDED_ZONES / EXCLUDED_ZONE_VALUES ────────────
 

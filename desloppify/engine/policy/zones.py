@@ -246,10 +246,10 @@ class FileZoneMap:
                 zone = Zone.GENERATED
             self._map[file_path] = zone
             self._rel_map[rel_path] = zone
-            parent = os.path.dirname(rel_path)
-            while parent:
+            child, parent = rel_path, os.path.dirname(rel_path)
+            while parent and parent != child:
                 self._dir_files.setdefault(parent, []).append(zone)
-                parent = os.path.dirname(parent)
+                child, parent = parent, os.path.dirname(parent)
 
     def _directory_zone(self, rel_dir: str) -> Zone | None:
         """Zone for a directory holding scanned files (directory-level issues)."""
