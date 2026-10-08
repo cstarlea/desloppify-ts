@@ -124,7 +124,7 @@ Every adversarial input in the original review broke one of the line-regex fixer
 | 2.20 | **Done (#35).** Every mutating command holds the state lock, then the plan lock, from its first load to its return; read-only commands load unlocked, and the corrupt-file rename and `.bak` restore run under the lock (or in memory if it stays busy). One re-entrant, ranked file lock backs `state_lock`, `plan_lock` and the progression log, whose trim now runs under the append lock. `plan triage --run-stages` and `review --run-batches`/`--scan-after-import` stay unlocked because they wait on desloppify subprocesses | M | CE-4 |
 | 2.21 | **Done (#42).** Deferred and triaged_out issues auto-resolve when a scan confirms they're gone, under the same conditions as open issues, and reconcile supersedes their skip entries. Wontfix stays wontfix: the scan marks it `scan_verified`, so it stops failing strict and verified, and clears the mark if the finding returns; its skip entry is kept. A superseded entry is dropped once its issue reappears so a fresh skip or queue entry isn't stripped | S | CE-5 |
 | 2.22 | **Done (#44).** `docs/scoring.md` (and its bundled copy) and `dev/QUEUE_LIFECYCLE.md` rewritten from the code, citing the functions behind each rule; the lifecycle doc lists the gaps found as 2.38–2.40 | S | CE-6 |
-| 2.23 | First run: headline the objective score (marked provisional) until subjective dimensions are assessed; `--profile ci` prints plain output with a threshold exit code; move `cycles` out of the Security dimension | M | CE-12 |
+| 2.23 | **Done (#63, #64, #66).** Until a subjective dimension is assessed, the scan summary, `status`, the LLM block, `query.json` (`headline`) and the scorecard lead with the objective score marked provisional (`headline_score`); stored scores are unchanged (#63). `scan --profile ci` prints a plain report with no colour, coaching or agent blocks, and `--fail-under SCORE` (`--fail-score`, default objective) exits 1 below the threshold (#64). `cycles` scores under Code quality instead of Security (#66) | M | CE-12 |
 | 2.24 | Expire carried-forward subjective dimensions; concerns ignore suppressed issues | S | CE-9, CE-10 |
 | 2.25 | **Done (#21).** Commands with `--path` (autofix, detect, …) default to the last scan's path, as `review` already does, and fall back to `src/` only without one. A bare `scan` re-scans the last scope too | S | — |
 | 2.30 | Plan quarantine coverage: #29 checks the entries of `queue_order`, `skipped`, `clusters` and `overrides`, but only the container type of `superseded`, `execution_log`, `commit_log` and `promoted_ids`. A malformed entry in those still loads as is | S | CE-3 |
@@ -295,7 +295,7 @@ Status key: **done** (with PR), **partial** (what's left is in §2), **open**, *
 | CE-9 | low | Carried-forward dimensions never expire | open → 2.24 |
 | CE-10 | low | Concerns count suppressed issues | open → 2.24 |
 | CE-11 | low | Recompute is O(dims × issues × modes) | open |
-| CE-12 | medium | Headline score from zeroed subjective dims; ci profile; cycles under Security | open → 2.23 |
+| CE-12 | medium | Headline score from zeroed subjective dims; ci profile; cycles under Security | done (#63, #64, #66) |
 | CE-13 | medium | Exclusions applied after language and state resolution | dropped |
 | CE-14 | medium | Auto-detect walks to an ancestor package.json | dropped |
 | CE-15 | low | No detector or domain disable | open → 3.12 |
