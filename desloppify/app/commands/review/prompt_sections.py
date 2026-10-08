@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TypedDict
 
+from desloppify.base.enums import resolved_statuses
 from desloppify.intelligence.review.feedback_contract import (
     max_batch_issues_for_dimension_count,
 )
@@ -123,7 +124,6 @@ _HISTORICAL_STATUS_GROUPS = (
     ("triaged_out", "Triaged out"),
 )
 _HISTORICAL_RESOLVED_GROUP = "Resolved"
-_HISTORICAL_RESOLVED_STATUSES = {"fixed", "wontfix", "false_positive", "auto_resolved"}
 
 
 def render_historical_focus(batch: PromptBatchPayload) -> str:
@@ -178,7 +178,7 @@ def render_historical_focus(batch: PromptBatchPayload) -> str:
     # Render resolved group (all remaining resolved statuses)
     resolved: list[dict] = []
     for status_key in list(grouped):
-        if status_key in _HISTORICAL_RESOLVED_STATUSES:
+        if status_key in resolved_statuses():
             resolved.extend(grouped.pop(status_key))
     if resolved:
         lines.append(f"\n  {_HISTORICAL_RESOLVED_GROUP} ({len(resolved)}):")
