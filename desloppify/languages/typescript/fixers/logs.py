@@ -42,7 +42,7 @@ from desloppify.languages.typescript.syntax.tree import (
 
 from .edits import apply_edits, whole_statement_range
 from .fixer_io import apply_fixer
-from .nodes import FUNCTIONS, STATEMENT_PARENTS, asi_hazards, node_key, reads_only
+from desloppify.languages.typescript.syntax.nodes import FUNCTIONS, STATEMENT_PARENTS, asi_hazards, node_key, reads_only
 
 _LOG_METHODS = frozenset({"log", "warn", "info", "debug"})
 _TAGGED_FIRST_ARG_RE = re.compile(

@@ -24,6 +24,14 @@ from collections import defaultdict
 
 from desloppify.base.output.terminal import colorize
 from desloppify.languages._framework.base.types import FixResult
+from desloppify.languages.typescript.syntax.nodes import (
+    PARAMETERS,
+    NameIndex,
+    node_key,
+    parameter_owner,
+    same,
+    within,
+)
 from desloppify.languages.typescript.syntax.tree import (
     ParsedSource,
     get_parser,
@@ -32,9 +40,7 @@ from desloppify.languages.typescript.syntax.tree import (
 
 from .edits import apply_replacements
 from .fixer_io import apply_fixer
-from .nodes import FUNCTIONS, NameIndex, is_parameter, node_key, same, within
 
-_PARAMETERS = frozenset({"required_parameter", "optional_parameter"})
 _PROPERTY_MODIFIERS = frozenset({"accessibility_modifier", "override_modifier", "readonly"})
 
 
@@ -85,7 +91,7 @@ def prefix_unused_params(
         if node is None:
             skipped.append("not_found")
             continue
-        owner = _owner(node)
+        owner = parameter_owner(node)
         if owner is None:
             skipped.append("not_a_parameter")
             continue
@@ -105,24 +111,6 @@ def prefix_unused_params(
     return apply_replacements(parsed.source, list(replacements.values())), fixed, skipped
 
 
-def _owner(node):
-    """The function or catch clause whose parameter ``node`` binds, or None."""
-    if node.type not in ("identifier", "shorthand_property_identifier_pattern"):
-        return None
-    if _is_binding(node) and is_parameter(node):
-        owner = node.parent
-        while owner is not None and owner.type not in FUNCTIONS:
-            owner = owner.parent
-        return owner
-    clause = node.parent
-    while clause is not None and clause.type != "catch_clause":
-        clause = clause.parent
-    parameter = clause.child_by_field_name("parameter") if clause is not None else None
-    if parameter is not None and within(node, parameter) and _is_binding(node):
-        return clause
-    return None
-
-
 def _named_in_signature(occurrences: list, node, owner) -> bool:
     """Whether the name appears elsewhere in the signature, e.g. ``x is T`` or ``typeof x``.
 
@@ -137,23 +125,9 @@ def _named_in_signature(occurrences: list, node, owner) -> bool:
     )
 
 
-def _is_binding(node) -> bool:
-    """Whether ``node`` is a name a parameter binds, not a default value or type."""
-    parent = node.parent
-    if node.type == "shorthand_property_identifier_pattern":
-        return True
-    if parent.type in (*_PARAMETERS, "assignment_pattern"):
-        return same(parent.child_by_field_name("pattern" if parent.type in _PARAMETERS else "left"), node)
-    if parent.type == "pair_pattern":
-        return same(parent.child_by_field_name("value"), node)
-    if parent.type == "arrow_function":
-        return same(parent.child_by_field_name("parameter"), node)
-    return parent.type in ("array_pattern", "rest_pattern", "catch_clause")
-
-
 def _is_parameter_property(node) -> bool:
     parameter = node.parent
-    while parameter is not None and parameter.type not in _PARAMETERS:
+    while parameter is not None and parameter.type not in PARAMETERS:
         parameter = parameter.parent
     return parameter is not None and any(
         child.type in _PROPERTY_MODIFIERS for child in parameter.children

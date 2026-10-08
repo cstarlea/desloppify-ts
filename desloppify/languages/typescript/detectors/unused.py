@@ -29,6 +29,14 @@ from desloppify.languages.typescript.detectors.unused_fallback import (
     detect_unused_fallback,
     should_use_deno_fallback,
 )
+from desloppify.languages.typescript.syntax.nodes import (
+    NameIndex,
+    byte_offset,
+    is_parameter,
+    parameter_owner,
+    same,
+)
+from desloppify.languages.typescript.syntax.tree import ParsedSource, parse_text
 
 TS6133_RE = re.compile(
     r"^(.+)\((\d+),(\d+)\): error TS6133: '(\S+)' is declared but its value is never read\."
@@ -47,6 +55,11 @@ _AGGREGATE_NAMES = {
     "TS6199": "(all variables)",
     "TS6205": "(all type parameters)",
 }
+ENTIRE_IMPORT = _AGGREGATE_NAMES["TS6192"]
+ALL_DESTRUCTURED = _AGGREGATE_NAMES["TS6198"]
+# Statements whose names are imports: `import ...` (including
+# `import x = require(...)`) and `import x = N.y`.
+_IMPORT_STATEMENTS = frozenset({"import_statement", "import_alias"})
 _TS_DIAGNOSTIC_RE = re.compile(r"error TS(\d+):")
 # TS5xxx are compiler-option/config errors; TS18003 is "no inputs were found".
 _TS_CONFIG_ERROR_RE = re.compile(r"error TS(5\d{3}|18003):")
@@ -231,18 +244,10 @@ def detect_unused_result(
             logger.debug("Skipping path scope check for %s: %s", filepath, exc)
             continue
 
-        cat = _categorize_unused(filepath, lineno)
-        if category != "all" and cat != category:
-            continue
-        entries.append(
-            {
-                "file": filepath,
-                "line": lineno,
-                "col": col,
-                "name": name,
-                "category": cat,
-            }
-        )
+        entries.append({"file": filepath, "line": lineno, "col": col, "name": name})
+    _categorize_entries(entries)
+    if category != "all":
+        entries = [entry for entry in entries if entry["category"] == category]
     return entries, total_files, coverage
 
 
@@ -251,41 +256,120 @@ def detect_unused(path: Path, category: str = "all") -> tuple[list[dict], int]:
     return entries, total_files
 
 
-def _categorize_unused(filepath: str, lineno: int) -> str:
+def _read_source(filepath: str) -> str | None:
     try:
         p = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
-        lines = p.read_text().splitlines()
-        if lineno <= len(lines):
-            src_line = lines[lineno - 1].strip()
-            if src_line.startswith("import ") or "from '" in src_line or 'from "' in src_line:
-                return "imports"
-            if src_line.startswith(
-                (
-                    "const ",
-                    "let ",
-                    "var ",
-                    "export ",
-                    "function ",
-                    "class ",
-                    "type ",
-                    "interface ",
-                )
-            ):
-                return "vars"
-            for back in range(1, 10):
-                idx = lineno - 1 - back
-                if idx < 0:
-                    break
-                prev = lines[idx].strip()
-                if prev.startswith("import "):
-                    return "imports"
-                if not prev or (
-                    not prev.startswith("{") and not prev.startswith(",") and "," not in prev
-                ):
-                    break
+        return p.read_text()
     except (OSError, UnicodeDecodeError) as exc:
         logger.debug("Unable to read %s for unused categorization: %s", filepath, exc)
+        return None
+
+
+def _categorize_entries(entries: list[dict]) -> None:
+    """Set each entry's ``category``: ``imports``, ``params`` or ``vars``.
+
+    Each file is read and parsed once. Without tree-sitter, or when the
+    reported name can't be found in the tree, the line heuristic decides.
+    """
+    by_file: dict[str, list[dict]] = defaultdict(list)
+    for entry in entries:
+        by_file[entry["file"]].append(entry)
+    for filepath, file_entries in by_file.items():
+        text = _read_source(filepath)
+        lines = text.splitlines() if text is not None else None
+        parsed = parse_text(text, filepath) if text is not None else None
+        names = NameIndex(parsed) if parsed is not None else None
+        for entry in file_entries:
+            category = None
+            if entry["name"] == ENTIRE_IMPORT:
+                category = "imports"
+            elif names is not None:
+                category = _syntax_category(names, entry)
+            if category is None:
+                category = _categorize_line(lines, entry["line"]) if lines is not None else "vars"
+            entry["category"] = category
+
+
+def _syntax_category(names: NameIndex, entry: dict) -> str | None:
+    """The category of the name tsc reported, or None when it isn't in the tree."""
+    name, line, col = entry["name"], entry["line"], entry["col"]
+    if name in _AGGREGATE_NAMES.values() and name != ALL_DESTRUCTURED:
         return "vars"
+    node = names.find(name, line, col) if name != ALL_DESTRUCTURED else None
+    if node is None:
+        # tsc reports the only element of a destructuring pattern, like
+        # `({ children }) => ...`, at the pattern itself.
+        pattern = _pattern_at(names.parsed, line, col)
+        if pattern is None:
+            return None
+        return "params" if is_parameter(pattern) or _in_catch_parameter(pattern) else "vars"
+    if parameter_owner(node) is not None:
+        return "params"
+    parent = node.parent
+    while parent is not None:
+        if parent.type in _IMPORT_STATEMENTS:
+            return "imports"
+        parent = parent.parent
+    return "vars"
+
+
+def _pattern_at(parsed: ParsedSource, line: int, col: int):
+    """The destructuring pattern starting at tsc's ``line``/``col``, if any."""
+    offset = byte_offset(parsed.source, line, col)
+    if offset is None:
+        return None
+    node = parsed.root.named_descendant_for_byte_range(offset, offset)
+    while node is not None and node.start_byte == offset:
+        if node.type in ("object_pattern", "array_pattern"):
+            return node
+        node = node.parent
+    return None
+
+
+def _in_catch_parameter(node) -> bool:
+    child, parent = node, node.parent
+    while parent is not None and parent.type in ("object_pattern", "array_pattern", "pair_pattern"):
+        child, parent = parent, parent.parent
+    return parent is not None and parent.type == "catch_clause" and same(
+        parent.child_by_field_name("parameter"), child
+    )
+
+
+def _categorize_unused(filepath: str, lineno: int) -> str:
+    """Categorize one finding from its source line alone (no syntax tree)."""
+    text = _read_source(filepath)
+    return _categorize_line(text.splitlines(), lineno) if text is not None else "vars"
+
+
+def _categorize_line(lines: list[str], lineno: int) -> str:
+    if lineno <= len(lines):
+        src_line = lines[lineno - 1].strip()
+        if src_line.startswith("import ") or "from '" in src_line or 'from "' in src_line:
+            return "imports"
+        if src_line.startswith(
+            (
+                "const ",
+                "let ",
+                "var ",
+                "export ",
+                "function ",
+                "class ",
+                "type ",
+                "interface ",
+            )
+        ):
+            return "vars"
+        for back in range(1, 10):
+            idx = lineno - 1 - back
+            if idx < 0:
+                break
+            prev = lines[idx].strip()
+            if prev.startswith("import "):
+                return "imports"
+            if not prev or (
+                not prev.startswith("{") and not prev.startswith(",") and "," not in prev
+            ):
+                break
     # Anything not provably part of an import (parameters, destructured
     # bindings, class members) must not be routed to the import fixer.
     return "vars"
