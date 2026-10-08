@@ -73,15 +73,31 @@ def _add_zone_parser(sub) -> None:
     p_zone.add_argument("--state", type=str, default=None, help="Path to state file")
     zone_sub = p_zone.add_subparsers(dest="zone_action")
     zone_sub.add_parser("show", help="Show zone classifications for all files")
-    z_set = zone_sub.add_parser("set", help="Override zone for a file")
-    z_set.add_argument("zone_path", type=str, help="Relative file path")
+    z_set = zone_sub.add_parser(
+        "set",
+        help="Override zone for a file, a directory, or a glob",
+        description=(
+            "A directory covers everything under it (stored as dir/**). A glob "
+            "(quote it so the shell doesn't expand it) is stored as a pattern, "
+            "so files added later are covered too. An exact file beats a "
+            "pattern, the more specific pattern beats a broader one, and every "
+            "override beats the built-in rules."
+        ),
+    )
+    z_set.add_argument(
+        "zone_path", type=str, help="File, directory, or quoted glob such as 'www/**'"
+    )
     z_set.add_argument(
         "zone_value",
         type=str,
         help="Zone (production, test, config, generated, script, vendor)",
     )
-    z_clear = zone_sub.add_parser("clear", help="Remove zone override for a file")
-    z_clear.add_argument("zone_path", type=str, help="Relative file path")
+    z_clear = zone_sub.add_parser(
+        "clear", help="Remove the zone override for a file, directory, or glob"
+    )
+    z_clear.add_argument(
+        "zone_path", type=str, help="File, directory, or glob, as given to zone set"
+    )
 
 
 def _add_config_parser(sub) -> None:

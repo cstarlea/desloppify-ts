@@ -6,6 +6,7 @@ based on path patterns. Zone metadata flows through issues, scoring, and the LLM
 
 from __future__ import annotations
 
+import functools
 import logging
 import os
 import re
@@ -189,19 +190,107 @@ def _classify_directory(
     return Zone.PRODUCTION
 
 
+_WILDCARDS = frozenset("*?")
+
+
+def is_override_pattern(key: str) -> bool:
+    """Return whether a ``zone_overrides`` key is a glob rather than a file path.
+
+    Only ``*`` and ``?`` make a pattern, so a literal ``app/[slug]/page.tsx``
+    stays a file; ``[...]`` classes work inside a pattern.
+    """
+    return any(ch in _WILDCARDS for ch in key)
+
+
+def _translate_segment(segment: str) -> str:
+    piece, i = "", 0
+    while i < len(segment):
+        ch = segment[i]
+        if ch == "*":
+            piece += "[^/]*"
+        elif ch == "?":
+            piece += "[^/]"
+        elif ch == "[" and "]" in segment[i + 2 :]:
+            end = segment.index("]", i + 2)
+            body = segment[i + 1 : end]
+            negate = body.startswith("!")
+            body = "".join("\\" + c if c in "\\[]^" else c for c in body[negate:])
+            piece += "[" + ("^" if negate else "") + body + "]"
+            i = end
+        else:
+            piece += re.escape(ch)
+        i += 1
+    return piece
+
+
+@functools.lru_cache(maxsize=512)
+def _compile_override_pattern(pattern: str) -> re.Pattern[str]:
+    """Compile a project-relative glob.
+
+    ``**`` spans any number of directories; ``*``, ``?`` and ``[...]`` stay
+    within one path segment. A trailing ``/**`` also matches the directory
+    itself, so ``www/**`` covers ``www`` and everything under it.
+    """
+    regex = ""
+    segments = pattern.strip("/").split("/")
+    for index, segment in enumerate(segments):
+        last = index == len(segments) - 1
+        if segment == "**":
+            if not last:
+                regex += "(?:[^/]+/)*"
+            elif regex:
+                regex = regex[:-1] + "(?:/.*)?"
+            else:
+                regex = ".*"
+            continue
+        regex += _translate_segment(segment) + ("" if last else "/")
+    return re.compile(regex)
+
+
+def override_specificity(pattern: str) -> tuple[int, int]:
+    """Rank patterns: a longer fixed leading path wins, then more literal characters.
+
+    ``www/docs/**`` beats ``www/**``, and ``www/**`` beats ``**/*.ts``.
+    """
+    prefix = 0
+    for ch in pattern:
+        if ch in _WILDCARDS or ch == "[":
+            break
+        prefix += 1
+    return prefix, sum(1 for ch in pattern if ch not in _WILDCARDS)
+
+
+def matching_override(rel_path: str, overrides: dict[str, str] | None) -> str | None:
+    """Return the ``zone_overrides`` key that decides *rel_path*, if any.
+
+    An exact path beats every pattern. Among matching patterns the most
+    specific wins (see ``override_specificity``); a tie goes to the pattern
+    that sorts first.
+    """
+    if not overrides:
+        return None
+    if rel_path in overrides:
+        return rel_path
+    matches = [
+        key
+        for key in overrides
+        if is_override_pattern(key) and _compile_override_pattern(key).fullmatch(rel_path)
+    ]
+    if not matches:
+        return None
+    return min(matches, key=lambda key: (tuple(-n for n in override_specificity(key)), key))
+
+
 def classify_file(
     rel_path: str, rules: list[ZoneRule], overrides: dict[str, str] | None = None
 ) -> Zone:
     """Classify a file by its relative path. Overrides take priority."""
-    if overrides:
-        override = overrides.get(rel_path)
-        if override:
-            try:
-                return Zone(override)
-            except ValueError as exc:
-                log_best_effort_failure(
-                    logger, f"parse zone override for {rel_path}", exc
-                )
+    key = matching_override(rel_path, overrides)
+    if key is not None and overrides:
+        try:
+            return Zone(overrides[key])
+        except ValueError as exc:
+            log_best_effort_failure(logger, f"parse zone override for {rel_path}", exc)
     for rule in rules:
         for pattern in rule.patterns:
             if _match_pattern(rel_path, pattern):
@@ -240,7 +329,7 @@ class FileZoneMap:
             zone = classify_file(rel_path, rules, overrides)
             if (
                 zone not in (Zone.GENERATED, Zone.VENDOR)
-                and not (overrides and rel_path in overrides)
+                and matching_override(rel_path, overrides) is None
                 and _file_has_generated_header(file_path)
             ):
                 zone = Zone.GENERATED
@@ -286,6 +375,11 @@ class FileZoneMap:
         dir_zone = self._directory_zone(rel_path) or self._directory_zone(path)
         if dir_zone is not None:
             return dir_zone
+
+        # Files outside the scan (CSS, Markdown) still honor explicit overrides.
+        key = matching_override(rel_path, self._overrides)
+        if key is not None and self._overrides:
+            return normalize_zone(self._overrides[key]) or Zone.PRODUCTION
 
         return Zone.PRODUCTION
 
