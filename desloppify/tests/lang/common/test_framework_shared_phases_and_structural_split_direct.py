@@ -390,12 +390,12 @@ def test_phase_test_coverage_and_private_imports_paths(monkeypatch) -> None:
 
     monkeypatch.setattr(review_mod, "_find_external_test_files", lambda _path, _lang: {"tests/a_test.py"})
 
-    def _fake_detect_test_coverage(graph, zone_map, name, *, extra_test_files, complexity_map):
+    def _fake_run_test_coverage(graph, zone_map, name, *, extra_test_files, complexity_map):
         test_calls["graph"] = graph
         test_calls["extra_test_files"] = extra_test_files
         test_calls["complexity_map"] = complexity_map
         test_calls["name"] = name
-        return (
+        return review_mod.CoverageResult(
             [
                 {
                     "file": "src/a.py",
@@ -406,9 +406,10 @@ def test_phase_test_coverage_and_private_imports_paths(monkeypatch) -> None:
                 }
             ],
             6,
+            1,
         )
 
-    monkeypatch.setattr(review_mod, "detect_test_coverage", _fake_detect_test_coverage)
+    monkeypatch.setattr(review_mod, "run_test_coverage", _fake_run_test_coverage)
     monkeypatch.setattr(review_mod, "filter_entries", lambda _zones, entries, _detector: entries)
     monkeypatch.setattr(
         review_mod,

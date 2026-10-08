@@ -18,6 +18,7 @@ from desloppify.languages.typescript.detectors.deps.imports import (
     MOCK,
     ImportExtractor,
 )
+from desloppify.languages.typescript.detectors.deps.packages import workspace_entries
 from desloppify.languages.typescript.detectors.deps.resolver import project_resolver
 from desloppify.languages.typescript.plugin_contract import TS_BARREL_NAMES
 
@@ -180,6 +181,14 @@ def _production_key(resolved: str, production_files: set[str]) -> str | None:
         return resolved
     relative = _relative_if_under_root(resolved)
     return relative if relative in production_files else None
+
+
+def public_entry_files(production_files: set[str]) -> set[str]:
+    """Production files a workspace package exposes (``exports``, ``main``, ``types``...)."""
+    root = get_project_root()
+    candidates = sorted(str(root / path) if not os.path.isabs(path) else path for path in production_files)
+    entries = workspace_entries(project_resolver(root).packages, candidates)
+    return {key for path in entries.public if (key := _production_key(path, production_files))}
 
 
 def resolve_import_spec(
