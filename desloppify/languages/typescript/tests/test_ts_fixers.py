@@ -868,6 +868,14 @@ class TestFixerWritePreservation:
         assert target.read_bytes() == b"\xef\xbb\xbfimport { a } from './a';\r\nexport {};\r\n"
         assert stat.S_IMODE(target.stat().st_mode) == 0o644
 
+    def test_mixed_line_endings_are_preserved(self, tmp_path):
+        target = tmp_path / "mixed.ts"
+        target.write_bytes(b"const keep = 1;\r\nconst DROP = 2;\nexport {};\n")
+
+        apply_fixer([{"file": str(target)}], self._drop_marked)
+
+        assert target.read_bytes() == b"const keep = 1;\r\nexport {};\n"
+
     def test_symlinked_file_is_written_through(self, tmp_path):
         real = tmp_path / "real.ts"
         real.write_text("const DROP = 1;\nconst keep = 2;\n")
