@@ -97,7 +97,7 @@ Every adversarial input in the original review broke one of the line-regex fixer
 | 2.11 | **Partial: the `dead_useeffect` smell is on the syntax tree, with a fallback that skips template and block-comment lines (#33).** Skip comment and string spans in the remaining line-regex detectors (security, smells, logs) | M | DT-7, FX-4 |
 | 2.12 | Zones: `@generated` headers; directory-level issues classified by zone | S | DT-11 |
 | 2.13 | **Done (#26).** A separate `params` category for unused symbols, with every category decided on the syntax tree | S | FX-15 |
-| 2.14 | package.json `imports` (`#subpath`) in the resolver. The vite-react golden pins this as a known false positive | S | GR-1 |
+| 2.14 | **Done (#37).** package.json `imports` (`#subpath`) in the resolver: the importer's nearest package.json is the scope; exact and `*` keys, condition objects and fallback arrays in order; bare targets resolve when they name a workspace package. The vite-react golden's `analytics.ts` false positive is gone | S | GR-1 |
 | 2.15 | Move the `_NEXTJS_*` constants out of `engine/detectors/orphaned.py` into `FrameworkSpec.entry_conventions` | S | GR-6 |
 | 2.16 | Test coverage follows re-export chains of any depth (it stops after one barrel hop today; see trpc `parseTRPCMessage.ts`) | M | DT-12 |
 | 2.17 | Test-health score: count coverage through a tested public entry as covered, and fix the "production files" and "checks" labels | M | DT-12 |
