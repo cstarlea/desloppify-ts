@@ -103,16 +103,16 @@ Before any of that, the scan skips these issues:
 - issues whose detector is suspect, i.e. it had open issues before and apparently didn't run this time (`find_suspect_detectors`);
 - issues matching an exclusion.
 
-Issues outside the scan's `--path` are never confirmed.
+Issues outside the scan's `--path` are never confirmed, and nothing about them changes.
 
 | Status before | Finding absent | Finding present again |
 |---|---|---|
 | `open`, `deferred`, `triaged_out` | `auto_resolved` once confirmed. The note records the old status | No change |
 | `wontfix` | Stays `wontfix`. Once confirmed, it gets `resolution_attestation.scan_verified`, and its note is kept | Stays `wontfix`. `scan_verified` is cleared, so strict and verified count it again |
-| `fixed`, `false_positive` | Stays as is. Marked `scan_verified` on any absence, even an unconfirmed one (see the known gaps) | Reopened as `open`, with `reopen_count` + 1 and the attestation dropped |
+| `fixed`, `false_positive` | Stays as is. Once confirmed, it gets `resolution_attestation.scan_verified`, and its note is kept | Reopened as `open`, with `reopen_count` + 1 and the attestation dropped |
 | `auto_resolved` | No change | Reopened as `open` |
 
-A scan never changes a `wontfix` status. `scan_verified` is what lets a gone wontfix stop counting against strict and verified (`issue_counts_as_failure`). Separately, the scan adds a `stale_wontfix` work item for a wontfix whose finding is still present when either:
+A scan never changes a `wontfix` status. `scan_verified` is what lets a gone wontfix stop counting against strict and verified, and a gone `fixed` or `false_positive` stop counting against verified (`issue_counts_as_failure`). A scan that confirms an already-marked issue again leaves it alone. Separately, the scan adds a `stale_wontfix` work item for a wontfix whose finding is still present when either:
 
 - `wontfix_decay_scans` scans (config, default 20) have passed since it was marked wontfix;
 - a structural finding has grown by at least 10 complexity or 50 LOC.
@@ -153,7 +153,6 @@ The rename and restore run under the file's lock, or in memory only if the lock 
 
 ## Known gaps
 
-These are tracked in `dev/FORK_ROADMAP.md` as 2.39 and 2.40.
+These are tracked in `dev/FORK_ROADMAP.md` as 2.40.
 
-- **`fixed` and `false_positive` are marked `scan_verified` on any absence.** That includes absences where their detector didn't run, and issues outside the scan's `--path`, so verified can credit a fix that no detector confirmed.
 - **Clusters close only on `fixed`, `auto_resolved` and `wontfix`.** `_reconcile_active_clusters_by_item_status` doesn't count `false_positive`, so a cluster whose last open issue was marked a false positive stays active.
