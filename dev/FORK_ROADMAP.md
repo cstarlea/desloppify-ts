@@ -130,7 +130,7 @@ Every adversarial input in the original review broke one of the line-regex fixer
 | 2.30 | Plan quarantine coverage: #29 checks the entries of `queue_order`, `skipped`, `clusters` and `overrides`, but only the container type of `superseded`, `execution_log`, `commit_log` and `promoted_ids`. A malformed entry in those still loads as is | S | CE-3 |
 | 2.31 | **Done (#41).** `tree` and `viz` label the root node with the scanned path relative to the project root (the project's directory name for a whole-project scan) and strip only that prefix, so `--path .` no longer merges `src/` into the root; `--focus` takes scan- or project-relative paths | S | — |
 | 2.32 | **Done (#43).** `cli.main()` configures logging once: a stderr handler on the `desloppify` logger prints `  WARNING: message`, yellow (red for errors) on a terminal unless `NO_COLOR` is set. No global verbosity flag exists, so `DESLOPPIFY_LOG_LEVEL` (e.g. `DEBUG`) sets the threshold | S | — |
-| 2.37 | Wontfix debt totals in the stats and `status` still include wontfix issues a scan confirmed gone (`scan_verified`), though the scores exclude them (#42 follow-up) | S | CE-5 |
+| 2.37 | **Done (#58).** Wontfix debt totals follow strict: a wontfix issue a scan confirmed gone (`scan_verified`) is no longer debt. `is_wontfix_debt()` sits beside `issue_counts_as_failure()`; `stats.wontfix_debt`/`wontfix_debt_by_tier` feed the scan gap warning, Score Integrity, the agent summary, `status` structural areas and tier table, and the narrative; `stats.wontfix` stays the status count | S | CE-5 |
 | 2.38 | **Done (#46).** `plan skip` now changes `open`, `deferred` and `triaged_out` issues, so `--permanent`/`--false-positive` on a deferred issue makes it `wontfix`/`false_positive` in state as well as plan; wontfix, false_positive and resolved issues are left alone in both. The deferred-disposition item suggested `plan skip --permanent "*"`, which wontfixed every open issue and no deferred one; it now suggests the new `--deferred-only` flag | S | CE-5 |
 | 2.39 | **Done (#49).** `fixed`/`false_positive` are marked `scan_verified` only on a confirmed absence (detector ran, zone policy now skips it, or file gone), like the other statuses; issues outside `--path` keep their mark as it was. An already-marked issue is no longer re-marked every scan, and the user's note is kept | S | CE-2 |
 | 2.40 | **Done (#50).** Cluster completion counts every resolved status (`resolved_statuses()`: fixed, wontfix, false_positive, auto_resolved) in scan reconcile and in `plan resolve`. The resolve path was the visible bug: members recovered from the execution log kept a cluster resolved one issue at a time from ever closing ("1 left in cluster") | S | — |
@@ -288,7 +288,7 @@ Status key: **done** (with PR), **partial** (what's left is in §2), **open**, *
 | CE-2 | high | Strict never recovers from real fixes | done (#38) |
 | CE-3 | medium | One bad issue loses the whole state | done (#25, #29); plan sections → 2.30 |
 | CE-4 | medium | Unlocked read-modify-write | done (#35) |
-| CE-5 | medium | Deferred, triaged_out and wontfix never auto-resolve | done (#42) |
+| CE-5 | medium | Deferred, triaged_out and wontfix never auto-resolve | done (#42, #58) |
 | CE-6 | medium | scoring.md and QUEUE_LIFECYCLE contradict code | done (#44) |
 | CE-7 | low | Subjective scores taken as-is | open |
 | CE-8 | low | Plan subsystem complexity | open → §2E |
