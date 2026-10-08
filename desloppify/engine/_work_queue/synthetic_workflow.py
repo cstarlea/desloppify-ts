@@ -328,7 +328,7 @@ def build_deferred_disposition_item(plan: dict) -> WorkflowActionItem | None:
     backlog_cmd = 'desloppify plan backlog "*"'
     subset_backlog_cmd = "desloppify plan backlog <cluster-or-id>"
     wontfix_cmd = (
-        'desloppify plan skip --permanent "*" '
+        'desloppify plan skip --permanent --deferred-only "*" '
         '--note "<why this deferred work should stay wontfix>" '
         '--attest "I have actually reviewed these deferred items and I am not gaming the score by skipping them permanently." '
         "--confirm"

@@ -55,6 +55,10 @@ def _add_skip_subparsers(plan_sub) -> None:
         "--confirm", action="store_true", default=False,
         help="Required when skipping more than 5 items at once",
     )
+    p_skip.add_argument(
+        "--deferred-only", action="store_true", default=False,
+        help="Only act on issues that are already temporarily skipped",
+    )
 
     # plan unskip <patterns>
     p_unskip = plan_sub.add_parser(
