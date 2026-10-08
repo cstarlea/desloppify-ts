@@ -211,20 +211,9 @@ def _walk(root, out: list[ImportRef]) -> None:
 
 def _parser():
     """The tsx parser, or None when tree-sitter or the grammar is unavailable."""
-    try:
-        from desloppify.languages._framework.treesitter import is_available
-        from desloppify.languages._framework.treesitter.parsing import (
-            _get_parser,
-        )
-    except ImportError:
-        return None
-    if not is_available():
-        return None
-    try:
-        parser, _language = _get_parser("tsx")
-    except Exception:  # noqa: BLE001 - recorded as a grammar load failure
-        return None
-    return parser
+    from desloppify.languages.typescript.syntax.tree import get_parser
+
+    return get_parser("tsx")
 
 
 def extract_imports_treesitter(filepath: str, parser) -> list[ImportRef] | None:

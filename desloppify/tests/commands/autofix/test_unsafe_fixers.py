@@ -72,7 +72,6 @@ def test_safe_fixer_runs_without_flag() -> None:
 def test_typescript_code_rewriting_fixers_are_marked_unsafe() -> None:
     unsafe = {name for name, fixer in get_ts_fixers().items() if fixer.unsafe}
     assert unsafe == {
-        "unused-imports",
         "unused-vars",
         "unused-params",
         "debug-logs",
@@ -82,7 +81,7 @@ def test_typescript_code_rewriting_fixers_are_marked_unsafe() -> None:
 
 def test_unsafe_fixers_are_not_advertised_as_supported() -> None:
     supported = supported_fixers({}, "typescript")
-    assert supported == {"dead-useeffect"}
+    assert supported == {"dead-useeffect", "unused-imports"}
 
 
 def test_import_cascade_skips_unsafe_fixer(capsys) -> None:

@@ -123,6 +123,7 @@ _SKIP_REASON_LABELS = {
     "standalone_var_with_call": "standalone variable with function call (may have side effects)",
     "no_destr_context": "destructuring member without context",
     "out_of_range": "line out of range (stale data?)",
+    "needs_treesitter": "needs tree-sitter (install desloppify[full])",
     "other": "other patterns (needs manual review)",
 }
 

@@ -3,7 +3,10 @@
 Covers: __init__, common, imports, vars, logs, params, if_chain, useeffect.
 """
 
+import importlib.util
 import textwrap
+
+import pytest
 
 from desloppify.languages.typescript.fixers import __all__
 from desloppify.languages.typescript.fixers.fixer_io import apply_fixer
@@ -253,6 +256,10 @@ class TestCommonApplyFixer:
 # =====================================================================
 
 
+@pytest.mark.skipif(
+    importlib.util.find_spec("tree_sitter_language_pack") is None,
+    reason="the unused-imports fixer needs tree-sitter",
+)
 class TestFixUnusedImports:
     """Tests for fix_unused_imports()."""
 

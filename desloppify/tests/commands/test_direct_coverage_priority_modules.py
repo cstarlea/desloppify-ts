@@ -42,7 +42,6 @@ import desloppify.intelligence.review.context_holistic.selection.contexts as sel
 import desloppify.intelligence.review.selection_cache as review_selection_cache_mod
 import desloppify.languages.typescript.detectors.deps.resolve as ts_deps_resolve_mod
 import desloppify.languages.typescript.fixers.fixer_io as ts_fixer_io_mod
-import desloppify.languages.typescript.fixers.import_rewrite as ts_import_rewrite_mod
 import desloppify.languages.typescript.fixers.syntax_scan as ts_syntax_scan_mod
 import desloppify.languages.typescript.syntax.scanner as ts_scanner_mod
 
@@ -89,20 +88,12 @@ def test_direct_coverage_priority_modules_smoke():
 
     assert callable(ts_scanner_mod.scan_code)
     assert callable(ts_fixer_io_mod.apply_fixer)
-    assert callable(ts_import_rewrite_mod.process_unused_import_lines)
     assert callable(ts_syntax_scan_mod.find_balanced_end)
 
 
 def test_direct_coverage_priority_modules_behavior():
     assert display_mod.short_issue_id("foo::bar::baz").startswith("foo")
     assert ts_syntax_scan_mod.collapse_blank_lines(["a", "", "", "b"]) == ["a", "", "b"]
-    rewritten, removed = ts_import_rewrite_mod.remove_symbols_from_import_stmt(
-        "import { A, B } from 'pkg';\n",
-        {"A"},
-    )
-    assert rewritten is not None
-    assert "B" in rewritten
-    assert removed == {"A"}
 
 
 def test_review_import_parse_normalizes_legacy_findings_alias():

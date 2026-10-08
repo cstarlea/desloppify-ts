@@ -64,7 +64,7 @@ def test_syntax_regression_only_flags_added_errors():
 
 
 def test_syntax_regression_is_none_without_tree_sitter(monkeypatch):
-    monkeypatch.setattr(validation_mod, "is_available", lambda: False)
+    monkeypatch.setattr(validation_mod, "parse_text", lambda *_args: None)
     assert count_syntax_errors("const a = ;\n", "a.ts") is None
     assert syntax_regression("a.ts", "const a = 1;\n", "const a = ;\n") is None
 
@@ -116,20 +116,24 @@ def test_vars_destructuring_breakage_is_blocked(tmp_path):
     assert ts_file.read_text() == original
 
 
-def test_imports_after_side_effect_import_breakage_is_blocked(tmp_path):
+def test_imports_after_side_effect_import_is_rewritten_correctly(tmp_path):
+    # The old line-based fixer wrote `import, { b } from 'lib';` here.
     ts_file = tmp_path / "i.ts"
-    original = textwrap.dedent("""\
-        import 'reflect-metadata'
-        import { a, b } from 'lib'
-        console.log(b)
-    """)
-    ts_file.write_text(original)
+    ts_file.write_text(
+        textwrap.dedent("""\
+            import 'reflect-metadata'
+            import { a, b } from 'lib'
+            console.log(b)
+        """)
+    )
     entries = [{"file": str(ts_file), "name": "a", "line": 2, "category": "imports"}]
 
     result = fix_unused_imports(entries, dry_run=False)
 
-    assert result.entries == []
-    assert ts_file.read_text() == original
+    assert [e["removed"] for e in result.entries] == [["a"]]
+    assert ts_file.read_text() == (
+        "import 'reflect-metadata'\nimport { b } from 'lib'\nconsole.log(b)\n"
+    )
 
 
 def test_valid_fix_still_applies(tmp_path):

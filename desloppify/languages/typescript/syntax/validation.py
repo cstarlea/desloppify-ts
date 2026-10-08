@@ -10,34 +10,17 @@ behaviour; those need the fixers themselves to be correct.
 
 from __future__ import annotations
 
-import logging
 from pathlib import Path
 
-from desloppify.languages._framework.treesitter import PARSE_INIT_ERRORS, is_available
-from desloppify.languages._framework.treesitter.parsing import _get_parser
-
-logger = logging.getLogger(__name__)
-
-# angle-bracket casts (`<T>value`) are valid here, but parse as JSX under tsx.
-_TYPESCRIPT_GRAMMAR_SUFFIXES = frozenset({".ts", ".mts", ".cts"})
-
-
-def grammar_for(path: str | Path) -> str:
-    """The tree-sitter grammar for a TS/JS file: ``typescript`` or ``tsx``."""
-    suffix = Path(path).suffix.lower()
-    return "typescript" if suffix in _TYPESCRIPT_GRAMMAR_SUFFIXES else "tsx"
+from desloppify.languages.typescript.syntax.tree import grammar_for, parse_text
 
 
 def count_syntax_errors(text: str, path: str | Path) -> int | None:
     """Count ERROR and MISSING nodes, or None when tree-sitter can't parse."""
-    if not is_available():
+    parsed = parse_text(text, path)
+    if parsed is None:
         return None
-    try:
-        parser, _language = _get_parser(grammar_for(path))
-    except PARSE_INIT_ERRORS as exc:
-        logger.debug("syntax check unavailable for %s: %s", path, exc)
-        return None
-    root = parser.parse(text.encode("utf-8")).root_node
+    root = parsed.root
     if not root.has_error:
         return 0
     count = 0
