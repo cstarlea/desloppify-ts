@@ -72,14 +72,22 @@ Each detected issue has a confidence level that determines how heavily it counts
 
 A low-confidence issue pulls the score down only 30% as much as a high-confidence one. This means uncertain detections have a lighter touch on your score.
 
-## Lenient vs. strict scoring
+## Lenient, strict and verified scoring
 
-Desloppify tracks two score variants:
+Desloppify tracks three score variants. They differ only in which issue statuses count as failures:
 
-- **Lenient (default):** `open`, `deferred`, and `triaged_out` issues count as failures. Issues you mark as `wontfix`, `fixed`, `false_positive`, or `auto_resolved` do not penalize the score.
-- **Strict:** `wontfix` and `auto_resolved` issues also count as failures, in addition to everything in lenient. This reveals the "true debt" you have accepted.
+| Status | Lenient | Strict | Verified |
+|---|---|---|---|
+| `open`, `deferred`, `triaged_out` | fails | fails | fails |
+| `wontfix` | passes | fails | fails |
+| `fixed`, `false_positive` | passes | passes | fails until a rescan confirms the finding is gone |
+| `auto_resolved` | passes | passes | passes |
 
-The gap between lenient and strict scores shows how much technical debt you are carrying via `wontfix` decisions.
+- **Lenient (overall):** only work you haven't done counts.
+- **Strict:** debt you accepted with `wontfix` also counts. The gap between lenient and strict is your wontfix debt.
+- **Verified:** a manual `fixed` or `false_positive` counts only once a later scan no longer reports the finding. It covers the mechanical dimensions only.
+
+`auto_resolved` means a scan confirmed the finding is gone (the detector ran and no longer reports it, or its file was deleted), so it never counts. Fixing every finding and rescanning reaches 100 in every variant.
 
 ## Zone filtering
 
