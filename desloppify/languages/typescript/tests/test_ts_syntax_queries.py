@@ -7,7 +7,15 @@ import importlib.util
 import pytest
 
 import desloppify.languages.typescript.syntax.tree as tree_mod
-from desloppify.languages._framework.treesitter import disable_parse_cache, enable_parse_cache
+from desloppify.languages._framework.treesitter import (
+    TYPESCRIPT_SPEC,
+    disable_parse_cache,
+    enable_parse_cache,
+)
+from desloppify.languages._framework.treesitter.cohesion import (
+    detect_responsibility_cohesion,
+)
+from desloppify.languages.typescript.detectors.deps.imports import ImportExtractor
 from desloppify.languages.typescript.detectors.facade import is_ts_facade
 from desloppify.languages.typescript.detectors.smells import detect_smells
 from desloppify.languages.typescript.syntax.queries import (
@@ -531,3 +539,19 @@ def test_parsed_file_missing_or_without_tree_sitter(tmp_path, set_project_root, 
     (tmp_path / "a.ts").write_text("let a = 1;\n")
     monkeypatch.setattr(tree_mod, "get_parser", lambda grammar: None)
     assert parsed_file(tmp_path / "a.ts") is None
+
+
+def test_cohesion_and_imports_share_the_parse(tmp_path, set_project_root, parse_counter):
+    # cohesion gets project-relative paths, deps/imports absolute ones; a
+    # ``.ts`` file is parsed once, with the typescript grammar, for both.
+    (tmp_path / "a.ts").write_text("import { b } from './b';\nconst x = <T>b;\n")
+    enable_parse_cache()
+    try:
+        _entries, checked = detect_responsibility_cohesion(["a.ts"], TYPESCRIPT_SPEC, min_loc=1)
+        refs = ImportExtractor().extract(str(tmp_path / "a.ts"))
+        assert not parsed_file(tmp_path / "a.ts").root.has_error
+    finally:
+        disable_parse_cache()
+    assert checked == 1
+    assert [r.specifier for r in refs] == ["./b"]
+    assert parse_counter == {"typescript": 1}

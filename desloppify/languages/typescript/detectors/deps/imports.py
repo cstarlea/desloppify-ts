@@ -1,7 +1,8 @@
 """Import extraction for the TypeScript dependency graph.
 
-Parses each file with the bundled tree-sitter ``tsx`` grammar, so specifiers
-inside comments and strings never become edges and every edge knows whether
+Parses each file with tree-sitter through ``syntax.tree.parsed_file``, which
+shares the parse with the scan's other users. Specifiers inside comments
+and strings never become edges and every edge knows whether
 it exists at runtime. Without tree-sitter, a regex fallback keeps the graph
 usable (with comment-stripping but no type information).
 """
@@ -216,17 +217,14 @@ def _parser():
     return get_parser("tsx")
 
 
-def extract_imports_treesitter(filepath: str, parser) -> list[ImportRef] | None:
-    from desloppify.languages._framework.treesitter.cache import (
-        get_or_parse_tree,
-    )
+def extract_imports_treesitter(filepath: str) -> list[ImportRef] | None:
+    from desloppify.languages.typescript.syntax.tree import parsed_file
 
-    cached = get_or_parse_tree(filepath, parser, "tsx")
-    if cached is None:
+    parsed = parsed_file(filepath)
+    if parsed is None:
         return None
-    _source, tree = cached
     refs: list[ImportRef] = []
-    _walk(tree.root_node, refs)
+    _walk(parsed.root, refs)
     return refs
 
 
@@ -277,7 +275,7 @@ class ImportExtractor:
 
     def extract(self, filepath: str) -> list[ImportRef]:
         if self._parser is not None and not filepath.endswith((".vue", ".svelte", ".astro")):
-            refs = extract_imports_treesitter(filepath, self._parser)
+            refs = extract_imports_treesitter(filepath)
             if refs is not None:
                 return refs
         try:
