@@ -143,6 +143,10 @@ TIER_WEIGHTS = {
 # Minimum checks for full dimension weight — below this, weight is dampened
 # proportionally. Prevents small-sample dimensions from swinging the overall score.
 MIN_SAMPLE = 200
+
+# A mechanical dimension whose detectors didn't run keeps its previous score
+# for this many scans, then drops out of the score until they run again.
+CARRIED_FORWARD_MAX_SCANS = 3
 HOLISTIC_POTENTIAL = 10
 
 # Budget: subjective dimensions get this fraction of the overall score.
@@ -308,6 +312,7 @@ __all__ = [
     "DETECTOR_SCORING_POLICIES",
     "DIMENSIONS",
     "DIMENSIONS_BY_NAME",
+    "CARRIED_FORWARD_MAX_SCANS",
     "FAILURE_STATUSES_BY_MODE",
     "FILE_BASED_DETECTORS",
     "HOLISTIC_MULTIPLIER",

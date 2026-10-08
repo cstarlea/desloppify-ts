@@ -106,6 +106,7 @@ class DimensionScore(TypedDict, total=False):
     failing: int
     tier: int
     carried_forward: bool
+    carried_forward_since_scan: int  # first scan the dimension was carried in
     detectors: dict[str, Any]
     coverage_status: str
     coverage_confidence: float

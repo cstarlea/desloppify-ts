@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from desloppify.engine._scoring.detection import detector_stats_by_mode
-from desloppify.engine._scoring.policy.core import SCORING_MODES
+from desloppify.engine._scoring.policy.core import CARRIED_FORWARD_MAX_SCANS, SCORING_MODES
 from desloppify.intelligence.review.dimensions.data import load_dimensions_for_lang
 from desloppify.state import (
     MergeScanOptions,
@@ -206,5 +206,40 @@ def test_dimension_whose_detector_did_not_run_is_carried_forward(scanned):
 
     # test_coverage reports no potential at all: it didn't run this time.
     _scan(state, [], root, dict(_POTENTIALS))
+
+    assert state["dimension_scores"]["Test health"]["carried_forward"] is True
+
+
+def test_carried_forward_dimension_expires(scanned):
+    state, root = scanned
+    with_coverage = {**_POTENTIALS, "test_coverage": 3}
+    _scan(state, [_raw_issue("test_coverage", "untested")], root, with_coverage)
+    measured_at = state["scan_count"]
+
+    for _ in range(CARRIED_FORWARD_MAX_SCANS):
+        _scan(state, [], root, dict(_POTENTIALS))
+        carried = state["dimension_scores"]["Test health"]
+        assert carried["carried_forward"] is True
+        assert carried["carried_forward_since_scan"] == measured_at + 1
+
+    _scan(state, [], root, dict(_POTENTIALS))
+    assert "Test health" not in state["dimension_scores"]
+    assert state["objective_score"] == 100.0
+
+    # Once the detector runs again the dimension is measured afresh.
+    _scan(state, [], root, with_coverage)
+    assert state["dimension_scores"]["Test health"].get("carried_forward") is None
+
+
+def test_saving_between_scans_does_not_age_a_carried_dimension(scanned):
+    from desloppify.engine._scoring.state_integration import recompute_stats
+
+    state, root = scanned
+    with_coverage = {**_POTENTIALS, "test_coverage": 3}
+    _scan(state, [_raw_issue("test_coverage", "untested")], root, with_coverage)
+    _scan(state, [], root, dict(_POTENTIALS))
+
+    for _ in range(CARRIED_FORWARD_MAX_SCANS + 1):
+        recompute_stats(state, scan_path=".")
 
     assert state["dimension_scores"]["Test health"]["carried_forward"] is True

@@ -10,7 +10,10 @@ from __future__ import annotations
 
 from desloppify.base.enums import issue_status_tokens
 from desloppify.engine._scoring.detection import merge_potentials
-from desloppify.engine._scoring.policy.core import is_wontfix_debt
+from desloppify.engine._scoring.policy.core import (
+    CARRIED_FORWARD_MAX_SCANS,
+    is_wontfix_debt,
+)
 from desloppify.engine._scoring.results.core import (
     compute_health_score,
     compute_score_bundle,
@@ -123,6 +126,21 @@ def _resolve_allowed_subjective_dimensions(
     return None
 
 
+def _scan_count(state: StateModel) -> int:
+    try:
+        return int(state.get("scan_count", 0) or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _carried_since(prev_data: dict, scan_count: int) -> int:
+    """Return the first scan *prev_data* was carried in (this one if it wasn't)."""
+    since = prev_data.get("carried_forward_since_scan")
+    if prev_data.get("carried_forward") and isinstance(since, int) and since <= scan_count:
+        return since
+    return scan_count
+
+
 def _materialize_dimension_scores(
     state: StateModel,
     bundle: object,
@@ -133,13 +151,15 @@ def _materialize_dimension_scores(
     A dimension missing from the bundle is carried forward only when none of
     its detectors reported a potential this time (the detectors didn't run).
     A detector that ran and reported zero checks has nothing left to fail, so
-    its old score is dropped rather than kept forever.
+    its old score is dropped rather than kept forever. A carried score expires
+    after ``CARRIED_FORWARD_MAX_SCANS`` scans without its detectors running.
     """
     lenient_scores = bundle.dimension_scores
     strict_scores = bundle.strict_dimension_scores
     verified_strict_scores = bundle.verified_strict_dimension_scores
 
     prev_dim_scores = dict(state.get("dimension_scores", {}))
+    scan_count = _scan_count(state)
 
     state["dimension_scores"] = {
         name: dict(
@@ -164,7 +184,10 @@ def _materialize_dimension_scores(
             continue
         if any(detector in potentials for detector in prev_detectors):
             continue
-        carried = {**prev_data, "carried_forward": True}
+        since = _carried_since(prev_data, scan_count)
+        if scan_count - since >= CARRIED_FORWARD_MAX_SCANS:
+            continue
+        carried = {**prev_data, "carried_forward": True, "carried_forward_since_scan": since}
         carried.setdefault("score", 0.0)
         carried.setdefault("strict", carried.get("score", 0.0))
         carried.setdefault(
