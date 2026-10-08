@@ -219,7 +219,7 @@ def merge_scan(
         resolved_options.force_resolve,
         ran_detectors,
     )
-    auto_resolved, skipped_other_lang, resolved_out_of_scope, resolve_changed = verify_disappeared(
+    auto_resolved, skipped_other_lang, resolve_changed = verify_disappeared(
         existing,
         current_ids,
         suspect_detectors,
@@ -274,7 +274,6 @@ def merge_scan(
         suspect_detectors=suspect_detectors,
         chronic_reopeners=chronic_reopeners,
         skipped_other_lang=skipped_other_lang,
-        resolved_out_of_scope=resolved_out_of_scope,
         ignored_count=ignored_count,
         ignore_pattern_count=len(ignore_patterns),
         raw_issues=raw_issues,

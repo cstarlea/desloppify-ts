@@ -667,11 +667,30 @@ class TestMissingIssuesResolved:
         }
         st["issues"]["det::a.py::fn"] = old
 
-        diff = merge_scan(st, [], MergeScanOptions(lang="python", force_resolve=True))
+        diff = merge_scan(
+            st, [], MergeScanOptions(lang="python", force_resolve=True, potentials={"det": 1})
+        )
         assert diff["auto_resolved"] == 1
         assert st["issues"]["det::a.py::fn"]["status"] == "fixed"
         assert st["issues"]["det::a.py::fn"]["resolution_attestation"]["scan_verified"] is True
         assert "scan_verified_at" in st["issues"]["det::a.py::fn"]["resolution_attestation"]
+
+
+    @pytest.mark.parametrize("status", ["fixed", "false_positive"])
+    def test_missing_resolved_issue_not_verified_when_detector_did_not_run(self, status):
+        """No potential and no finding from the detector: the absence isn't confirmed."""
+        st = empty_state()
+        old = _make_raw_issue("det::a.py::fn", detector="det", file="a.py", status=status)
+        old["lang"] = "python"
+        old["resolution_attestation"] = {"kind": "manual", "scan_verified": False}
+        st["issues"]["det::a.py::fn"] = old
+
+        diff = merge_scan(
+            st, [], MergeScanOptions(lang="python", force_resolve=True, potentials={"other": 1})
+        )
+        assert diff["auto_resolved"] == 0
+        assert st["issues"]["det::a.py::fn"]["status"] == status
+        assert st["issues"]["det::a.py::fn"]["resolution_attestation"]["scan_verified"] is False
 
 
 # ---------------------------------------------------------------------------
