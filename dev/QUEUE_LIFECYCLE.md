@@ -61,7 +61,7 @@ Temporary skips therefore **block the scan step** until one of these happens:
      - queue, promoted and cluster references to issues that aren't `open`, `deferred` or `triaged_out`;
      - skip entries whose issue is now `auto_resolved`.
 
-     Wontfix and false-positive skip entries are kept, because those issues keep their status.
+     Wontfix and false-positive skip entries are kept, because those issues keep their status. Such an issue is only taken out of the queue, promoted list and clusters; it is not superseded, and an old superseded entry for it is forgotten.
    - **Close clusters.** A cluster is marked done when it has emptied, or when all its issues have a resolved status: `fixed`, `wontfix`, `false_positive` or `auto_resolved` (`resolved_statuses()` in `base/enums.py`). `plan resolve` applies the same rule: it marks a cluster done once the members it didn't just resolve are already resolved in state.
    - **Resurface skips.** Temporary skips whose `review_after` scans have passed return to the queue, and their `deferred` issues reopen.
    - **Prune.** Superseded entries older than 90 days are dropped.
