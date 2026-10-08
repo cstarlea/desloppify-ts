@@ -8,6 +8,7 @@ from pathlib import Path
 
 from desloppify.base.discovery.paths import get_project_root
 from desloppify.base.discovery.source import find_tsx_and_jsx_files
+from desloppify.languages.typescript.syntax.scanner import SourceText
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +25,7 @@ def detect_context_nesting(path: Path) -> tuple[list[dict], int]:
         try:
             p = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
             content = p.read_text()
-            lines = content.splitlines()
+            lines = SourceText(content).code_lines
         except (OSError, UnicodeDecodeError) as exc:
             logger.debug(
                 "Skipping unreadable TSX file %s in context-nesting pass: %s",

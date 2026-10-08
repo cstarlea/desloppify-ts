@@ -51,6 +51,7 @@ import desloppify.intelligence.review.dimensions.validation as review_dimensions
 import desloppify.languages.framework as lang_framework
 import desloppify.languages.typescript.detectors.smells.detector_safety as ts_smell_detectors_safety
 import desloppify.languages.typescript.detectors.smells.helpers as ts_smell_helpers_mod
+from desloppify.languages.typescript.syntax.scanner import SourceText
 import desloppify.languages.typescript.detectors.deps.runtime as ts_deps_runtime
 import desloppify.languages.typescript.extractors_components as ts_extractors_components
 from desloppify.engine._work_queue.models import QueueBuildOptions, QueueVisibility
@@ -254,21 +255,22 @@ def test_typescript_split_smell_helpers_have_direct_coverage():
     masked = ts_smell_helpers_mod._code_text('const x = "message"; // hi')
     assert "message" not in masked
 
-    assert ts_smell_helpers_mod._scan_template_content("x`${a}`", 1, 0)[1] is True
-    assert ts_smell_helpers_mod._scan_code_line("/* open comment") == (True, False, 0)
-    states = ts_smell_helpers_mod._build_ts_line_state(
-        [
-            "const a = 1;",
-            "/* block",
-            "still block",
-            "end */",
-            "const tpl = `",
-            "value",
-            "`;",
-        ]
+    source = SourceText(
+        "\n".join(
+            [
+                "const a = 1;",
+                "/* block",
+                "still block",
+                "end */",
+                "const tpl = `",
+                "value",
+                "`;",
+            ]
+        )
     )
-    assert states[2] == "block_comment"
-    assert states[5] == "template_literal"
+    assert source.kind_at(source.line_starts[2]) == "comment"
+    assert source.kind_at(source.line_starts[5]) == "template"
+    assert source.kind_at(source.line_starts[0]) is None
 
 
 def test_smoke_intelligence():

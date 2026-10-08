@@ -33,7 +33,7 @@ _DESCRIPTION = re.compile(r"\w")
 _CASTS = frozenset({"as_expression", "type_assertion"})
 _NODE_TYPES = _CASTS | {"non_null_expression", "predefined_type", "comment"}
 
-# Without tree-sitter: one match per line, outside strings and block comments.
+# Without tree-sitter: one match per line, starting in code (the directives: starting a comment).
 _FALLBACK_PATTERNS = {
     "any_type": r":\s*any\b|<\s*any\b|,\s*any\b(?=\s*(?:,|>))",
     "as_any_cast": r"\bas\s+any\b",
@@ -58,7 +58,8 @@ def _detect_type_safety(ctx, smell_counts: dict[str, list[dict]]) -> None:
         for smell_id, pattern in _FALLBACK_PATTERNS.items():
             if smell_id in skip:
                 continue
-            for index, line in _regex_line_matches(ctx, pattern):
+            anchor = "comment" if smell_id.startswith("ts_") else "code"
+            for index, line in _regex_line_matches(ctx, pattern, anchor):
                 _emit(smell_counts, smell_id, ctx, index + 1, line.strip()[:100])
         return
     unchecked_index = _unchecked_index_access(ctx.filepath)

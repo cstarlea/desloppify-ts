@@ -7,9 +7,9 @@ import json
 from types import SimpleNamespace
 
 import desloppify.languages.typescript.detectors.smells.helpers as blocks_mod
-import desloppify.languages.typescript.detectors.smells.helpers as line_state_mod
 import desloppify.languages.typescript.detectors.patterns.cli as patterns_cli_mod
 import desloppify.languages.typescript.detectors.react.cli as react_cli_mod
+from desloppify.languages.typescript.syntax.scanner import SourceText
 
 
 def test_block_helpers_find_body_and_line_info() -> None:
@@ -43,29 +43,26 @@ def test_block_helpers_code_text_strips_comments_and_strings() -> None:
     assert "const y = 1;" in masked
 
 
-def test_line_state_helpers_detect_template_and_block_comment_states() -> None:
-    end_pos, found_close, depth = line_state_mod._scan_template_content("x`${a}`y`", 1, 0)
-    assert found_close is True
-    assert depth == 0
-    assert end_pos > 1
-
-    assert line_state_mod._scan_code_line("/* no close") == (True, False, 0)
-    assert line_state_mod._scan_code_line("const a = `x ${y}`;") == (False, False, 0)
-
-    states = line_state_mod._build_ts_line_state(
-        [
-            "const a = 1;",
-            "/* block",
-            "still block",
-            "end */",
-            "const t = `",
-            "inside template",
-            "`;",
-        ]
+def test_source_text_tells_code_from_comments_and_literals() -> None:
+    source = SourceText(
+        "\n".join(
+            [
+                "const a = 1;",
+                "/* block",
+                "still block",
+                "end */",
+                "const t = `",
+                "inside ${x} template",
+                "`; // tail",
+            ]
+        )
     )
-    # State applies to lines entered while already inside a block/template.
-    assert states[2] == "block_comment"
-    assert states[5] == "template_literal"
+    assert source.kind_at(source.line_starts[2]) == "comment"
+    assert source.kind_at(source.line_starts[5]) == "template"
+    assert source.kind_at(source.line_starts[5] + len("inside ${")) is None
+    assert source.code_lines[6] == " ;" + " " * 8
+    assert [i for i, _ in source.line_matches(r"//", "comment")] == [6]
+    assert [i for i, _ in source.line_matches(r"`", "literal")] == [4]
 
 
 def test_patterns_cli_json_output(monkeypatch, capsys) -> None:

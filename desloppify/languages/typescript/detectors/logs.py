@@ -4,6 +4,10 @@ Catches:
 - Direct tags: console.log('[Tag] ...')
 - Emoji-prefixed tags: console.log('🔍 [Tag] ...')
 - Template-literal tags: console.log(`${TAG_VAR} ...`) where TAG_VAR = '[Tag]'
+
+Calls come from the syntax tree, so a log in a comment or string isn't one;
+each is reported on the line where the call starts, where the debug-logs
+fixer looks for it.
 """
 
 import argparse
@@ -14,44 +18,89 @@ from collections import defaultdict
 from pathlib import Path
 
 from desloppify.base.discovery.file_paths import rel
-from desloppify.base.discovery.source import find_ts_and_js_files
+from desloppify.base.discovery.source import find_ts_and_js_files, read_file_text
 from desloppify.base.output.terminal import colorize, print_table
-from desloppify.base.search.grep import grep_files
 from desloppify.languages.typescript.detectors.contracts import DetectorResult
+from desloppify.languages.typescript.syntax.queries import calls
+from desloppify.languages.typescript.syntax.scanner import SourceText
+from desloppify.languages.typescript.syntax.tree import ParsedSource, parsed_file
 
 logger = logging.getLogger(__name__)
 
 
 TAG_EXTRACT_RE = re.compile(r"\[([^\]]+)\]")
 
+_LOG_CALLEES = frozenset(f"console.{method}" for method in ("log", "warn", "info", "debug"))
+_TAGGED_FIRST_ARG_RE = re.compile(
+    r"""^['"`].{0,4}\[|^`\$\{\w*(?:TAG|DEBUG|LOG)\w*\}""", re.IGNORECASE
+)
+
+# Without tree-sitter: calls that start in code with the tagged argument on the same line.
 # Pattern 1: Direct and emoji-prefixed tags
-_PAT1 = r"console\.(log|warn|info|debug)\s*\(\s*['\"`].{0,4}\["
+_PAT1 = re.compile(r"console\.(log|warn|info|debug)\s*\(\s*['\"`].{0,4}\[")
 # Pattern 2: Template-literal tag via variable containing TAG/DEBUG/LOG
-_PAT2 = r"console\.(log|warn|info|debug)\s*\(\s*`\$\{\w*(TAG|DEBUG|LOG)\w*\}"
+_PAT2 = re.compile(r"console\.(log|warn|info|debug)\s*\(\s*`\$\{\w*(TAG|DEBUG|LOG)\w*\}", re.IGNORECASE)
+
+
+def tagged_console_calls(parsed: ParsedSource) -> list:
+    """``console.log/warn/info/debug`` calls whose first argument is tagged:
+    ``'[Tag] ...'``, ``'🔍 [Tag]'`` or `` `${DEBUG_TAG} ...` ``."""
+    return [
+        call.node
+        for call in calls(parsed, _LOG_CALLEES)
+        if call.arguments and _TAGGED_FIRST_ARG_RE.match(parsed.text(call.arguments[0]))
+    ]
 
 
 def detect_logs(path: Path) -> DetectorResult[dict]:
     """Detect tagged logs with explicit population semantics."""
     ts_files = find_ts_and_js_files(path)
-    total_files = len(ts_files)
-
-    hits1 = grep_files(_PAT1, ts_files)
-    hits2 = grep_files(_PAT2, ts_files, flags=re.IGNORECASE)
-
-    seen: set[tuple[str, int]] = set()
     entries = []
-    for filepath, lineno, content in hits1 + hits2:
-        key = (filepath, lineno)
-        if key in seen:
+    for filepath in ts_files:
+        parsed = parsed_file(filepath)
+        if parsed is not None:
+            entries.extend(_tree_logs(filepath, parsed))
             continue
-        seen.add(key)
-        tag_match = TAG_EXTRACT_RE.search(content)
-        tag = tag_match.group(1) if tag_match else "unknown"
-        entries.append(
-            {"file": filepath, "line": lineno, "tag": tag, "content": content.strip()}
-        )
+        content = read_file_text(filepath)
+        if content is not None:
+            entries.extend(_regex_logs(filepath, content))
+    return DetectorResult(entries=entries, population_kind="files", population_size=len(ts_files))
 
-    return DetectorResult(entries=entries, population_kind="files", population_size=total_files)
+
+def _tree_logs(filepath: str, parsed: ParsedSource) -> list[dict]:
+    found: dict[int, dict] = {}
+    source = parsed.source
+    for call in tagged_console_calls(parsed):
+        row = call.start_point[0]
+        if row in found:
+            continue
+        start = source.rfind(b"\n", 0, call.start_byte) + 1
+        end = source.find(b"\n", call.start_byte)
+        line = source[start : len(source) if end == -1 else end].decode("utf-8", "replace")
+        args = call.child_by_field_name("arguments")
+        first = next(a for a in args.named_children if a.type != "comment")
+        tag = TAG_EXTRACT_RE.search(parsed.text(first))
+        found[row] = {
+            "file": filepath,
+            "line": row + 1,
+            "tag": tag.group(1) if tag else "unknown",
+            "content": line.strip(),
+        }
+    return [found[row] for row in sorted(found)]
+
+
+def _regex_logs(filepath: str, content: str) -> list[dict]:
+    source = SourceText(content)
+    entries = []
+    for index, line in enumerate(source.lines):
+        match = source.search(_PAT1, index) or source.search(_PAT2, index)
+        if match is None:
+            continue
+        tag = TAG_EXTRACT_RE.search(line, match.start())
+        entries.append(
+            {"file": filepath, "line": index + 1, "tag": tag.group(1) if tag else "unknown", "content": line.strip()}
+        )
+    return entries
 
 
 def cmd_logs(args: argparse.Namespace) -> None:

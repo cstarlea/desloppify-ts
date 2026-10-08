@@ -29,11 +29,10 @@ from desloppify.languages.typescript.detectors.smells.helpers import (
     _code_text,
     _content_line_info,
     _extract_block_body,
-    _build_ts_line_state,
     _FileContext,
+    _file_context,
     _strip_ts_comments,
     _track_brace_body,
-    _ts_match_is_in_string,
 )
 
 
@@ -45,16 +44,14 @@ needs_treesitter = pytest.mark.skipif(
 
 def _ctx(content: str, filepath: str = "test.ts") -> _FileContext:
     """Build a _FileContext from content string for testing."""
-    lines = content.splitlines()
-    return _FileContext(filepath=filepath, content=content, lines=lines, line_state={})
+    return _file_context(filepath, content)
 
 
 def _file_ctx(tmp_path, content: str, name: str = "a.tsx") -> _FileContext:
     """A _FileContext for a file on disk, which the syntax-tree detectors parse."""
     path = tmp_path / name
     path.write_text(content, encoding="utf-8", newline="")
-    lines = content.splitlines()
-    return _FileContext(str(path), content, lines, _build_ts_line_state(lines))
+    return _file_context(str(path), content)
 
 
 # ── _strip_ts_comments ───────────────────────────────────────
@@ -194,54 +191,6 @@ class TestCodeText:
         result = _code_text(text)
         assert len(result) == len(text)
         assert [i for i, c in enumerate(result) if c == "\n"] == [i for i, c in enumerate(text) if c == "\n"]
-
-
-# ── _ts_match_is_in_string ───────────────────────────────────
-
-
-class TestTsMatchIsInString:
-    def test_match_in_double_quoted_string(self):
-        line = 'const s = "any type";'
-        pos = line.index("any")
-        assert _ts_match_is_in_string(line, pos) is True
-
-    def test_match_in_single_quoted_string(self):
-        line = "const s = 'any type';"
-        pos = line.index("any")
-        assert _ts_match_is_in_string(line, pos) is True
-
-    def test_match_in_template_literal(self):
-        line = "const s = `any type`;"
-        pos = line.index("any")
-        assert _ts_match_is_in_string(line, pos) is True
-
-    def test_match_in_code(self):
-        line = "const x: any = 5;"
-        pos = line.index("any")
-        assert _ts_match_is_in_string(line, pos) is False
-
-    def test_match_in_line_comment(self):
-        line = "const x = 1; // any type here"
-        pos = line.index("any")
-        assert _ts_match_is_in_string(line, pos) is True
-
-    def test_match_after_escaped_quote(self):
-        line = r"const s = 'it\'s any type';"
-        # After the escaped quote, "any" is still inside the string
-        pos = line.index("any")
-        assert _ts_match_is_in_string(line, pos) is True
-
-    def test_match_at_start_of_line(self):
-        line = "any = 5;"
-        assert _ts_match_is_in_string(line, 0) is False
-
-    def test_match_after_string_closes(self):
-        line = "const s = 'hi'; const x: any = 5;"
-        pos = line.rindex("any")
-        assert _ts_match_is_in_string(line, pos) is False
-
-    def test_empty_line(self):
-        assert _ts_match_is_in_string("", 0) is False
 
 
 # ── _track_brace_body ────────────────────────────────────────
@@ -676,16 +625,19 @@ class TestDetectWindowGlobals:
         _detect_window_globals(_ctx("window['__myVar'] = 'test';"), counts)
         assert len(counts["window_global"]) == 1
 
-    def test_skips_lines_in_block_comment(self):
-        content = "window.__debug = true;"
-        ctx = _FileContext(
-            filepath="test.ts",
-            content=content,
-            lines=content.splitlines(),
-            line_state={0: "block_comment"},
-        )
+    @pytest.mark.parametrize(
+        "content",
+        [
+            "/*\nwindow.__debug = true;\n*/",
+            "// window.__debug = true;",
+            "const s = 'window.__debug = true';",
+            "const s = `\nwindow.__debug = true;\n`;",
+        ],
+        ids=["block-comment", "line-comment", "string", "template"],
+    )
+    def test_skips_comments_and_literals(self, content):
         counts = _make_counts()
-        _detect_window_globals(ctx, counts)
+        _detect_window_globals(_ctx(content), counts)
         assert len(counts["window_global"]) == 0
 
 

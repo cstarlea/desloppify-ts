@@ -23,10 +23,10 @@ from .detector_safety import (
     _detect_switch_no_default,
     _detect_window_globals,
 )
+from .detector_statements import _detect_statement_smells
 from .detector_types import TYPE_SAFETY_SMELLS, _detect_type_safety
 from .helpers import (
-    _FileContext,
-    _build_ts_line_state,
+    _file_context,
     _regex_line_matches,
 )
 from .assets import (
@@ -52,6 +52,7 @@ _MULTI_LINE_DETECTORS = (
     _detect_high_cyclomatic_complexity,
     _detect_monster_functions,
     _detect_nested_closures,
+    _detect_statement_smells,
     _detect_stub_functions,
     _detect_swallowed_errors,
     _detect_switch_no_default,
@@ -71,19 +72,16 @@ def detect_smells(path: Path) -> tuple[list[dict], int]:
         try:
             p = resolve_typescript_source(filepath)
             content = p.read_text()
-            lines = content.splitlines()
         except (OSError, UnicodeDecodeError) as exc:
             log_best_effort_failure(logger, f"read TypeScript smell candidate {filepath}", exc)
             continue
 
-        line_state = _build_ts_line_state(lines)
-        ctx = _FileContext(filepath, content, lines, line_state)
-
-        loc[filepath] = len(lines)
+        ctx = _file_context(filepath, content)
+        loc[filepath] = len(ctx.lines)
         for check in checks:
             if check["pattern"] is None:
                 continue
-            for i, line in _regex_line_matches(ctx, check["pattern"]):
+            for i, line in _regex_line_matches(ctx, check["pattern"], check.get("anchor", "code")):
                 if check["id"] == "hardcoded_url" and re.match(
                     r"^(?:export\s+)?(?:const|let|var)\s+[A-Z_][A-Z0-9_]*\s*=",
                     line.strip(),
