@@ -94,6 +94,7 @@
   },
   "reduced_coverage": [
     "exports: knip_not_installed",
+    "type_error: tsc_missing",
     "unused: tsc_missing"
   ]
 }

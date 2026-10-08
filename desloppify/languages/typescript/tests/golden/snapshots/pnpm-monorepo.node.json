@@ -48,6 +48,13 @@
       "confidence": "medium",
       "zone": "production",
       "summary": "No direct tests (19 LOC, 1 importers) — covered only via imports from tested modules"
+    },
+    {
+      "id": "type_error::packages/utils/src/dates.ts::TS2769::6",
+      "tier": 2,
+      "confidence": "high",
+      "zone": "production",
+      "summary": "TS2769: No overload matches this call."
     }
   ],
   "potentials": {
@@ -69,7 +76,10 @@
     "smells": 12,
     "structural": 12,
     "test_coverage": 23,
+    "type_error": 2,
     "unused": 12
   },
-  "reduced_coverage": []
+  "reduced_coverage": [
+    "type_error: partial"
+  ]
 }

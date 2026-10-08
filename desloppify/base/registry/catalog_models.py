@@ -7,6 +7,7 @@ from dataclasses import dataclass
 DISPLAY_ORDER = [
     "logs",
     "unused",
+    "type_error",
     "exports",
     "deprecated",
     "structural",

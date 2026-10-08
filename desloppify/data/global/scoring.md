@@ -56,6 +56,7 @@ Each detector reports a **potential**, the number of checks it ran, along with i
 | **Duplication** | 1.0 | dupes, boilerplate_duplication |
 | **Test health** | 1.0 | test_coverage |
 | **Security** | 1.0 | security |
+| **Type checks** | 1.0 | type_error |
 
 The detector-to-dimension mapping comes from the registry (`base/registry/catalog_entries.py`), and the weights come from `MECHANICAL_DIMENSION_WEIGHTS`. The registry also maps some detectors that no TypeScript phase emits, such as the Rust detectors. They never report a potential, so they never count. Review, concerns, `signature`, `stale_wontfix` and a few others create work items but are kept out of scoring (`SCORING_EXCLUDED_DETECTORS`).
 
@@ -87,13 +88,24 @@ Some issues don't count at all:
 
 ### File-based detectors
 
-For smells, security, test_coverage, nextjs and next_lint (plus some excluded or unused ones, see `_FILE_BASED_POLICY_DETECTORS`), the potential is a number of files. A file's failures are capped so that one bad file can't dominate:
+For smells, security, test_coverage, type_error, nextjs and next_lint (plus some excluded or unused ones, see `_FILE_BASED_POLICY_DETECTORS`), the potential is a number of files. A file's failures are capped so that one bad file can't dominate:
 
 - 1–2 issues: up to 1.0;
 - 3–5 issues: up to 1.5;
 - 6 or more issues: up to 2.0.
 
 `test_coverage` works differently. Each scorable file contributes `min(sqrt(LOC), 50)` to the potential, and its issues fail by at most that same weight. That makes a large untested file cost more than a small one. Files shorter than 10 lines aren't scored at all, so a fix that shrinks every remaining file below that leaves Test health with nothing to check, and the dimension drops out of the score.
+
+### Type checks
+
+`type_error` reports what tsc reports, read from the same tsc run as `unused` (`detectors/tsc.py` runs tsc once per scan with `--noUnusedLocals --noUnusedParameters --listFiles`; those flags only add the unused diagnostics, which `type_error` leaves out). Its potential is the number of files tsc checked in the scan path, from `--listFiles`. One issue covers one error code on one line, with ID `type_error::<file>::TS<code>::<line>`.
+
+- tsc runs on the scan path's nearest tsconfig (`tsconfig.app.json`, then `tsconfig.json`), as for `unused`. A file whose own nearest tsconfig is a different one belongs to another project, such as a package in a monorepo, and is neither reported nor counted: a root config isn't the config that package is checked with. The scan records reduced coverage naming those tsconfigs; scanning that directory checks it.
+- Compiler-option errors (TS5xxx, TS6xxx) aren't issues.
+- A package or its types that can't be found (`Cannot find module 'x'` for a bare specifier, missing `@types`, missing JSX types) is an uninstalled dependency, not a code error. Such a file's errors aren't reported and the file isn't counted, since the rest may be cascades of the missing types. When the project declares dependencies and no `node_modules` exists above its tsconfig, the detector doesn't run at all.
+- Errors that depend more on compiler options or ambient types than on the code (implicit `any`, index-signature access, module-format interop, unknown globals, an unused `@ts-expect-error`) have medium confidence; the rest have high confidence.
+
+When tsc doesn't run (not installed, no tsconfig, dependencies not installed, a Deno project), the detector reports no potential: Type checks is carried forward and its open issues aren't auto-resolved.
 
 ## Subjective dimensions
 

@@ -51,6 +51,7 @@ _FILE_BASED_POLICY_DETECTORS = frozenset(
         "review",
         "nextjs",
         "next_lint",
+        "type_error",
     }
 )
 _LOC_WEIGHT_POLICY_DETECTORS = frozenset({"test_coverage"})
@@ -162,6 +163,7 @@ MECHANICAL_DIMENSION_WEIGHTS: dict[str, float] = {
     "duplication": 1.0,
     "test health": 1.0,
     "security": 1.0,
+    "type checks": 1.0,
 }
 
 # Per-dimension weighting within the subjective pool.

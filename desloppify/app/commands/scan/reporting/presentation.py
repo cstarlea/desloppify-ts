@@ -286,6 +286,7 @@ def show_low_dimension_hints(
         "Duplication": "run `desloppify show dupes` — deduplicate functions",
         "Test health": "run `desloppify show test_coverage` — review coverage gaps (fix code issues first, tests later)",
         "Security": "run `desloppify show security` — fix security issues",
+        "Type checks": "run `desloppify show type_error` — fix tsc type errors",
     }
 
     low = []

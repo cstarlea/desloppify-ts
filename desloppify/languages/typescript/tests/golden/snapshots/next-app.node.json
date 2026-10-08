@@ -112,9 +112,11 @@
     "smells": 14,
     "structural": 14,
     "test_coverage": 35,
+    "type_error": 5,
     "unused": 14
   },
   "reduced_coverage": [
-    "next_lint: tool_not_found"
+    "next_lint: tool_not_found",
+    "type_error: partial"
   ]
 }
