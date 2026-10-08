@@ -10,6 +10,7 @@ from desloppify.app.output.visualize_data import (
     _build_tree,
     _collect_file_data,
     _issues_by_file,
+    scan_root_label,
 )
 from desloppify.app.output.tree_text import render_tree_lines
 from desloppify.base.discovery.file_paths import safe_write_text
@@ -50,7 +51,8 @@ def generate_visualization(
         files = _collect_file_data(path, lang)
         dep_graph = _build_dep_graph_for_path(path, lang)
         issues_by_file = _issues_by_file(state)
-        tree = _build_tree(files, dep_graph, issues_by_file)
+        prefix, name = scan_root_label(path)
+        tree = _build_tree(files, dep_graph, issues_by_file, prefix=prefix, name=name)
         # Escape </ to prevent </script> in filenames from breaking HTML
         tree_json = json.dumps(tree).replace("</", r"<\/")
 
@@ -130,13 +132,16 @@ def generate_tree_text(
     resolved_options = options or TreeTextOptions()
     files = _collect_file_data(path, lang)
     dep_graph = _build_dep_graph_for_path(path, lang)
-    tree = _build_tree(files, dep_graph, _issues_by_file(state))
+    prefix, name = scan_root_label(path)
+    tree = _build_tree(files, dep_graph, _issues_by_file(state), prefix=prefix, name=name)
 
     root = tree
     if resolved_options.focus:
-        parts = resolved_options.focus.strip("/").split("/")
-        if parts and parts[0] == "src":
-            parts = parts[1:]
+        # Relative to the scanned directory, or to the project root.
+        parts = [p for p in resolved_options.focus.strip("/").split("/") if p not in ("", ".")]
+        prefix_parts = [] if prefix == "." else prefix.split("/")
+        if prefix_parts and parts[: len(prefix_parts)] == prefix_parts:
+            parts = parts[len(prefix_parts) :]
         for part in parts:
             found = None
             for child in root.get("children", []):

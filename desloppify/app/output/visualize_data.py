@@ -48,15 +48,43 @@ def _collect_file_data(path: Path, lang=None) -> list[dict]:
     return files
 
 
-def _build_tree(files: list[dict], dep_graph: dict, issues_by_file: dict) -> dict:
-    """Build nested tree structure for D3 treemap."""
-    root: dict = {"name": "src", "children": {}}
+def scan_root_label(path: Path) -> tuple[str, str]:
+    """``(prefix, name)`` for the tree root of a scan of *path*.
+
+    *prefix* is the scanned directory relative to the project root ("." for
+    the root itself), which file paths are made relative to. *name* labels the
+    root node: that relative path, or the directory's own name when the scan
+    covers the whole project or lies outside it.
+    """
+    resolved = path.resolve()
+    prefix = rel(resolved)
+    if prefix in ("", ".") or prefix.startswith("../") or Path(prefix).is_absolute():
+        return ".", resolved.name or str(resolved)
+    return prefix, prefix
+
+
+def _build_tree(
+    files: list[dict],
+    dep_graph: dict,
+    issues_by_file: dict,
+    *,
+    prefix: str = "src",
+    name: str | None = None,
+) -> dict:
+    """Build nested tree structure for D3 treemap.
+
+    The root node is the scanned directory: *prefix* is its project-relative
+    path, stripped from file paths, and *name* its label (default *prefix*).
+    """
+    root: dict = {"name": name or prefix, "children": {}}
+    prefix_parts = [] if prefix == "." else prefix.strip("/").split("/")
 
     for f in files:
         parts = f["path"].split("/")
-        # Skip leading 'src/' since root is already 'src'
-        if parts and parts[0] == "src":
-            parts = parts[1:]
+        # Paths are project-relative; the root node already stands for the prefix.
+        depth = len(prefix_parts)
+        if depth and len(parts) > depth and parts[:depth] == prefix_parts:
+            parts = parts[depth:]
         node = root
         for part in parts[:-1]:
             if part not in node["children"]:
@@ -133,4 +161,5 @@ __all__ = [
     "_build_tree",
     "_collect_file_data",
     "_issues_by_file",
+    "scan_root_label",
 ]

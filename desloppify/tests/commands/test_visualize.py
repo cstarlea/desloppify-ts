@@ -7,9 +7,11 @@ from types import SimpleNamespace
 
 
 from desloppify.app.output.tree_text import _aggregate, _print_tree
+from desloppify.app.output.visualize import TreeTextOptions, generate_tree_text
 from desloppify.app.output.visualize_data import (
     _build_tree,
     _collect_file_data,
+    scan_root_label,
 )
 
 # ===========================================================================
@@ -168,6 +170,87 @@ class TestBuildTree:
         tree = _build_tree(files, {}, {})
         # Root is "src", the "lib" dir should be a child
         assert any(c["name"] == "lib" for c in tree["children"])
+
+    def test_root_is_the_scanned_directory(self):
+        files = [
+            self._file("packages/ui/src/button.tsx"),
+            self._file("packages/ui/index.ts"),
+        ]
+        tree = _build_tree(files, {}, {}, prefix="packages/ui")
+        assert tree["name"] == "packages/ui"
+        assert {c["name"] for c in tree["children"]} == {"src", "index.ts"}
+
+    def test_whole_project_keeps_top_level_directories(self):
+        """Scanning the project root must not merge src/ into the root."""
+        files = [self._file("src/main.ts"), self._file("vite.config.ts")]
+        tree = _build_tree(files, {}, {}, prefix=".", name="my-app")
+        assert tree["name"] == "my-app"
+        names = {c["name"] for c in tree["children"]}
+        assert names == {"src", "vite.config.ts"}
+        src = next(c for c in tree["children"] if c["name"] == "src")
+        assert [c["name"] for c in src["children"]] == ["main.ts"]
+
+
+# ===========================================================================
+# scan_root_label / generate_tree_text
+# ===========================================================================
+
+
+class TestScanRootLabel:
+    def test_subdirectory_is_labelled_relative_to_project_root(self, set_project_root):
+        target = set_project_root / "packages" / "ui"
+        target.mkdir(parents=True)
+        assert scan_root_label(target) == ("packages/ui", "packages/ui")
+
+    def test_src(self, set_project_root):
+        (set_project_root / "src").mkdir()
+        assert scan_root_label(set_project_root / "src") == ("src", "src")
+
+    def test_project_root_uses_its_directory_name(self, set_project_root):
+        assert scan_root_label(set_project_root) == (".", set_project_root.name)
+
+    def test_outside_project_root_uses_its_directory_name(self, set_project_root, tmp_path_factory):
+        outside = tmp_path_factory.mktemp("elsewhere")
+        assert scan_root_label(outside) == (".", outside.name)
+
+
+class TestTreeTextRoot:
+    def _lang(self, files):
+        return SimpleNamespace(file_finder=lambda _path: files, build_dep_graph=None)
+
+    def _write(self, root, name, lines=3):
+        path = root / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("x\n" * lines)
+
+    def test_root_label_follows_the_scanned_path(self, set_project_root):
+        root = set_project_root
+        self._write(root, "app/page.tsx")
+        self._write(root, "app/blog/post.tsx")
+        lang = self._lang(["app/page.tsx", "app/blog/post.tsx"])
+        text = generate_tree_text(root / "app", lang=lang)
+        assert text.splitlines()[0].startswith("app/  (2 files")
+        assert "  blog/" in text
+        assert "src/" not in text
+
+    def test_project_root_scan_is_labelled_with_the_project_name(self, set_project_root):
+        root = set_project_root
+        self._write(root, "src/main.ts")
+        self._write(root, "vite.config.ts")
+        lang = self._lang(["src/main.ts", "vite.config.ts"])
+        lines = generate_tree_text(root, lang=lang).splitlines()
+        assert lines[0].startswith(f"{root.name}/  (2 files")
+        assert any(line.startswith("  src/  (1 files") for line in lines)
+        assert any(line.strip().startswith("vite.config.ts") for line in lines)
+
+    def test_focus_accepts_scan_relative_and_project_relative_paths(self, set_project_root):
+        root = set_project_root
+        self._write(root, "packages/ui/src/button.tsx")
+        lang = self._lang(["packages/ui/src/button.tsx"])
+        scan = root / "packages" / "ui"
+        for focus in ("src", "packages/ui/src"):
+            text = generate_tree_text(scan, options=TreeTextOptions(focus=focus), lang=lang)
+            assert text.splitlines()[0].startswith("src/  (1 files"), focus
 
 
 # ===========================================================================
