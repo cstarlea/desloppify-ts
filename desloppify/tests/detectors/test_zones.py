@@ -173,6 +173,33 @@ class TestClassifyFile:
         """File in bin/ is classified as SCRIPT."""
         assert classify_file("bin/run.py", COMMON_ZONE_RULES) == Zone.SCRIPT
 
+    def test_examples_directory(self):
+        """Example apps are classified as SCRIPT."""
+        for path in (
+            "examples/next-app/src/app.ts",
+            "example/index.ts",
+            "packages/client/examples/basic.ts",
+        ):
+            assert classify_file(path, COMMON_ZONE_RULES) == Zone.SCRIPT, path
+
+    def test_examples_name_outside_directory_is_production(self):
+        """Only an examples/ directory counts, not a file or a longer name."""
+        for path in (
+            "src/examples.ts",
+            "src/example.ts",
+            "src/example-data/index.ts",
+            "src/my-examples/index.ts",
+        ):
+            assert classify_file(path, COMMON_ZONE_RULES) == Zone.PRODUCTION, path
+
+    def test_examples_tests_and_configs_keep_their_zone(self):
+        """Earlier rules win inside examples/."""
+        from desloppify.languages.typescript._zones import TS_ZONE_RULES
+
+        assert classify_file("examples/app/src/a.test.ts", TS_ZONE_RULES) == Zone.TEST
+        assert classify_file("examples/app/vite.config.ts", TS_ZONE_RULES) == Zone.CONFIG
+        assert classify_file("examples/app/src/a.ts", TS_ZONE_RULES) == Zone.SCRIPT
+
     def test_production_default(self):
         """File not matching any rule defaults to PRODUCTION."""
         assert classify_file("src/app.py", COMMON_ZONE_RULES) == Zone.PRODUCTION
@@ -637,9 +664,11 @@ class TestZonePolicies:
         assert vendor.exclude_from_score is True
 
     def test_script_zone_skips(self):
-        """SCRIPT zone skips coupling, single_use, orphaned, facade."""
+        """SCRIPT zone skips coupling, single_use, orphaned, facade, test_coverage."""
         policy = ZONE_POLICIES[Zone.SCRIPT]
-        assert policy.skip_detectors == {"coupling", "single_use", "orphaned", "facade"}
+        assert policy.skip_detectors == {
+            "coupling", "single_use", "orphaned", "facade", "test_coverage"
+        }
 
     def test_script_zone_downgrades_structural(self):
         """SCRIPT zone downgrades structural."""
@@ -650,8 +679,8 @@ class TestZonePolicies:
         assert ZONE_POLICIES[Zone.SCRIPT].exclude_from_score is False
 
     def test_all_non_production_zones_skip_test_coverage(self):
-        """test_coverage is in skip_detectors for TEST, CONFIG, GENERATED, VENDOR."""
-        for zone in [Zone.TEST, Zone.CONFIG, Zone.GENERATED, Zone.VENDOR]:
+        """test_coverage is in skip_detectors for every zone but PRODUCTION."""
+        for zone in [Zone.TEST, Zone.CONFIG, Zone.GENERATED, Zone.VENDOR, Zone.SCRIPT]:
             policy = ZONE_POLICIES[zone]
             assert "test_coverage" in policy.skip_detectors, (
                 f"{zone.value} zone should skip test_coverage"
@@ -660,10 +689,6 @@ class TestZonePolicies:
     def test_production_does_not_skip_test_coverage(self):
         """PRODUCTION zone does NOT skip test_coverage."""
         assert "test_coverage" not in ZONE_POLICIES[Zone.PRODUCTION].skip_detectors
-
-    def test_script_does_not_skip_test_coverage(self):
-        """SCRIPT zone does NOT skip test_coverage."""
-        assert "test_coverage" not in ZONE_POLICIES[Zone.SCRIPT].skip_detectors
 
     def test_every_zone_has_policy(self):
         """Every Zone enum value has a corresponding policy."""

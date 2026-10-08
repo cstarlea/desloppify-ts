@@ -127,7 +127,8 @@ COMMON_ZONE_RULES = [
     ZoneRule(Zone.VENDOR, ["/vendor/", "/third_party/", "/vendored/"]),
     ZoneRule(Zone.GENERATED, ["/generated/", "/__generated__/"]),
     ZoneRule(Zone.TEST, ["/tests/", "/test/", "/fixtures/"]),
-    ZoneRule(Zone.SCRIPT, ["/scripts/", "/bin/"]),
+    # Example apps are runnable demos, untested by convention like scripts.
+    ZoneRule(Zone.SCRIPT, ["/scripts/", "/bin/", "/examples/", "/example/"]),
 ]
 
 

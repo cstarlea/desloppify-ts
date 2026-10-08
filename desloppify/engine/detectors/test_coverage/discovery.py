@@ -56,9 +56,10 @@ def _discover_scorable_and_tests(
     if extra_test_files:
         test_files |= {_to_rel(f) for f in extra_test_files}
 
+    # Scripts resolve test imports but aren't expected to have tests.
     scorable = {
         filepath
-        for filepath in production_files
+        for filepath in zone_map.include_only(all_files, Zone.PRODUCTION)
         if _file_loc(filepath) >= _MIN_LOC and _has_testable_logic(filepath, lang_name)
     }
 

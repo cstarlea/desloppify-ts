@@ -49,7 +49,7 @@ def test_discover_scorable_and_tests_filters_by_loc_and_logic(monkeypatch) -> No
     monkeypatch.setattr(
         discovery_mod,
         "_has_testable_logic",
-        lambda path, lang_name: lang_name == "python" and path != script_keep,
+        lambda path, lang_name: lang_name == "python",
     )
 
     production, tests, scorable, potential = discovery_mod._discover_scorable_and_tests(
@@ -59,6 +59,7 @@ def test_discover_scorable_and_tests_filters_by_loc_and_logic(monkeypatch) -> No
         extra_test_files=None,
     )
 
+    # Scripts still resolve test imports but are never scored.
     assert production == {prod_keep, prod_small, script_keep}
     assert tests == {test_file}
     assert scorable == {prod_keep}

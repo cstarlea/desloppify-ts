@@ -84,7 +84,7 @@ Some issues don't count at all:
 
 - Suppressed issues (matched by an ignore pattern) are skipped.
 - Issues outside the last scan's `--path` are skipped.
-- Issues in the **test**, **config**, **generated** and **vendor** zones are skipped. Production and script files count.
+- Issues in the **test**, **config**, **generated** and **vendor** zones are skipped. Production and script files count. The script zone covers `scripts/`, `bin/`, `examples/` and `example/` directories; its files aren't expected to have tests, so Test health scores production files only.
 
 ### File-based detectors
 
