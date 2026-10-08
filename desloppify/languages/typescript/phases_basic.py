@@ -82,7 +82,7 @@ def phase_deprecated(
     total_deprecated = dep_result.population_size
     results = []
     for entry in dep_entries:
-        if entry["kind"] == "property":
+        if entry["kind"] in ("property", "overload"):
             continue
         exported = entry.get("exported", True)
         unused = (
@@ -112,7 +112,7 @@ def phase_deprecated(
             )
         )
     log(
-        f"         {len(dep_entries)} instances → {len(results)} issues (properties suppressed)"
+        f"         {len(dep_entries)} instances → {len(results)} issues (members and overloads suppressed)"
     )
     return results, {"deprecated": total_deprecated}
 
