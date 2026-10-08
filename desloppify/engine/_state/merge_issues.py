@@ -89,11 +89,15 @@ def _mark_scan_verified(
 _AUTO_RESOLVABLE_STATUSES = frozenset({"open", "deferred", "triaged_out"})
 
 # Statuses that keep their manual disposition on a confirmed absence and are
-# marked scan-verified instead. A wontfix decision is kept if the finding
-# later comes back; a fixed or false_positive issue is reopened.
+# marked scan-verified instead. If the finding later comes back, a fixed issue
+# is reopened.
 _SCAN_VERIFIABLE_STATUSES = frozenset({"wontfix", "fixed", "false_positive"})
 
 _CONFIRMED_ABSENCE_STATUSES = _AUTO_RESOLVABLE_STATUSES | _SCAN_VERIFIABLE_STATUSES
+
+# User judgements that a reported finding doesn't overturn: a scan never
+# changes these statuses.
+_KEPT_ON_RETURN_STATUSES = frozenset({"wontfix", "false_positive"})
 
 
 def _is_scan_verified(issue: dict) -> bool:
@@ -292,13 +296,16 @@ def upsert_issues(
         previous["suppressed_at"] = None
         previous["suppression_pattern"] = None
 
-        if previous["status"] == "wontfix" and _is_scan_verified(previous):
-            # The accepted finding is back: it stays wontfix and counts again.
-            _clear_scan_verified(previous)
-            changed_detectors.add(detector)
+        if previous["status"] in _KEPT_ON_RETURN_STATUSES:
+            # A wontfix or false_positive judgement covers the finding being
+            # reported: the status stays, and a scan-verified mark is cleared
+            # so the issue counts again where the mode counts it.
+            if _is_scan_verified(previous):
+                _clear_scan_verified(previous)
+                changed_detectors.add(detector)
             continue
 
-        if previous["status"] in ("fixed", "auto_resolved", "false_positive"):
+        if previous["status"] in ("fixed", "auto_resolved"):
             # Review-request issues are condition-based. When just
             # completed by an agent import, skip reopening to avoid a
             # resolve-then-reopen loop on the same scan cycle.
