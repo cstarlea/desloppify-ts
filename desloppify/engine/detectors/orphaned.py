@@ -13,45 +13,6 @@ from desloppify.base.discovery.file_paths import count_lines, resolve_path
 _DUNDER_ALL_RE = re.compile(r"^__all__\s*[:=]", re.MULTILINE)
 
 # ---------------------------------------------------------------------------
-# Next.js App Router convention files
-# ---------------------------------------------------------------------------
-
-# Files that are entry points when inside an app/ directory
-_NEXTJS_APP_DIR_CONVENTIONS: set[str] = {
-    "page",
-    "layout",
-    "loading",
-    "error",
-    "not-found",
-    "global-error",
-    "route",
-    "template",
-    "default",
-    "opengraph-image",
-    "twitter-image",
-    "sitemap",
-    "robots",
-    "icon",
-    "apple-icon",
-    "forbidden",
-    "unauthorized",
-    "global-not-found",
-    "manifest",
-}
-
-# Files that are entry points at the project root (or src/)
-_NEXTJS_ROOT_CONVENTIONS: set[str] = {
-    "middleware",
-    "proxy",  # Next.js 16 renamed middleware to proxy
-    "mdx-components",
-    "instrumentation",
-    "instrumentation-client",
-}
-
-_NEXTJS_EXTENSIONS: set[str] = {".ts", ".tsx", ".js", ".jsx"}
-
-
-# ---------------------------------------------------------------------------
 # React Router / Remix convention files
 # ---------------------------------------------------------------------------
 
@@ -65,6 +26,8 @@ _REACT_ROUTER_CONVENTIONS: set[str] = {
     "entry.client",
     "entry.server",
 }
+
+_REACT_ROUTER_EXTENSIONS: frozenset[str] = frozenset({".ts", ".tsx", ".js", ".jsx"})
 
 _REACT_ROUTER_CONFIGS: tuple[str, ...] = (
     "react-router.config.js",
@@ -105,7 +68,7 @@ def _is_react_router_convention_entry(rel_path: str) -> bool:
     is a false positive on every project of this shape.
     """
     p = Path(rel_path)
-    if p.suffix not in _NEXTJS_EXTENSIONS:
+    if p.suffix not in _REACT_ROUTER_EXTENSIONS:
         return False
 
     parts = p.parts
@@ -124,40 +87,40 @@ def _is_react_router_convention_entry(rel_path: str) -> bool:
     return False
 
 
-def _detect_nextjs_project(path: Path) -> bool:
-    """Return True if the scan root looks like a Next.js project."""
-    for name in ("next.config.js", "next.config.mjs", "next.config.ts"):
-        if (path / name).exists():
-            return True
-    return False
+@dataclass(frozen=True)
+class EntryConventions:
+    """Files a framework loads by file-system convention, so nothing imports them.
 
-
-def _is_nextjs_convention_entry(rel_path: str) -> bool:
-    """Return True if *rel_path* is a Next.js App Router convention file.
-
-    Checks:
-    - Files with convention names inside any ``app/`` directory segment
-    - Root-level convention files (middleware, instrumentation)
+    A framework spec declares these (``FrameworkSpec.entry_conventions``) and
+    the language passes them in; a matching file is an entry point. Paths are
+    matched relative to a package root, and only for packages that have one
+    of ``config_files`` at their root.
     """
-    p = Path(rel_path)
-    ext = p.suffix
-    if ext not in _NEXTJS_EXTENSIONS:
-        return False
 
-    stem = p.stem
-    parts = p.parts
+    config_files: tuple[str, ...]
+    extensions: frozenset[str]
+    # Stems that are entry points at the package root or one level down (``src/``).
+    root_stems: frozenset[str] = frozenset()
+    # Stems that are entry points anywhere beneath a ``route_dir`` segment.
+    route_dir: str | None = None
+    route_stems: frozenset[str] = frozenset()
 
-    # Root-level conventions: middleware.ts, instrumentation.ts, etc.
-    # These can live at the project root or inside src/
-    if stem in _NEXTJS_ROOT_CONVENTIONS and len(parts) <= 2:
-        return True
+    def applies_to(self, package_root: Path) -> bool:
+        """Whether the package at *package_root* uses this framework."""
+        return any((package_root / name).exists() for name in self.config_files)
 
-    # App directory conventions: any file inside an app/ segment
-    if stem in _NEXTJS_APP_DIR_CONVENTIONS:
-        if "app" in parts:
+    def is_entry(self, rel_path: str) -> bool:
+        """Whether *rel_path* (relative to the package root) is a convention file."""
+        path = Path(rel_path)
+        if path.suffix not in self.extensions:
+            return False
+        if path.stem in self.root_stems and len(path.parts) <= 2:
             return True
-
-    return False
+        return (
+            self.route_dir is not None
+            and path.stem in self.route_stems
+            and self.route_dir in path.parts
+        )
 
 
 @dataclass
@@ -174,15 +137,23 @@ class OrphanedDetectionOptions:
     # Package directories inside the scan; framework conventions are detected
     # per package and matched relative to it.
     package_roots: list[Path] | None = None
+    # File-system conventions of the frameworks the language knows (Next.js).
+    entry_conventions: tuple[EntryConventions, ...] = ()
 
 
 class _FrameworkConventions:
     """Framework convention checks, detected for the package owning each file."""
 
-    def __init__(self, scan_path: Path, package_roots: list[Path] | None) -> None:
+    def __init__(
+        self,
+        scan_path: Path,
+        package_roots: list[Path] | None,
+        conventions: tuple[EntryConventions, ...],
+    ) -> None:
         roots = {scan_path.resolve(), *(Path(r).resolve() for r in package_roots or ())}
         self._roots = sorted(roots, key=lambda p: len(p.parts), reverse=True)
-        self._detected: dict[Path, tuple[bool, bool]] = {}
+        self._conventions = conventions
+        self._detected: dict[Path, tuple[tuple[EntryConventions, ...], bool]] = {}
 
     def is_entry(self, filepath: str) -> bool:
         file_path = Path(resolve_path(filepath))
@@ -191,12 +162,12 @@ class _FrameworkConventions:
             return False
         if root not in self._detected:
             self._detected[root] = (
-                _detect_nextjs_project(root),
+                tuple(c for c in self._conventions if c.applies_to(root)),
                 _detect_react_router_project(root),
             )
-        is_nextjs, is_react_router = self._detected[root]
+        conventions, is_react_router = self._detected[root]
         relative = file_path.relative_to(root).as_posix()
-        if is_nextjs and _is_nextjs_convention_entry(relative):
+        if any(c.is_entry(relative) for c in conventions):
             return True
         return is_react_router and _is_react_router_convention_entry(relative)
 
@@ -250,7 +221,9 @@ def detect_orphaned_files(
 
     entry_files = resolved_options.entry_files or set()
     conventions = (
-        _FrameworkConventions(path, resolved_options.package_roots)
+        _FrameworkConventions(
+            path, resolved_options.package_roots, resolved_options.entry_conventions
+        )
         if resolved_options.detect_frameworks
         else None
     )
