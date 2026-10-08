@@ -5,7 +5,7 @@
       "tier": 3,
       "confidence": "high",
       "zone": "production",
-      "summary": "Deprecated: isClientError (1 importers)"
+      "summary": "Deprecated: isClientError (0 importers) → exported; may still be public API"
     },
     {
       "id": "exports::src/links.mts::Link",

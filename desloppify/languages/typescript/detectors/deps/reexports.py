@@ -6,8 +6,8 @@ before reaching the declaration. ``definition_files`` walks those hops by
 name, so a test importing one name from a package entry is credited to the
 file that implements it, not to every file the barrels touch.
 
-Type-only exports are skipped: importing a type runs no code. Needs
-tree-sitter; without it nothing is followed.
+Type-only exports are skipped (importing a type runs no code) unless a
+caller asks for ``types``. Needs tree-sitter; without it nothing is followed.
 """
 
 from __future__ import annotations
@@ -32,40 +32,43 @@ class ModuleExports:
     stars: list[str] = field(default_factory=list)
 
 
-_CACHE: dict[str, tuple[bytes, ModuleExports]] = {}
+_CACHE: dict[tuple[str, bool], tuple[bytes, ModuleExports]] = {}
 
 
-def module_exports(path: str) -> ModuleExports | None:
-    """The export summary of the file at *path* (absolute), or None if unparseable."""
+def module_exports(path: str, *, types: bool = False) -> ModuleExports | None:
+    """The export summary of the file at *path* (absolute), or None if unparseable.
+
+    With ``types``, type-only imports and exports count too.
+    """
     parsed = parsed_file(path)
     if parsed is None:
         return None
-    cached = _CACHE.get(path)
+    cached = _CACHE.get((path, types))
     if cached is not None and cached[0] is parsed.source:
         return cached[1]
 
     imported: dict[str, tuple[str, str]] = {}
     for info in imports(parsed):
-        if info.type_only or info.kind == "side_effect":
+        if (info.type_only and not types) or info.kind == "side_effect":
             continue
         for binding in info.bindings:
-            if not binding.type_only:
+            if types or not binding.type_only:
                 name = NAMESPACE if binding.imported in (NAMESPACE, "=") else binding.imported
                 imported[binding.local] = (info.source, name)
 
     summary = ModuleExports()
     for info in exports(parsed):
-        if info.type_only:
+        if info.type_only and not types:
             continue
         if info.kind == "reexport":
             if info.star and not info.bindings:
                 summary.stars.append(info.source or "")
             for binding in info.bindings:
-                if not binding.type_only and binding.name is not None:
+                if (types or not binding.type_only) and binding.name is not None:
                     summary.forwarded[binding.exported] = (info.source or "", binding.name)
             continue
         for binding in info.bindings:
-            if binding.type_only:
+            if binding.type_only and not types:
                 continue
             if binding.name in imported and info.kind in ("named", "default"):
                 summary.forwarded[binding.exported] = imported[binding.name]
@@ -74,7 +77,7 @@ def module_exports(path: str) -> ModuleExports | None:
         # ``export default function () {}`` and ``export default {...}`` bind no name.
         if info.is_default and not info.bindings and info.kind in ("declaration", "default"):
             summary.local.add("default")
-    _CACHE[path] = (parsed.source, summary)
+    _CACHE[(path, types)] = (parsed.source, summary)
     return summary
 
 
