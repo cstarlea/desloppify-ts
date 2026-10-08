@@ -3,6 +3,8 @@
 import json
 from pathlib import Path
 
+import pytest
+
 
 from desloppify.engine._state import filtering as state_query_mod
 from desloppify.engine._state.issue_semantics import MECHANICAL_DEFECT, SCAN_ORIGIN
@@ -678,10 +680,11 @@ class TestMissingIssuesResolved:
 
 
 class TestWontfixAutoResolution:
-    """Wontfix issues stay authoritative when the detector produces no findings."""
+    """Deferred and triaged_out issues auto-resolve like open ones; wontfix
+    issues stay wontfix and are marked scan-verified."""
 
-    def test_wontfix_stays_wontfix_when_detector_ran(self):
-        """Wontfix issues stay wontfix and gain scan verification."""
+    def test_wontfix_scan_verified_when_detector_ran(self):
+        """A scan that confirms the finding is gone verifies a wontfix."""
         st = empty_state()
         # Pre-populate 3 open + 2 wontfix test_coverage issues
         for i in range(3):
@@ -708,14 +711,9 @@ class TestWontfixAutoResolution:
             st, [], MergeScanOptions(lang="python", potentials={"test_coverage": 50, "smells": 100})
         )
         assert diff["auto_resolved"] == 5
-        assert (
-            st["issues"]["test_coverage::mod3.py::untested_module"]["status"]
-            == "wontfix"
-        )
-        assert (
-            st["issues"]["test_coverage::mod4.py::untested_module"]["resolution_attestation"]["scan_verified"]
-            is True
-        )
+        wontfixed = st["issues"]["test_coverage::mod3.py::untested_module"]
+        assert wontfixed["status"] == "wontfix"
+        assert wontfixed["resolution_attestation"]["scan_verified"] is True
         assert (
             st["issues"]["test_coverage::mod0.py::untested_module"]["status"]
             == "auto_resolved"
@@ -754,6 +752,130 @@ class TestWontfixAutoResolution:
             st["issues"]["test_coverage::mod4.py::untested_module"]["status"]
             == "wontfix"
         )
+
+    @pytest.mark.parametrize("status", ["deferred", "triaged_out"])
+    def test_skipped_status_auto_resolves_when_detector_ran_clean(self, status):
+        st = empty_state()
+        issue = _make_raw_issue(
+            "unused::src/a.ts::x", detector="unused", file="src/a.ts",
+            status=status, lang="typescript",
+        )
+        issue["resolution_attestation"] = {"kind": "manual", "scan_verified": False}
+        st["issues"][issue["id"]] = issue
+
+        diff = merge_scan(st, [], MergeScanOptions(lang="typescript", potentials={"unused": 5}))
+
+        assert diff["auto_resolved"] == 1
+        assert st["issues"][issue["id"]]["status"] == "auto_resolved"
+        assert st["issues"][issue["id"]]["note"].endswith(f"(was {status})")
+        assert "resolution_attestation" not in st["issues"][issue["id"]]
+
+    @pytest.mark.parametrize("status", ["deferred", "triaged_out", "wontfix"])
+    def test_skipped_status_kept_when_detector_did_not_run(self, status):
+        st = empty_state()
+        issue = _make_raw_issue(
+            "unused::src/a.ts::x", detector="unused", file="src/a.ts",
+            status=status, lang="typescript",
+        )
+        st["issues"][issue["id"]] = issue
+
+        merge_scan(st, [], MergeScanOptions(lang="typescript", potentials={"smells": 5}))
+
+        assert st["issues"][issue["id"]]["status"] == status
+
+    @pytest.mark.parametrize("status", ["deferred", "triaged_out", "wontfix"])
+    def test_skipped_status_kept_out_of_scan_scope(self, status):
+        st = empty_state()
+        issue = _make_raw_issue(
+            "unused::lib/a.ts::x", detector="unused", file="lib/a.ts",
+            status=status, lang="typescript",
+        )
+        st["issues"][issue["id"]] = issue
+
+        merge_scan(
+            st, [],
+            MergeScanOptions(lang="typescript", scan_path="src", potentials={"unused": 5}),
+        )
+
+        assert st["issues"][issue["id"]]["status"] == status
+
+    def test_wontfix_keeps_status_and_note_when_finding_disappears(self):
+        st = empty_state()
+        issue = _make_raw_issue(
+            "unused::src/a.ts::x", detector="unused", file="src/a.ts",
+            status="wontfix", lang="typescript",
+        )
+        issue["note"] = "kept on purpose"
+        issue["resolution_attestation"] = {"kind": "manual", "scan_verified": False}
+        st["issues"][issue["id"]] = issue
+        options = MergeScanOptions(lang="typescript", potentials={"unused": 5})
+
+        first = merge_scan(st, [], options)
+        second = merge_scan(st, [], options)
+
+        assert first["auto_resolved"] == 1
+        assert second["auto_resolved"] == 0  # already verified: not counted again
+        verified = st["issues"][issue["id"]]
+        assert verified["status"] == "wontfix"
+        assert verified["note"] == "kept on purpose"
+        assert verified["resolution_attestation"]["kind"] == "manual"
+        assert verified["resolution_attestation"]["scan_verified"] is True
+
+    def test_wontfix_stays_wontfix_and_unverified_when_finding_returns(self):
+        st = empty_state()
+        issue = _make_raw_issue(
+            "unused::src/a.ts::x", detector="unused", file="src/a.ts",
+            status="wontfix", lang="typescript",
+        )
+        st["issues"][issue["id"]] = issue
+        options = MergeScanOptions(lang="typescript", potentials={"unused": 5})
+        merge_scan(st, [], options)
+        assert st["issues"][issue["id"]]["resolution_attestation"]["scan_verified"] is True
+
+        returned = _make_raw_issue(
+            "unused::src/a.ts::x", detector="unused", file="src/a.ts",
+        )
+        diff = merge_scan(st, [returned], options)
+
+        assert diff["reopened"] == 0
+        back = st["issues"][issue["id"]]
+        assert back["status"] == "wontfix"
+        assert back["resolution_attestation"]["scan_verified"] is False
+        assert "scan_verified_at" not in back["resolution_attestation"]
+
+    def test_wontfix_not_verified_out_of_scan_scope(self):
+        st = empty_state()
+        issue = _make_raw_issue(
+            "unused::lib/a.ts::x", detector="unused", file="lib/a.ts",
+            status="wontfix", lang="typescript",
+        )
+        st["issues"][issue["id"]] = issue
+
+        merge_scan(
+            st, [],
+            MergeScanOptions(lang="typescript", scan_path="src", potentials={"unused": 5}),
+        )
+
+        assert "resolution_attestation" not in st["issues"][issue["id"]]
+
+    def test_auto_resolved_deferred_reopens_when_finding_returns(self):
+        st = empty_state()
+        issue = _make_raw_issue(
+            "unused::src/a.ts::x", detector="unused", file="src/a.ts",
+            status="deferred", lang="typescript",
+        )
+        st["issues"][issue["id"]] = issue
+        options = MergeScanOptions(lang="typescript", potentials={"unused": 5})
+        merge_scan(st, [], options)
+        assert st["issues"][issue["id"]]["status"] == "auto_resolved"
+
+        returned = _make_raw_issue(
+            "unused::src/a.ts::x", detector="unused", file="src/a.ts",
+        )
+        diff = merge_scan(st, [returned], options)
+
+        assert diff["reopened"] == 1
+        assert st["issues"][issue["id"]]["status"] == "open"
 
     def test_open_issue_auto_resolves_when_detector_ran_clean(self):
         """Absent open issues are stale when the detector ran successfully."""
@@ -818,8 +940,8 @@ class TestWontfixAutoResolution:
         assert diff["auto_resolved"] == 0
         assert st["issues"]["det::src/a.py::old"]["status"] == "open"
 
-    def test_wontfix_stays_wontfix_when_some_issues_remain(self):
-        """Wontfix issues stay wontfix even when other issues remain open."""
+    def test_wontfix_scan_verified_when_some_issues_remain(self):
+        """Fixing only the wontfix findings verifies them; the rest stay open."""
         st = empty_state()
         # 2 wontfix + 2 open
         for i in range(2):
@@ -850,19 +972,10 @@ class TestWontfixAutoResolution:
             for i in range(2, 4)
         ]
         _ = merge_scan(st, current, MergeScanOptions(lang="python", potentials={"test_coverage": 50}))
-        # The 2 wontfix issues stay wontfix and become scan-verified.
-        assert (
-            st["issues"]["test_coverage::mod0.py::untested_module"]["status"]
-            == "wontfix"
-        )
-        assert (
-            st["issues"]["test_coverage::mod1.py::untested_module"]["status"]
-            == "wontfix"
-        )
-        assert (
-            st["issues"]["test_coverage::mod0.py::untested_module"]["resolution_attestation"]["scan_verified"]
-            is True
-        )
+        for i in range(2):
+            issue = st["issues"][f"test_coverage::mod{i}.py::untested_module"]
+            assert issue["status"] == "wontfix"
+            assert issue["resolution_attestation"]["scan_verified"] is True
         # The 2 open issues should still be open (they were re-emitted)
         assert (
             st["issues"]["test_coverage::mod2.py::untested_module"]["status"]

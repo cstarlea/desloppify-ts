@@ -157,6 +157,19 @@ def _referenced_plan_issue_ids(plan: PlanModel) -> set[str]:
     }
 
 
+def _restore_returned_superseded(plan: PlanModel, state: StateModel) -> None:
+    """Forget superseded entries whose issue is actionable again.
+
+    A finding that disappears is superseded; if a later scan reports it again
+    the issue reopens. Left in ``superseded``, every reconcile would strip the
+    issue from the queue, skips and clusters, undoing a fresh skip or reorder.
+    """
+    superseded = plan.get("superseded", {})
+    for fid in list(superseded):
+        if _is_issue_alive(state, fid):
+            superseded.pop(fid, None)
+
+
 def _prune_existing_superseded_references(
     plan: PlanModel,
     *,
@@ -257,6 +270,31 @@ def _supersede_nonactionable_action_references(
     for fid in sorted(_action_referenced_plan_issue_ids(plan)):
         issue = issues.get(fid)
         if issue is None or issue.get("status") in _ALIVE_STATUSES:
+            continue
+        if _supersede_id(plan, state, fid, now):
+            result.superseded.append(fid)
+            result.changes += 1
+
+
+def _supersede_auto_resolved_skips(
+    plan: PlanModel,
+    state: StateModel,
+    *,
+    now: str,
+    result: ReconcileResult,
+) -> None:
+    """Supersede skip entries whose issue a scan has auto-resolved.
+
+    Deferred and triaged_out issues auto-resolve when a scan confirms the
+    finding is gone, just as queued open issues do; their skip entries go the
+    same way as those queue entries. Wontfix and false_positive skips keep
+    their entry: those issues keep their status, so a returning finding is
+    still covered by the decision.
+    """
+    issues = state.get("work_items") or state.get("issues", {})
+    for fid in sorted(plan.get("skipped", {})):
+        issue = issues.get(fid)
+        if issue is None or issue.get("status") != "auto_resolved":
             continue
         if _supersede_id(plan, state, fid, now):
             result.superseded.append(fid)
@@ -382,6 +420,7 @@ def reconcile_plan_after_scan(
     now = utc_now()
     now_dt = datetime.now(UTC)
 
+    _restore_returned_superseded(plan, state)
     _prune_existing_superseded_references(plan, result=result)
     referenced_ids = _referenced_plan_issue_ids(plan)
 
@@ -411,6 +450,7 @@ def reconcile_plan_after_scan(
         now=now,
         result=result,
     )
+    _supersede_auto_resolved_skips(plan, state, now=now, result=result)
     _complete_empty_manual_clusters(plan, pre_sizes=pre_sizes, result=result)
     _reconcile_active_clusters_by_item_status(plan, state, result=result)
     _reconcile_epic_clusters(plan, state, result=result)
