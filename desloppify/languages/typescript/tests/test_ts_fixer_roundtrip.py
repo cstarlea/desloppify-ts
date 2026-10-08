@@ -411,6 +411,26 @@ export function Effects({ id }: { id: string }) {
   return <p>{id}</p>;
 }
 """,
+    # Dead effects inside a template string, and sharing a line with code.
+    "src/effect_in_template.tsx": """\
+import { useEffect } from './react';
+export function Doc() {
+  useEffect(() => { use(1); }, []);
+  useEffect(() => {
+  }, []);
+  return `
+useEffect(() => {
+}, []);
+`;
+}
+""",
+    "src/effect_same_line.tsx": """\
+import { useEffect } from './react';
+export function Inline() {
+  useEffect(() => {}, []); const later = 1;
+  return later;
+}
+""",
     # The last statement goes and there is no final newline.
     "src/no_eol.ts": "import { a, b } from './m';\nexport const k = a;\nconst unusedLast = 2;",
 }
@@ -425,52 +445,7 @@ _EXECUTABLE = {"src/asi.ts"}
 
 # Files that trip a fixer bug, kept out of the corpus so they don't hide other
 # regressions; ``test_known_fixer_bugs`` runs each one under a strict xfail.
-_KNOWN_BUGS = [
-    pytest.param(
-        "dead-useeffect",
-        "fallback",
-        "src/effect_in_template.tsx",
-        """\
-import { useEffect } from './react';
-export function Doc() {
-  useEffect(() => { use(1); }, []);
-  return `
-useEffect(() => {
-}, []);
-`;
-}
-""",
-        id="dead-useeffect-template-string",
-        marks=pytest.mark.xfail(
-            strict=True,
-            raises=AssertionError,
-            reason="the line-based dead-useeffect detector and fixer delete lines inside "
-            "template strings (roadmap 2.3)",
-        ),
-    ),
-    pytest.param(
-        "dead-useeffect",
-        "tsc",
-        "src/effect_same_line.tsx",
-        """\
-import { useEffect } from './react';
-export function Inline() {
-  useEffect(() => {}, []); const later = 1;
-  return later;
-}
-""",
-        id="dead-useeffect-shared-line",
-        marks=[
-            _needs_tsc,
-            pytest.mark.xfail(
-                strict=True,
-                raises=AssertionError,
-                reason="the line-based dead-useeffect fixer deletes code sharing the "
-                "effect's line (roadmap 2.3)",
-            ),
-        ],
-    ),
-]
+_KNOWN_BUGS: list = []
 
 
 def _corpus_bytes() -> dict[str, bytes]:
