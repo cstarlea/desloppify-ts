@@ -175,7 +175,7 @@ class TestAppendAndLoad:
         event = {"event_type": "test", "schema_version": 1, "payload": {}}
         with (
             patch(
-                "desloppify.engine._state.progression._acquire_lock",
+                "desloppify.engine._state.progression.exclusive_file_lock",
                 side_effect=TimeoutError("test timeout"),
             ),
             caplog.at_level(logging.WARNING),

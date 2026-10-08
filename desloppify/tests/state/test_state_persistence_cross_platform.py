@@ -24,9 +24,11 @@ def test_state_lock_times_out_without_bad_file_descriptor(tmp_path):
     persistence_mod = importlib.import_module("desloppify.engine._state.persistence")
     state_path = tmp_path / "state.json"
 
+    file_paths_mod = importlib.import_module("desloppify.base.discovery.file_paths")
+
     with patch.object(
-        persistence_mod,
-        "_acquire_state_lock",
+        file_paths_mod,
+        "_try_os_lock",
         side_effect=OSError(errno.EACCES, "busy"),
     ):
         with pytest.raises(TimeoutError, match="Could not acquire state lock"):

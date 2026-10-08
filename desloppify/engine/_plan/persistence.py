@@ -4,17 +4,21 @@ from __future__ import annotations
 
 import json
 import logging
-import os
-import shutil
 import sys
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import cast
 
 from desloppify.base.exception_sets import CORRUPT_JSON_FILE_EXCEPTIONS
-from desloppify.base.discovery.file_paths import safe_write_text, set_aside_corrupted
+from desloppify.base.discovery.file_paths import (
+    LockOrderError,
+    exclusive_file_lock,
+    safe_copy_file,
+    safe_write_text,
+    set_aside_corrupted,
+)
 from desloppify.base.output.fallbacks import log_best_effort_failure
 from desloppify.engine._plan.schema import (
     PLAN_VERSION,
@@ -65,33 +69,38 @@ def _default_plan_file() -> Path:
     return get_plan_file()
 
 
+# Lock order: state (10) before plan (20) before progression (30).
+PLAN_LOCK_RANK = 20
+# How long a load waits for the lock before recovering a corrupt file in
+# memory only (leaving the files on disk alone).
+_RECOVERY_LOCK_TIMEOUT = 5.0
+
+
+def plan_lock_path(plan_path: Path) -> Path:
+    """Return the lock file guarding ``plan_path``."""
+    return plan_path.with_suffix(".lock")
+
+
 @contextmanager
-def plan_lock(path: Path | None = None) -> Iterator[None]:
-    """Acquire exclusive lock on plan file for read-modify-write safety."""
+def plan_lock(
+    path: Path | None = None,
+    *,
+    timeout: float | None = 30.0,
+    on_wait: Callable[[], None] | None = None,
+) -> Iterator[None]:
+    """Acquire exclusive lock on plan file for read-modify-write safety.
+
+    Re-entrant within a thread. When the state lock is also needed, take it
+    first. Raises TimeoutError if the lock is not free within ``timeout``.
+    """
     plan_path = path or _default_plan_file()
-    lock_path = plan_path.with_suffix(".lock")
-    lock_path.parent.mkdir(parents=True, exist_ok=True)
-    fd = os.open(str(lock_path), os.O_CREAT | os.O_WRONLY)
-    try:
-        if sys.platform == "win32":
-            import msvcrt
-
-            msvcrt.locking(fd, msvcrt.LK_LOCK, 1)
-        else:
-            import fcntl
-
-            fcntl.flock(fd, fcntl.LOCK_EX)
+    with exclusive_file_lock(
+        plan_lock_path(plan_path),
+        timeout=timeout,
+        rank=PLAN_LOCK_RANK,
+        on_wait=on_wait,
+    ):
         yield
-    finally:
-        if sys.platform == "win32":
-            import msvcrt
-
-            msvcrt.locking(fd, msvcrt.LK_UNLCK, 1)
-        else:
-            import fcntl
-
-            fcntl.flock(fd, fcntl.LOCK_UN)
-        os.close(fd)
 
 
 # Plan files whose on-disk content did not load cleanly. ``save_plan`` does
@@ -155,7 +164,9 @@ def resolve_plan_load_status(path: Path | None = None) -> PlanLoadStatus:
       load is not degraded.
     - A file that cannot be used at all is renamed to ``.corrupted`` and the
       ``.bak`` copy is loaded (and copied into its place), else the plan
-      starts fresh. Both are degraded loads.
+      starts fresh. Both are degraded loads. The rename and restore happen
+      under the plan lock; if the lock stays busy, the backup is loaded
+      without touching disk.
     - After anything but a clean load, the next ``save_plan`` to this path
       leaves ``.bak`` alone.
     """
@@ -166,10 +177,19 @@ def resolve_plan_load_status(path: Path | None = None) -> PlanLoadStatus:
         return PlanLoadStatus(plan=None, degraded=False, error_kind=None, recovery=None)
     try:
         plan, quarantined = _load_validated_plan(plan_path)
-    except (*CORRUPT_JSON_FILE_EXCEPTIONS, OSError) as exc:
+    except OSError as exc:
+        # Unreadable is not corrupt: nothing on disk changes.
         _unclean_plan_files.add(rotation_key)
-        return _load_plan_after_failure(plan_path, exc)
+        return _load_plan_after_failure(plan_path, exc, set_aside=False)
+    except CORRUPT_JSON_FILE_EXCEPTIONS as exc:
+        return _recover_corrupt_plan(plan_path, exc)
+    return _finish_plan_load(plan_path, plan, quarantined)
 
+
+def _finish_plan_load(
+    plan_path: Path, plan: PlanModel, quarantined: int
+) -> PlanLoadStatus:
+    rotation_key = _rotation_key(plan_path)
     if quarantined:
         _unclean_plan_files.add(rotation_key)
         _warn_quarantined(plan_path, quarantined)
@@ -184,14 +204,50 @@ def resolve_plan_load_status(path: Path | None = None) -> PlanLoadStatus:
     )
 
 
-def _load_plan_after_failure(plan_path: Path, exc: Exception) -> PlanLoadStatus:
-    """Set aside an unusable plan file, then fall back to ``.bak`` or empty."""
+def _recover_corrupt_plan(plan_path: Path, exc: Exception) -> PlanLoadStatus:
+    """Recover from a corrupt plan file, touching disk only under the lock.
+
+    Under the lock the file is read again (a concurrent load may already
+    have restored it). If the lock is busy, recover in memory only.
+    """
+    rotation_key = _rotation_key(plan_path)
+    try:
+        with plan_lock(plan_path, timeout=_RECOVERY_LOCK_TIMEOUT):
+            if not plan_path.exists():
+                _unclean_plan_files.add(rotation_key)
+                return _load_plan_after_failure(plan_path, exc, set_aside=False)
+            try:
+                plan, quarantined = _load_validated_plan(plan_path)
+            except (*CORRUPT_JSON_FILE_EXCEPTIONS, OSError) as again:
+                _unclean_plan_files.add(rotation_key)
+                return _load_plan_after_failure(plan_path, again, set_aside=True)
+            return _finish_plan_load(plan_path, plan, quarantined)
+    except (TimeoutError, LockOrderError) as lock_exc:
+        logger.warning(
+            "Plan lock unavailable while recovering %s (%s); "
+            "recovering in memory only",
+            plan_path,
+            lock_exc,
+        )
+        _unclean_plan_files.add(rotation_key)
+        return _load_plan_after_failure(plan_path, exc, set_aside=False)
+
+
+def _load_plan_after_failure(
+    plan_path: Path, exc: Exception, *, set_aside: bool
+) -> PlanLoadStatus:
+    """Fall back to ``.bak`` or empty after a failed load.
+
+    With ``set_aside`` (only under the plan lock), a corrupt file is renamed
+    to ``.corrupted`` and a good backup is copied into its place.
+    """
     moved_to: Path | None = None
     if isinstance(exc, OSError):
         # Unreadable is not corrupt: leave the file where it is.
         problem = f"Plan file could not be read ({exc})"
     else:
         problem = f"Plan file corrupted ({exc})"
+    if set_aside and not isinstance(exc, OSError):
         moved_to = set_aside_corrupted(plan_path)
         if moved_to is not None:
             problem += f"; moved to {moved_to.name}"
@@ -219,7 +275,7 @@ def _load_plan_after_failure(plan_path: Path, exc: Exception) -> PlanLoadStatus:
                 # Put the backup in place so later loads in this run (and the
                 # next command, if nothing saves) see it, not a missing file.
                 try:
-                    shutil.copy2(str(backup), str(plan_path))
+                    safe_copy_file(backup, plan_path)
                 except OSError as copy_ex:
                     log_best_effort_failure(logger, "restore plan from backup", copy_ex)
             print(
@@ -267,7 +323,7 @@ def save_plan(plan: PlanModel | dict, path: Path | None = None) -> None:
     if plan_path.exists() and rotation_key not in _unclean_plan_files:
         backup = plan_path.with_suffix(".json.bak")
         try:
-            shutil.copy2(str(plan_path), str(backup))
+            safe_copy_file(plan_path, backup)
         except OSError as backup_ex:
             log_best_effort_failure(logger, "create plan backup", backup_ex)
 
@@ -300,11 +356,13 @@ def has_living_plan(path: Path | None = None) -> bool:
 
 __all__ = [
     "PLAN_FILE",
+    "PLAN_LOCK_RANK",
     "PlanLoadStatus",
     "get_plan_file",
     "has_living_plan",
     "load_plan",
     "plan_lock",
+    "plan_lock_path",
     "plan_path_for_state",
     "resolve_plan_load_status",
     "save_plan",

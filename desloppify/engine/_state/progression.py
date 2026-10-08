@@ -7,14 +7,17 @@ object with a discriminated ``event_type`` + ``payload``.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
-import os
-import sys
-import time
 from pathlib import Path
 from typing import Any
 
+from desloppify.base.discovery.file_paths import (
+    LockOrderError,
+    exclusive_file_lock,
+    safe_write_text,
+)
 from desloppify.engine._plan.constants import is_synthetic_id
 from desloppify.engine._state.schema import get_state_dir, utc_now
 
@@ -23,6 +26,8 @@ logger = logging.getLogger(__name__)
 PROGRESSION_VERSION = 1
 _MAX_LINES = 2000
 _LOCK_TIMEOUT = 2.0
+# Lock order: state (10) before plan (20) before progression (30).
+PROGRESSION_LOCK_RANK = 30
 
 
 # ---------------------------------------------------------------------------
@@ -76,104 +81,58 @@ def append_progression_event(
     *,
     path: Path | None = None,
 ) -> None:
-    """Append a single event to the progression log with advisory file lock."""
+    """Append a single event to the progression log with advisory file lock.
+
+    Every 50th scan the log is trimmed while the same lock is held, so a
+    concurrent append cannot land between the trim's read and its rewrite.
+    """
     target = path or progression_path()
     target.parent.mkdir(parents=True, exist_ok=True)
     line = json.dumps(event, separators=(",", ":"), default=str) + "\n"
-
-    lock_fd: int | None = None
-    lock_path = target.with_suffix(".jsonl.lock")
-    try:
-        lock_fd = os.open(str(lock_path), os.O_CREAT | os.O_RDWR)
-        _acquire_lock(lock_fd)
-    except Exception:
-        if lock_fd is not None:
-            _safe_close(lock_fd)
-            lock_fd = None
-        logger.warning(
-            "Could not acquire progression lock for %s — appending without lock",
-            event.get("event_type", "unknown"),
-        )
-
-    try:
-        with open(target, "a", encoding="utf-8") as fh:
-            fh.write(line)
-    except OSError as exc:
-        logger.warning("Failed to append progression event: %s", exc)
-    finally:
-        if lock_fd is not None:
-            _release_lock(lock_fd)
-            _safe_close(lock_fd)
-
-    # Periodic trim
     scan_count = event.get("scan_count")
-    if isinstance(scan_count, int) and scan_count > 0 and scan_count % 50 == 0:
-        _trim_if_needed(target)
+    trim = isinstance(scan_count, int) and scan_count > 0 and scan_count % 50 == 0
+
+    with contextlib.ExitStack() as stack:
+        locked = True
+        try:
+            stack.enter_context(
+                exclusive_file_lock(
+                    target.with_suffix(".jsonl.lock"),
+                    timeout=_LOCK_TIMEOUT,
+                    rank=PROGRESSION_LOCK_RANK,
+                )
+            )
+        except (OSError, TimeoutError, LockOrderError):
+            locked = False
+            logger.warning(
+                "Could not acquire progression lock for %s — appending without lock",
+                event.get("event_type", "unknown"),
+            )
+
+        try:
+            with open(target, "a", encoding="utf-8") as fh:
+                fh.write(line)
+        except OSError as exc:
+            logger.warning("Failed to append progression event: %s", exc)
+
+        # Never trim without the lock: a rewrite could drop a concurrent append.
+        if trim and locked:
+            _trim_if_needed(target)
 
 
 def _trim_if_needed(path: Path, max_lines: int = _MAX_LINES) -> None:
-    """Keep the last *max_lines* when the file grows too large."""
+    """Keep the last *max_lines* when the file grows too large.
+
+    The caller holds the progression lock; the rewrite is atomic.
+    """
     try:
         with open(path, encoding="utf-8") as fh:
             lines = fh.readlines()
         if len(lines) <= max_lines:
             return
-        trimmed = lines[-max_lines:]
-        with open(path, "w", encoding="utf-8") as fh:
-            fh.writelines(trimmed)
+        safe_write_text(path, "".join(lines[-max_lines:]))
     except OSError as exc:
         logger.warning("Progression trim failed: %s", exc)
-
-
-# ---------------------------------------------------------------------------
-# Lock helpers (advisory, best-effort)
-# ---------------------------------------------------------------------------
-
-_LOCK_RETRY_ERRNOS = frozenset({
-    getattr(__import__("errno"), "EACCES", 13),
-    getattr(__import__("errno"), "EAGAIN", 11),
-    getattr(__import__("errno"), "EDEADLK", 35),
-})
-
-
-def _acquire_lock(lock_fd: int) -> None:
-    deadline = time.monotonic() + _LOCK_TIMEOUT
-    while True:
-        try:
-            if sys.platform == "win32":
-                import msvcrt
-                msvcrt.locking(lock_fd, msvcrt.LK_NBLCK, 1)
-            else:
-                import fcntl
-                fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            return
-        except OSError as exc:
-            if exc.errno not in _LOCK_RETRY_ERRNOS:
-                raise
-            if time.monotonic() >= deadline:
-                raise TimeoutError(
-                    f"Could not acquire progression lock within {_LOCK_TIMEOUT}s"
-                ) from None
-            time.sleep(0.05)
-
-
-def _release_lock(lock_fd: int) -> None:
-    try:
-        if sys.platform == "win32":
-            import msvcrt
-            msvcrt.locking(lock_fd, msvcrt.LK_UNLCK, 1)
-        else:
-            import fcntl
-            fcntl.flock(lock_fd, fcntl.LOCK_UN)
-    except OSError:
-        pass
-
-
-def _safe_close(fd: int) -> None:
-    try:
-        os.close(fd)
-    except OSError:
-        pass
 
 
 # ---------------------------------------------------------------------------
