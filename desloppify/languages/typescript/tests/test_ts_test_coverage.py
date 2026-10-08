@@ -102,6 +102,21 @@ def test_imported_name_is_credited_to_its_definition_through_any_depth(tmp_path)
 
 
 @needs_treesitter
+def test_barrel_siblings_of_an_imported_name_are_not_credited(tmp_path, monkeypatch):
+    files = _chain_project(tmp_path)
+    test = _touch(tmp_path, "test/parse.test.ts", "import { parse } from '../src';\nparse(' a ');\n")
+    production = set(files.values())
+    graph = {test: {"imports": {files["index"]}}, files["index"]: {"imports": {files["api"], files["other"]}}}
+    tested = import_based_mapping(graph, {test}, production, "typescript")
+    assert files["impl"] in tested
+    assert files["other"] not in tested
+
+    # Without tree-sitter the name-blind barrel and facade hops remain the fallback.
+    monkeypatch.setattr(ts_coverage_mod, "follows_reexport_names", lambda: False)
+    assert files["other"] in import_based_mapping(graph, {test}, production, "typescript")
+
+
+@needs_treesitter
 def test_type_only_imports_and_exports_are_not_followed(tmp_path):
     files = _chain_project(tmp_path)
     test = _touch(
@@ -127,6 +142,18 @@ def test_namespace_import_follows_the_members_used(tmp_path):
         "import * as z from '../src';\nz.string();\nz.core.minLength().toString();\n",
     )
     assert imported_definitions(test, set(files.values())) == {files["schemas"], files["checks"]}
+
+
+@needs_treesitter
+def test_anonymous_default_export_is_a_definition(tmp_path):
+    files = {
+        "index": _touch(tmp_path, "src/index.ts", "export * as locales from './locales';\n"),
+        "locales": _touch(tmp_path, "src/locales.ts", "export { default as ka } from './ka';\nexport { default as ro } from './ro';\n"),
+        "ka": _touch(tmp_path, "src/ka.ts", "export default function () {\n  return 1;\n}\n"),
+        "ro": _touch(tmp_path, "src/ro.ts", "export default { ro: true };\n"),
+    }
+    test = _touch(tmp_path, "test/ka.test.ts", "import * as z from '../src';\nz.locales.ka();\nz.locales.ro;\n")
+    assert imported_definitions(test, set(files.values())) == {files["ka"], files["ro"]}
 
 
 @needs_treesitter

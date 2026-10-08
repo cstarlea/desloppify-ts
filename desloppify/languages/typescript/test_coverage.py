@@ -23,7 +23,13 @@ from desloppify.languages.typescript.detectors.deps.reexports import NAMESPACE, 
 from desloppify.languages.typescript.detectors.deps.resolver import project_resolver
 from desloppify.languages.typescript.plugin_contract import TS_BARREL_NAMES
 from desloppify.languages.typescript.syntax.queries import descendants, directive, imports
-from desloppify.languages.typescript.syntax.tree import ParsedSource, parse_text, parsed_file
+from desloppify.languages.typescript.syntax.tree import (
+    ParsedSource,
+    get_parser,
+    grammar_for,
+    parse_text,
+    parsed_file,
+)
 
 TS_REEXPORT_RE = re.compile(
     r"""^export\s+(?:\{[^}]*\}|\*)\s+from\s+['\"]([^'\"]+)['\"]""", re.MULTILINE
@@ -287,6 +293,12 @@ def resolve_barrel_reexports(filepath: str, production_files: set[str]) -> set[s
         if resolved:
             results.add(resolved)
     return results
+
+
+def follows_reexport_names() -> bool:
+    """True when ``imported_definitions`` can parse, so name-blind barrel and
+    facade expansion is unnecessary."""
+    return get_parser(grammar_for("x.ts")) is not None and get_parser(grammar_for("x.tsx")) is not None
 
 
 def imported_definitions(test_path: str, production_files: set[str]) -> set[str]:
