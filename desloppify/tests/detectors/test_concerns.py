@@ -313,6 +313,43 @@ class TestSystemicPatterns:
         assert len(systemic) == 1
 
 
+# ── Suppression and scan scope ──────────────────────────────────────
+
+
+def _monster(file: str) -> dict:
+    return _make_issue(
+        "smells", file, "monster",
+        detail={"smell_id": "monster_function", "function": "f", "loc": 200},
+    )
+
+
+class TestSuppressedAndOutOfScope:
+    """Concerns see only the issues the score counts."""
+
+    def test_suppressed_issues_are_ignored(self):
+        issues = [_make_issue("smells", f"src/m{i}.ts", "c", detail={"smell_id": "empty_catch"}) for i in range(5)]
+        state = _state_with_issues(*issues)
+        assert [c.type for c in generate_concerns(state)] == ["systemic_smell"]
+
+        issues[0]["suppressed"] = True
+        assert generate_concerns(state) == []
+
+    def test_issues_outside_the_scan_path_are_ignored(self):
+        state = _state_with_issues(_monster("src/big.ts"), _monster("lib/big.ts"))
+        state["scan_path"] = "src"
+        assert [c.file for c in generate_concerns(state)] == ["src/big.ts"]
+
+    def test_dismissal_of_a_suppressed_issue_is_kept(self):
+        f = _monster("src/big.ts")
+        state = _state_with_issues(f)
+        fp = generate_concerns(state)[0].fingerprint
+        state["concern_dismissals"] = {fp: {"reasoning": "fine", "source_issue_ids": [f["id"]]}}
+
+        f["suppressed"] = True
+        assert cleanup_stale_dismissals(state) == 0
+        assert fp in state["concern_dismissals"]
+
+
 # ── Dismissal tracking ──────────────────────────────────────────────
 
 

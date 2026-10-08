@@ -10,7 +10,7 @@ from desloppify.engine._state.schema import StateModel
 
 from .constants import MIN_FILES_FOR_SMELL_PATTERN, MIN_FILES_FOR_SYSTEMIC
 from .signals import _extract_signals, _has_elevated_signals
-from .state import _group_by_file, _open_issues
+from .state import _all_open_issues, _group_by_file, _open_issues
 from .text import _build_evidence, _build_question, _build_summary, _classify
 from .types import Concern
 from .utils import _fingerprint, _is_dismissed
@@ -218,11 +218,15 @@ def generate_concerns(state: StateModel) -> list[Concern]:
 
 
 def cleanup_stale_dismissals(state: StateModel) -> int:
-    """Remove concern dismissals whose source issues all disappeared."""
+    """Remove concern dismissals whose source issues all disappeared.
+
+    A suppressed or out-of-scope issue hasn't disappeared, so its dismissals
+    are kept for when it counts again.
+    """
     dismissals = state.get("concern_dismissals", {})
     if not dismissals:
         return 0
-    open_ids = {finding.get("id", "") for finding in _open_issues(state)}
+    open_ids = {finding.get("id", "") for finding in _all_open_issues(state)}
     stale_fingerprints = [
         fingerprint
         for fingerprint, entry in dismissals.items()
