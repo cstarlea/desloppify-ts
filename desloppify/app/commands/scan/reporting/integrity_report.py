@@ -90,6 +90,35 @@ def _plan_data_for_narrative() -> dict[str, Any] | None:
     return None
 
 
+def _post_scan_analysis(
+    diff: dict[str, Any],
+    state: StateModel,
+    lang,
+) -> tuple[list[str], dict[str, Any], dict[str, Any] | None]:
+    warnings = _post_scan_warnings(diff, state, lang)
+    plan_data = _plan_data_for_narrative()
+    narrative = narrative_mod.compute_narrative(
+        state,
+        context=narrative_mod.NarrativeContext(
+            diff=diff,
+            lang=lang.name if lang else None,
+            command="scan",
+            plan=plan_data,
+        ),
+    )
+    return warnings, narrative, plan_data
+
+
+def post_scan_analysis(
+    diff: dict[str, Any],
+    state: StateModel,
+    lang,
+) -> tuple[list[str], dict[str, Any]]:
+    """Return (warnings, narrative) for a scan without printing anything."""
+    warnings, narrative, _plan_data = _post_scan_analysis(diff, state, lang)
+    return warnings, narrative
+
+
 def show_post_scan_analysis(
     diff: dict[str, Any],
     state: StateModel,
@@ -98,26 +127,13 @@ def show_post_scan_analysis(
     target_strict_score: float = DEFAULT_TARGET_STRICT_SCORE,
 ) -> tuple[list[str], dict[str, Any]]:
     """Print critical warnings + headline + pointers. Returns (warnings, narrative)."""
-    warnings = _post_scan_warnings(diff, state, lang)
+    warnings, narrative, plan_data = _post_scan_analysis(diff, state, lang)
 
     for warning in warnings:
         print(colorize(f"  {warning}", "yellow"))
     if warnings:
         print()
 
-    plan_data = _plan_data_for_narrative()
-
-    # Single narrative headline
-    lang_name = lang.name if lang else None
-    narrative = narrative_mod.compute_narrative(
-        state,
-        context=narrative_mod.NarrativeContext(
-            diff=diff,
-            lang=lang_name,
-            command="scan",
-            plan=plan_data,
-        ),
-    )
     if narrative.get("headline"):
         print(colorize(f"  → {narrative['headline']}", "cyan"))
 
@@ -310,4 +326,4 @@ def show_score_integrity(state: StateModel, diff: dict[str, Any]) -> None:
     print()
 
 
-__all__ = ["show_post_scan_analysis", "show_score_integrity"]  # show_score_integrity used by status
+__all__ = ["post_scan_analysis", "show_post_scan_analysis", "show_score_integrity"]  # show_score_integrity used by status

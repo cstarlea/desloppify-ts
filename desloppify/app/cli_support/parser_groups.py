@@ -55,6 +55,7 @@ examples:
   desloppify scan
   desloppify scan --skip-slow
   desloppify scan --profile ci
+  desloppify scan --profile ci --fail-under 80
   desloppify scan --force-resolve""",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -72,7 +73,20 @@ examples:
         "--profile",
         choices=["objective", "full", "ci"],
         default=None,
-        help="Scan profile: objective, full, or ci",
+        help="Scan profile: objective, full, or ci (plain output, no agent guidance)",
+    )
+    p_scan.add_argument(
+        "--fail-under",
+        type=float,
+        default=None,
+        metavar="SCORE",
+        help="Exit with status 1 when the --fail-score score is below SCORE",
+    )
+    p_scan.add_argument(
+        "--fail-score",
+        choices=["objective", "verified", "strict", "overall"],
+        default="objective",
+        help="Score that --fail-under checks (default: objective)",
     )
     p_scan.add_argument(
         "--force-resolve",
