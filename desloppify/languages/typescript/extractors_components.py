@@ -9,6 +9,7 @@ from pathlib import Path
 from desloppify.base.discovery.source import find_tsx_and_jsx_files
 from desloppify.base.discovery.paths import get_project_root
 from desloppify.engine.detectors.base import ClassInfo
+from desloppify.languages.typescript.syntax.lines import line_number
 from desloppify.engine.detectors.passthrough import (
     classify_params,
     classify_passthrough_tier,
@@ -155,7 +156,7 @@ def detect_passthrough_components(path: Path) -> list[dict]:
                     continue
                 tier, confidence = classification
 
-                line = content[: match.start()].count("\n") + 1
+                line = line_number(content, match.start())
                 entries.append(
                     {
                         "file": filepath,

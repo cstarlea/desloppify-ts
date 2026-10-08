@@ -9,6 +9,7 @@ from pathlib import Path
 from desloppify.base.discovery.paths import get_project_root
 from desloppify.base.discovery.source import find_ts_and_js_files, read_file_text
 from desloppify.base.text_utils import strip_c_style_comments
+from desloppify.languages.typescript.syntax.lines import split_lines
 
 _IDENT_RE = re.compile(r"^[A-Za-z_$][A-Za-z0-9_$]*$")
 _DENO_IMPORT_RE = re.compile(
@@ -84,7 +85,7 @@ def detect_unused_fallback(path: Path, category: str) -> tuple[list[dict], int]:
         if raw is None:
             continue
         code = strip_c_style_comments(raw)
-        lines = raw.splitlines()
+        lines = split_lines(raw)
 
         if category in {"all", "imports"}:
             for lineno, line in enumerate(lines, 1):

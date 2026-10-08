@@ -591,7 +591,7 @@ def test_dead_useeffect_tree_line_matches_the_fixer_after_a_line_separator(tmp_p
     counts = _make_counts()
     _detect_dead_useeffects(_file_ctx(tmp_path, content), counts)
     [match] = counts["dead_useeffect"]
-    assert match["line"] == 2
+    assert match["line"] == 3  # U+2028 ends a line, as tsc counts
     assert match["content"] == "useEffect(() => {}, []);"
 
 

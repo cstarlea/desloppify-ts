@@ -12,6 +12,7 @@ from desloppify.base.discovery.paths import get_area
 from desloppify.base.discovery.source import find_ts_and_js_files
 from desloppify.base.output.fallbacks import log_best_effort_failure
 from desloppify.languages._framework.node.js_text import code_text
+from desloppify.languages.typescript.syntax.lines import line_number
 from desloppify.languages.typescript.detectors.contracts import DetectorResult
 from .catalog import PATTERN_FAMILIES
 
@@ -51,7 +52,7 @@ def _build_census(
                 if not match:
                     continue
                 census[area][family_name].add(name)
-                line = content[:match.start()].count("\n") + 1
+                line = line_number(content, match.start())
                 evidence[area][family_name][name].append(
                     {"file": rel(filepath), "line": line}
                 )

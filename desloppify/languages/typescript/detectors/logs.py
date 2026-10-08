@@ -69,24 +69,20 @@ def detect_logs(path: Path) -> DetectorResult[dict]:
 
 def _tree_logs(filepath: str, parsed: ParsedSource) -> list[dict]:
     found: dict[int, dict] = {}
-    source = parsed.source
     for call in tagged_console_calls(parsed):
-        row = call.start_point[0]
-        if row in found:
+        line_no = parsed.line(call)
+        if line_no in found:
             continue
-        start = source.rfind(b"\n", 0, call.start_byte) + 1
-        end = source.find(b"\n", call.start_byte)
-        line = source[start : len(source) if end == -1 else end].decode("utf-8", "replace")
         args = call.child_by_field_name("arguments")
         first = next(a for a in args.named_children if a.type != "comment")
         tag = TAG_EXTRACT_RE.search(parsed.text(first))
-        found[row] = {
+        found[line_no] = {
             "file": filepath,
-            "line": row + 1,
+            "line": line_no,
             "tag": tag.group(1) if tag else "unknown",
-            "content": line.strip(),
+            "content": parsed.line_text(call).strip(),
         }
-    return [found[row] for row in sorted(found)]
+    return [found[line_no] for line_no in sorted(found)]
 
 
 def _regex_logs(filepath: str, content: str) -> list[dict]:

@@ -9,6 +9,7 @@ from pathlib import Path
 from desloppify.base.discovery.paths import get_project_root
 from desloppify.base.discovery.source import find_tsx_and_jsx_files
 from desloppify.languages._framework.node.js_text import code_text
+from desloppify.languages.typescript.syntax.lines import line_number, split_lines
 from desloppify.languages.typescript.detectors.smells.helpers import (
     _strip_ts_comments,
     scan_code,
@@ -27,7 +28,7 @@ def detect_state_sync(path: Path) -> tuple[list[dict], int]:
         try:
             p = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
             content = p.read_text()
-            lines = content.splitlines()
+            lines = split_lines(content)
         except (OSError, UnicodeDecodeError) as exc:
             logger.debug("Skipping unreadable TSX file %s in state-sync pass: %s", filepath, exc)
             continue
@@ -87,7 +88,7 @@ def detect_state_sync(path: Path) -> tuple[list[dict], int]:
                     break
 
             if all_setters and matched_setters:
-                line_no = content[: match.start()].count("\n") + 1
+                line_no = line_number(content, match.start())
                 entries.append(
                     {
                         "file": filepath,

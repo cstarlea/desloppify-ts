@@ -66,7 +66,7 @@ def _detect_type_safety(ctx, smell_counts: dict[str, list[dict]]) -> None:
     for smell_id, node in _type_safety_nodes(parsed):
         if smell_id in skip or (unchecked_index and smell_id == "non_null_assert" and _is_index_access(node)):
             continue
-        _emit(smell_counts, smell_id, ctx, node.start_point[0] + 1, _line_text(parsed, node))
+        _emit(smell_counts, smell_id, ctx, parsed.line(node), parsed.line_text(node).strip()[:100])
 
 
 def _is_test_file(filepath: str) -> bool:
@@ -185,16 +185,9 @@ def _documented(parsed: ParsedSource, comment) -> bool:
     return (
         previous is not None
         and previous.type == "comment"
-        and previous.end_point[0] == comment.start_point[0] - 1
+        and parsed.end_line(previous) == parsed.line(comment) - 1
         and _directive(parsed.text(previous)) is None
     )
-
-
-def _line_text(parsed: ParsedSource, node) -> str:
-    source = parsed.source
-    start = source.rfind(b"\n", 0, node.start_byte) + 1
-    end = source.find(b"\n", node.start_byte)
-    return source[start : len(source) if end == -1 else end].decode("utf-8", "replace").strip()[:100]
 
 
 __all__ = ["TYPE_SAFETY_SMELLS", "_detect_type_safety"]

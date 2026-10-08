@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import re
 from collections import defaultdict
 
+from desloppify.languages.typescript.syntax.lines import LINE_BREAK_BYTES
 from desloppify.languages.typescript.syntax.tree import ParsedSource
 
 NAME_TYPES = frozenset(
@@ -33,7 +33,6 @@ ALL_DESTRUCTURED = "(all destructured elements)"
 _DECLARATIONS = frozenset({"lexical_declaration", "variable_declaration"})
 # Nodes whose children are statements that can be deleted outright.
 STATEMENT_PARENTS = frozenset({"program", "statement_block", "switch_case", "switch_default"})
-_JS_LINE_BREAK = re.compile(rb"\r\n?|\n|\xe2\x80[\xa8\xa9]")  # CRLF, CR, LF, U+2028, U+2029
 
 
 def byte_offset(source: bytes, line: int, col: int) -> int | None:
@@ -46,11 +45,11 @@ def byte_offset(source: bytes, line: int, col: int) -> int | None:
         return None
     start = 0
     for _ in range(line - 1):
-        newline = _JS_LINE_BREAK.search(source, start)
+        newline = LINE_BREAK_BYTES.search(source, start)
         if newline is None:
             return None
         start = newline.end()
-    newline = _JS_LINE_BREAK.search(source, start)
+    newline = LINE_BREAK_BYTES.search(source, start)
     end = len(source) if newline is None else newline.start()
     text = source[start:end].decode("utf-8", "replace")
     units = 0
@@ -116,7 +115,7 @@ class NameIndex:
             bound = binding_names(pattern) if pattern is not None else []
             if len(bound) == 1 and self.parsed.text(bound[0]) == name:
                 return bound[0]
-        matches = [n for n in self.get(name) if n.start_point[0] == line - 1]
+        matches = [n for n in self.get(name) if self.parsed.line(n) == line]
         return matches[0] if len(matches) == 1 else None
 
 

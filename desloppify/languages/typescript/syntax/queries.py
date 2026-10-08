@@ -5,9 +5,9 @@ ask for functions, classes, imports, exports, JSX elements or calls. Each
 query returns small frozen dataclasses in source order; every record keeps
 its tree-sitter ``node`` for callers that need more than the summary.
 
-Lines are 1-based tree-sitter rows, which count ``\\n`` only (see
-``nodes.byte_offset`` for tsc's line rules). Without tree-sitter there is no
-``ParsedSource``, so callers keep their own regex fallback for that case.
+Lines are 1-based and counted as tsc counts them (``syntax.lines``), not as
+tree-sitter rows. Without tree-sitter there is no ``ParsedSource``, so
+callers keep their own regex fallback for that case.
 """
 
 from __future__ import annotations
@@ -50,8 +50,8 @@ class Span:
     end_line: int
 
 
-def span(node) -> Span:
-    return Span(node.start_byte, node.end_byte, node.start_point[0] + 1, node.end_point[0] + 1)
+def span(parsed: ParsedSource, node) -> Span:
+    return Span(node.start_byte, node.end_byte, parsed.line(node), parsed.end_line(node))
 
 
 def descendants(root, types: Collection[str] | None = None) -> Iterator:
@@ -192,8 +192,8 @@ def _function_info(parsed: ParsedSource, node, exports: dict[str, bool] | None) 
         name=name,
         kind=kind,
         params=_params(parsed, node),
-        span=span(node),
-        body=span(body) if body is not None else None,
+        span=span(parsed, node),
+        body=span(parsed, body) if body is not None else None,
         expression_body=body is not None and body.type != "statement_block",
         is_async="async" in tokens,
         is_generator=node.type in _GENERATOR_TYPES or "*" in tokens,
@@ -242,12 +242,12 @@ def definitions(parsed: ParsedSource) -> list[Definition]:
         if parent is None:
             continue
         if parent.type == "export_statement" and info.name is None and info.kind in ("expression", "arrow"):
-            found.append(Definition("default", parent.start_byte, parent.start_point[0] + 1, info))
+            found.append(Definition("default", parent.start_byte, parsed.line(parent), info))
             continue
         member = _object_member(parsed, node)
         if member is not None:
             name, holder = member
-            found.append(Definition(name, holder.start_byte, holder.start_point[0] + 1, info, object_member=True))
+            found.append(Definition(name, holder.start_byte, parsed.line(holder), info, object_member=True))
             continue
         if info.name is None:
             continue
@@ -265,7 +265,7 @@ def definitions(parsed: ParsedSource) -> list[Definition]:
         if holder.parent is not None and holder.parent.type == "export_statement":
             holder = holder.parent
         first = next((c for c in holder.children if c.type not in ("decorator", "comment")), holder)
-        found.append(Definition(name, first.start_byte, first.start_point[0] + 1, info))
+        found.append(Definition(name, first.start_byte, parsed.line(first), info))
     return found
 
 
@@ -525,7 +525,7 @@ def _class_info(parsed: ParsedSource, node, exports: dict[str, bool]) -> ClassIn
         members=members,
         exported=exported,
         default_export=default,
-        span=span(node),
+        span=span(parsed, node),
         node=node,
     )
 
@@ -568,7 +568,7 @@ def _class_member(parsed: ParsedSource, node) -> ClassMember | None:
         is_readonly="readonly" in tokens,
         is_optional="?" in tokens,
         accessibility=accessibility,
-        span=span(node),
+        span=span(parsed, node),
         node=node,
     )
 
@@ -647,7 +647,7 @@ def import_info(parsed: ParsedSource, node) -> ImportInfo | None:
         type_only=_has_token(node, "type"),
         bindings=tuple(bindings),
         has_error=node.has_error,
-        span=span(node),
+        span=span(parsed, node),
         node=node,
     )
 
@@ -757,7 +757,7 @@ def export_info(parsed: ParsedSource, node) -> ExportInfo:
         is_default=is_default,
         bindings=tuple(bindings),
         has_error=_has_error(node) if source is not None else node.has_error,
-        span=span(node),
+        span=span(parsed, node),
         node=node,
     )
 
@@ -847,7 +847,7 @@ def jsx_elements(parsed: ParsedSource) -> list[JsxElement]:
                 name=parsed.text(name) if name is not None else "",
                 self_closing=node.type == "jsx_self_closing_element",
                 attributes=tuple(_jsx_attribute(parsed, a) for a in tag.children_by_field_name("attribute")),
-                span=span(node),
+                span=span(parsed, node),
                 node=node,
             )
         )
@@ -894,7 +894,7 @@ def calls(parsed: ParsedSource, callees: Collection[str] | None = None) -> list[
             continue
         args = node.child_by_field_name("arguments")
         values = () if args is None else tuple(a for a in args.named_children if a.type != "comment")
-        found.append(CallInfo(callee, values, span(node), node))
+        found.append(CallInfo(callee, values, span(parsed, node), node))
     return found
 
 
@@ -947,7 +947,7 @@ def type_declarations(parsed: ParsedSource) -> list[TypeDeclaration]:
                 extends=tuple(heritage.named_children) if heritage is not None else (),
                 value=value,
                 exported=holder is not node,
-                span=span(holder),
+                span=span(parsed, holder),
                 node=node,
             )
         )

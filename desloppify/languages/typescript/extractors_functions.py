@@ -9,6 +9,7 @@ from pathlib import Path
 
 from desloppify.base.discovery.paths import get_project_root
 from desloppify.engine.detectors.base import FunctionInfo
+from desloppify.languages.typescript.syntax.lines import split_lines
 from desloppify.languages.typescript.syntax.nodes import PARAMETERS, binding_names
 from desloppify.languages.typescript.syntax.queries import FunctionInfo as SyntaxFunctionInfo
 from desloppify.languages.typescript.syntax.queries import definitions
@@ -210,7 +211,7 @@ def _extract_ts_functions_regex(filepath: str) -> list[FunctionInfo]:
         logger.debug("Skipping unreadable TS file %s in function extraction: %s", filepath, exc)
         return []
 
-    lines = content.splitlines()
+    lines = split_lines(content)
     functions = []
     fn_re = re.compile(
         r"^(?:export\s+)?(?:"

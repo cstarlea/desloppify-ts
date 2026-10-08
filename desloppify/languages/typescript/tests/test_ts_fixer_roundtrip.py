@@ -431,6 +431,28 @@ export function Inline() {
   return later;
 }
 """,
+    # 2.29: every JavaScript line break (U+2028, U+2029, a lone CR) and the
+    # characters str.splitlines() also breaks at (VT, FF, U+0085), in strings,
+    # comments and a template, before every kind of finding. Detectors and
+    # fixers must agree on the lines after them (``_FULLY_FIXED``).
+    "src/breaks.ts": """\
+import { useEffect } from './react';
+const ls = 'a\u2028b'; const ps = 'c\u2029d'; /* e\u2028f\u2029g\rh\x0bi\x0cj\x85k */
+const ctl = 'v\x0bf\x0cn\x85'; export const seps = ls + ps + ctl;\rconst unusedAfterCr = 1;
+// a comment with \x0b, \x0c and \x85 in it
+export const tpl = `x\ry\u2028z`;
+import { d } from './m';
+console.log('[Breaks] after separators', seps);
+const unusedBreaks = 2;
+export function breaks(x: number, unusedArg: number) {
+  if (x) {
+  } else {
+  }
+  useEffect(() => {}, []);
+  console.log('[Breaks] in function', x);
+  return tpl;
+}
+""",
     # The last statement goes and there is no final newline.
     "src/no_eol.ts": "import { a, b } from './m';\nexport const k = a;\nconst unusedLast = 2;",
 }
@@ -440,6 +462,8 @@ _WITH_BOM = {"src/bom.ts", "src/crlf_bom.tsx"}
 # Mostly LF with one CRLF line: neither ending may be rewritten to the other.
 _MIXED = {"src/mixed.ts": "import { a, b } from './m';\r\nconst unusedMixed = 1;\nexport const m = a;\n"}
 _EXECUTABLE = {"src/asi.ts"}
+# Files where every finding can be fixed: a second detection must find nothing.
+_FULLY_FIXED = {"src/breaks.ts"}
 
 
 
@@ -642,6 +666,9 @@ def _round_trip(
             )
     if second.entries:
         problems.append(f"the second run reported fixes: {second.entries}")
+    left = [e for e in second_entries if any(str(e.get("file", "")).endswith(name) for name in _FULLY_FIXED)]
+    if left:
+        problems.append(f"findings the first run should have fixed: {left}")
     new_diagnostics = after_diagnostics - before_diagnostics
     if new_diagnostics:
         problems.append(f"new tsc errors: {sorted(new_diagnostics)}")
