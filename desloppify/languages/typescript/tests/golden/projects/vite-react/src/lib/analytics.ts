@@ -1,5 +1,5 @@
-// Imported only through the package.json "imports" alias (#lib/*), which the
-// resolver doesn't map yet (roadmap 1.1), so this looks orphaned.
+// Imported only through the package.json "imports" alias (#lib/*); it looks
+// orphaned unless the resolver maps `#` subpaths.
 type Event = { name: string; at: number };
 
 const queue: Event[] = [];
