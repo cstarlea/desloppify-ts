@@ -121,7 +121,7 @@ Overall score = **25% mechanical** + **75% subjective**.
 - **Mechanical (25%)**: auto-detected issues — duplication, dead code, smells, unused imports, security. Fixed by changing code and rescanning.
 - **Subjective (75%)**: design quality review — naming, error handling, abstractions, clarity. Starts at **0%** until reviewed. The scan will prompt you when a review is needed.
 - **Strict score** is the north star: wontfix items count as open. The gap between overall and strict is your wontfix debt.
-- **Score types**: overall (lenient), strict (wontfix counts), objective (mechanical only), verified (confirmed fixes only).
+- **Score types**: overall (lenient), strict (wontfix counts), objective (mechanical only), verified (manual fixes count once a rescan confirms them). Fixing the code and rescanning clears an issue in every score.
 
 ### Reviews
 

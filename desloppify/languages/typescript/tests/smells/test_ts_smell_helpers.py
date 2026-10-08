@@ -40,6 +40,14 @@ def _ctx(content: str, filepath: str = "test.ts") -> _FileContext:
     return _FileContext(filepath=filepath, content=content, lines=lines, line_state={})
 
 
+def _file_ctx(tmp_path, content: str, name: str = "a.tsx") -> _FileContext:
+    """A _FileContext for a file on disk, which the syntax-tree detectors parse."""
+    path = tmp_path / name
+    path.write_text(content, encoding="utf-8", newline="")
+    lines = content.splitlines()
+    return _FileContext(str(path), content, lines, _build_ts_line_state(lines))
+
+
 # ── _strip_ts_comments ───────────────────────────────────────
 
 
@@ -533,22 +541,22 @@ class TestDetectEmptyIfChains:
 
 
 class TestDetectDeadUseeffects:
-    def test_empty_useeffect_body(self):
+    def test_empty_useeffect_body(self, tmp_path):
         content = "useEffect(() => {\n}, []);"
         counts = _make_counts()
-        _detect_dead_useeffects(_ctx(content), counts)
+        _detect_dead_useeffects(_file_ctx(tmp_path, content), counts)
         assert len(counts["dead_useeffect"]) == 1
 
-    def test_comment_only_useeffect_body(self):
+    def test_comment_only_useeffect_body(self, tmp_path):
         content = "useEffect(() => {\n  // just a comment\n}, [dep]);"
         counts = _make_counts()
-        _detect_dead_useeffects(_ctx(content), counts)
+        _detect_dead_useeffects(_file_ctx(tmp_path, content), counts)
         assert len(counts["dead_useeffect"]) == 1
 
-    def test_non_empty_useeffect_not_flagged(self):
+    def test_non_empty_useeffect_not_flagged(self, tmp_path):
         content = "useEffect(() => {\n  setCount(1);\n}, [dep]);"
         counts = _make_counts()
-        _detect_dead_useeffects(_ctx(content), counts)
+        _detect_dead_useeffects(_file_ctx(tmp_path, content), counts)
         assert len(counts["dead_useeffect"]) == 0
 
 
@@ -565,35 +573,33 @@ _DEAD_EFFECT_CASES = [
 
 @pytest.mark.parametrize(("content", "lines"), _DEAD_EFFECT_CASES)
 @pytest.mark.parametrize("path", ["tree", "regex"])
-def test_dead_useeffect_forms(content, lines, path, monkeypatch):
+def test_dead_useeffect_forms(content, lines, path, monkeypatch, tmp_path):
     if path == "tree" and importlib.util.find_spec("tree_sitter_language_pack") is None:
         pytest.skip("needs tree-sitter")
     if path == "regex":
-        monkeypatch.setattr(safety_mod, "parse_text", lambda *_args: None)
-    split = content.splitlines()
-    ctx = _FileContext("a.tsx", content, split, _build_ts_line_state(split))
+        monkeypatch.setattr(safety_mod, "parsed_file", lambda _path: None)
     counts = _make_counts()
-    _detect_dead_useeffects(ctx, counts)
+    _detect_dead_useeffects(_file_ctx(tmp_path, content), counts)
     assert [m["line"] for m in counts["dead_useeffect"]] == lines
 
 
 @pytest.mark.skipif(
     importlib.util.find_spec("tree_sitter_language_pack") is None, reason="needs tree-sitter"
 )
-def test_dead_useeffect_tree_sees_calls_mid_line():
+def test_dead_useeffect_tree_sees_calls_mid_line(tmp_path):
     content = "const a = 1; useEffect(() => {}, []);\nfoo(); React.useEffect(function () {});\n"
     counts = _make_counts()
-    _detect_dead_useeffects(_ctx(content, "a.tsx"), counts)
+    _detect_dead_useeffects(_file_ctx(tmp_path, content), counts)
     assert [m["line"] for m in counts["dead_useeffect"]] == [1, 2]
 
 
 @pytest.mark.skipif(
     importlib.util.find_spec("tree_sitter_language_pack") is None, reason="needs tree-sitter"
 )
-def test_dead_useeffect_tree_line_matches_the_fixer_after_a_line_separator():
+def test_dead_useeffect_tree_line_matches_the_fixer_after_a_line_separator(tmp_path):
     content = "const s = 'a b';\nuseEffect(() => {}, []);\n"
     counts = _make_counts()
-    _detect_dead_useeffects(_ctx(content, "a.tsx"), counts)
+    _detect_dead_useeffects(_file_ctx(tmp_path, content), counts)
     [match] = counts["dead_useeffect"]
     assert match["line"] == 2
     assert match["content"] == "useEffect(() => {}, []);"

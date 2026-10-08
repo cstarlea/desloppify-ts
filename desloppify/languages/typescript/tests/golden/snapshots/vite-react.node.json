@@ -43,13 +43,6 @@
       "summary": "Orphaned file (12 LOC): zero importers, not an entry point"
     },
     {
-      "id": "orphaned::src/lib/analytics.ts",
-      "tier": 3,
-      "confidence": "low",
-      "zone": "production",
-      "summary": "Orphaned file (13 LOC): zero importers, not an entry point (an unresolved import in src/main.tsx may point here)"
-    },
-    {
       "id": "orphaned::src/lib/constants.ts",
       "tier": 3,
       "confidence": "medium",
@@ -124,7 +117,7 @@
       "tier": 3,
       "confidence": "high",
       "zone": "production",
-      "summary": "Untested module (13 LOC, 0 importers)"
+      "summary": "Untested module (13 LOC, 1 importers)"
     },
     {
       "id": "test_coverage::src/lib/constants.ts::untested_module",
@@ -212,7 +205,7 @@
     "props": 4,
     "react": 0,
     "security": 18,
-    "single_use": 8,
+    "single_use": 9,
     "smells": 18,
     "structural": 18,
     "test_coverage": 54,
