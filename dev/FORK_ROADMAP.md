@@ -107,7 +107,7 @@ Every adversarial input in the original review broke one of the line-regex fixer
 | 2.13 | **Done (#26).** A separate `params` category for unused symbols, with every category decided on the syntax tree | S | FX-15 |
 | 2.14 | **Done (#37).** package.json `imports` (`#subpath`) in the resolver: the importer's nearest package.json is the scope; exact and `*` keys, condition objects and fallback arrays in order; bare targets resolve when they name a workspace package. The vite-react golden's `analytics.ts` false positive is gone | S | GR-1 |
 | 2.15 | **Done (#39).** The `_NEXTJS_*` constants left `engine/detectors/orphaned.py` for `NEXTJS_SPEC.entry_conventions`; the language passes the specs' conventions to the detector through `OrphanedDetectionOptions`, since detectors may not import the language layer. Behaviour unchanged (commerce issue IDs identical) | S | GR-6 |
-| 2.16 | Test coverage follows re-export chains of any depth (it stops after one barrel hop today; see trpc `parseTRPCMessage.ts`) | M | DT-12 |
+| 2.16 | **Done (#45).** Test coverage follows each imported name through re-export chains of any depth (`export { } from`, `export *`, `export * as ns`, import-then-export) to the file that defines it, via `syntax.queries`; namespace imports follow the members the test uses; type-only names aren't followed. trpc `parseTRPCMessage.ts` is directly tested. The one-hop name-blind barrel and facade expansions remain | M | DT-12 |
 | 2.17 | Test-health score: count coverage through a tested public entry as covered, and fix the "production files" and "checks" labels | M | DT-12 |
 | 2.28 | **Done (#36).** A file whose directive prologue holds `'use client'` or `'use server'` (after `'use strict'` or comments too) is not a facade, even if it only re-exports: in Next.js it marks a client or server boundary. None appear in the four repos | S | DT-6 |
 | 2.29 | Line numbers in the logs and smells detectors: they split lines with `str.splitlines()`, which also breaks at U+2028/U+2029, CR, VT, FF and U+0085, while the debug-logs and empty-if-chain fixers match on tree-sitter rows, which count only LF. After such a character the fixer looks at the wrong row. #30 fixed the same class of bug for tsc positions in `byte_offset` | S | — |
@@ -270,7 +270,7 @@ Status key: **done** (with PR), **partial** (what's left is in §2), **open**, *
 | DT-9 | medium | Non-null, block `@ts-ignore`, double-cast gaps | open → 2.7 |
 | DT-10 | medium | Author-specific heuristics | open → 3.5 |
 | DT-11 | medium | test-d, bench, e2e, config, generated not zoned | partial (#1) → 2.12 |
-| DT-12 | high | Jest-only assertions; inverted test-health; cross-package basename mapping | partial (#1, #8) → 2.16, 2.17, 3.11 |
+| DT-12 | high | Jest-only assertions; inverted test-health; cross-package basename mapping | partial (#1, #8, #45) → 2.17, 3.11 |
 | DT-13 | medium | tsconfig strictness never read | open → 3.3 |
 | DT-14 | high | No framework support beyond Next.js (React Router entries only); SFCs unanalysed | open → 3.6, 3.7 |
 | DT-15 | medium | No server-action auth, raw-SQL or child_process checks | open → 3.8 |
