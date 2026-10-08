@@ -10,9 +10,7 @@ from desloppify.app.commands.move.apply import apply_file_move
 from desloppify.app.commands.move.directory import run_directory_move
 from desloppify.app.commands.move.language import (
     load_lang_move_module,
-    resolve_lang_for_file_move,
     resolve_move_verify_hint,
-    supported_ext_hint,
 )
 from desloppify.app.commands.move.planning import (
     check_unrewritable_importers,
@@ -48,15 +46,8 @@ def cmd_move(args: argparse.Namespace) -> None:
 
     dry_run = getattr(args, "dry_run", False)
 
-    lang_name = resolve_lang_for_file_move(source_abs, args)
-    if not lang_name:
-        raise CommandError(
-            "Cannot detect language. Use --lang or ensure file has one of: "
-            f"{supported_ext_hint()}"
-        )
-
-    lang = lang_mod.get_lang(lang_name)
-    move_mod = load_lang_move_module(lang_name)
+    lang = lang_mod.default_lang()
+    move_mod = load_lang_move_module(lang.name)
 
     scan_path = move_graph_root(
         move_mod, Path(resolve_path(lang.default_src)), get_project_root()

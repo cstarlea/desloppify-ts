@@ -26,7 +26,7 @@ def _score_snapshot(state: StateModel) -> tuple[float, float, float]:
     )
 
 
-def render_empty_remediation_plan(state: StateModel, lang_name: str) -> str:
+def render_empty_remediation_plan(state: StateModel) -> str:
     """Generate a short plan when no holistic issues are open."""
     overall, objective, strict = _score_snapshot(state)
     return (
@@ -36,7 +36,7 @@ def render_empty_remediation_plan(state: StateModel, lang_name: str) -> str:
         "No open holistic issues. The codebase is clean at the architectural level.\n\n"
         "To start a new holistic review cycle:\n"
         "```bash\n"
-        f"desloppify --lang {lang_name} review --prepare --path <src>\n"
+        f"desloppify review --prepare --path <src>\n"
         "```\n"
     )
 
@@ -119,7 +119,7 @@ def _render_header(
     append("---\n")
 
 
-def _render_usage(lines: list[str], lang_name: str) -> None:
+def _render_usage(lines: list[str]) -> None:
     append = lines.append
     append("## How to use this plan\n")
     append("1. Work through issues in priority order (highest impact first)")
@@ -128,7 +128,7 @@ def _render_usage(lines: list[str], lang_name: str) -> None:
     append("4. Run `desloppify scan` to update automated issues and score")
     append("5. To re-evaluate holistic issues, re-run the full cycle:")
     append(
-        f"   `desloppify --lang {lang_name} review --prepare --path <src>`"
+        f"   `desloppify review --prepare --path <src>`"
     )
     append("   Then have an agent investigate and import — previously addressed")
     append("   issues auto-resolve if not re-reported.\n")
@@ -136,7 +136,7 @@ def _render_usage(lines: list[str], lang_name: str) -> None:
 
 
 def _render_entry(
-    lines: list[str], entry: dict[str, Any], idx: int, lang_name: str
+    lines: list[str], entry: dict[str, Any], idx: int
 ) -> None:
     append = lines.append
     impact_label = (
@@ -171,19 +171,19 @@ def _render_entry(
 
     append("### After fixing\n")
     append("```bash")
-    append(f'desloppify --lang {lang_name} resolve fixed "{entry["id"]}"')
+    append(f'desloppify resolve fixed "{entry["id"]}"')
     append("```\n")
     append("---\n")
 
 
-def _render_re_evaluate(lines: list[str], lang_name: str) -> None:
+def _render_re_evaluate(lines: list[str]) -> None:
     append = lines.append
     append("## Re-evaluate\n")
     append("After addressing issues, re-run the holistic review cycle:\n")
     append("```bash")
-    append(f"desloppify --lang {lang_name} review --prepare --path <src>")
+    append(f"desloppify review --prepare --path <src>")
     append("# Agent investigates batches and writes issues.json")
-    append(f"desloppify --lang {lang_name} review --import issues.json")
+    append(f"desloppify review --import issues.json")
     append("```\n")
     append(
         "Previously addressed issues will auto-resolve if not re-reported by the agent."
@@ -192,12 +192,12 @@ def _render_re_evaluate(lines: list[str], lang_name: str) -> None:
 
 
 def generate_remediation_plan(
-    state: StateModel, lang_name: str, *, output_path: Path | None = None
+    state: StateModel, *, output_path: Path | None = None
 ) -> str:
     """Generate prioritized markdown remediation steps for open holistic issues."""
     holistic_issues = _collect_holistic_issues(state)
     if not holistic_issues:
-        content = render_empty_remediation_plan(state, lang_name)
+        content = render_empty_remediation_plan(state)
         if output_path:
             safe_write_text(output_path, content)
         return content
@@ -207,10 +207,10 @@ def generate_remediation_plan(
 
     lines: list[str] = []
     _render_header(lines, overall, objective, strict, entries, total_impact)
-    _render_usage(lines, lang_name)
+    _render_usage(lines)
     for idx, entry in enumerate(entries, start=1):
-        _render_entry(lines, entry, idx, lang_name)
-    _render_re_evaluate(lines, lang_name)
+        _render_entry(lines, entry, idx)
+    _render_re_evaluate(lines)
 
     content = "\n".join(lines)
     if output_path:

@@ -74,7 +74,7 @@ Layer 4: app/                    CLI commands. Thin entry points delegating to e
 ## Data Flow
 
 ```
-scan:    LangConfig → LangRun(phases) → generate_findings() → merge_scan() → state-{lang}.json
+scan:    LangConfig → LangRun(phases) → generate_findings() → merge_scan() → state.json
 plan:    state → reconcile → plan.json (ordered queue, clusters, deferred items)
 review:  state + plan → batch packets → LLM → import findings → merge
 fix:     LangConfig.fixers → fixer.fix() → resolve in state

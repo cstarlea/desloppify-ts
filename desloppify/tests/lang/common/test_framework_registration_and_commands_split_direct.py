@@ -12,7 +12,6 @@ import desloppify.app.commands.review.runtime.setup as review_runtime_setup_mod
 import desloppify.app.commands.scan.contracts as scan_contracts_mod
 import desloppify.app.commands.scan.coverage as scan_coverage_mod
 import desloppify.app.commands.scan.workflow as scan_workflow_mod
-import desloppify.app.commands.langs.cmd as langs_cmd_mod
 import desloppify.engine._scoring.state_coverage as state_coverage_mod
 import desloppify.engine._state.schema_types as state_schema_types_mod
 import desloppify.engine.planning.scan as planning_scan_mod
@@ -82,12 +81,6 @@ def test_languages_registry_surface_keeps_legacy_exports_compat_only() -> None:
     assert "__getattr__" not in source
     assert "registry_state" not in languages_mod.__all__
     assert not hasattr(languages_mod, "registry_state")
-
-
-def test_langs_command_uses_public_framework_facade() -> None:
-    source = inspect.getsource(langs_cmd_mod)
-    assert "from desloppify.languages.framework import" in source
-    assert "desloppify.languages._framework" not in source
 
 
 def test_app_and_engine_runtime_paths_use_public_framework_facade() -> None:

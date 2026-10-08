@@ -7,7 +7,6 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from desloppify.base.discovery.file_paths import rel
-from desloppify.base.discovery.paths import get_project_root
 from desloppify.base.output.terminal import colorize
 from desloppify.engine.planning.helpers import is_subjective_phase
 from desloppify.engine.policy.zones import (
@@ -19,10 +18,8 @@ from desloppify.languages.framework import (
     DetectorPhase,
     LangConfig,
     LangRun,
-    auto_detect_lang,
-    available_langs,
     clear_review_phase_prefetch,
-    get_lang,
+    default_lang,
     make_lang_run,
     prewarm_review_phase_detectors,
 )
@@ -42,19 +39,8 @@ def _stderr(msg: str) -> None:
     print(colorize(msg, "dim"), file=sys.stderr)
 
 
-def _resolve_lang(
-    lang: LangConfig | LangRun | None, project_root: Path
-) -> LangConfig | LangRun:
-    if lang is not None:
-        return lang
-
-    detected = auto_detect_lang(project_root)
-    if detected is None:
-        langs = available_langs()
-        if not langs:
-            raise ValueError("No language plugins available")
-        detected = langs[0]
-    return get_lang(detected)
+def _resolve_lang(lang: LangConfig | LangRun | None) -> LangConfig | LangRun:
+    return lang if lang is not None else default_lang()
 
 
 def _build_zone_map(path: Path, lang: LangRun, zone_overrides: dict[str, str] | None) -> None:
@@ -172,7 +158,7 @@ def generate_issues(
     """Run all detectors and convert results to normalized issues."""
     resolved_options = options or PlanScanOptions()
 
-    resolved_lang = _resolve_lang(lang, get_project_root())
+    resolved_lang = _resolve_lang(lang)
     runtime_lang = make_lang_run(resolved_lang)
     return _generate_issues_from_lang(
         path,

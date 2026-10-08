@@ -1,4 +1,4 @@
-"""Tests for desloppify.languages — register_lang, get_lang, available_langs, auto_detect_lang."""
+"""Tests for desloppify.languages — register_lang, get_lang, available_langs."""
 
 import importlib
 from pathlib import Path
@@ -8,7 +8,6 @@ import pytest
 
 import desloppify.languages as lang_mod
 from desloppify.languages import (
-    auto_detect_lang,
     available_langs,
     get_lang,
     register_lang,
@@ -105,37 +104,6 @@ def test_available_langs_returns_sorted():
     """available_langs returns a sorted list."""
     langs = available_langs()
     assert langs == sorted(langs)
-
-
-# ── auto_detect_lang ─────────────────────────────────────────
-
-
-def test_auto_detect_typescript_project(tmp_path):
-    """Project with package.json auto-detects as typescript."""
-    (tmp_path / "package.json").write_text('{"name": "test"}')
-    src = tmp_path / "src"
-    src.mkdir()
-    (src / "index.ts").write_text("export const x = 1;")
-
-    result = auto_detect_lang(tmp_path)
-    assert result == "typescript"
-
-
-def test_auto_detect_javascript_project(tmp_path):
-    """A package.json project with only .js files is scanned by the TypeScript plugin."""
-    (tmp_path / "package.json").write_text('{"name": "test"}')
-    src = tmp_path / "src"
-    src.mkdir()
-    (src / "index.js").write_text("export const x = 1;")
-
-    result = auto_detect_lang(tmp_path)
-    assert result == "typescript"
-
-
-def test_auto_detect_no_config_returns_none(tmp_path):
-    """Project with no recognized config files returns None."""
-    result = auto_detect_lang(tmp_path)
-    assert result is None
 
 
 # ── LangConfig basics ───────────────────────────────────────

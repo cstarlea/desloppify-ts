@@ -15,8 +15,6 @@ _COMMAND_POST_FIX: dict[str, Callable[..., None]] = {}
 def resolve_fixer_config(args, fixer_name: str) -> tuple[LangConfig, FixerConfig]:
     """Resolve and normalize fixer config from language registry, or raise."""
     lang = resolve_lang(args)
-    if not lang:
-        raise CommandError("Could not detect language. Use --lang to specify.")
     if not lang.fixers:
         raise CommandError(f"No auto-fixers available for {lang.name}.")
     if fixer_name not in lang.fixers:

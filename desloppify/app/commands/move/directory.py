@@ -5,13 +5,10 @@ from __future__ import annotations
 from pathlib import Path
 
 from desloppify.languages import framework as lang_mod
-from desloppify.app.commands.helpers.lang import resolve_lang
 from desloppify.app.commands.move.apply import apply_directory_move
 from desloppify.app.commands.move.language import (
-    detect_lang_from_dir,
     load_lang_move_module,
     resolve_move_verify_hint,
-    supported_ext_hint,
 )
 from desloppify.app.commands.move.planning import (
     build_directory_move_plan,
@@ -36,25 +33,8 @@ def run_directory_move(args, source_abs: str, resolve_path_fn) -> None:
     if Path(dest_abs).exists():
         raise CommandError(f"Destination already exists: {rel(dest_abs)}")
 
-    lang_name = None
-    if getattr(args, "lang", None):
-        lang = resolve_lang(args)
-        if lang:
-            lang_name = lang.name
-    else:
-        lang_name = detect_lang_from_dir(source_abs)
-
-    if not lang_name:
-        lang = resolve_lang(args)
-        if lang:
-            lang_name = lang.name
-    if not lang_name:
-        raise CommandError(
-            "Cannot detect language from directory contents. Use --lang "
-            f"(supported extensions: {supported_ext_hint()})."
-        )
-
-    lang = lang_mod.get_lang(lang_name)
+    lang = lang_mod.default_lang()
+    lang_name = lang.name
     move_mod = load_lang_move_module(lang_name)
 
     source_files = collect_source_files(source_path, list(lang.extensions))

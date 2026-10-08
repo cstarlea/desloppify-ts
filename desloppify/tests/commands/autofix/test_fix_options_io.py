@@ -105,15 +105,6 @@ def test_load_fixer_does_not_override_existing_post_fix():
 # ── _resolve_fixer_config: exit paths ────────────────────────
 
 
-def test_load_fixer_exits_when_no_lang():
-    """When resolve_lang returns None, sys.exit(1) is called."""
-    args = _FakeArgs()
-    with patch("desloppify.app.commands.autofix.fixer_selection.resolve_lang", return_value=None):
-        with pytest.raises(CommandError) as exc_info:
-            resolve_fixer_config(args, "unused")
-        assert exc_info.value.exit_code == 1
-
-
 def test_load_fixer_exits_when_no_fixers():
     """When language has no fixers, sys.exit(1) is called."""
     lang = _make_lang(fixers={})

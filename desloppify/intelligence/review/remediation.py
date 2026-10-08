@@ -7,18 +7,17 @@ from pathlib import Path
 from desloppify.engine._state.schema import StateModel
 
 
-def render_empty_remediation_plan(state: StateModel, lang_name: str) -> str:
+def render_empty_remediation_plan(state: StateModel) -> str:
     """Build the empty remediation plan output."""
     from desloppify.intelligence.review._prepare.remediation_engine import (
         render_empty_remediation_plan as _render_empty_remediation_plan,
     )
 
-    return _render_empty_remediation_plan(state, lang_name)
+    return _render_empty_remediation_plan(state)
 
 
 def generate_remediation_plan(
     state: StateModel,
-    lang_name: str,
     *,
     output_path: Path | None = None,
 ) -> str:
@@ -29,7 +28,6 @@ def generate_remediation_plan(
 
     return _generate_remediation_plan(
         state,
-        lang_name,
         output_path=output_path,
     )
 

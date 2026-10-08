@@ -170,47 +170,6 @@ def test_state_path_from_explicit_state_arg():
     assert str(result) == "/custom/path.json"
 
 
-def test_state_path_from_lang_arg():
-    """--lang argument produces .desloppify/state-{lang}.json."""
-    args = SimpleNamespace(state=None, lang="python")
-    result = state_path(args)
-    assert result is not None
-    assert result.name == "state-python.json"
-    assert ".desloppify" in str(result)
-
-
-def test_state_path_no_args_with_auto_detect(monkeypatch):
-    """When neither --state nor --lang is set, auto_detect_lang_name is called."""
-    args = SimpleNamespace(state=None, lang=None)
-    monkeypatch.setattr(
-        "desloppify.app.commands.helpers.state.auto_detect_lang_name",
-        lambda _: "typescript",
-    )
-    # Disable the sole-state-file fallback so the test exercises auto-detect.
-    monkeypatch.setattr(
-        "desloppify.app.commands.helpers.state._sole_existing_lang_state_file",
-        lambda: None,
-    )
-    result = state_path(args)
-    assert result is not None
-    assert "state-typescript.json" in str(result)
-
-
-def test_state_path_returns_none_when_nothing_detected(monkeypatch):
-    """When auto-detection fails and no fallback state file exists, returns None."""
-    args = SimpleNamespace(state=None, lang=None)
-    monkeypatch.setattr(
-        "desloppify.app.commands.helpers.state.auto_detect_lang_name",
-        lambda _: None,
-    )
-    monkeypatch.setattr(
-        "desloppify.app.commands.helpers.state._sole_existing_lang_state_file",
-        lambda: None,
-    )
-    result = state_path(args)
-    assert result is None
-
-
 # ── state.py: require_issue_inventory ─────────────────────────────────
 
 

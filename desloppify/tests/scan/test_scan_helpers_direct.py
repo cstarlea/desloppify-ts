@@ -34,24 +34,14 @@ def test_formatting_helpers():
     assert color == "red"
 
 
-def test_warn_explicit_lang_with_no_files(monkeypatch, capsys, tmp_path):
-    args = SimpleNamespace(lang="python")
-    lang = SimpleNamespace(name="python")
+def test_warn_no_source_files(capsys, tmp_path):
+    lang = SimpleNamespace(name="typescript")
 
-    import desloppify.languages as lang_mod
+    scan_helpers_mod.warn_no_source_files(lang, Path(tmp_path), metrics={"total_files": 0})
+    assert "No TypeScript or JavaScript source files found" in capsys.readouterr().out
 
-    monkeypatch.setattr(lang_mod, "auto_detect_lang", lambda _root: "typescript")
-
-    scan_helpers_mod.warn_explicit_lang_with_no_files(
-        args,
-        lang,
-        Path(tmp_path),
-        metrics={"total_files": 0},
-    )
-
-    out = capsys.readouterr().out
-    assert "No python source files found" in out
-    assert "Omit `--lang` to auto-detect." in out
+    scan_helpers_mod.warn_no_source_files(lang, Path(tmp_path), metrics={"total_files": 3})
+    assert capsys.readouterr().out == ""
 
 
 def test_audit_excluded_dirs_reads_each_file_once(monkeypatch, tmp_path):

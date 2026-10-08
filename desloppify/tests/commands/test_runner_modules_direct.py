@@ -275,7 +275,6 @@ def test_run_followup_scan_handles_force_bypass_timeout_and_oserror(
         raise TimeoutError
 
     timeout_code = codex_batch_mod.run_followup_scan(
-        lang_name="python",
         scan_path="src",
         deps=SimpleNamespace(
             python_executable="python",
@@ -292,7 +291,6 @@ def test_run_followup_scan_handles_force_bypass_timeout_and_oserror(
     assert "--attest" in calls[0]
 
     oserror_code = codex_batch_mod.run_followup_scan(
-        lang_name="python",
         scan_path="src",
         deps=SimpleNamespace(
             python_executable="python",
@@ -314,7 +312,6 @@ def test_run_followup_scan_default_does_not_force_queue_bypass(tmp_path: Path) -
     calls: list[list[str]] = []
 
     code = codex_batch_mod.run_followup_scan(
-        lang_name="python",
         scan_path="src",
         deps=SimpleNamespace(
             python_executable="python",

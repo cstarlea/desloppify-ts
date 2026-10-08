@@ -274,6 +274,20 @@ def _handle_help_command(
         return
 
 
+def _reject_removed_lang_flag(argv: list[str]) -> None:
+    """Explain the removed global ``--lang`` flag instead of a confusing parse error."""
+    for token in argv:
+        if token == "--":
+            return
+        if token == "--lang" or token.startswith("--lang="):
+            print(
+                "desloppify: --lang was removed; desloppify only scans "
+                "TypeScript and JavaScript now, so drop the flag.",
+                file=sys.stderr,
+            )
+            raise SystemExit(2)
+
+
 def main() -> None:
     # Ensure Unicode output works on Windows terminals (cp1252 etc.)
     for stream in (sys.stdout, sys.stderr):
@@ -286,6 +300,7 @@ def main() -> None:
                     getattr(stream, "name", "<stream>"),
                 )
 
+    _reject_removed_lang_flag(sys.argv[1:])
     parser = create_parser()
     args = parser.parse_args()
     if not args.command:

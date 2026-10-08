@@ -98,13 +98,8 @@ class TestVizWriteBehavior:
             def build_dep_graph(_path):
                 raise RuntimeError("dep graph parse failed")
 
-        monkeypatch.setattr(
-            "desloppify.app.output.visualize_data._resolve_visualization_lang",
-            lambda _path, _lang=None: _Lang(),
-        )
-
         html, output_result = generate_visualization(
-            tmp_path, state={}, output=None, lang=None
+            tmp_path, state={}, output=None, lang=_Lang()
         )
         assert isinstance(html, str)
         assert output_result.ok is True

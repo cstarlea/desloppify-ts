@@ -6,12 +6,8 @@ from types import SimpleNamespace
 import pytest
 
 import desloppify.app.commands.move.cmd as move_mod
-from desloppify.app.commands.move.cmd import _cmd_move_dir
 from desloppify.app.commands.move.language import (
-    detect_lang_from_dir,
-    detect_lang_from_ext,
     load_lang_move_module,
-    resolve_lang_for_file_move,
     resolve_move_verify_hint,
 )
 from desloppify.app.commands.move.planning import dedup_replacements, resolve_dest
@@ -57,82 +53,6 @@ class TestDedup:
     def test_different_values_not_deduped(self):
         pairs = [("a", "b"), ("a", "c")]
         assert dedup_replacements(pairs) == [("a", "b"), ("a", "c")]
-
-
-# ---------------------------------------------------------------------------
-# detect_lang_from_ext
-# ---------------------------------------------------------------------------
-
-
-class TestDetectLangFromExt:
-    """detect_lang_from_ext maps file extensions to language names."""
-
-    def test_typescript_ts(self):
-        assert detect_lang_from_ext("foo.ts") == "typescript"
-
-    def test_typescript_tsx(self):
-        assert detect_lang_from_ext("foo.tsx") == "typescript"
-
-    def test_javascript_js(self):
-        assert detect_lang_from_ext("foo.js") == "typescript"
-
-    def test_unknown_ext(self):
-        assert detect_lang_from_ext("foo.xyz") is None
-
-    def test_no_ext(self):
-        assert detect_lang_from_ext("Makefile") is None
-
-    def test_full_path(self):
-        assert detect_lang_from_ext("/src/components/Button.tsx") == "typescript"
-
-    def test_skips_registered_plugin_when_metadata_load_fails(self, monkeypatch):
-        import desloppify.app.commands.move.language as move_lang_mod
-
-        move_lang_mod._ext_to_lang_map.cache_clear()
-        monkeypatch.setattr(
-            move_lang_mod.lang_mod,
-            "available_langs",
-            lambda: ["broken_lang"],
-        )
-        monkeypatch.setattr(
-            move_lang_mod,
-            "load_lang_config_metadata",
-            lambda _name: None,
-        )
-
-        assert detect_lang_from_ext("foo.py") is None
-        move_lang_mod._ext_to_lang_map.cache_clear()
-
-
-# ---------------------------------------------------------------------------
-# detect_lang_from_dir
-# ---------------------------------------------------------------------------
-
-
-class TestDetectLangFromDir:
-    """detect_lang_from_dir inspects directory contents."""
-
-    def test_javascript_dir(self, tmp_path):
-        (tmp_path / "foo.js").write_text("")
-        assert detect_lang_from_dir(str(tmp_path)) == "typescript"
-
-    def test_typescript_dir(self, tmp_path):
-        (tmp_path / "bar.ts").write_text("")
-        assert detect_lang_from_dir(str(tmp_path)) == "typescript"
-
-    def test_empty_dir(self, tmp_path):
-        assert detect_lang_from_dir(str(tmp_path)) is None
-
-    def test_no_source_files(self, tmp_path):
-        (tmp_path / "readme.txt").write_text("")
-        (tmp_path / "config.toml").write_text("")
-        assert detect_lang_from_dir(str(tmp_path)) is None
-
-    def test_nested_files(self, tmp_path):
-        sub = tmp_path / "src" / "components"
-        sub.mkdir(parents=True)
-        (sub / "App.tsx").write_text("")
-        assert detect_lang_from_dir(str(tmp_path)) == "typescript"
 
 
 # ---------------------------------------------------------------------------
@@ -185,77 +105,6 @@ class TestResolveDest:
         source = "src/foo.ts"
         result = resolve_dest(source, str(tmp_path) + "/", resolve_path)
         assert result.endswith("foo.ts")
-
-
-# ---------------------------------------------------------------------------
-# Language resolution precedence
-# ---------------------------------------------------------------------------
-
-
-class TestResolveLangPrecedence:
-    """Explicit --lang should override auto-detection heuristics."""
-
-    def test_explicit_lang_overrides_extension_detection(self, monkeypatch):
-        class FakeArgs:
-            lang = "python"
-            path = "."
-
-        monkeypatch.setattr(
-            "desloppify.app.commands.move.language.resolve_lang",
-            lambda _args: type("L", (), {"name": "python"})(),
-        )
-        result = resolve_lang_for_file_move("/tmp/example.ts", FakeArgs())
-        assert result == "python"
-
-    def test_directory_move_prefers_explicit_lang(self, tmp_path, monkeypatch):
-        source_dir = tmp_path / "pkg"
-        source_dir.mkdir()
-        (source_dir / "mod.py").write_text("import os\n")
-        dest_dir = tmp_path / "pkg_new"
-
-        captured = []
-
-        class FakeLang:
-            extensions = [".py"]
-            default_src = "."
-
-            @staticmethod
-            def build_dep_graph(_path):
-                return {}
-
-        class FakeMoveMod:
-            @staticmethod
-            def find_replacements(_source, _dest, _graph):
-                return {}
-
-            @staticmethod
-            def find_self_replacements(_source, _dest, _graph):
-                return []
-
-        monkeypatch.setattr(
-            "desloppify.app.commands.move.directory.detect_lang_from_dir",
-            lambda _p: "typescript",
-        )
-        monkeypatch.setattr(
-            "desloppify.app.commands.move.directory.resolve_lang",
-            lambda _args: type("L", (), {"name": "python"})(),
-        )
-        monkeypatch.setattr(
-            "desloppify.app.commands.move.directory.lang_mod.get_lang",
-            lambda name: captured.append(name) or FakeLang(),
-        )
-        monkeypatch.setattr(
-            "desloppify.app.commands.move.directory.load_lang_move_module",
-            lambda _n: FakeMoveMod(),
-        )
-
-        class FakeArgs:
-            dest = str(dest_dir)
-            dry_run = True
-            lang = "python"
-
-        _cmd_move_dir(FakeArgs(), str(source_dir))
-        assert captured == ["python"]
 
 
 class TestLoadLangMoveModule:

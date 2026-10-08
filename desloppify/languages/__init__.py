@@ -10,7 +10,6 @@ from collections.abc import Callable
 from typing import TypeVar
 
 from desloppify.languages.framework import (
-    auto_detect_lang,
     available_langs,
     get_lang,
     make_lang_config,
@@ -58,7 +57,6 @@ __all__ = [
     "reload_lang_plugins",
     "get_lang",
     "available_langs",
-    "auto_detect_lang",
     "make_lang_config",
     "validate_lang_structure",
     "validate_lang_contract",

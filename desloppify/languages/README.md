@@ -119,7 +119,7 @@ The path is incremental:
 2. **Extend in-place** — add zone rules, test coverage hooks, security hooks (stays generic)
 3. **Go full** — when you need custom detectors or fixers, switch to `register_full_plugin(...)` with a package directory
 
-Bootstrap: `desloppify dev scaffold-lang <name> --extension .ext --marker <root-marker>`
+
 
 Required package structure (validated at registration): `__init__.py`, `commands.py`, `extractors.py`, `phases.py`, `move.py`, `review.py`, `test_coverage.py`, plus `detectors/`, `fixers/`, and `tests/` directories.
 

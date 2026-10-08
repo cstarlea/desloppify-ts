@@ -582,7 +582,6 @@ def do_external_submit(
 
     if scan_after_import:
         code = run_followup_scan(
-            lang_name=lang.name,
             scan_path=scan_path,
             deps=FollowupScanDeps(
                 project_root=_runtime_project_root(),

@@ -5,7 +5,6 @@ from __future__ import annotations
 import argparse
 import sys
 
-from desloppify.languages import framework as lang_api
 from desloppify.app.commands.helpers.lang import resolve_lang, resolve_lang_settings
 from desloppify.app.commands.helpers.command_runtime import command_runtime
 from desloppify.app.commands.helpers.runtime_options import (
@@ -67,14 +66,7 @@ def cmd_detect(args: argparse.Namespace) -> None:
     """Run a single detector directly (bypass state tracking)."""
     detector_input = args.detector
 
-    # Resolve language (from --lang flag or auto-detection)
     lang_cfg = resolve_lang(args)
-
-    if not lang_cfg:
-        langs = ", ".join(lang_api.available_langs()) or "registered language plugins"
-        raise CommandError(
-            f"No language specified. Use --lang <name> (available: {langs})."
-        )
 
     # Validate detector name
     detector = _resolve_detector_key(detector_input, lang_cfg.detect_commands)

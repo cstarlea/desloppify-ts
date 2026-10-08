@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 from types import SimpleNamespace
 
-import pytest
 
 from desloppify.app.output.tree_text import _aggregate, _print_tree
 from desloppify.app.output.visualize_data import (
@@ -55,43 +54,6 @@ class TestCollectFileData:
         assert len(rows) == 1
         assert rows[0]["loc"] == 2
         assert rows[0]["abs_path"] == str(target.resolve())
-
-    def test_lang_resolution_failures_use_best_effort_fallback(
-        self, tmp_path, monkeypatch
-    ):
-        scan_root = tmp_path / "workspace"
-        scan_root.mkdir(parents=True, exist_ok=True)
-
-        monkeypatch.setattr(
-            "desloppify.languages.framework.auto_detect_lang",
-            lambda _root: "python",
-        )
-        monkeypatch.setattr(
-            "desloppify.languages.framework.get_lang",
-            lambda _name: (_ for _ in ()).throw(RuntimeError("plugin load failed")),
-        )
-        monkeypatch.setattr("desloppify.languages.framework.available_langs", lambda: ["python"])
-
-        rows = _collect_file_data(scan_root, lang=None)
-        assert rows == []
-
-    def test_unexpected_lang_resolution_error_is_not_swallowed(
-        self, tmp_path, monkeypatch
-    ):
-        scan_root = tmp_path / "workspace"
-        scan_root.mkdir(parents=True, exist_ok=True)
-
-        monkeypatch.setattr(
-            "desloppify.languages.framework.auto_detect_lang",
-            lambda _root: "python",
-        )
-        monkeypatch.setattr(
-            "desloppify.languages.framework.get_lang",
-            lambda _name: (_ for _ in ()).throw(LookupError("unexpected resolution bug")),
-        )
-
-        with pytest.raises(LookupError):
-            _collect_file_data(scan_root, lang=None)
 
 
 # ===========================================================================

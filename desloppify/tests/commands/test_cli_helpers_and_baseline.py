@@ -175,13 +175,11 @@ class TestCliSmokeBaseline:
 
         scan_args = parser.parse_args(
             [
-                "--lang",
-                "python",
                 "scan",
                 "--path",
                 "desloppify/tests/fixtures/cli_smoke_project/src",
                 "--state",
-                "desloppify/tests/snapshots/cli_smoke/state-python.json",
+                "desloppify/tests/snapshots/cli_smoke/state.json",
                 "--no-badge",
             ]
         )
@@ -190,25 +188,21 @@ class TestCliSmokeBaseline:
 
         status_args = parser.parse_args(
             [
-                "--lang",
-                "python",
                 "status",
                 "--state",
-                "desloppify/tests/snapshots/cli_smoke/state-python.json",
+                "desloppify/tests/snapshots/cli_smoke/state.json",
             ]
         )
         assert status_args.command == "status"
 
         review_args = parser.parse_args(
             [
-                "--lang",
-                "python",
                 "review",
                 "--prepare",
                 "--path",
                 "tests/fixtures/cli_smoke_project/src",
                 "--state",
-                "tests/snapshots/cli_smoke/state-python.json",
+                "tests/snapshots/cli_smoke/state.json",
             ]
         )
         assert review_args.command == "review"
