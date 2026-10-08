@@ -7,10 +7,12 @@ from pathlib import Path
 import pytest
 
 import desloppify.languages.typescript.detectors.deps.resolve as deps_resolve_mod
+import desloppify.languages.typescript.test_coverage as ts_coverage_mod
 from desloppify.engine.detectors.coverage.mapping import import_based_mapping, naming_based_mapping
 from desloppify.languages.typescript.detectors.deps.imports import ImportExtractor
 from desloppify.languages.typescript.detectors.deps.resolver import clear_resolver_cache
 from desloppify.languages.typescript.test_coverage import (
+    has_testable_logic,
     imported_definitions,
     map_test_to_source,
     parse_test_import_specs,
@@ -133,3 +135,42 @@ def test_star_export_cycles_terminate(tmp_path):
     b = _touch(tmp_path, "src/b.ts", "export * from './a';\n")
     test = _touch(tmp_path, "test/a.test.ts", "import { missing } from '../src/a';\n")
     assert imported_definitions(test, {a, b}) == set()
+
+
+# ── testable logic ──────────────────────────────────────────
+
+
+@needs_treesitter
+@pytest.mark.parametrize(
+    "content",
+    [
+        # zod's json-schema.ts: a multi-line union, then a commented-out interface
+        "export type Schema =\n  | ObjectSchema\n  | ArraySchema;\n\n// export interface JSONSchema {\n//   type?: string;\n// }\n",
+        "export type Pick2<T> =\n  T extends string\n    ? 'a'\n    : 'b';\n",
+        "import type { A } from './a';\nexport default interface B extends A {\n  b: string;\n}\n",
+        "'use client';\nexport type { A } from './a';\nexport {};\ndeclare const x: number;\n",
+    ],
+)
+def test_type_only_files_have_no_testable_logic(content):
+    assert has_testable_logic("src/types.ts", content) is False
+
+
+@needs_treesitter
+@pytest.mark.parametrize(
+    "content",
+    [
+        "export type A =\n  | 'a'\n  | 'b';\nexport const a: A = 'a';\n",
+        "export enum Color {\n  Red,\n}\n",
+        "export default {\n  a: 1,\n};\n",
+        "export default function () {\n  return 1;\n}\n",
+        "const a = 1;\nexport { a };\n",
+    ],
+)
+def test_runtime_statements_are_testable_logic(content):
+    assert has_testable_logic("src/mod.ts", content) is True
+
+
+def test_line_heuristic_without_treesitter(monkeypatch):
+    monkeypatch.setattr(ts_coverage_mod, "parse_text", lambda *_args: None)
+    assert has_testable_logic("src/a.ts", "export type A = { a: 1 };\n") is False
+    assert has_testable_logic("src/a.ts", "export const a = 1;\n") is True
