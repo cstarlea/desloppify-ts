@@ -320,7 +320,9 @@ class _ImportGraph:
         parsed = parsed_file(path)
         if parsed is None:
             return
-        bound: dict[str, tuple[str, tuple[str, ...]]] = {}
+        # local -> (member prefix, module, names): ``z.iso.x`` on ``const z = { iso: _iso }``
+        # has prefix ``("iso",)`` and continues as ``_iso.x``.
+        bound: dict[str, list[tuple[tuple[str, ...], str, tuple[str, ...]]]] = {}
         for info in imports(parsed):
             if info.kind == "side_effect":
                 continue
@@ -329,14 +331,16 @@ class _ImportGraph:
                 continue
             for binding in info.bindings:
                 names = () if binding.imported in (NAMESPACE, "=") else (binding.imported,)
-                bound[binding.local] = (module, names)
+                bound[binding.local] = [((), module, names)]
                 if names:
                     yield module, names
         if not bound:
             return
+        _bind_object_aliases(parsed, bound)
         for chain in _member_chains(parsed, set(bound), member_names):
-            module, names = bound[chain[0]]
-            yield module, names + chain[1:]
+            for prefix, module, names in bound[chain[0]]:
+                if chain[1 : 1 + len(prefix)] == prefix and len(chain) > 1 + len(prefix):
+                    yield module, names + chain[1 + len(prefix) :]
 
     def _resolve(self, specifier: str, from_file: str) -> str | None:
         try:
@@ -378,6 +382,26 @@ class _ImportGraph:
             if further:
                 return here | further
         return None
+
+
+def _bind_object_aliases(parsed: ParsedSource, bound: dict) -> None:
+    """``const z = { ...ns, iso: _iso }``: members of ``z`` reach the imports it spreads or holds."""
+    for declarator in descendants(parsed.root, ("variable_declarator",)):
+        name, value = declarator.child_by_field_name("name"), declarator.child_by_field_name("value")
+        if name is None or value is None or name.type != "identifier" or value.type != "object":
+            continue
+        aliases = []
+        for member in value.named_children:
+            if member.type == "spread_element" and member.named_children:
+                source, key = member.named_children[0], ()
+            elif member.type == "pair" and member.child_by_field_name("key").type == "property_identifier":  # type: ignore[union-attr]
+                source, key = member.child_by_field_name("value"), (parsed.text(member.child_by_field_name("key")),)
+            else:
+                continue
+            if source is not None and source.type == "identifier":
+                aliases.extend((key + prefix, module, names) for prefix, module, names in bound.get(parsed.text(source), ()))
+        if aliases:
+            bound.setdefault(parsed.text(name), []).extend(aliases)
 
 
 def _member_chains(parsed: ParsedSource, locals_: set[str], member_names: set[str]) -> set[tuple[str, ...]]:
