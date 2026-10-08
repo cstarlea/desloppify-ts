@@ -1,100 +1,163 @@
-"""Unused params fixer: prefixes unused function/callback params with _."""
+"""Unused-params fixer: marks unused parameters as intentional with a ``_`` prefix.
 
-import re
+Each tsc finding is matched to the parameter name at its reported line and
+column. A plain parameter is renamed (``x`` → ``_x``, ``...rest`` →
+``..._rest``); a destructured shorthand keeps its property and gets an alias
+(``{ a = 1 }`` → ``{ a: _a = 1 }``), since renaming the property itself would
+read a different one. tsc's ``noUnusedParameters`` ignores all of these forms.
+Catch bindings are treated the same way.
 
+Skipped: names that aren't parameters (the unused-vars fixer's job),
+TypeScript parameter properties (``constructor(private x)``, where the name
+is also a class field), parameters named elsewhere in the signature (type
+predicates like ``x is T``, ``asserts x``, ``typeof x``), and parameters whose
+new name already appears in the function, where the rename would shadow or
+collide with it.
+
+Needs tree-sitter: without it the fixer changes nothing.
+"""
+
+from __future__ import annotations
+
+import sys
+from collections import defaultdict
+
+from desloppify.base.output.terminal import colorize
 from desloppify.languages._framework.base.types import FixResult
-from desloppify.languages.typescript.fixers.fixer_io import apply_fixer
+from desloppify.languages.typescript.syntax.tree import (
+    ParsedSource,
+    get_parser,
+    parse_text,
+)
+
+from .edits import apply_replacements
+from .fixer_io import apply_fixer
+from .nodes import FUNCTIONS, NameIndex, is_parameter, node_key, same, within
+
+_PARAMETERS = frozenset({"required_parameter", "optional_parameter"})
+_PROPERTY_MODIFIERS = frozenset({"accessibility_modifier", "override_modifier", "readonly"})
 
 
 def fix_unused_params(entries: list[dict], *, dry_run: bool = False) -> FixResult:
-    """Prefix unused function/callback/catch parameters with _ to signal intentional non-use."""
+    """Prefix unused function, callback and catch parameters with ``_``."""
+    if entries and get_parser("tsx") is None:
+        print(
+            colorize(
+                "  Skip: the unused-params fixer needs tree-sitter (install desloppify[full]).",
+                "yellow",
+            ),
+            file=sys.stderr,
+        )
+        return FixResult(entries=[], skip_reasons={"needs_treesitter": len(entries)})
 
-    def _transform(lines: list[str], file_entries: list[dict]):
-        fixed = [entry for entry in file_entries if _rewrite_unused_param(lines, entry)]
-        return lines, fixed
+    skip_reasons: dict[str, int] = defaultdict(int)
 
-    return FixResult(entries=apply_fixer(entries, _transform, dry_run=dry_run))
+    def transform(lines: list[str], file_entries: list[dict]) -> tuple[list[str], list[dict]]:
+        path = str(file_entries[0].get("file", "")) if file_entries else ""
+        parsed = parse_text("".join(lines), path)
+        if parsed is None:
+            return lines, []
+        new_source, fixed, skipped = prefix_unused_params(parsed, file_entries)
+        for reason in skipped:
+            skip_reasons[reason] += 1
+        if not fixed:
+            return lines, []
+        return new_source.decode("utf-8").splitlines(keepends=True), fixed
+
+    results = apply_fixer(entries, transform, dry_run=dry_run)
+    return FixResult(entries=results, skip_reasons=dict(skip_reasons))
 
 
-def _rewrite_unused_param(lines: list[str], entry: dict) -> str | None:
-    """Rewrite one unused param entry in-place and return renamed symbol."""
-    name = entry["name"]
-    if name.startswith("_"):
+def prefix_unused_params(
+    parsed: ParsedSource, file_entries: list[dict]
+) -> tuple[bytes, list[dict], list[str]]:
+    """Return the edited source, the fixed entries and a skip reason per skipped entry."""
+    names = NameIndex(parsed)
+    replacements: dict[tuple, tuple[int, int, bytes]] = {}
+    fixed: list[dict] = []
+    skipped: list[str] = []
+    for entry in file_entries:
+        name, line = entry.get("name"), entry.get("line")
+        if not isinstance(name, str) or not isinstance(line, int) or name.startswith("_"):
+            skipped.append("not_found")
+            continue
+        node = names.find(name, line, entry.get("col"))
+        if node is None:
+            skipped.append("not_found")
+            continue
+        owner = _owner(node)
+        if owner is None:
+            skipped.append("not_a_parameter")
+            continue
+        if _is_parameter_property(node):
+            skipped.append("parameter_property")
+            continue
+        if _named_in_signature(names.get(name), node, owner):
+            skipped.append("used_in_signature")
+            continue
+        new_name = f"_{name}"
+        if any(within(other, owner) for other in names.get(new_name)):
+            skipped.append("name_taken")
+            continue
+        text = new_name if node.type == "identifier" else f"{name}: {new_name}"
+        replacements[node_key(node)] = (node.start_byte, node.end_byte, text.encode("utf-8"))
+        fixed.append(entry)
+    return apply_replacements(parsed.source, list(replacements.values())), fixed, skipped
+
+
+def _owner(node):
+    """The function or catch clause whose parameter ``node`` binds, or None."""
+    if node.type not in ("identifier", "shorthand_property_identifier_pattern"):
         return None
-
-    line_idx = entry["line"] - 1
-    if line_idx < 0 or line_idx >= len(lines):
-        return None
-
-    src = lines[line_idx]
-    if not _line_is_param_context(src, lines, line_idx):
-        return None
-
-    if _rewrite_with_column_hint(lines, line_idx, src, name, entry.get("col", 0)):
-        return name
-
-    new_name = f"_{name}"
-    param_re = re.compile(r"(?<=[\(,\s])" + re.escape(name) + r"(?=\s*[?:,)=])")
-    new_line = param_re.sub(new_name, src, count=1)
-    if new_line == src:
-        return None
-    lines[line_idx] = new_line
-    return name
+    if _is_binding(node) and is_parameter(node):
+        owner = node.parent
+        while owner is not None and owner.type not in FUNCTIONS:
+            owner = owner.parent
+        return owner
+    clause = node.parent
+    while clause is not None and clause.type != "catch_clause":
+        clause = clause.parent
+    parameter = clause.child_by_field_name("parameter") if clause is not None else None
+    if parameter is not None and within(node, parameter) and _is_binding(node):
+        return clause
+    return None
 
 
-def _line_is_param_context(src: str, lines: list[str], line_idx: int) -> bool:
-    stripped = src.strip()
-    return bool(
-        re.search(r"(?:function\s+\w+|function)\s*\(", stripped)
-        or re.search(r"\)\s*(?:=>|:)", stripped)
-        or re.search(r"=>\s*\{", stripped)
-        or re.match(r"\s*\(", stripped)
-        or re.search(r"catch\s*\(", stripped)
-        or _is_param_context(lines, line_idx)
+def _named_in_signature(occurrences: list, node, owner) -> bool:
+    """Whether the name appears elsewhere in the signature, e.g. ``x is T`` or ``typeof x``.
+
+    tsc doesn't count those as reads, but they'd break if only the parameter
+    were renamed. Occurrences in the body are other, shadowing bindings,
+    since tsc reported the parameter as never read.
+    """
+    body = owner.child_by_field_name("body")
+    return any(
+        not same(other, node) and within(other, owner) and not (body is not None and within(other, body))
+        for other in occurrences
     )
 
 
-def _rewrite_with_column_hint(
-    lines: list[str], line_idx: int, src: str, name: str, col: int
-) -> bool:
-    if col <= 0:
-        return False
-    col_idx = col - 1
-    if col_idx + len(name) > len(src):
-        return False
-    if src[col_idx : col_idx + len(name)] != name:
-        return False
-    new_name = f"_{name}"
-    lines[line_idx] = src[:col_idx] + new_name + src[col_idx + len(name) :]
-    return True
+def _is_binding(node) -> bool:
+    """Whether ``node`` is a name a parameter binds, not a default value or type."""
+    parent = node.parent
+    if node.type == "shorthand_property_identifier_pattern":
+        return True
+    if parent.type in (*_PARAMETERS, "assignment_pattern"):
+        return same(parent.child_by_field_name("pattern" if parent.type in _PARAMETERS else "left"), node)
+    if parent.type == "pair_pattern":
+        return same(parent.child_by_field_name("value"), node)
+    if parent.type == "arrow_function":
+        return same(parent.child_by_field_name("parameter"), node)
+    return parent.type in ("array_pattern", "rest_pattern", "catch_clause")
 
 
-def _is_param_context(lines: list[str], line_idx: int) -> bool:
-    """Check if a line is inside a multi-line function parameter list."""
-    paren_depth = 0
-    for back in range(0, 15):
-        idx = line_idx - back
-        if idx < 0:
-            break
-        line = lines[idx]
-        for ch in reversed(line):
-            if ch == ")":
-                paren_depth += 1
-            elif ch == "(":
-                paren_depth -= 1
-        if paren_depth < 0:
-            # Found unmatched ( — check if it belongs to a function/catch
-            for check_idx in range(max(0, idx - 1), idx + 1):
-                prev = lines[check_idx].strip()
-                if re.search(
-                    r"(?:function\s+\w+|catch|\w+\s*=\s*(?:async\s+)?)\s*$", prev
-                ):
-                    return True
-                if re.search(r"(?:function|catch)\s*\($", prev):
-                    return True
-                if prev.endswith("("):
-                    return True
-            return False  # Unmatched ( but not a function/catch context
-        if line.strip().endswith((";", "{")):
-            break
-    return False
+def _is_parameter_property(node) -> bool:
+    parameter = node.parent
+    while parameter is not None and parameter.type not in _PARAMETERS:
+        parameter = parameter.parent
+    return parameter is not None and any(
+        child.type in _PROPERTY_MODIFIERS for child in parameter.children
+    )
+
+
+__all__ = ["fix_unused_params", "prefix_unused_params"]

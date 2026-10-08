@@ -15,10 +15,7 @@ from desloppify.languages.typescript.fixers.if_chain import (
 )
 from desloppify.languages.typescript.fixers.imports import fix_unused_imports
 from desloppify.languages.typescript.fixers.logs import fix_debug_logs
-from desloppify.languages.typescript.fixers.params import (
-    _is_param_context,
-    fix_unused_params,
-)
+from desloppify.languages.typescript.fixers.params import fix_unused_params
 from desloppify.languages.typescript.fixers.syntax_scan import (
     collapse_blank_lines,
     extract_body_between_braces,
@@ -773,30 +770,14 @@ class TestFixDebugLogs:
 
 
 # =====================================================================
-# params.py — _is_param_context, fix_unused_params
+# params.py — fix_unused_params
 # =====================================================================
 
 
-class TestIsParamContext:
-    """Tests for _is_param_context()."""
-
-    def test_function_param_context(self):
-        """Line inside a function param list is recognized."""
-        lines = ["function foo(\n", "  a: string,\n", "  b: number\n", ") {\n"]
-        # Line 1 (a: string) should be in a param context
-        assert _is_param_context(lines, 1) is True
-
-    def test_not_param_context(self):
-        """Line not inside any param list returns False."""
-        lines = ["const x = 1;\n", "const y = 2;\n"]
-        assert _is_param_context(lines, 1) is False
-
-    def test_catch_param_context(self):
-        """Line inside a catch() param list is recognized."""
-        lines = ["} catch(\n", "  error\n", ") {\n"]
-        assert _is_param_context(lines, 1) is True
-
-
+@pytest.mark.skipif(
+    importlib.util.find_spec("tree_sitter_language_pack") is None,
+    reason="the unused-params fixer needs tree-sitter",
+)
 class TestFixUnusedParams:
     """Tests for fix_unused_params()."""
 

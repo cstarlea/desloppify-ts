@@ -108,7 +108,6 @@ def get_ts_fixers() -> dict[str, FixerConfig]:
             "unused",
             "Prefixed",
             "Would prefix",
-            unsafe=True,
         ),
         "dead-useeffect": FixerConfig(
             "dead useEffect calls",
