@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Any
 
@@ -30,6 +31,8 @@ from desloppify.engine.detectors.patterns.security import (
 from desloppify.engine.detectors.patterns.security import (
     is_placeholder as _is_placeholder,
 )
+
+_LOGGED_VALUE = re.compile(r"[\w$]")
 
 
 @dataclass(frozen=True)
@@ -95,15 +98,27 @@ def _secret_format_entries(
     return entries
 
 
+def _in_code(code: str | None, line: str, offset: int) -> bool:
+    """Whether ``line[offset]`` is code, given the line with its literals and
+    comments blanked (``code``); without one, every offset counts."""
+    return code is None or (offset < len(code) and code[offset] == line[offset] != " ")
+
+
 def _secret_name_entries(
     filepath: str,
     line_num: int,
     line: str,
     is_test: bool,
+    *,
+    code: str | None = None,
 ) -> list[dict[str, Any]]:
     confidence = "medium" if is_test else "high"
     entries: list[dict[str, Any]] = []
     for secret_match in _SECRET_NAME_RE.finditer(line):
+        # The name is code (so the quote after its ``=`` or ``:`` opens a
+        # literal), not words in a comment, string or JSX text.
+        if not _in_code(code, line, secret_match.start(1)):
+            continue
         var_name = secret_match.group(1)
         value = secret_match.group(3)
         if not _SECRET_NAMES.search(var_name):
@@ -133,8 +148,16 @@ def _insecure_random_entries(
     filepath: str,
     line_num: int,
     line: str,
+    *,
+    code: str | None = None,
+    uncommented: str | None = None,
 ) -> list[dict[str, Any]]:
-    if not (_RANDOM_CALLS.search(line) and _SECURITY_CONTEXT_WORDS.search(line)):
+    # The call is code; the context may be a name or a string key
+    # (``setItem('session', Math.random())``), but not a comment.
+    if not (
+        _RANDOM_CALLS.search(line if code is None else code)
+        and _SECURITY_CONTEXT_WORDS.search(line if uncommented is None else uncommented)
+    ):
         return []
     return [
         make_security_entry(
@@ -156,10 +179,13 @@ def _weak_crypto_entries(
     filepath: str,
     line_num: int,
     line: str,
+    *,
+    code: str | None = None,
 ) -> list[dict[str, Any]]:
     entries: list[dict[str, Any]] = []
     for pattern, label, severity, remediation in _WEAK_CRYPTO_PATTERNS:
-        if not pattern.search(line):
+        # A setting starts in code; its value may be a string (``= '0'``).
+        if not any(_in_code(code, line, match.start()) for match in pattern.finditer(line)):
             continue
         entries.append(
             make_security_entry(
@@ -182,8 +208,19 @@ def _sensitive_log_entries(
     filepath: str,
     line_num: int,
     line: str,
+    *,
+    code: str | None = None,
+    uncommented: str | None = None,
 ) -> list[dict[str, Any]]:
-    if not (_LOG_CALLS.search(line) and _SENSITIVE_IN_LOG.search(line)):
+    log_call = _LOG_CALLS.search(line if code is None else code)
+    if log_call is None or not _SENSITIVE_IN_LOG.search(line if uncommented is None else uncommented):
+        return []
+    # A sensitive word only in a string counts when the call logs a value
+    # too (``console.log("Authorization:", header)``); a message alone
+    # (``console.error("Invalid token")``) only mentions one.
+    if code is not None and not (
+        _SENSITIVE_IN_LOG.search(code) or _LOGGED_VALUE.search(code, log_call.end())
+    ):
         return []
     return [
         make_security_entry(

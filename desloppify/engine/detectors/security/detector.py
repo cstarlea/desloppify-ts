@@ -6,6 +6,7 @@ import logging
 from pathlib import Path
 
 from desloppify.base.discovery.file_paths import resolve_scan_file
+from desloppify.engine.hook_registry import get_lang_hook
 from desloppify.engine.policy.zones import FileZoneMap
 
 from .filters import _is_test_file, _should_scan_file, _should_skip_line
@@ -21,8 +22,13 @@ def detect_security_issues(
     *,
     scan_root: Path | None = None,
 ) -> tuple[list[dict], int]:
-    """Detect cross-language security issues in source files."""
-    _ = lang_name
+    """Detect cross-language security issues in source files.
+
+    A language with a ``security`` hook gives each file's lines with comments
+    and literals blanked, so each rule picks what it matches in (see the
+    scanner); otherwise lines that start as comments are skipped.
+    """
+    line_views = getattr(get_lang_hook(lang_name, "security"), "line_views", None)
     entries: list[dict] = []
     scanned = 0
 
@@ -42,10 +48,24 @@ def detect_security_issues(
             continue
 
         scanned += 1
-        lines = content.splitlines()
         is_test = _is_test_file(filepath, zone_map)
 
-        for line_num, line in enumerate(lines, 1):
+        if line_views is not None:
+            lines, code_lines, uncommented_lines = line_views(content, resolved_path)
+            for index, line in enumerate(lines):
+                entries.extend(
+                    _scan_line_for_security_entries(
+                        filepath=filepath,
+                        line_num=index + 1,
+                        line=line,
+                        is_test=is_test,
+                        code=code_lines[index],
+                        uncommented=uncommented_lines[index],
+                    )
+                )
+            continue
+
+        for line_num, line in enumerate(content.splitlines(), 1):
             if _should_skip_line(line):
                 continue
             entries.extend(

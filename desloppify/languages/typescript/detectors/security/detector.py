@@ -59,7 +59,7 @@ def detect_ts_security(
         scanned += 1
         normalized_path = filepath.replace("\\", "/")
         is_server_only = is_server_only_path(normalized_path)
-        source = SourceText(content)
+        source = SourceText(content, filepath)
         has_dev_guard = "__IS_DEV_ENV__" in content or "isDev" in content
 
         # Only matches that start in code count: "allow eval (HMR)" in a doc
