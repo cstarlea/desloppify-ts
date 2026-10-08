@@ -108,7 +108,7 @@ Every adversarial input in the original review broke one of the line-regex fixer
 
 | # | Item | Effort | Findings |
 |---|---|---|---|
-| 2.18 | Strict score: scan-confirmed resolutions (`auto_resolved`) stop counting as failures; add a test that full remediation reaches 100 in every mode; make scoring.md, README and SKILL.md agree | S | CE-2 |
+| 2.18 | **Done (#38).** Strict no longer counts scan-confirmed resolutions (`auto_resolved`) as failures; verified counts a manual `fixed`/`false_positive` once a rescan confirms it (`scan_verified`); a mechanical dimension whose detector ran with zero checks left is no longer carried forward with its old score. A test checks that fixing and rescanning reaches 100 in every mode; scoring.md and SKILL.md describe the three modes as the code does | S | CE-2 |
 | 2.19 | **Done for `state.json` (#25) and `plan.json` (#29).** Resilient loading: quarantine invalid issues and plan entries instead of discarding the whole file; rename the bad file to `.corrupted`; don't rotate `.bak` after a failed load; coerce the version field | S | CE-3 |
 | 2.20 | **Done (#35).** Every mutating command holds the state lock, then the plan lock, from its first load to its return; read-only commands load unlocked, and the corrupt-file rename and `.bak` restore run under the lock (or in memory if it stays busy). One re-entrant, ranked file lock backs `state_lock`, `plan_lock` and the progression log, whose trim now runs under the append lock. `plan triage --run-stages` and `review --run-batches`/`--scan-after-import` stay unlocked because they wait on desloppify subprocesses | M | CE-4 |
 | 2.21 | Auto-resolve deferred, triaged_out and wontfix issues when a scan confirms they're gone | S | CE-5 |
@@ -267,7 +267,7 @@ Status key: **done** (with PR), **partial** (what's left is in §2), **open**, *
 | ID | Sev | Title | Status |
 |---|---|---|---|
 | CE-1 | high | One plan.json across languages | dropped |
-| CE-2 | high | Strict never recovers from real fixes | open → 2.18 |
+| CE-2 | high | Strict never recovers from real fixes | done (#38) |
 | CE-3 | medium | One bad issue loses the whole state | done (#25, #29); plan sections → 2.30 |
 | CE-4 | medium | Unlocked read-modify-write | done (#35) |
 | CE-5 | medium | Deferred, triaged_out and wontfix never auto-resolve | open → 2.21 |

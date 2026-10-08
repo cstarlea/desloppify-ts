@@ -112,8 +112,15 @@ def _resolve_allowed_subjective_dimensions(
 def _materialize_dimension_scores(
     state: StateModel,
     bundle: object,
+    potentials: dict[str, int],
 ) -> None:
-    """Write dimension scores from a score bundle into state, carrying forward old dims."""
+    """Write dimension scores from a score bundle into state, carrying forward old dims.
+
+    A dimension missing from the bundle is carried forward only when none of
+    its detectors reported a potential this time (the detectors didn't run).
+    A detector that ran and reported zero checks has nothing left to fail, so
+    its old score is dropped rather than kept forever.
+    """
     lenient_scores = bundle.dimension_scores
     strict_scores = bundle.strict_dimension_scores
     verified_strict_scores = bundle.verified_strict_dimension_scores
@@ -138,7 +145,10 @@ def _materialize_dimension_scores(
             continue
         if not isinstance(prev_data, dict):
             continue
-        if "subjective_assessment" in prev_data.get("detectors", {}):
+        prev_detectors = prev_data.get("detectors", {})
+        if "subjective_assessment" in prev_detectors:
+            continue
+        if any(detector in potentials for detector in prev_detectors):
             continue
         carried = {**prev_data, "carried_forward": True}
         carried.setdefault("score", 0.0)
@@ -194,7 +204,7 @@ def _update_objective_health(
         subjective_assessments=subjective_assessments,
         allowed_subjective_dimensions=allowed_subjective,
     )
-    _materialize_dimension_scores(state, bundle)
+    _materialize_dimension_scores(state, bundle, merged)
 
 
 def recompute_stats(
