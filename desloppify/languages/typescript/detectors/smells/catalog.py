@@ -12,14 +12,20 @@ TS_SMELL_CHECKS = [
     {
         "id": "any_type",
         "label": "Explicit `any` types",
-        "pattern": r":\s*any\b|<\s*any\b|,\s*any\b(?=\s*(?:,|>))",
+        "pattern": None,
         "severity": "medium",
     },
     {
         "id": "ts_ignore",
-        "label": "@ts-ignore / @ts-expect-error",
-        "pattern": r"//\s*@ts-(?:ignore|expect-error)",
+        "label": "@ts-ignore suppressions",
+        "pattern": None,
         "severity": "medium",
+    },
+    {
+        "id": "ts_expect_error_undocumented",
+        "label": "@ts-expect-error without an explanation",
+        "pattern": None,
+        "severity": "low",
     },
     {
         "id": "ts_nocheck",
@@ -29,8 +35,8 @@ TS_SMELL_CHECKS = [
     },
     {
         "id": "non_null_assert",
-        "label": "Non-null assertions (!.)",
-        "pattern": r"\w+!\.",
+        "label": "Non-null assertions (`!`)",
+        "pattern": None,
         "severity": "low",
     },
     {
@@ -138,7 +144,13 @@ TS_SMELL_CHECKS = [
     {
         "id": "as_any_cast",
         "label": "`as any` type casts",
-        "pattern": r"\bas\s+any\b",
+        "pattern": None,
+        "severity": "medium",
+    },
+    {
+        "id": "double_cast",
+        "label": "Double casts through `unknown` (`as unknown as T`)",
+        "pattern": None,
         "severity": "medium",
     },
     {

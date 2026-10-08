@@ -43,7 +43,7 @@ def test_detect_generic_any_type(tmp_path):
 
 
 def test_detect_ts_ignore(tmp_path):
-    """Detects @ts-ignore and @ts-expect-error comments."""
+    """Detects @ts-ignore, and @ts-expect-error without an explanation separately."""
 
     _write(
         tmp_path,
@@ -51,8 +51,9 @@ def test_detect_ts_ignore(tmp_path):
         ("// @ts-ignore\nconst a = 1;\n// @ts-expect-error\nconst b = 2;\n"),
     )
     entries, _ = detect_smells(tmp_path)
-    ts_ignore = next(e for e in entries if e["id"] == "ts_ignore")
-    assert ts_ignore["count"] == 2
+    counts = {e["id"]: e["count"] for e in entries}
+    assert counts["ts_ignore"] == 1
+    assert counts["ts_expect_error_undocumented"] == 1
 
 
 def test_detect_ts_nocheck(tmp_path):
