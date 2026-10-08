@@ -210,29 +210,46 @@ def _function_info(parsed: ParsedSource, node, exports: dict[str, bool] | None) 
 class Definition:
     """A function a reader knows by name: a declaration or named function
     expression, a function bound to a variable or assigned (``exports.f = ...``),
-    or a class member (``Owner.name``).
+    a class member (``Owner.name``), an anonymous default export (``default``)
+    or an object-literal member.
+
+    An object member (``object_member``) is named by the path to it:
+    ``obj.foo`` for ``const obj = { foo() {} }``, ``a.b.c`` when nested,
+    ``default.foo`` in ``export default { ... }``; an object with no name
+    (a call argument, a return value) contributes just the keys.
 
     ``start`` is the byte its statement starts at (``export``, ``const``),
-    decorators left out; ``line`` is that byte's line.
+    decorators left out; an object member starts at its key. ``line`` is that
+    byte's line.
     """
 
     name: str
     start: int
     line: int
     function: FunctionInfo
+    object_member: bool = False
 
 
 def definitions(parsed: ParsedSource) -> list[Definition]:
     """Named function definitions, nested ones included, in source order.
 
-    Anonymous callbacks, object-literal members, anonymous default exports
-    and overload signatures are left out.
+    Anonymous callbacks and overload signatures are left out.
     """
     found = []
     for info in functions(parsed):
         node = info.node
         parent = node.parent  # type: ignore[attr-defined]
-        if info.name is None or parent is None:
+        if parent is None:
+            continue
+        if parent.type == "export_statement" and info.name is None and info.kind in ("expression", "arrow"):
+            found.append(Definition("default", parent.start_byte, parent.start_point[0] + 1, info))
+            continue
+        member = _object_member(parsed, node)
+        if member is not None:
+            name, holder = member
+            found.append(Definition(name, holder.start_byte, holder.start_point[0] + 1, info, object_member=True))
+            continue
+        if info.name is None:
             continue
         if info.owner is not None:
             name = f"{info.owner}.{info.name}"
@@ -250,6 +267,51 @@ def definitions(parsed: ParsedSource) -> list[Definition]:
         first = next((c for c in holder.children if c.type not in ("decorator", "comment")), holder)
         found.append(Definition(name, first.start_byte, first.start_point[0] + 1, info))
     return found
+
+
+_OBJECT_WRAPPERS = frozenset({"parenthesized_expression", "as_expression", "satisfies_expression"})
+
+
+def _object_member(parsed: ParsedSource, node) -> tuple[str, object] | None:
+    """(path name, holder) for a method or a pair-valued function in an object literal."""
+    parent = node.parent
+    if node.type == "method_definition" and parent is not None and parent.type == "object":
+        key, holder = node.child_by_field_name("name"), node
+    elif parent is not None and parent.type == "pair" and _is_field(parent, "value", node):
+        key, holder = parent.child_by_field_name("key"), parent
+    else:
+        return None
+    if key is None:
+        return None
+    parts = [_key_text(parsed, key)]
+    obj = holder.parent
+    while obj is not None:
+        outer = obj.parent
+        if outer is None:
+            break
+        if outer.type in _OBJECT_WRAPPERS:
+            obj = outer
+        elif outer.type == "pair" and _is_field(outer, "value", obj):
+            outer_key = outer.child_by_field_name("key")
+            if outer_key is None:
+                break
+            parts.append(_key_text(parsed, outer_key))
+            obj = outer.parent
+        else:
+            root = _bound_name(parsed, obj)
+            if root is None and outer.type == "export_statement":
+                root = "default"
+            if root is not None:
+                parts.append(root)
+            break
+    name = parts[-1]
+    for part in reversed(parts[:-1]):
+        name += part if part.startswith("[") else f".{part}"
+    return name, holder
+
+
+def _key_text(parsed: ParsedSource, key) -> str:
+    return string_value(parsed, key) if key.type == "string" else parsed.text(key)
 
 
 def _leading_tokens(node) -> set[str]:

@@ -127,6 +127,46 @@ def _resolve_extends(spec: str, config_dir: Path) -> Path | None:
     return None
 
 
+def find_nearest_tsconfig(path: Path) -> Path | None:
+    """Return the closest TypeScript config that owns ``path``.
+
+    Prefer an application config when both conventional config names exist in
+    the same directory. Walking upward keeps scans of monorepo projects scoped
+    to that project's config instead of assuming the repository root is a
+    single application.
+    """
+    current = path.resolve()
+    if current.is_file():
+        current = current.parent
+
+    for directory in (current, *current.parents):
+        for config_name in ("tsconfig.app.json", "tsconfig.json"):
+            candidate = directory / config_name
+            if candidate.is_file():
+                return candidate
+    return None
+
+
+def compiler_option(config_path: Path, name: str, depth: int = 0) -> Any:
+    """A ``compilerOptions`` value as the config sees it after ``extends``; None if unset."""
+    if depth > _MAX_EXTENDS_DEPTH:
+        return None
+    data = read_tsconfig(config_path)
+    if data is None:
+        return None
+    options = data.get("compilerOptions")
+    if isinstance(options, dict) and name in options:
+        return options[name]
+    extends = data.get("extends")
+    specs = [extends] if isinstance(extends, str) else extends if isinstance(extends, list) else []
+    for spec in reversed(specs):  # later entries override earlier ones
+        parent = _resolve_extends(spec, config_path.parent) if isinstance(spec, str) else None
+        value = compiler_option(parent, name, depth + 1) if parent is not None else None
+        if value is not None:
+            return value
+    return None
+
+
 def _effective_paths(
     config_path: Path, depth: int = 0
 ) -> tuple[dict[str, Any], Path, str | None, Path | None] | None:
