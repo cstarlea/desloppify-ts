@@ -206,6 +206,52 @@ def _function_info(parsed: ParsedSource, node, exports: dict[str, bool] | None) 
     )
 
 
+@dataclass(frozen=True)
+class Definition:
+    """A function a reader knows by name: a declaration or named function
+    expression, a function bound to a variable or assigned (``exports.f = ...``),
+    or a class member (``Owner.name``).
+
+    ``start`` is the byte its statement starts at (``export``, ``const``),
+    decorators left out; ``line`` is that byte's line.
+    """
+
+    name: str
+    start: int
+    line: int
+    function: FunctionInfo
+
+
+def definitions(parsed: ParsedSource) -> list[Definition]:
+    """Named function definitions, nested ones included, in source order.
+
+    Anonymous callbacks, object-literal members, anonymous default exports
+    and overload signatures are left out.
+    """
+    found = []
+    for info in functions(parsed):
+        node = info.node
+        parent = node.parent  # type: ignore[attr-defined]
+        if info.name is None or parent is None:
+            continue
+        if info.owner is not None:
+            name = f"{info.owner}.{info.name}"
+            holder = parent if parent.type == "public_field_definition" else node
+        elif parent.type == "variable_declarator" and _is_field(parent, "value", node):
+            name, holder = _bound_name(parsed, node) or info.name, parent.parent
+        elif parent.type == "assignment_expression" and _is_field(parent, "right", node):
+            name, holder = _bound_name(parsed, node) or info.name, parent
+        elif info.kind in ("declaration", "expression") and node.child_by_field_name("name") is not None:  # type: ignore[attr-defined]
+            name, holder = info.name, node
+        else:
+            continue
+        if holder.parent is not None and holder.parent.type == "export_statement":
+            holder = holder.parent
+        first = next((c for c in holder.children if c.type not in ("decorator", "comment")), holder)
+        found.append(Definition(name, first.start_byte, first.start_point[0] + 1, info))
+    return found
+
+
 def _leading_tokens(node) -> set[str]:
     """Anonymous keyword tokens before the name or parameters (``async``, ``static``, ``get``, ``*``)."""
     tokens = set()
@@ -794,6 +840,7 @@ __all__ = [
     "CallInfo",
     "ClassInfo",
     "ClassMember",
+    "Definition",
     "ExportBinding",
     "ExportInfo",
     "FunctionInfo",
@@ -805,6 +852,7 @@ __all__ = [
     "Span",
     "calls",
     "classes",
+    "definitions",
     "descendants",
     "directive",
     "export_info",

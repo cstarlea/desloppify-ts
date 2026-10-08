@@ -20,6 +20,8 @@ class FunctionInfo:
     body_hash: str = ""
     params: list[str] = field(default_factory=list)
     return_annotation: str | None = None
+    # Importers choose a default export's name, so it isn't an API name.
+    default_export: bool = False
 
 
 @dataclass

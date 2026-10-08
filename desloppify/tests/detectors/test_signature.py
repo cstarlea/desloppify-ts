@@ -164,6 +164,26 @@ def test_test_functions_skipped():
 # ── self/cls filtering ───────────────────────────────────────
 
 
+def test_default_exports_skipped():
+    """Importers name a default export, so its local name isn't an API name."""
+    functions = [
+        FunctionInfo("Page", f"app/{d}/page.tsx", 1, 5, 5, "", params=p, default_export=True)
+        for d, p in (("a", []), ("b", ["params"]), ("c", ["params", "searchParams"]))
+    ]
+    entries, _ = detect_signature_variance(functions)
+    assert entries == []
+
+
+def test_route_handler_methods_allowlisted():
+    functions = [
+        _fn("GET", "a/route.ts", []),
+        _fn("GET", "b/route.ts", ["request"]),
+        _fn("GET", "c/route.ts", ["request", "context"]),
+    ]
+    entries, _ = detect_signature_variance(functions)
+    assert entries == []
+
+
 def test_self_and_cls_ignored_in_comparison():
     """Parameters named 'self' and 'cls' are excluded from signature comparison."""
     functions = [
