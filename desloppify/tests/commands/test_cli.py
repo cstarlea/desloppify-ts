@@ -606,7 +606,7 @@ class TestStatePath:
 
 
 class TestResolveDefaultPath:
-    """Tests for _resolve_default_path — especially the review-command scan_path fix."""
+    """Tests for _resolve_default_path — defaulting to the last scan's scan_path."""
 
     def test_does_nothing_when_path_already_set(self):
         args = SimpleNamespace(command="review", path="/explicit/path")
@@ -658,26 +658,74 @@ class TestResolveDefaultPath:
 
         assert args.path.endswith("src")
 
-    def test_non_review_command_uses_lang_default(self):
-        with patch("desloppify.cli.resolve_lang") as mock_lang:
+    @pytest.mark.parametrize(
+        "command", ["scan", "autofix", "detect", "tree", "viz", "zone"]
+    )
+    def test_other_path_commands_use_scan_path_from_state(
+        self, monkeypatch, tmp_path, command
+    ):
+        """Every --path command defaults to the last scan's scope, not src/."""
+        project_root = tmp_path / "myproject"
+        (project_root / "app").mkdir(parents=True)
+        monkeypatch.setattr(cli_mod, "get_project_root", lambda: project_root)
+
+        with (
+            patch("desloppify.cli.state_path", return_value=tmp_path / "state.json"),
+            patch("desloppify.cli.load_state", return_value={"scan_path": "app"}),
+        ):
+            args = SimpleNamespace(command=command, path=None)
+            _resolve_default_path(args)
+
+        assert args.path == str((project_root / "app").resolve())
+
+    def test_missing_saved_scan_path_falls_back_to_lang_default(
+        self, monkeypatch, tmp_path
+    ):
+        project_root = tmp_path / "proj"
+        project_root.mkdir()
+        monkeypatch.setattr(cli_mod, "get_project_root", lambda: project_root)
+        with (
+            patch("desloppify.cli.state_path", return_value=tmp_path / "state.json"),
+            patch("desloppify.cli.load_state", return_value={"scan_path": "gone"}),
+            patch("desloppify.cli.resolve_lang") as mock_lang,
+        ):
+            mock_lang.return_value = SimpleNamespace(default_src="src")
+            args = SimpleNamespace(command="autofix", path=None)
+            _resolve_default_path(args)
+
+        assert args.path == str(project_root / "src")
+
+    def test_command_without_scan_path_uses_lang_default(self):
+        with (
+            patch("desloppify.cli.state_path", return_value=None),
+            patch("desloppify.cli.resolve_lang") as mock_lang,
+        ):
             mock_lang.return_value = SimpleNamespace(default_src="src")
             args = SimpleNamespace(command="scan", path=None)
             _resolve_default_path(args)
 
         assert args.path.endswith("src")
 
-    def test_non_review_command_honors_language_default_src_exactly(
+    def test_command_honors_language_default_src_exactly(
         self, monkeypatch, tmp_path
     ):
         project_root = tmp_path / "proj"
         project_root.mkdir()
         monkeypatch.setattr(cli_mod, "get_project_root", lambda: project_root)
-        with patch("desloppify.cli.resolve_lang") as mock_lang:
+        with (
+            patch("desloppify.cli.state_path", return_value=None),
+            patch("desloppify.cli.resolve_lang") as mock_lang,
+        ):
             mock_lang.return_value = SimpleNamespace(default_src=".")
             args = SimpleNamespace(command="scan", path=None)
             _resolve_default_path(args)
 
         assert args.path == str(project_root.resolve())
+
+    def test_command_without_path_argument_is_untouched(self):
+        args = SimpleNamespace(command="next")
+        _resolve_default_path(args)
+        assert not hasattr(args, "path")
 
 
 class TestResolveLang:

@@ -7,7 +7,7 @@ import argparse
 
 def _add_core_options(p_review: argparse.ArgumentParser) -> None:
     g_core = p_review.add_argument_group("core options")
-    g_core.add_argument("--path", type=str, default=None, help="Project root directory (default: auto-detected)")
+    g_core.add_argument("--path", type=str, default=None, help="Directory to scan (default: the last scan's path, else src/)")
     g_core.add_argument("--state", type=str, default=None, help="Path to state file")
     g_core.add_argument(
         "--prepare",

@@ -152,28 +152,32 @@ def _project_root_from_scan_path(
 
 
 def _resolve_default_path(args: argparse.Namespace) -> None:
-    """Fill args.path from detected language or default source path.
+    """Fill args.path from the last scan's path, else the language default.
 
-    For the review command, the last scan path (stored in state) is used as the
-    default so that ``desloppify review --prepare`` works on the same scope as
-    the preceding scan even when the project files are not under ``src/``.
+    Every command with ``--path`` (scan included) defaults to the scope of the
+    last scan stored in state, so ``desloppify scan --path .`` followed by
+    ``desloppify autofix ...`` or a bare ``desloppify scan`` keeps working on
+    the same files even when the project is not under ``src/``. Without a
+    saved scan path (or when it no longer exists) the language's default
+    source directory is used.
     """
     if getattr(args, "path", None) is not None:
         return
     if not hasattr(args, "path"):
         return
     runtime_root = get_project_root()
-    if getattr(args, "command", None) == "review":
-        try:
-            state_file = state_path(args)
-            if state_file:
-                saved = load_state(state_file)
-                saved_path = saved.get("scan_path")
-                if saved_path:
-                    args.path = str((runtime_root / saved_path).resolve())
+    try:
+        state_file = state_path(args)
+        if state_file:
+            saved = load_state(state_file)
+            saved_path = saved.get("scan_path")
+            if saved_path:
+                resolved = (runtime_root / saved_path).resolve()
+                if resolved.exists():
+                    args.path = str(resolved)
                     return
-        except (OSError, KeyError, ValueError, TypeError, AttributeError) as exc:
-            log_best_effort_failure(logger, "resolve default review path from saved state", exc)
+    except (OSError, KeyError, ValueError, TypeError, AttributeError) as exc:
+        log_best_effort_failure(logger, "resolve default path from saved state", exc)
     lang = resolve_lang(args)
     args.path = str(
         get_default_scan_path(
