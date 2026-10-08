@@ -123,6 +123,10 @@ def _parse_test_imports(
                 tested.add(prod_by_module[candidate])
                 break
 
+    # Names imported through re-export chains, credited to their definitions.
+    follow = getattr(mod, "imported_definitions", None)
+    if callable(follow):
+        tested |= follow(test_path, production_files)
     return tested
 
 

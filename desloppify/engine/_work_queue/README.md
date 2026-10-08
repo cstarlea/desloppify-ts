@@ -8,13 +8,13 @@ How items flow from scan results into the execution queue that `desloppify next`
 - **Phase gate** controls visibility — re-resolved from live items every build, not from persisted phase.
 - **`auto_queue` detectors** (`unused`, `logs`) auto-inject into `queue_order` without triage.
 - See `policy.py` for the readable queue model summary.
-- See `docs/QUEUE_LIFECYCLE.md` for phase lifecycle rules.
+- See `dev/QUEUE_LIFECYCLE.md` for phase lifecycle rules.
 
 ## Lifecycle phases
 
 Phase is determined by `_phase_for_snapshot()` from the persisted lifecycle mode plus
-live item partitions. Legacy fine-grained phase names are migrated once by
-`current_lifecycle_phase()` before snapshot resolution.
+live item partitions. Legacy fine-grained phase names are migrated once at
+plan load by `migrate_legacy_phase()`.
 
 1. **LIFECYCLE_PHASE_REVIEW_INITIAL** — fresh boundary, no scores yet. Shows subjective review items.
    Objective items are NOT visible until initial review completes.
