@@ -115,7 +115,7 @@ Every adversarial input in the original review broke one of the line-regex fixer
 | 2.5 | **Done (#18).** Fixers return the exact issue IDs they fixed, so autofix resolves the right issues | S | FX-16 |
 | 2.26 | **Done (#34).** unused-vars: nested patterns. An emptied inner pattern (`b` unused in `const { a: { b } } = o`) removes the pair or element holding it, cascading outward to the declarator, which still goes only with a pure initializer. TS6198 on a nested pattern cascades the same way. An array pattern whose elements all go is removed whole; a single array element still isn't | S | FX-8 |
 | 2.27 | **Done (#34).** The "(all destructured elements)" name is defined once, as `ALL_DESTRUCTURED` in `syntax/nodes.py`, and imported by `detectors/unused.py`, `fixers/params.py` and `fixers/vars.py` | S | — |
-| 2.33 | Share the remaining parses (#40 follow-up): cohesion keys the parse cache by relative path while `deps/imports` uses the resolved path, and both parse `.ts` with the tsx grammar, so neither shares `parsed_file`'s parse | S | AR-2 |
+| 2.33 | **Done.** Cohesion and `deps/imports` parse through `syntax.tree.parsed_file` (resolved path, grammar by extension): `TreeSitterLangSpec` takes a `parse_file` hook instead of a grammar, and cohesion compiles its function query per grammar. Every file is now parsed once per scan: trpc 2845 → 1038 parses, zod 1527 → 524, ky 261 → 87, commerce 152 → 66; issues identical | S | AR-2 |
 
 ### 2B. Detector accuracy (rest of Milestone 2, plus M0 and M1 leftovers)
 
@@ -349,7 +349,7 @@ Status key: **done** (with PR), **partial** (what's left is in §2), **open**, *
 | PK-3 | medium | Wheel omits elixir/php/r review data | dropped |
 | PK-4 | medium | Fork inherits PyPI name and upstream URLs | partial (#4 gated publish) → §2F |
 | AR-1 | medium | New TS detector touches 6–8 files | open → §2E |
-| AR-2 | medium | Regex-based TS plugin | partial (#3 imports on tree-sitter, #40 shared helper) → 2.33 |
+| AR-2 | medium | Regex-based TS plugin | partial (#3 imports on tree-sitter, #40 shared helper, 2.33 one parse per file) |
 | AR-3 | medium | Plugin guide describes nonexistent files | done (#14) |
 | AR-4 | low | Dead compat shims, `dev test-hermes` | partial (#12 removed the shims) → §2E |
 | UP-1 | high | Upstream abandoned | — |
