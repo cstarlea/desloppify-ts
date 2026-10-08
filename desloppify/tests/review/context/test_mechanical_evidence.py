@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from desloppify.intelligence.review.context_holistic.mechanical import (
     gather_mechanical_evidence,
+    type_strictness_evidence,
 )
 
 
@@ -675,3 +676,15 @@ class TestStaleReminderGating:
         reminders = _stale_assessment_reminder(state)
         assert len(reminders) == 1
         assert reminders[0]["type"] == "stale_assessments"
+
+
+def test_type_strictness_evidence_lists_open_tsconfig_issues():
+    issues = [
+        _issue(id="a", detector="tsconfig_health", file="tsconfig.json"),
+        _issue(id="b", detector="tsconfig_health", file="pkg/tsconfig.json", status="fixed"),
+        _issue(id="c", detector="smells", file="src/a.ts"),
+    ]
+    state = {"issues": {issue["id"]: issue for issue in issues}}
+    assert type_strictness_evidence(state) == [
+        {"config": "tsconfig.json", "summary": "tsconfig_health issue in tsconfig.json"}
+    ]

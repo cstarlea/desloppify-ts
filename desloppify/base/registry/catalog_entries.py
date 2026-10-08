@@ -481,6 +481,15 @@ DETECTORS: dict[str, DetectorMeta] = {
         tier=2,
         subjective_dimensions=("type_safety",),
     ),
+    "tsconfig_health": DetectorMeta(
+        "tsconfig_health",
+        "tsconfig health",
+        "Code quality",
+        "manual_fix",
+        "turn on the missing compiler options in the tsconfig named (or record why not)",
+        tier=3,
+        subjective_dimensions=("type_safety",),
+    ),
     "stale_exclude": DetectorMeta(
         "stale_exclude",
         "stale exclude",

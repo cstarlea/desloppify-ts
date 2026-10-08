@@ -8,6 +8,7 @@ DISPLAY_ORDER = [
     "logs",
     "unused",
     "type_error",
+    "tsconfig_health",
     "exports",
     "deprecated",
     "structural",
