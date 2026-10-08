@@ -486,6 +486,10 @@ class TestFixUnusedVars:
 # =====================================================================
 
 
+@pytest.mark.skipif(
+    importlib.util.find_spec("tree_sitter_language_pack") is None,
+    reason="the debug-logs fixer needs tree-sitter",
+)
 class TestFixDebugLogs:
     """Tests for fix_debug_logs()."""
 

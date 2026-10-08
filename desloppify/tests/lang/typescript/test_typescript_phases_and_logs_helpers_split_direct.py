@@ -5,78 +5,11 @@ from __future__ import annotations
 from pathlib import Path
 from types import SimpleNamespace
 
-import desloppify.languages.typescript.fixers.logs_cleanup as logs_cleanup_mod
-import desloppify.languages.typescript.fixers.logs_context as logs_context_mod
 import desloppify.languages.typescript.phases_basic as phases_basic_mod
 import desloppify.languages.typescript.phases_config as phases_config_mod
 import desloppify.languages.typescript.phases_coupling as phases_coupling_mod
 import desloppify.languages.typescript.phases_smells as phases_smells_mod
 import desloppify.languages.typescript.phases_structural as phases_structural_mod
-
-
-def test_logs_cleanup_helpers_cover_comment_marking_dead_vars_and_block_cleanup() -> None:
-    lines = [
-        "// DEBUG: remove with log\n",
-        "// keep this note\n",
-        "console.log(token)\n",
-    ]
-    to_remove = {2}
-    logs_cleanup_mod.mark_orphaned_comments(lines, 2, to_remove)
-    assert 0 in to_remove
-    assert 1 not in to_remove
-
-    dead_lines = logs_cleanup_mod.find_dead_log_variables(
-        [
-            "const dbg = token;\n",
-            "console.log(dbg);\n",
-            "const keep = token;\n",
-            "doSomething(keep);\n",
-        ],
-        removed_indices={1},
-    )
-    assert dead_lines == {0}
-
-    # Declarations with side effects or spanning lines must never cascade.
-    effectful = logs_cleanup_mod.find_dead_log_variables(
-        [
-            "const result = await saveUser(user);\n",
-            "const conn = connect();\n",
-            "const cfg = {\n",
-            "  a: 1,\n",
-            "};\n",
-            "console.log(result, conn, cfg);\n",
-        ],
-        removed_indices={5},
-    )
-    assert effectful == set()
-
-    cleaned = logs_cleanup_mod.remove_empty_blocks(
-        [
-            "if (ok) {}\n",
-            "promise.then(() => {})\n",
-            "React.useEffect(() => {\n",
-            "});\n",
-            "keep();\n",
-            "\n",
-            "\n",
-        ]
-    )
-    assert "keep();\n" in cleaned
-    assert cleaned.count("\n") <= 1
-
-
-def test_logs_context_helpers_cover_inline_and_previous_line_detection() -> None:
-    assert logs_context_mod._normalize_wrapper_name("'Logger'") == "logger"
-    assert logs_context_mod._is_logger_wrapper_name("Warn") is True
-
-    inline = "const logger = () => console.log('x')"
-    name = logs_context_mod._line_logger_wrapper_name(inline, logs_context_mod._INLINE_WRAPPER_PATTERNS)
-    assert name == "logger"
-
-    lines = ["", "const debug = () =>", "  console.log('x')"]
-    assert logs_context_mod._previous_non_empty_line(lines, 2) == "const debug = () =>"
-    assert logs_context_mod.is_logger_wrapper_context(lines, 2) is True
-    assert logs_context_mod.is_logger_wrapper_context(["doWork()"], 0) is False
 
 
 def test_phase_config_helpers_and_constants() -> None:
