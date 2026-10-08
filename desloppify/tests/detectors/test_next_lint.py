@@ -19,6 +19,7 @@ from desloppify.languages._framework.tools.phase import make_tool_phase
 
 def test_parse_next_lint_aggregates_per_file_and_relativizes_paths(monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("DESLOPPIFY_ROOT", str(tmp_path))
     scan_path = tmp_path / "apps" / "web"
     scan_path.mkdir(parents=True, exist_ok=True)
 
@@ -74,6 +75,7 @@ def test_parse_next_lint_raises_on_missing_json_array(tmp_path):
 
 def test_next_lint_tool_phase_emits_issues_and_potential(monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("DESLOPPIFY_ROOT", str(tmp_path))
     scan_path = tmp_path / "apps" / "web"
     scan_path.mkdir(parents=True, exist_ok=True)
 
@@ -113,6 +115,7 @@ def test_next_lint_tool_phase_emits_issues_and_potential(monkeypatch, tmp_path):
 
 def test_next_lint_tool_phase_reports_potential_when_clean(monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("DESLOPPIFY_ROOT", str(tmp_path))
     scan_path = tmp_path / "apps" / "web"
     scan_path.mkdir(parents=True, exist_ok=True)
 
@@ -140,6 +143,7 @@ def test_next_lint_tool_phase_reports_potential_when_clean(monkeypatch, tmp_path
 
 def test_next_lint_tool_phase_records_coverage_warning_on_tool_missing(monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("DESLOPPIFY_ROOT", str(tmp_path))
 
     def fake_run(*_args, **_kwargs):
         raise FileNotFoundError("missing tool")
@@ -164,6 +168,7 @@ def test_next_lint_tool_phase_records_coverage_warning_on_tool_missing(monkeypat
 
 def test_next_lint_tool_phase_records_coverage_warning_on_parser_error(monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("DESLOPPIFY_ROOT", str(tmp_path))
 
     def fake_run(argv, *, shell, cwd, capture_output, text, timeout):
         return subprocess.CompletedProcess(argv, 0, stdout="not json", stderr="")

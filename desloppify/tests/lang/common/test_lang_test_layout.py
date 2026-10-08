@@ -14,10 +14,12 @@ except ImportError:
     setuptools = None  # type: ignore[assignment]
 
 from desloppify.base.discovery.file_paths import rel
-from desloppify.base.discovery.paths import get_project_root
 from desloppify.base.tooling import compute_tool_hash
 from desloppify.engine.policy.zones import FileZoneMap, Zone
 from desloppify.languages.framework import get_lang
+
+
+_REPO_ROOT = Path(__file__).resolve().parents[4]
 
 
 def _full_langs() -> list[str]:
@@ -25,7 +27,7 @@ def _full_langs() -> list[str]:
 
 
 def _load_pyproject() -> dict:
-    return tomllib.loads((get_project_root() / "pyproject.toml").read_text())
+    return tomllib.loads((_REPO_ROOT / "pyproject.toml").read_text())
 
 
 def _lang_test_rel_path(lang: str) -> str:
@@ -55,16 +57,17 @@ def test_pyproject_excludes_tests_from_packages():
 
 def test_each_lang_has_colocated_tests_dir():
     for lang in _full_langs():
-        test_dir = get_project_root() / _lang_test_rel_path(lang)
+        test_dir = _REPO_ROOT / _lang_test_rel_path(lang)
         assert test_dir.is_dir(), f"missing tests dir for {lang}: {test_dir}"
         init_file = test_dir / "__init__.py"
         assert init_file.is_file(), f"missing tests/__init__.py for {lang}"
 
 
-def test_colocated_lang_tests_are_classified_as_test_zone():
+def test_colocated_lang_tests_are_classified_as_test_zone(monkeypatch):
+    monkeypatch.setenv("DESLOPPIFY_ROOT", str(_REPO_ROOT))
     for lang in _full_langs():
         cfg = get_lang(lang)
-        test_dir = get_project_root() / _lang_test_rel_path(lang)
+        test_dir = _REPO_ROOT / _lang_test_rel_path(lang)
         files = sorted(str(p) for p in test_dir.glob("test_*.py"))
         files += [str(test_dir / "__init__.py")]
         files = [f for f in files if Path(f).exists()]
@@ -96,7 +99,7 @@ def test_packaging_includes_lang_plugin_tests():
     excludes = find_cfg.get("exclude", [])
 
     pkgs = set(
-        setuptools.find_packages(str(get_project_root()), include=includes, exclude=excludes)
+        setuptools.find_packages(str(_REPO_ROOT), include=includes, exclude=excludes)
     )
 
     missing = [
