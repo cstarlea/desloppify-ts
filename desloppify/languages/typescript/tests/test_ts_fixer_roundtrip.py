@@ -46,7 +46,6 @@ from pathlib import Path
 import pytest
 
 import desloppify.languages.typescript.detectors.tsc as tsc_mod
-import desloppify.languages.typescript.detectors.unused as unused_mod
 from desloppify.base.discovery.source import clear_source_file_cache_for_tests
 from desloppify.base.runtime_state import RuntimeContext, runtime_scope
 from desloppify.languages.typescript._fixers import get_ts_fixers
