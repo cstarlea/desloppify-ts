@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+from collections.abc import Collection
 
 __all__ = [
     "coerce_assessment_score",
@@ -117,8 +118,14 @@ def resolve_issues(
     status: str,
     note: str | None = None,
     attestation: str | None = None,
+    *,
+    from_statuses: Collection[str] | None = None,
 ) -> list[str]:
-    """Set issue status for matches and return affected issue IDs."""
+    """Set issue status for matches and return affected issue IDs.
+
+    By default only ``open`` issues are matched (any status when reopening).
+    *from_statuses* overrides which current statuses may change.
+    """
     ensure_state_defaults(state)
     now = utc_now()
     resolved: list[str] = []
@@ -146,8 +153,11 @@ def resolve_issues(
             "detail": copy.deepcopy(original.get("detail", {})),
         }
 
-    status_filter = "all" if status == "open" else "open"
-    for issue in match_issues(state, pattern, status_filter=status_filter):
+    if from_statuses is None and status != "open":
+        from_statuses = ("open",)
+    for issue in match_issues(state, pattern, status_filter="all"):
+        if from_statuses is not None and issue.get("status") not in from_statuses:
+            continue
         previous_status = str(issue.get("status", "open")).strip() or "open"
         if status == "open" and previous_status == "open":
             continue

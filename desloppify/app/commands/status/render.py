@@ -14,7 +14,7 @@ from desloppify.app.commands.scan.reporting import (
 )
 from desloppify.base.output.terminal import colorize, print_table
 from desloppify.engine._scoring.detection import merge_potentials
-from desloppify.engine._scoring.policy.core import DIMENSIONS
+from desloppify.engine._scoring.policy.core import DIMENSIONS, is_loc_weighted_dimension
 from desloppify.engine._scoring.results.core import compute_score_impact
 from desloppify.engine._state.schema import StateModel
 
@@ -51,6 +51,7 @@ def _render_dimension_legend(
     state: StateModel | None = None,
     *,
     objective_backlog: int = 0,
+    loc_weighted: bool = False,
 ) -> None:
     """Print the legend footer and, when actionable, the stale rerun command."""
     print(
@@ -62,6 +63,8 @@ def _render_dimension_legend(
             "dim",
         )
     )
+    if loc_weighted:
+        print(colorize("  * = files weighted by √LOC (max 50 each), not a count of checks", "dim"))
     stale_keys = [
         str(e.get("dimension_key"))
         for e in scorecard_subjective
@@ -108,7 +111,14 @@ def show_dimension_table(
         bar_len=bar_len,
         review_issue_counts=review_issue_counts,
     )
-    _render_dimension_legend(scorecard_subjective, state=state, objective_backlog=objective_backlog)
+    _render_dimension_legend(
+        scorecard_subjective,
+        state=state,
+        objective_backlog=objective_backlog,
+        loc_weighted=any(
+            is_loc_weighted_dimension(dim_scores[dim.name]) for dim in DIMENSIONS if dim_scores.get(dim.name)
+        ),
+    )
     print()
 
 

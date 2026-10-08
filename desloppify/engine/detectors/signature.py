@@ -44,6 +44,13 @@ _ALLOWLIST = {
     "put",
     "delete",
     "patch",  # HTTP methods
+    "GET",
+    "POST",
+    "PUT",
+    "PATCH",
+    "DELETE",
+    "HEAD",
+    "OPTIONS",  # route handlers (Next.js, Remix, Hono)
     # PHP magic + framework-polymorphic methods
     "__construct",
     "__destruct",
@@ -102,6 +109,8 @@ def detect_signature_variance(
             continue
         if fn.name.startswith("test_"):
             continue  # Skip test functions
+        if getattr(fn, "default_export", False):
+            continue
         for key in _signature_group_keys(fn.name):
             by_group[key].append(fn)
 

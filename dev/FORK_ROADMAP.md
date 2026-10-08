@@ -97,7 +97,7 @@ Every adversarial input in the original review broke one of the line-regex fixer
 
 | # | Item | Effort | Findings |
 |---|---|---|---|
-| 2.6 | Port the function extractor and `_extract_function_body` to the AST: async, default, methods, multi-line params, concise arrows | M | DT-3 |
+| 2.6 | **Done (#47).** The function extractor and the five function-shape smells read `syntax.queries.definitions()`: declarations and named function expressions, variable-bound or assigned functions, and class members (`Owner.member`), so async, default exports, methods, multi-line/destructured params and concise arrows are seen and bodies come from the tree. `detector_flow` builds the list once per file; `async_no_await` looks for `await` in the function's own body. Signature variance skips default exports and uppercase route-handler names. Regex stays only as the fallback without tree-sitter | M | DT-3 |
 | 2.7 | Type-safety smells as queries: non-null `!`, `as unknown as`, `any`, `@ts-ignore` in block comments, a separate undocumented `@ts-expect-error`; report per-file density | M | DT-9 |
 | 2.8 | Props detector: count properties; include extends, generics and intersections; match names on word boundaries | M | DT-4 |
 | 2.9 | **Done (#22).** Facade: every top-level statement is a re-export (directives and comments allowed); cover multi-line, `export * as`, `export type *` | S | DT-6 |
@@ -108,7 +108,7 @@ Every adversarial input in the original review broke one of the line-regex fixer
 | 2.14 | **Done (#37).** package.json `imports` (`#subpath`) in the resolver: the importer's nearest package.json is the scope; exact and `*` keys, condition objects and fallback arrays in order; bare targets resolve when they name a workspace package. The vite-react golden's `analytics.ts` false positive is gone | S | GR-1 |
 | 2.15 | **Done (#39).** The `_NEXTJS_*` constants left `engine/detectors/orphaned.py` for `NEXTJS_SPEC.entry_conventions`; the language passes the specs' conventions to the detector through `OrphanedDetectionOptions`, since detectors may not import the language layer. Behaviour unchanged (commerce issue IDs identical) | S | GR-6 |
 | 2.16 | **Done (#45).** Test coverage follows each imported name through re-export chains of any depth (`export { } from`, `export *`, `export * as ns`, import-then-export) to the file that defines it, via `syntax.queries`; namespace imports follow the members the test uses; type-only names aren't followed. trpc `parseTRPCMessage.ts` is directly tested. The one-hop name-blind barrel and facade expansions remain | M | DT-12 |
-| 2.17 | Test-health score: count coverage through a tested public entry as covered, and fix the "production files" and "checks" labels | M | DT-12 |
+| 2.17 | **Done (#48).** A module reached through the import graph from a directly tested public entry (package.json `exports`/`main`/`types`...) counts as covered, not `transitive_only`; reached only from a tested internal module, it stays transitive. The scan line reports scored files and the √LOC weight separately; `status` and the plan table mark Test health's Checks with `*` (√LOC-weighted), and `next` reports weighted failures instead of "of N checks". trpc test health 36.6% → 42.3%, zod 74.0% → 74.5% (on top of #45). Files under 10 lines are documented as unscored | M | DT-12 |
 | 2.28 | **Done (#36).** A file whose directive prologue holds `'use client'` or `'use server'` (after `'use strict'` or comments too) is not a facade, even if it only re-exports: in Next.js it marks a client or server boundary. None appear in the four repos | S | DT-6 |
 | 2.29 | Line numbers in the logs and smells detectors: they split lines with `str.splitlines()`, which also breaks at U+2028/U+2029, CR, VT, FF and U+0085, while the debug-logs and empty-if-chain fixers match on tree-sitter rows, which count only LF. After such a character the fixer looks at the wrong row. #30 fixed the same class of bug for tsc positions in `byte_offset` | S | — |
 | 2.34 | A `#x` import whose target is an npm package (not a workspace package) still counts as unresolved; it should count as external like a bare import (#37 follow-up) | S | GR-1 |
@@ -131,7 +131,7 @@ Every adversarial input in the original review broke one of the line-regex fixer
 | 2.31 | **Done (#41).** `tree` and `viz` label the root node with the scanned path relative to the project root (the project's directory name for a whole-project scan) and strip only that prefix, so `--path .` no longer merges `src/` into the root; `--focus` takes scan- or project-relative paths | S | — |
 | 2.32 | **Done (#43).** `cli.main()` configures logging once: a stderr handler on the `desloppify` logger prints `  WARNING: message`, yellow (red for errors) on a terminal unless `NO_COLOR` is set. No global verbosity flag exists, so `DESLOPPIFY_LOG_LEVEL` (e.g. `DEBUG`) sets the threshold | S | — |
 | 2.37 | Wontfix debt totals in the stats and `status` still include wontfix issues a scan confirmed gone (`scan_verified`), though the scores exclude them (#42 follow-up) | S | CE-5 |
-| 2.38 | `plan skip --permanent` on a deferred issue leaves its state status `deferred`: `resolve_issues()` only matches `open` issues, so the plan entry becomes permanent but the issue keeps failing lenient. The deferred-disposition item suggests this exact command (found in the 2.22 pass) | S | CE-5 |
+| 2.38 | **Done (#46).** `plan skip` now changes `open`, `deferred` and `triaged_out` issues, so `--permanent`/`--false-positive` on a deferred issue makes it `wontfix`/`false_positive` in state as well as plan; wontfix, false_positive and resolved issues are left alone in both. The deferred-disposition item suggested `plan skip --permanent "*"`, which wontfixed every open issue and no deferred one; it now suggests the new `--deferred-only` flag | S | CE-5 |
 | 2.39 | **Done (#49).** `fixed`/`false_positive` are marked `scan_verified` only on a confirmed absence (detector ran, zone policy now skips it, or file gone), like the other statuses; issues outside `--path` keep their mark as it was. An already-marked issue is no longer re-marked every scan, and the user's note is kept | S | CE-2 |
 | 2.40 | Reconcile marks an active cluster done when all its issues are `fixed`, `auto_resolved` or `wontfix`, but not `false_positive` (found in the 2.22 pass) | S | — |
 
@@ -262,7 +262,7 @@ Status key: **done** (with PR), **partial** (what's left is in §2), **open**, *
 |---|---|---|---|
 | DT-1 | high | Global `matches[:50]` drops most smells | done (#1) |
 | DT-2 | high | Body extractor grabs param or return-type braces | done (#1, upstream #629; #11 added tests) |
-| DT-3 | low | Function extractor misses async/default/methods | open → 2.6 |
+| DT-3 | low | Function extractor misses async/default/methods | done (#47) |
 | DT-4 | medium | Props detector counts lines, skips extends/generics/intersections | open → 2.8 |
 | DT-5 | medium | Deprecated detector false positives; "safe to delete" on public API | partial (#1) → 2.10 |
 | DT-6 | low | Facade misses multi-line, `export * as`, `'use client'` | done (#5, #22, #36) |
@@ -270,7 +270,7 @@ Status key: **done** (with PR), **partial** (what's left is in §2), **open**, *
 | DT-9 | medium | Non-null, block `@ts-ignore`, double-cast gaps | open → 2.7 |
 | DT-10 | medium | Author-specific heuristics | open → 3.5 |
 | DT-11 | medium | test-d, bench, e2e, config, generated not zoned | partial (#1) → 2.12 |
-| DT-12 | high | Jest-only assertions; inverted test-health; cross-package basename mapping | partial (#1, #8, #45) → 2.17, 3.11 |
+| DT-12 | high | Jest-only assertions; inverted test-health; cross-package basename mapping | partial (#1, #8, #45, #48) → 3.11 |
 | DT-13 | medium | tsconfig strictness never read | open → 3.3 |
 | DT-14 | high | No framework support beyond Next.js (React Router entries only); SFCs unanalysed | open → 3.6, 3.7 |
 | DT-15 | medium | No server-action auth, raw-SQL or child_process checks | open → 3.8 |

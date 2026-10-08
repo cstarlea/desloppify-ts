@@ -288,6 +288,12 @@ def detector_policy(detector: str) -> DetectorScoringPolicy:
     )
 
 
+def is_loc_weighted_dimension(dimension_score: dict) -> bool:
+    """True when a dimension's checks are √LOC weights, not a count (Test health)."""
+    detectors = dimension_score.get("detectors") or {}
+    return bool(detectors) and all(detector_policy(d).use_loc_weight for d in detectors)
+
+
 __all__ = [
     "CONFIDENCE_WEIGHTS",
     "DETECTOR_SCORING_POLICIES",
@@ -312,6 +318,7 @@ __all__ = [
     "Dimension",
     "ScoreMode",
     "detector_policy",
+    "is_loc_weighted_dimension",
     "issue_counts_as_failure",
     "matches_target_score",
     "register_scoring_policy",

@@ -15,6 +15,13 @@
       "summary": "Orphaned file (17 LOC): zero importers, not an entry point"
     },
     {
+      "id": "smells::src/client.ts::async_no_await",
+      "tier": 3,
+      "confidence": "medium",
+      "zone": "production",
+      "summary": "1x Async functions without await"
+    },
+    {
       "id": "smells::src/title.ts::async_no_await",
       "tier": 3,
       "confidence": "medium",
@@ -68,7 +75,7 @@
     "coupling": 0,
     "cycles": 9,
     "deprecated": 1,
-    "dupes": 3,
+    "dupes": 7,
     "exports": 0,
     "facade": 9,
     "flat_dirs": 2,

@@ -83,7 +83,7 @@ For smells, security, test_coverage, nextjs and next_lint (plus some excluded or
 - 3–5 issues: up to 1.5;
 - 6 or more issues: up to 2.0.
 
-`test_coverage` works differently. Each scorable file contributes `min(sqrt(LOC), 50)` to the potential, and its issues fail by at most that same weight. That makes a large untested file cost more than a small one.
+`test_coverage` works differently. Each scorable file contributes `min(sqrt(LOC), 50)` to the potential, and its issues fail by at most that same weight. That makes a large untested file cost more than a small one. Files shorter than 10 lines aren't scored at all, so a fix that shrinks every remaining file below that leaves Test health with nothing to check, and the dimension drops out of the score.
 
 ## Subjective dimensions
 

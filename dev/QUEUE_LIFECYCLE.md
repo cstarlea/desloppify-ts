@@ -46,7 +46,7 @@ Temporary skips therefore **block the scan step** until one of these happens:
 
 - `plan unskip` reactivates them;
 - `plan backlog` drops them from the plan, and the issues reopen;
-- `plan skip --permanent` makes the skips permanent (but see the first known gap below);
+- `plan skip --permanent --deferred-only "*"` makes them wontfix (the item's suggested command; without `--deferred-only`, `"*"` would also wontfix every open issue);
 - they resolve on their own. A deferred issue whose finding a scan confirms gone becomes `auto_resolved`, and reconcile supersedes its skip entry.
 
 ### After a scan
@@ -83,7 +83,9 @@ Temporary skips therefore **block the scan step** until one of these happens:
 | `triaged_out` | Triage dismissal |
 | `auto_resolved` | A scan confirming the finding is gone |
 
-The status mapping for skip kinds is `skip_kind_state_status()` in `engine/_plan/skip_policy.py`. Manual changes go through `resolve_issues()` in `engine/_state/resolution.py`, which only matches issues that are currently `open`, except when it is reopening them.
+The status mapping for skip kinds is `skip_kind_state_status()` in `engine/_plan/skip_policy.py`. Manual changes go through `resolve_issues()` in `engine/_state/resolution.py`. By default it only matches issues that are currently `open`, except when it is reopening them.
+
+`plan skip` changes issues that are `open`, `deferred` or `triaged_out` (`SKIPPABLE_STATUSES`), so a deferred issue can later be made `wontfix` or `false_positive`. It leaves `wontfix`, `false_positive`, `fixed` and `auto_resolved` issues alone, in state and in the plan; to change one, reopen it first with `plan unskip` (`--force` for a skip with a note). `--deferred-only` restricts it to issues that already have a temporary skip.
 
 ### What a scan does to existing issues
 
@@ -151,7 +153,6 @@ The rename and restore run under the file's lock, or in memory only if the lock 
 
 ## Known gaps
 
-These are tracked in `dev/FORK_ROADMAP.md` as 2.38 and 2.40.
+These are tracked in `dev/FORK_ROADMAP.md` as 2.40.
 
-- **`plan skip --permanent` on a deferred issue leaves it `deferred`.** `resolve_issues()` matches only `open` issues, so the state status doesn't change while the plan entry becomes `permanent`. The issue then keeps failing lenient. The deferred-disposition item suggests exactly this command.
 - **Clusters close only on `fixed`, `auto_resolved` and `wontfix`.** `_reconcile_active_clusters_by_item_status` doesn't count `false_positive`, so a cluster whose last open issue was marked a false positive stays active.
