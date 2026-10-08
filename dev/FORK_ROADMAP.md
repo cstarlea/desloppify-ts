@@ -12,7 +12,7 @@ The fork (`cstarlea/desloppify`) is a **TypeScript/JavaScript-only** code-health
 
 **Accuracy.** The resolver and graph work (Milestones 0 and 1) removed most of the false positives that made upstream v1.0 untrustworthy on real repos:
 
-- unused-imports, unused-vars, unused-params, debug-logs and empty-if-chain edit syntax-tree nodes and run without `--unsafe`; no fixer is marked unsafe now. dead-useeffect still edits by line and was never behind the gate (2.3). Every fixer and `move` refuses to write output that parses worse than its input, and round-trip property tests cover every fixer (#30).
+- Every fixer (unused-imports, unused-vars, unused-params, debug-logs, empty-if-chain and dead-useeffect) edits syntax-tree nodes and runs without `--unsafe`; no fixer is marked unsafe now (2.3, #32). Every fixer and `move` refuses to write output that parses worse than its input, and round-trip property tests cover every fixer (#30).
 - tsc and knip run correctly and report reduced coverage instead of silent zeros.
 - Imports come from the tree-sitter syntax tree.
 - One `ModuleResolver` handles tsconfig `paths`/`extends`/`references`, workspaces and package `exports`, and is shared by the graph, test coverage and `move`.
@@ -68,7 +68,7 @@ Effort: S < 1 day, M a few days, L 1–2 weeks, XL multi-week. IDs in brackets r
 
 ### 2A. AST-based fixers: remove the `--unsafe` gate (Milestone 2)
 
-Every adversarial input in the original review broke one of the line-regex fixers. Five of the six now edit syntax-tree nodes and no longer need `--unsafe` (#17, #19, #20, #23, #24). The flag and gate stay for future fixers. dead-useeffect is the one line-based fixer left, and it was never behind the gate.
+Every adversarial input in the original review broke one of the line-regex fixers. All six now edit syntax-tree nodes and none needs `--unsafe` (#17, #19, #20, #23, #24, #32). The flag and gate stay for future fixers.
 
 | # | Item | Effort | Findings |
 |---|---|---|---|
