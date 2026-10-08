@@ -7,6 +7,7 @@ from datetime import UTC, datetime, timedelta
 
 from desloppify.engine._plan.annotations import get_issue_note
 from desloppify.engine._plan.constants import SYNTHETIC_PREFIXES
+from desloppify.base.enums import resolved_statuses
 from desloppify.engine._plan.cluster_semantics import EXECUTION_STATUS_DONE, cluster_is_active
 from desloppify.engine._plan.operations.lifecycle import clear_focus_if_cluster_empty
 from desloppify.engine._plan.operations.meta import append_log_entry
@@ -353,9 +354,6 @@ def _complete_empty_manual_clusters(
         result.changes += 1
 
 
-_RESOLVED_STATUSES = frozenset({"fixed", "auto_resolved", "wontfix"})
-
-
 def _reconcile_active_clusters_by_item_status(
     plan: PlanModel,
     state: StateModel,
@@ -372,7 +370,7 @@ def _reconcile_active_clusters_by_item_status(
         if not issue_ids:
             continue
         all_resolved = all(
-            issues.get(fid, {}).get("status") in _RESOLVED_STATUSES
+            issues.get(fid, {}).get("status") in resolved_statuses()
             for fid in issue_ids
         )
         if not all_resolved:
