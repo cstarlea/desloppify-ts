@@ -125,16 +125,35 @@ def _project_root_from_state_path(state_path_value: str | Path | None) -> Path |
     return None
 
 
+def _is_submodule_checkout(directory: Path) -> bool:
+    """True when ``directory/.git`` is a gitfile pointing into ``.git/modules``.
+
+    Worktrees also use a gitfile (pointing into ``.git/worktrees``); they are
+    independent checkouts, so only submodules count.
+    """
+    try:
+        first = (directory / ".git").read_text(encoding="utf-8").splitlines()[0]
+    except (OSError, UnicodeDecodeError, IndexError):
+        return False
+    if not first.startswith("gitdir:"):
+        return False
+    gitdir = Path(first[len("gitdir:"):].strip())
+    return gitdir.parent.name != "worktrees" and "modules" in gitdir.parts
+
+
 def _project_root_from_scan_path(
     scan_path_value: str | Path | None, cwd_root: Path
 ) -> Path | None:
     """Infer the project root from an explicit ``--path``.
 
-    The nearest ancestor of the path (inclusive) holding existing desloppify
-    state wins, then the nearest git work tree. Without either, a path inside
-    the cwd keeps the cwd as root (the historical behavior) and a path outside
-    it is its own root, so ``desloppify scan --path ../app`` keeps its state
-    and finding IDs in ``../app`` instead of the cwd.
+    The nearest ancestor of the path (inclusive) holding desloppify state or a
+    git checkout (``.git`` directory, or a worktree's ``.git`` file) wins, so a
+    repo nested inside another project with state keeps its own state. A git
+    submodule stays with its superproject's state when the superproject has
+    some, and is its own root otherwise. Without any marker, a path inside the
+    cwd keeps the cwd as root (the historical behavior) and a path outside it
+    is its own root, so ``desloppify scan --path ../app`` keeps its state and
+    finding IDs in ``../app`` instead of the cwd.
     """
     if scan_path_value in (None, ""):
         return None
@@ -143,11 +162,21 @@ def _project_root_from_scan_path(
     except OSError:
         return None
     start = scan_path if scan_path.is_dir() else scan_path.parent
-    chain = [start, *start.parents]
-    for marker in (".desloppify", ".git"):
-        for directory in chain:
-            if (directory / marker).exists():
-                return directory
+    submodule: Path | None = None
+    for directory in (start, *start.parents):
+        if (directory / ".desloppify").is_dir():
+            return directory
+        if not (directory / ".git").exists():
+            continue
+        if _is_submodule_checkout(directory):
+            submodule = submodule or directory
+            continue
+        if submodule is not None:
+            # The superproject has no state: the submodule is its own root.
+            return submodule
+        return directory
+    if submodule is not None:
+        return submodule
     if scan_path.is_relative_to(cwd_root):
         return None
     return start
