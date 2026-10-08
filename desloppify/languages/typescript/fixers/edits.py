@@ -1,8 +1,8 @@
-"""Byte-range deletions shared by the syntax-tree fixers.
+"""Byte-range edits shared by the syntax-tree fixers.
 
 Fixers collect ``(start, end)`` byte ranges from tree-sitter nodes and apply
-them in one pass. Nothing here inserts text, so overlapping ranges merge
-safely.
+them in one pass. Deletions may overlap and are merged; replacements must not
+overlap.
 """
 
 from __future__ import annotations
@@ -38,6 +38,13 @@ def apply_edits(source: bytes, edits: list[tuple[int, int]]) -> bytes:
             merged.append([start, end])
     for start, end in reversed(merged):
         source = source[:start] + source[end:]
+    return source
+
+
+def apply_replacements(source: bytes, replacements: list[tuple[int, int, bytes]]) -> bytes:
+    """Replace each ``source[start:end]`` with its bytes. Ranges must not overlap."""
+    for start, end, text in sorted(replacements, reverse=True):
+        source = source[:start] + text + source[end:]
     return source
 
 
@@ -118,4 +125,10 @@ def _jsdoc_start(source: bytes, statement, line_start: int) -> int:
     return comment_line_start
 
 
-__all__ = ["apply_edits", "byte_offset", "comma_list_edits", "whole_statement_range"]
+__all__ = [
+    "apply_edits",
+    "apply_replacements",
+    "byte_offset",
+    "comma_list_edits",
+    "whole_statement_range",
+]

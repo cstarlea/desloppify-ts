@@ -35,18 +35,11 @@ from desloppify.languages.typescript.syntax.tree import (
 
 from .edits import apply_edits, byte_offset, comma_list_edits, whole_statement_range
 from .fixer_io import apply_fixer
+from .nodes import FUNCTIONS, NameIndex, is_parameter, node_key, same, within
 
 ALL_DESTRUCTURED = "(all destructured elements)"
 ALL_VARIABLES = "(all variables)"
 
-_NAME_TYPES = frozenset(
-    {
-        "identifier",
-        "shorthand_property_identifier",
-        "shorthand_property_identifier_pattern",
-        "type_identifier",
-    }
-)
 _DECLARATIONS = frozenset({"lexical_declaration", "variable_declaration"})
 _DECLARATION_KINDS = frozenset({"const", "let", "var"})
 _NAMED_STATEMENTS = frozenset(
@@ -59,19 +52,7 @@ _NAMED_STATEMENTS = frozenset(
 )
 _STATEMENT_PARENTS = frozenset({"program", "statement_block", "switch_case", "switch_default"})
 _LOOPS = frozenset({"for_statement", "for_in_statement"})
-_FUNCTIONS = frozenset(
-    {
-        "function_declaration",
-        "generator_function_declaration",
-        "function_expression",
-        "function",
-        "generator_function",
-        "arrow_function",
-        "method_definition",
-        "class_static_block",
-    }
-)
-_BLOCKS = frozenset({"program", "statement_block", "switch_body", *_LOOPS, *_FUNCTIONS})
+_BLOCKS = frozenset({"program", "statement_block", "switch_body", *_LOOPS, *FUNCTIONS})
 _PATTERN_WRAPPERS = frozenset(
     {"pair_pattern", "object_assignment_pattern", "assignment_pattern", "object_pattern", "array_pattern"}
 )
@@ -170,14 +151,6 @@ def remove_unused_vars(
     return apply_edits(parsed.source, edits), planner.fixed, planner.skipped
 
 
-def _key(node) -> tuple[int, int, str]:
-    return node.start_byte, node.end_byte, node.type
-
-
-def _same(a, b) -> bool:
-    return a is not None and b is not None and _key(a) == _key(b)
-
-
 class _Planner:
     """Maps entries to nodes to delete, then turns them into byte ranges."""
 
@@ -189,7 +162,7 @@ class _Planner:
         self._patterns: dict[tuple, tuple[object, dict[tuple, _Target]]] = {}
         self._declarations: dict[tuple, tuple[object, dict[tuple, _Target]]] = {}
         self._statements: dict[tuple, _Target] = {}
-        self._names: dict[str, list[object]] | None = None
+        self._names = NameIndex(parsed)
 
     # -- planning ---------------------------------------------------------
 
@@ -200,17 +173,17 @@ class _Planner:
         if name in (ALL_DESTRUCTURED, ALL_VARIABLES):
             return self._plan_aggregate(entry, name, line, col)
 
-        node = self._find_name(name, line, col)
+        node = self._names.find(name, line, col)
         if node is None:
             return "not_found"
         parent = node.parent
-        if _is_parameter(node):
+        if is_parameter(node):
             return "function_param"
-        if parent.type in _NAMED_STATEMENTS and _same(parent.child_by_field_name("name"), node):
+        if parent.type in _NAMED_STATEMENTS and same(parent.child_by_field_name("name"), node):
             return self._plan_statement(entry, parent, [node])
         if node.type == "type_identifier":
             return "type_parameter" if parent.type == "type_parameter" else "other"
-        if parent.type == "variable_declarator" and _same(parent.child_by_field_name("name"), node):
+        if parent.type == "variable_declarator" and same(parent.child_by_field_name("name"), node):
             return self._plan_declarator(entry, parent, [node])
         if parent.type == "rest_pattern":
             return "rest_element"
@@ -237,10 +210,10 @@ class _Planner:
                 return "side_effects"
             names = [n for d in declarators for n in _binding_names(d.child_by_field_name("name"))]
             return self._plan_statement(entry, statement, names)
-        if _is_parameter(node):
+        if is_parameter(node):
             return "function_param"
         declarator = node.parent
-        if declarator.type != "variable_declarator" or not _same(
+        if declarator.type != "variable_declarator" or not same(
             declarator.child_by_field_name("name"), node
         ):
             return "other"
@@ -252,7 +225,7 @@ class _Planner:
         function_scoped = statement.type != "lexical_declaration"
         if self._used_elsewhere(names, statement, statement, function_scoped=function_scoped):
             return "written_elsewhere"
-        self._statements.setdefault(_key(statement), _Target(statement)).entries.append(entry)
+        self._statements.setdefault(node_key(statement), _Target(statement)).entries.append(entry)
         return None
 
     def _plan_declarator(self, entry: dict, declarator, names: list) -> str | None:
@@ -281,7 +254,7 @@ class _Planner:
         while top.parent is not None and top.parent.type in _PATTERN_WRAPPERS:
             top = top.parent
         declarator = top.parent
-        if declarator is None or declarator.type != "variable_declarator" or not _same(
+        if declarator is None or declarator.type != "variable_declarator" or not same(
             declarator.child_by_field_name("name"), top
         ):
             return "other"
@@ -296,37 +269,10 @@ class _Planner:
 
     @staticmethod
     def _add(groups: dict, container, item, entries: list[dict]) -> None:
-        _container, items = groups.setdefault(_key(container), (container, {}))
-        items.setdefault(_key(item), _Target(item)).entries.extend(entries)
+        _container, items = groups.setdefault(node_key(container), (container, {}))
+        items.setdefault(node_key(item), _Target(item)).entries.extend(entries)
 
     # -- lookups ----------------------------------------------------------
-
-    def _find_name(self, name: str, line: int, col: object):
-        source = self.parsed.source
-        offset = byte_offset(source, line, col) if isinstance(col, int) else None
-        if offset is not None:
-            node = self.parsed.root.named_descendant_for_byte_range(offset, offset)
-            if (
-                node is not None
-                and node.type in _NAME_TYPES
-                and node.start_byte == offset
-                and self.parsed.text(node) == name
-            ):
-                return node
-        matches = [n for n in self._name_index().get(name, []) if n.start_point[0] == line - 1]
-        return matches[0] if len(matches) == 1 else None
-
-    def _name_index(self) -> dict[str, list[object]]:
-        if self._names is None:
-            names: dict[str, list[object]] = defaultdict(list)
-            stack = [self.parsed.root]
-            while stack:
-                node = stack.pop()
-                if node.type in _NAME_TYPES:
-                    names[self.parsed.text(node)].append(node)
-                stack.extend(node.children)
-            self._names = names
-        return self._names
 
     def _used_elsewhere(
         self, names: list, declaration, removed, *, function_scoped: bool
@@ -338,10 +284,10 @@ class _Planner:
         """
         scope = _scope(declaration, function_scoped=function_scoped)
         for name_node in names:
-            for other in self._name_index().get(self.parsed.text(name_node), []):
-                if _within(other, removed):
+            for other in self._names.get(self.parsed.text(name_node)):
+                if within(other, removed):
                     continue
-                if _within(other, scope):
+                if within(other, scope):
                     return True
         return False
 
@@ -351,7 +297,7 @@ class _Planner:
         edits: list[tuple[int, int]] = []
         for pattern, members in self._patterns.values():
             items = _list_items(pattern)
-            remove = {i for i, item in enumerate(items) if _key(item) in members}
+            remove = {i for i, item in enumerate(items) if node_key(item) in members}
             entries = [e for target in members.values() for e in target.entries]
             if len(remove) < len(items):
                 edits.extend(comma_list_edits(items, remove))
@@ -360,7 +306,7 @@ class _Planner:
             declarator = pattern.parent
             if (
                 declarator.type == "variable_declarator"
-                and _same(declarator.child_by_field_name("name"), pattern)
+                and same(declarator.child_by_field_name("name"), pattern)
                 and _declarator_blocker(declarator) is None
             ):
                 # Every member goes, so the declarator goes with them.
@@ -370,14 +316,14 @@ class _Planner:
 
         for declaration, declarators in self._declarations.values():
             items = _list_items(declaration)
-            remove = {i for i, item in enumerate(items) if _key(item) in declarators}
+            remove = {i for i, item in enumerate(items) if node_key(item) in declarators}
             entries = [e for target in declarators.values() for e in target.entries]
             if len(remove) < len(items):
                 edits.extend(comma_list_edits(items, remove))
                 self.fixed.extend(entries)
             else:
                 statement = _declaration_statement(declaration)
-                target = self._statements.setdefault(_key(statement), _Target(statement))
+                target = self._statements.setdefault(node_key(statement), _Target(statement))
                 target.entries.extend(entries)
 
         source = self.parsed.source
@@ -402,10 +348,6 @@ def _declarator_blocker(declarator) -> str | None:
     ):
         return "side_effects"
     return None
-
-
-def _within(node, container) -> bool:
-    return container.start_byte <= node.start_byte and node.end_byte <= container.end_byte
 
 
 def _kind(declaration) -> str:
@@ -446,11 +388,11 @@ def _pattern_member(node):
         return None, None
     if node.type != "identifier":
         return None, None
-    if parent.type == "pair_pattern" and _same(parent.child_by_field_name("value"), node):
+    if parent.type == "pair_pattern" and same(parent.child_by_field_name("value"), node):
         return parent, None
     if (
         parent.type == "assignment_pattern"
-        and _same(parent.child_by_field_name("left"), node)
+        and same(parent.child_by_field_name("left"), node)
         and parent.parent.type == "pair_pattern"
     ):
         return parent.parent, parent.child_by_field_name("right")
@@ -481,8 +423,8 @@ def _binding_names(pattern) -> list:
             names.append(node)
         elif node.type == "identifier" and parent is not None and (
             parent.type in ("array_pattern", "rest_pattern")
-            or (parent.type == "pair_pattern" and _same(parent.child_by_field_name("value"), node))
-            or (parent.type == "assignment_pattern" and _same(parent.child_by_field_name("left"), node))
+            or (parent.type == "pair_pattern" and same(parent.child_by_field_name("value"), node))
+            or (parent.type == "assignment_pattern" and same(parent.child_by_field_name("left"), node))
         ):
             names.append(node)
         elif node.type in _PATTERN_WRAPPERS or node.type == "rest_pattern":
@@ -490,22 +432,10 @@ def _binding_names(pattern) -> list:
     return names
 
 
-def _is_parameter(node) -> bool:
-    """Whether ``node`` sits in a function's parameter list."""
-    child, parent = node, node.parent
-    while parent is not None and parent.type not in ("statement_block", "program", *_DECLARATIONS):
-        if parent.type == "formal_parameters":
-            return True
-        if parent.type == "arrow_function" and _same(parent.child_by_field_name("parameter"), child):
-            return True
-        child, parent = parent, parent.parent
-    return False
-
-
 def _scope(node, *, function_scoped: bool):
     parent = node.parent
     while parent is not None:
-        if parent.type == "program" or parent.type in (_FUNCTIONS if function_scoped else _BLOCKS):
+        if parent.type == "program" or parent.type in (FUNCTIONS if function_scoped else _BLOCKS):
             return parent
         parent = parent.parent
     return node
@@ -573,7 +503,7 @@ def _neighbour(statement, removing: dict, *, forward: bool):
     sibling = statement
     while True:
         sibling = sibling.next_named_sibling if forward else sibling.prev_named_sibling
-        if sibling is None or (sibling.type != "comment" and _key(sibling) not in removing):
+        if sibling is None or (sibling.type != "comment" and node_key(sibling) not in removing):
             return sibling
 
 

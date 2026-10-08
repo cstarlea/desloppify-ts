@@ -257,8 +257,12 @@ class TestComputeTools:
 
     def test_unsafe_fixers_not_offered(self):
         result = _compute_tools({"unused": 5, "logs": 2}, {}, "typescript", {})
-        # unused-params and debug-logs are still marked unsafe.
-        assert [f["name"] for f in result["fixers"]] == ["unused-imports", "unused-vars"]
+        # debug-logs is still marked unsafe.
+        assert [f["name"] for f in result["fixers"]] == [
+            "unused-imports",
+            "unused-vars",
+            "unused-params",
+        ]
 
     def test_no_fixers_for_python(self):
         state = {"lang_capabilities": {"python": {"fixers": []}}}
