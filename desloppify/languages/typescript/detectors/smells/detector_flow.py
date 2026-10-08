@@ -58,6 +58,7 @@ class _Function(NamedTuple):
     is_generator: bool = False
     awaits: bool = False
     stub_exempt: bool = False
+    object_member: bool = False
 
 
 _LAST: list = [None, [], False]  # (ctx, functions, from_tree): detectors run one file at a time
@@ -96,6 +97,7 @@ def _functions_tree(parsed: ParsedSource) -> list[_Function]:
                 # Parameter properties need a constructor; decorated members
                 # are framework hooks.
                 stub_exempt=(info.kind == "method" and info.name == "constructor") or _decorated(info.node),
+                object_member=definition.object_member,
             )
         )
     return found
@@ -213,6 +215,10 @@ def _detect_async_no_await(ctx, smell_counts: dict[str, list[dict]]) -> None:
         _async_no_await_regex(ctx, smell_counts)
         return
     for function in found:
+        # An object member fills a slot of the shape its object is passed as;
+        # ``async`` is how it returns the promise that slot asks for.
+        if function.object_member:
+            continue
         if function.is_async and not function.is_generator and not function.awaits:
             _emit(smell_counts, "async_no_await", ctx, function.line + 1, f"async {function.name} has no await")
 
@@ -372,7 +378,8 @@ def _detect_nested_closures(ctx, smell_counts: dict[str, list[dict]]) -> None:
 def _detect_stub_functions(ctx, smell_counts: dict[str, list[dict]]) -> None:
     """Find functions with empty or return-only bodies."""
     for function in _functions(ctx):
-        if function.body is None or not function.block or function.stub_exempt:
+        # An empty object member is a no-op implementation (an observer, a mock, an option).
+        if function.body is None or not function.block or function.stub_exempt or function.object_member:
             continue
         body_clean = _strip_ts_comments(function.body).strip().rstrip(";")
         if body_clean in ("", "return", "return null", "return undefined"):
