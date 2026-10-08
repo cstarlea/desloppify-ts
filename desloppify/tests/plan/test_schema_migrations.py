@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import desloppify.engine._plan.schema.migrations as migrations
+from desloppify.engine._plan.operations.lifecycle import purge_ids
+from desloppify.engine._plan.schema import ensure_plan_defaults
 from desloppify.engine._plan.schema.version_upgrades import V7_SCHEMA_VERSION
 
 
@@ -122,7 +124,7 @@ def test_normalize_cluster_defaults_restores_issue_ids_from_execution_log() -> N
         ],
     }
 
-    migrations.normalize_cluster_defaults(plan)
+    migrations.normalize_cluster_defaults(plan, recover_from_log=True)
 
     assert plan["clusters"]["manual"]["issue_ids"] == [
         "review::.::holistic::authorization_consistency::decrypted_api_key_rpc_not_restricted",
@@ -163,3 +165,31 @@ def test_normalize_cluster_defaults_preserves_non_review_ids_and_recovers_overri
     assert plan["clusters"]["auto/security"]["issue_ids"] == [
         "security::pkg/mod.py::security::B101::pkg/mod.py::12",
     ]
+
+
+def _plan_with_logged_cluster(version: int) -> dict:
+    return {
+        "version": version,
+        "clusters": {"anys": {"name": "anys", "issue_ids": ["b"]}},
+        "execution_log": [
+            {"action": "cluster_add", "cluster_name": "anys", "issue_ids": ["a", "b"]},
+            {"action": "resolve", "issue_ids": ["a"]},
+        ],
+    }
+
+
+def test_removed_cluster_member_is_not_recovered_from_log() -> None:
+    """A member removed by resolve or supersede stays removed (2.43)."""
+    plan = _plan_with_logged_cluster(V7_SCHEMA_VERSION)
+    ensure_plan_defaults(plan)
+    assert plan["clusters"]["anys"]["issue_ids"] == ["b"]
+
+    purge_ids(plan, ["b"])
+    ensure_plan_defaults(plan)
+    assert plan["clusters"]["anys"]["issue_ids"] == []
+
+
+def test_legacy_plan_still_recovers_cluster_members_from_log() -> None:
+    plan = _plan_with_logged_cluster(V7_SCHEMA_VERSION - 1)
+    ensure_plan_defaults(plan)
+    assert plan["clusters"]["anys"]["issue_ids"] == ["b", "a"]
