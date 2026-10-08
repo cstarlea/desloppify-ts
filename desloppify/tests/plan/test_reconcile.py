@@ -256,6 +256,46 @@ def test_reconcile_keeps_new_skip_of_issue_that_came_back():
     assert plan["skipped"]["a"]["kind"] == "temporary"
 
 
+def test_reconcile_keeps_wontfix_and_false_positive_skips_of_queued_or_clustered_issues():
+    """Detaching a decided issue from the queue/cluster keeps its skip entry (2.41)."""
+    plan = _plan_with_queue("w", "f", "x")
+    ensure_plan_defaults(plan)
+    plan["promoted_ids"] = ["w"]
+    create_cluster(plan, "c")
+    add_to_cluster(plan, "c", ["w", "f", "x"])
+    state = _state_with_issues("x")
+    for fid, kind, status in (("w", "permanent", "wontfix"), ("f", "false_positive", "false_positive")):
+        plan["skipped"][fid] = {"issue_id": fid, "kind": kind, "skipped_at_scan": 1}
+        state["issues"][fid] = {**_state_with_issues(fid)["issues"][fid], "status": status}
+
+    result = reconcile_plan_after_scan(plan, state)
+
+    assert plan["skipped"]["w"]["kind"] == "permanent"
+    assert plan["skipped"]["f"]["kind"] == "false_positive"
+    assert not ({"w", "f"} & set(result.superseded))
+    assert not ({"w", "f"} & set(plan["superseded"]))
+    assert plan["queue_order"] == ["x"]
+    assert plan["promoted_ids"] == []
+    assert plan["clusters"]["c"]["issue_ids"] == ["x"]
+
+    # A second reconcile changes nothing.
+    assert reconcile_plan_after_scan(plan, state).changes == 0
+
+
+def test_reconcile_forgets_superseded_entry_of_decided_skip():
+    """An old superseded entry must not keep stripping a wontfix skip."""
+    plan = empty_plan()
+    ensure_plan_defaults(plan)
+    plan["superseded"]["w"] = {"original_id": "w", "status": "superseded", "superseded_at": "2026-10-01T00:00:00+00:00"}
+    plan["skipped"]["w"] = {"issue_id": "w", "kind": "permanent", "skipped_at_scan": 5}
+    state = _state_with_issues("w", status="wontfix")
+
+    reconcile_plan_after_scan(plan, state)
+
+    assert "w" not in plan["superseded"]
+    assert plan["skipped"]["w"]["kind"] == "permanent"
+
+
 # ---------------------------------------------------------------------------
 # Active clusters completed when all items resolved
 # ---------------------------------------------------------------------------
