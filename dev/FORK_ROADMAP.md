@@ -71,6 +71,22 @@ The fork (`cstarlea/desloppify`) is a **TypeScript/JavaScript-only** code-health
 | #41 | `tree`/`viz` label the root node with the scanned path (2.31) |
 | #42 | Scan-confirmed absence auto-resolves deferred and triaged_out issues and marks wontfix `scan_verified`; reconcile supersedes their skip entries (2.21) |
 | #43 | CLI logging: `  WARNING: …` lines on stderr, coloured on a terminal, `DESLOPPIFY_LOG_LEVEL` (2.32) |
+| #44 | `docs/scoring.md` and `dev/QUEUE_LIFECYCLE.md` rewritten from the code; roadmap catch-up (2.22) |
+| #45 | Test coverage follows imported names through re-export chains of any depth (2.16) |
+| #46 | `plan skip --permanent`/`--false-positive` change deferred and triaged_out issues too; `--deferred-only` (2.38) |
+| #47 | Function extractor and the function-shape smells on `syntax.queries.definitions()` (2.6) |
+| #48 | A module reached from a tested public entry counts as covered; separate file and √LOC-weight labels (2.17) |
+| #49 | `fixed`/`false_positive` are marked `scan_verified` only on a confirmed absence (2.39) |
+| #50 | Cluster completion counts every resolved status, in scan reconcile and `plan resolve` (2.40) |
+| #51 | Name-aware re-export following replaces the one-hop barrel and facade expansions in test coverage (2.16) |
+| #52 | Reconcile keeps the skip entries of wontfix and false_positive issues (2.41) |
+| #53 | A scan never changes a `false_positive` status (2.42) |
+| #54 | Type-safety smells as syntax-tree queries (2.7) |
+| #55 | Cluster members removed by resolve or supersede stay removed (2.43) |
+| #56 | `has_testable_logic` on the syntax tree: types-only files are no longer scored by Test health (2.44) |
+| #57 | Comment-, string-, template- and regex-aware `code_text` and `scan_code` for the smells and their brace matching (2.11, partial) |
+| #60 | `definitions()` also returns object-literal methods and anonymous default exports (2.6) |
+| #65 | Deprecated detector on the syntax tree (2.10) |
 
 ---
 
@@ -97,12 +113,12 @@ Every adversarial input in the original review broke one of the line-regex fixer
 
 | # | Item | Effort | Findings |
 |---|---|---|---|
-| 2.6 | **Done (#47).** The function extractor and the five function-shape smells read `syntax.queries.definitions()`: declarations and named function expressions, variable-bound or assigned functions, and class members (`Owner.member`), so async, default exports, methods, multi-line/destructured params and concise arrows are seen and bodies come from the tree. `detector_flow` builds the list once per file; `async_no_await` looks for `await` in the function's own body. Signature variance skips default exports and uppercase route-handler names. Regex stays only as the fallback without tree-sitter | M | DT-3 |
+| 2.6 | **Done (#47).** The function extractor and the five function-shape smells read `syntax.queries.definitions()`: declarations and named function expressions, variable-bound or assigned functions, and class members (`Owner.member`), so async, default exports, methods, multi-line/destructured params and concise arrows are seen and bodies come from the tree. `detector_flow` builds the list once per file; `async_no_await` looks for `await` in the function's own body. Signature variance skips default exports and uppercase route-handler names. Regex stays only as the fallback without tree-sitter. #60 adds object-literal methods and function-valued pairs (named by their path, e.g. `api.get`, `default.fetch`) and anonymous `export default` functions (`default`) | M | DT-3 |
 | 2.7 | **Done (#54).** Type-safety smells read the syntax tree (`detector_types`): every non-null `!` (not just `x!.y`), `as unknown as T` / `<T><unknown>x` (`double_cast`), `any` in any type position (`keyof any` left out; `as any` / `<any>x` stay `as_any_cast`), and `@ts-ignore` / `@ts-expect-error` by TypeScript's own directive rules, block comments included. An `@ts-expect-error` with no reason after it or in the comment above is its own low-severity smell (`ts_expect_error_undocumented`), outside test files; explained ones aren't reported. `x[i]!` isn't reported when the nearest tsconfig enables `noUncheckedIndexedAccess`. Each per-file issue carries its density (matches per 1,000 lines). Regex stays only as the fallback without tree-sitter | M | DT-9 |
 | 2.8 | Props detector: count properties; include extends, generics and intersections; match names on word boundaries | M | DT-4 |
 | 2.9 | **Done (#22).** Facade: every top-level statement is a re-export (directives and comments allowed); cover multi-line, `export * as`, `export type *` | S | DT-6 |
 | 2.10 | **Done (#65).** Deprecated detector on the syntax tree: a `/** @deprecated */` comment attaches to the next sibling node, as in TypeScript (declarations, every declarator, class/interface/object/enum members, and `export { a as b }` specifiers, so deprecated barrel aliases are found; `$` names, `async function` and long JSDoc no longer slip past). Importers are files whose imports reach the export through the import graph (re-export chains, `export *`, type-only imports, namespace members like `z.cuid()`), not files that mention the name; same-file uses are identifier references. A deprecated overload whose sibling signatures aren't all deprecated is an `overload`, not an issue. `.d.ts` files are skipped. Each file is parsed once (the detector owns the parse cache outside a scan); the regex fallback reads each file once and greps all names in one pass. zod and trpc importer counts drop from name collisions (`ZodErrorMap` 77 → 1, `inferProcedureInput` 23 → 0); 31 new deprecated symbols | M | DT-5 |
-| 2.11 | **Partial: the `dead_useeffect` smell is on the syntax tree, with a fallback that skips template and block-comment lines (#33).** Skip comment and string spans in the remaining line-regex detectors (security, smells, logs) | M | DT-7, FX-4 |
+| 2.11 | **Partial: the `dead_useeffect` smell is on the syntax tree, with a fallback that skips template and block-comment lines (#33); the smells' `code_text` and `scan_code` blank comments, strings, template text and regex literals, so their brace matching no longer trips on them (#57).** Skip comment and string spans in the remaining line-regex detectors (security, logs) | M | DT-7, FX-4 |
 | 2.12 | Zones: `@generated` headers; directory-level issues classified by zone | S | DT-11 |
 | 2.13 | **Done (#26).** A separate `params` category for unused symbols, with every category decided on the syntax tree | S | FX-15 |
 | 2.14 | **Done (#37).** package.json `imports` (`#subpath`) in the resolver: the importer's nearest package.json is the scope; exact and `*` keys, condition objects and fallback arrays in order; bare targets resolve when they name a workspace package. The vite-react golden's `analytics.ts` false positive is gone | S | GR-1 |
@@ -114,6 +130,7 @@ Every adversarial input in the original review broke one of the line-regex fixer
 | 2.34 | A `#x` import whose target is an npm package (not a workspace package) still counts as unresolved; it should count as external like a bare import (#37 follow-up) | S | GR-1 |
 | 2.35 | `detect orphaned` reports `next.config.ts` as orphaned while `scan` does not, and the tree output says "1 files" (seen while checking #39) | S | GR-6 |
 | 2.36 | The Next.js entry conventions check `next.config.{js,mjs,ts}`, while the framework detection list also has `next.config.cjs` (#39 kept the old list on purpose) | S | GR-6 |
+| 2.44 | **Done (#56).** `has_testable_logic` decides on the syntax tree which files Test health scores: a file holding only comments, directives, imports, type aliases, interfaces, ambient declarations and re-exports is not testable logic. The line heuristic ended a type context after the first line of a multi-line type alias or conditional type, so types-only files were scored (zod 169 → 165 scored files, trpc 451 → 427); it stays as the fallback without tree-sitter | S | DT-12 |
 
 ### 2C. Engine and state correctness
 
@@ -265,15 +282,15 @@ Status key: **done** (with PR), **partial** (what's left is in §2), **open**, *
 |---|---|---|---|
 | DT-1 | high | Global `matches[:50]` drops most smells | done (#1) |
 | DT-2 | high | Body extractor grabs param or return-type braces | done (#1, upstream #629; #11 added tests) |
-| DT-3 | low | Function extractor misses async/default/methods | done (#47) |
+| DT-3 | low | Function extractor misses async/default/methods | done (#47, #60) |
 | DT-4 | medium | Props detector counts lines, skips extends/generics/intersections | open → 2.8 |
 | DT-5 | medium | Deprecated detector false positives; "safe to delete" on public API | done (#1, #65) |
 | DT-6 | low | Facade misses multi-line, `export * as`, `'use client'` | done (#5, #22, #36) |
-| DT-7 | medium | eval/innerHTML false positives; comments not stripped | partial (#1, #11) → 2.11 |
+| DT-7 | medium | eval/innerHTML false positives; comments not stripped | partial (#1, #11, #57) → 2.11 |
 | DT-9 | medium | Non-null, block `@ts-ignore`, double-cast gaps | done (#54) |
 | DT-10 | medium | Author-specific heuristics | open → 3.5 |
 | DT-11 | medium | test-d, bench, e2e, config, generated not zoned | partial (#1) → 2.12 |
-| DT-12 | high | Jest-only assertions; inverted test-health; cross-package basename mapping | partial (#1, #8, #45, #48, #51) → 3.11 |
+| DT-12 | high | Jest-only assertions; inverted test-health; cross-package basename mapping | partial (#1, #8, #45, #48, #51, #56) → 3.11 |
 | DT-13 | medium | tsconfig strictness never read | open → 3.3 |
 | DT-14 | high | No framework support beyond Next.js (React Router entries only); SFCs unanalysed | open → 3.6, 3.7 |
 | DT-15 | medium | No server-action auth, raw-SQL or child_process checks | open → 3.8 |
