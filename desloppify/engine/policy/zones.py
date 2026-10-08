@@ -8,10 +8,12 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
 
+from desloppify.base.discovery.file_paths import resolve_path
 from desloppify.base.output.fallbacks import log_best_effort_failure
 from desloppify.engine.policy.zones_data import (
     CONFIG_SKIP_DETECTORS,
@@ -129,6 +131,64 @@ COMMON_ZONE_RULES = [
 ]
 
 
+_GENERATED_MARKER_RE = re.compile(
+    r"@generated\b|\bauto-?generated\b|\bautomatically generated\b"
+    r"|\bcode generated\b.*\bdo not edit\b",
+    re.IGNORECASE,
+)
+_HEADER_BYTES = 4096
+_COMMENT_PREFIXES = ("//", "/*", "*", "#")
+
+
+def has_generated_header(text: str) -> bool:
+    """Return whether the file's leading comment block marks it as generated.
+
+    Only comments before the first line of code count (after an optional
+    shebang), so a ``@generated`` mention in the body is ignored.
+    """
+    in_block = False
+    for raw_line in text.lstrip("\ufeff").splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        if in_block:
+            in_block = "*/" not in line
+        elif line.startswith("/*"):
+            in_block = "*/" not in line[2:]
+        elif not line.startswith(_COMMENT_PREFIXES):
+            return False
+        if _GENERATED_MARKER_RE.search(line):
+            return True
+    return False
+
+
+def _file_has_generated_header(file_path: str) -> bool:
+    try:
+        with open(resolve_path(file_path), "rb") as handle:
+            head = handle.read(_HEADER_BYTES)
+    except OSError:
+        return False
+    return has_generated_header(head.decode("utf-8", errors="replace"))
+
+
+def _classify_directory(
+    rel_dir: str, rules: list[ZoneRule], file_zones: list[Zone]
+) -> Zone:
+    """Zone for a directory: its directory patterns, else its files' common zone."""
+    for rule in rules:
+        for pattern in rule.patterns:
+            if (
+                pattern.startswith("/")
+                and pattern.endswith("/")
+                and _match_pattern(rel_dir, pattern)
+            ):
+                return rule.zone
+    zones = set(file_zones)
+    if len(zones) == 1:
+        return zones.pop()
+    return Zone.PRODUCTION
+
+
 def classify_file(
     rel_path: str, rules: list[ZoneRule], overrides: dict[str, str] | None = None
 ) -> Zone:
@@ -162,19 +222,49 @@ class FileZoneMap:
         rel_fn: Callable[[str], str] | None = None,
         overrides: dict[str, str] | None = None,
     ):
-        """Build a zone map from files, ordered rules, and optional overrides."""
+        """Build a zone map from files, ordered rules, and optional overrides.
+
+        A file whose leading comment marks it as generated (``@generated``,
+        "auto-generated", "Code generated ... DO NOT EDIT") is in the generated zone unless an
+        override or a vendor path says otherwise.
+        """
         self._map: dict[str, Zone] = {}
         self._rel_map: dict[str, Zone] = {}
         self._rel_fn = rel_fn
         self._overrides = overrides
+        self._rules = rules
+        self._dir_files: dict[str, list[Zone]] = {}
+        self._dir_zones: dict[str, Zone] = {}
         for file_path in files:
             rel_path = rel_fn(file_path) if rel_fn else file_path
             zone = classify_file(rel_path, rules, overrides)
+            if (
+                zone not in (Zone.GENERATED, Zone.VENDOR)
+                and not (overrides and rel_path in overrides)
+                and _file_has_generated_header(file_path)
+            ):
+                zone = Zone.GENERATED
             self._map[file_path] = zone
             self._rel_map[rel_path] = zone
+            child, parent = rel_path, os.path.dirname(rel_path)
+            while parent and parent != child:
+                self._dir_files.setdefault(parent, []).append(zone)
+                child, parent = parent, os.path.dirname(parent)
+
+    def _directory_zone(self, rel_dir: str) -> Zone | None:
+        """Zone for a directory holding scanned files (directory-level issues)."""
+        rel_dir = rel_dir.rstrip("/")
+        file_zones = self._dir_files.get(rel_dir)
+        if file_zones is None:
+            return None
+        zone = self._dir_zones.get(rel_dir)
+        if zone is None:
+            zone = _classify_directory(rel_dir, self._rules, file_zones)
+            self._dir_zones[rel_dir] = zone
+        return zone
 
     def get(self, path: str) -> Zone:
-        """Get zone for a file path. Returns PRODUCTION if not classified."""
+        """Get zone for a file or directory path. PRODUCTION if not classified."""
         direct = self._map.get(path)
         if direct is not None:
             return direct
@@ -183,6 +273,7 @@ class FileZoneMap:
         if rel_direct is not None:
             return rel_direct
 
+        rel_path = path
         if self._rel_fn is not None:
             try:
                 rel_path = self._rel_fn(path)
@@ -191,6 +282,10 @@ class FileZoneMap:
             rel_zone = self._rel_map.get(rel_path)
             if rel_zone is not None:
                 return rel_zone
+
+        dir_zone = self._directory_zone(rel_path) or self._directory_zone(path)
+        if dir_zone is not None:
+            return dir_zone
 
         return Zone.PRODUCTION
 

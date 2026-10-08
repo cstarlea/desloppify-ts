@@ -12,7 +12,6 @@ Algorithm:
 
 from __future__ import annotations
 
-import logging
 import re
 from collections import defaultdict
 from pathlib import Path
@@ -23,10 +22,7 @@ from desloppify.engine._state.filtering import make_issue
 from desloppify.languages._framework.base.types import DetectorPhase
 from desloppify.state_io import Issue
 
-from .cache import get_or_parse_tree
 from .parsing import (
-    PARSE_INIT_ERRORS,
-    _get_parser,
     _make_query,
     _node_text,
     _run_query,
@@ -38,7 +34,6 @@ if TYPE_CHECKING:
 
     from .spec import TreeSitterLangSpec
 
-logger = logging.getLogger(__name__)
 
 # Minimum thresholds to analyze a file.
 _MIN_FUNCTIONS = 8  # Don't flag files with few functions.
@@ -57,21 +52,18 @@ def detect_responsibility_cohesion(
     Returns (entries, total_files_checked).
     Each entry: {file, loc, function_count, component_count, families}.
     """
-    try:
-        parser, language = _get_parser(spec.grammar)
-    except PARSE_INIT_ERRORS as exc:
-        logger.debug("tree-sitter init failed: %s", exc)
-        return [], 0
-
-    query = _make_query(language, spec.function_query)
+    queries: dict[object, object] = {}
     entries: list[dict] = []
     checked = 0
 
     for filepath in file_list:
-        cached = get_or_parse_tree(filepath, parser, spec.grammar)
-        if cached is None:
+        parsed = spec.parse_file(filepath)
+        if parsed is None:
             continue
-        source, tree = cached
+        source, tree = parsed
+        query = queries.get(tree.language)
+        if query is None:
+            query = queries[tree.language] = _make_query(tree.language, spec.function_query)
         checked += 1
 
         loc = source.count(b"\n") + 1

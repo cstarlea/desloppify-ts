@@ -167,8 +167,20 @@ class ModuleResolver:
                 return found
         return None
 
-    def is_external(self, specifier: str) -> bool:
-        """npm dependencies, Node builtins and bundler virtual modules (``virtual:x``)."""
+    def is_external(self, specifier: str, from_file: str | None = None) -> bool:
+        """npm dependencies, Node builtins and bundler virtual modules (``virtual:x``).
+
+        A ``#subpath`` is external when the importer's package.json maps it
+        to such a package (``"#fetch": "node-fetch"``).
+        """
+        if specifier.startswith("#"):
+            if from_file is None:
+                return False
+            package = self.package_scopes.for_file(self._absolute(from_file))
+            return package is not None and any(
+                is_bare(target) and not target.startswith("#") and self.is_external(target)
+                for target in package_import_targets(package, specifier)
+            )
         if ":" in specifier:
             return True
         name = package_name(specifier)
