@@ -135,7 +135,7 @@ DETECTORS: dict[str, DetectorMeta] = {
     "cycles": DetectorMeta(
         "cycles",
         "cycles",
-        "Security",
+        "Code quality",
         "reorganize",
         "break cycles by extracting shared code or using `desloppify move`",
         tool="move",

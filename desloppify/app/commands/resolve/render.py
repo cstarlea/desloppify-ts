@@ -15,6 +15,7 @@ from desloppify.base.config import load_config
 from desloppify.base.exception_sets import CommandError, PLAN_LOAD_EXCEPTIONS
 from desloppify.base.git_context import detect_git_context
 from desloppify.base.output.terminal import colorize
+from desloppify.engine._scoring.policy.core import is_wontfix_debt
 from desloppify.engine.plan_state import get_uncommitted_issues, suggest_commit_message
 
 
@@ -36,9 +37,7 @@ def _print_wontfix_batch_warning(
     if status != "wontfix" or resolved_count <= 10:
         return
     work_items = state.get("work_items") or state.get("issues", {})
-    wontfix_count = sum(
-        1 for issue in work_items.values() if issue["status"] == "wontfix"
-    )
+    wontfix_count = sum(1 for issue in work_items.values() if is_wontfix_debt(issue))
     actionable = sum(
         1
         for issue in work_items.values()

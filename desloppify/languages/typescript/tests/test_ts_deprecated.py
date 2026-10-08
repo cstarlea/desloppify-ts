@@ -326,6 +326,20 @@ class TestDeprecatedOnSyntaxTree:
         assert entry["same_file_uses"] == 1
         assert entry["exported"] is True
 
+    def test_importers_through_object_spreads(self, tmp_path):
+        _write(tmp_path, "lib/old.ts", "/** @deprecated */\nexport function old() {}\n")
+        _write(tmp_path, "lib/iso.ts", "/** @deprecated */\nexport function legacy() {}\n")
+        _write(
+            tmp_path,
+            "local.ts",
+            "import * as _schemas from './lib/old';\nimport * as _iso from './lib/iso';\n"
+            "const z = { ..._schemas, iso: _iso, other: 1 };\nz.old();\nz.iso.legacy();\n",
+        )
+        _write(tmp_path, "unrelated.ts", "const z = { other: 1 };\nz.old();\n")
+        found = _by_symbol(tmp_path)
+        assert found[("old.ts", "old")]["importers"] == 1
+        assert found[("iso.ts", "legacy")]["importers"] == 1
+
     def test_deprecated_reexport_alias(self, tmp_path):
         _write(tmp_path, "impl.ts", "export function current() {}\nexport type Shape = {};\n")
         _write(

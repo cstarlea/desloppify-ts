@@ -143,6 +143,10 @@ TIER_WEIGHTS = {
 # Minimum checks for full dimension weight — below this, weight is dampened
 # proportionally. Prevents small-sample dimensions from swinging the overall score.
 MIN_SAMPLE = 200
+
+# A mechanical dimension whose detectors didn't run keeps its previous score
+# for this many scans, then drops out of the score until they run again.
+CARRIED_FORWARD_MAX_SCANS = 3
 HOLISTIC_POTENTIAL = 10
 
 # Budget: subjective dimensions get this fraction of the overall score.
@@ -229,6 +233,15 @@ def issue_counts_as_failure(issue: Mapping[str, Any], mode: ScoreMode) -> bool:
     return True
 
 
+def is_wontfix_debt(issue: Mapping[str, Any]) -> bool:
+    """Return True for a wontfix issue that strict still counts as debt.
+
+    A wontfix whose finding a scan has confirmed gone keeps its status but
+    no longer fails strict, so debt totals leave it out too.
+    """
+    return issue.get("status") == "wontfix" and issue_counts_as_failure(issue, "strict")
+
+
 # Tolerance for treating a subjective score as "on target" in integrity checks.
 # Scores within this band of the target are flagged as potential gaming.
 SUBJECTIVE_TARGET_MATCH_TOLERANCE = 0.05
@@ -299,6 +312,7 @@ __all__ = [
     "DETECTOR_SCORING_POLICIES",
     "DIMENSIONS",
     "DIMENSIONS_BY_NAME",
+    "CARRIED_FORWARD_MAX_SCANS",
     "FAILURE_STATUSES_BY_MODE",
     "FILE_BASED_DETECTORS",
     "HOLISTIC_MULTIPLIER",
@@ -319,6 +333,7 @@ __all__ = [
     "ScoreMode",
     "detector_policy",
     "is_loc_weighted_dimension",
+    "is_wontfix_debt",
     "issue_counts_as_failure",
     "matches_target_score",
     "register_scoring_policy",

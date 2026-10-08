@@ -21,6 +21,7 @@ from desloppify.languages.typescript.syntax.queries import (
     imports,
     jsx_elements,
     module_statements,
+    type_declarations,
 )
 from desloppify.languages.typescript.syntax.tree import parse_text, parsed_file
 
@@ -430,6 +431,25 @@ def test_calls_filter_by_callee():
 def test_descendants_in_source_order():
     parsed = _parse("a(); b(c());\n")
     assert [parsed.text(n) for n in descendants(parsed.root, {"call_expression"})] == ["a()", "b(c())", "c()"]
+
+
+# ── Type declarations ───────────────────────────────────────
+
+
+def test_type_declarations():
+    parsed = _parse(
+        "export interface A<T, U = T> extends B<T>, C { a: T }\n"
+        "type D = A<string> & { d: 1 };\n"
+        "namespace N { interface E {} }\n"
+    )
+    found = {d.name: d for d in type_declarations(parsed)}
+    assert list(found) == ["A", "D", "E"]
+    a, d = found["A"], found["D"]
+    assert (a.kind, a.type_parameters, a.exported, a.line) == ("interface", ("T", "U"), True, 1)
+    assert [parsed.text(n) for n in a.extends] == ["B<T>", "C"]
+    assert a.value.type == "interface_body"
+    assert (d.kind, d.exported, d.extends, d.value.type) == ("alias", False, (), "intersection_type")
+    assert a.span.start_byte == 0  # from ``export``
 
 
 # ── Parse once per scan ─────────────────────────────────────

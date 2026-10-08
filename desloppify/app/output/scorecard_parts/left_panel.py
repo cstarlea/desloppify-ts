@@ -23,7 +23,8 @@ def _left_panel_measurements(
     draw,
     *,
     main_score: float,
-    strict_score: float,
+    strict_score: float | None,
+    strict_label: str,
     project_name: str,
     package_version: str,
 ) -> dict:
@@ -40,11 +41,11 @@ def _left_panel_measurements(
     )
     title = "DESLOPPIFY SCORE"
     score_text = fmt_score(main_score)
-    strict_text = fmt_score(strict_score)
+    strict_text = fmt_score(strict_score) if strict_score is not None else ""
     version_bbox = draw.textbbox((0, 0), version_text, font=font_version)
     title_bbox = draw.textbbox((0, 0), title, font=font_title)
     score_bbox = draw.textbbox((0, 0), score_text, font=font_big)
-    strict_label_bbox = draw.textbbox((0, 0), "strict", font=font_strict_label)
+    strict_label_bbox = draw.textbbox((0, 0), strict_label, font=font_strict_label)
     strict_value_bbox = draw.textbbox((0, 0), strict_text, font=font_strict_val)
     project_bbox = draw.textbbox((0, 0), project_name, font=font_project)
     version_h = version_bbox[3] - version_bbox[1]
@@ -85,18 +86,21 @@ def _left_panel_measurements(
 def draw_left_panel(
     draw,
     main_score: float,
-    strict_score: float,
+    strict_score: float | None,
     project_name: str,
     package_version: str,
     lp_left: int,
     lp_right: int,
     lp_top: int,
     lp_bot: int,
+    strict_label: str = "strict",
 ) -> None:
+    """Draw the score panel; ``strict_score=None`` shows ``strict_label`` alone."""
     measurements = _left_panel_measurements(
         draw,
         main_score=main_score,
         strict_score=strict_score,
+        strict_label=strict_label,
         project_name=project_name,
         package_version=package_version,
     )
@@ -198,8 +202,9 @@ def draw_left_panel(
         draw,
         center_x=lp_center,
         strict_y=strict_y,
-        strict_value=strict_score,
+        strict_value=strict_score or 0.0,
         strict_text=strict_text,
+        strict_label=strict_label,
         strict_label_bbox=strict_label_bbox,
         strict_value_bbox=strict_value_bbox,
         font_strict_label=font_strict_label,

@@ -21,7 +21,7 @@ from desloppify.base.discovery.paths import get_project_root
 from desloppify.engine._scoring.results.core import compute_health_breakdown
 from desloppify.engine._state.filtering import open_scope_breakdown
 from desloppify.engine.plan_state import load_plan
-from desloppify.state_scoring import score_snapshot
+from desloppify.state_scoring import headline_score, score_snapshot
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +50,7 @@ def build_scan_query_payload(
         "objective_score": scores.objective,
         "strict_score": scores.strict,
         "verified_strict_score": scores.verified,
+        "headline": headline_score(state)._asdict(),
         "prev_overall_score": merge.prev_overall,
         "prev_objective_score": merge.prev_objective,
         "prev_strict_score": merge.prev_strict,
@@ -146,9 +147,9 @@ def _readme_references_badge(rel_path: str) -> bool:
 
 
 def emit_scorecard_badge(
-    args, config: dict[str, object], state: dict[str, object]
+    args, config: dict[str, object], state: dict[str, object], *, quiet: bool = False
 ) -> tuple[Path | None, OutputResult]:
-    """Generate a scorecard image badge and print usage hints."""
+    """Generate a scorecard image badge and print usage hints (none when ``quiet``)."""
     generate_scorecard, get_badge_config = _load_scorecard_helpers()
     if not callable(generate_scorecard) or not callable(get_badge_config):
         return _missing_scorecard_result(args, config)
@@ -180,6 +181,10 @@ def emit_scorecard_badge(
         )
 
     rel_path = _badge_relative_path(badge_path)
+    if quiet:
+        return badge_path, OutputResult(
+            ok=True, status="written", message=f"scorecard badge written to {rel_path}"
+        )
     readme_has_badge = _readme_references_badge(rel_path)
 
     if readme_has_badge:

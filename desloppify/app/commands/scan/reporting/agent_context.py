@@ -169,6 +169,7 @@ def _print_stats_summary(
         return
 
     wontfix = stats.get("wontfix", 0)
+    wontfix_debt = stats.get("wontfix_debt", wontfix)
     ignored = diff.get("ignored", 0) if diff else 0
     ignore_pats = diff.get("ignore_patterns", 0) if diff else 0
     strict_gap = (
@@ -181,8 +182,9 @@ def _print_stats_summary(
         f"Open: {stats.get('open', 0)} | "
         f"Fixed: {stats.get('fixed', 0)} | "
         f"Wontfix: {wontfix}"
+        + (f" ({wontfix_debt} still present)" if wontfix_debt != wontfix else "")
     )
-    if wontfix or ignored or ignore_pats:
+    if wontfix_debt or ignored or ignore_pats:
         print(
             f"Ignored: {ignored} (by {ignore_pats} patterns) | Strict gap: {strict_gap} pts"
         )
@@ -254,6 +256,13 @@ def print_llm_summary(
     if has_plan:
         _print_living_plan_notice(plan_snapshot)
 
+    headline = state_mod.headline_score(state)
+    if headline.provisional and headline.score is not None:
+        print(
+            f"Headline score:  {headline.score:.1f}/100 objective, PROVISIONAL: no subjective "
+            "dimension is assessed yet, so overall and strict count them as 0.\n"
+            "Lead with this score, say it is provisional, and offer `desloppify review --prepare`."
+        )
     _print_score_lines(
         overall_score=scores.overall,
         objective_score=scores.objective,

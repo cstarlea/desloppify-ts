@@ -85,8 +85,16 @@ The fork (`cstarlea/desloppify`) is a **TypeScript/JavaScript-only** code-health
 | #55 | Cluster members removed by resolve or supersede stay removed (2.43) |
 | #56 | `has_testable_logic` on the syntax tree: types-only files are no longer scored by Test health (2.44) |
 | #57 | Comment-, string-, template- and regex-aware `code_text` and `scan_code` for the smells and their brace matching (2.11, partial) |
+| #58 | Wontfix debt totals in stats, `status` and the narrative leave out wontfix issues a scan confirmed gone (2.37) |
+| #59 | Plan quarantine checks the entries of `superseded`, `execution_log`, `commit_log`, `promoted_ids` and `uncommitted_issues` (2.30) |
 | #60 | `definitions()` also returns object-literal methods and anonymous default exports (2.6) |
+| #61 | Props detector on the syntax tree (2.8) |
+| #62 | Carried-forward dimensions expire after 3 scans; concerns skip suppressed and out-of-scope issues (2.24) |
+| #63 | Headline the objective score, marked provisional, until a subjective dimension is assessed (2.23) |
+| #64 | `scan --profile ci` prints a plain report; `--fail-under`/`--fail-score` exit code (2.23) |
 | #65 | Deprecated detector on the syntax tree (2.10) |
+| #66 | `cycles` scores under Code quality instead of Security (2.23) |
+| #68 | Deprecated importers followed through object-literal namespace aliases (2.10) |
 
 ---
 
@@ -115,9 +123,9 @@ Every adversarial input in the original review broke one of the line-regex fixer
 |---|---|---|---|
 | 2.6 | **Done (#47).** The function extractor and the five function-shape smells read `syntax.queries.definitions()`: declarations and named function expressions, variable-bound or assigned functions, and class members (`Owner.member`), so async, default exports, methods, multi-line/destructured params and concise arrows are seen and bodies come from the tree. `detector_flow` builds the list once per file; `async_no_await` looks for `await` in the function's own body. Signature variance skips default exports and uppercase route-handler names. Regex stays only as the fallback without tree-sitter. #60 adds object-literal methods and function-valued pairs (named by their path, e.g. `api.get`, `default.fetch`) and anonymous `export default` functions (`default`) | M | DT-3 |
 | 2.7 | **Done (#54).** Type-safety smells read the syntax tree (`detector_types`): every non-null `!` (not just `x!.y`), `as unknown as T` / `<T><unknown>x` (`double_cast`), `any` in any type position (`keyof any` left out; `as any` / `<any>x` stay `as_any_cast`), and `@ts-ignore` / `@ts-expect-error` by TypeScript's own directive rules, block comments included. An `@ts-expect-error` with no reason after it or in the comment above is its own low-severity smell (`ts_expect_error_undocumented`), outside test files; explained ones aren't reported. `x[i]!` isn't reported when the nearest tsconfig enables `noUncheckedIndexedAccess`. Each per-file issue carries its density (matches per 1,000 lines). Regex stays only as the fallback without tree-sitter | M | DT-9 |
-| 2.8 | Props detector: count properties; include extends, generics and intersections; match names on word boundaries | M | DT-4 |
+| 2.8 | **Done (#61).** Props detector on the syntax tree (`syntax.queries.type_declarations`): an interface or type alias counts its distinct property and method names, including those inherited through `extends`, intersections, generic declarations and `Partial`/`Required`/`Readonly`/`Omit`/`Pick` of types declared in the scan (imports resolved); package types add nothing, a union counts its largest variant, same-name interfaces merge. Props/Context/State must be whole words of the name (`UIState`, bare `Props`; not `Statement`). A plain rename of a checked type and types without properties are skipped. Regex line counting stays only without tree-sitter. trpc `TRPCContextState` (24) is newly reported; zod `ToJSONSchemaContext` 17 → 15 | M | DT-4 |
 | 2.9 | **Done (#22).** Facade: every top-level statement is a re-export (directives and comments allowed); cover multi-line, `export * as`, `export type *` | S | DT-6 |
-| 2.10 | **Done (#65).** Deprecated detector on the syntax tree: a `/** @deprecated */` comment attaches to the next sibling node, as in TypeScript (declarations, every declarator, class/interface/object/enum members, and `export { a as b }` specifiers, so deprecated barrel aliases are found; `$` names, `async function` and long JSDoc no longer slip past). Importers are files whose imports reach the export through the import graph (re-export chains, `export *`, type-only imports, namespace members like `z.cuid()`), not files that mention the name; same-file uses are identifier references. A deprecated overload whose sibling signatures aren't all deprecated is an `overload`, not an issue. `.d.ts` files are skipped. Each file is parsed once (the detector owns the parse cache outside a scan); the regex fallback reads each file once and greps all names in one pass. zod and trpc importer counts drop from name collisions (`ZodErrorMap` 77 → 1, `inferProcedureInput` 23 → 0); 31 new deprecated symbols | M | DT-5 |
+| 2.10 | **Done (#65).** Deprecated detector on the syntax tree: a `/** @deprecated */` comment attaches to the next sibling node, as in TypeScript (declarations, every declarator, class/interface/object/enum members, and `export { a as b }` specifiers, so deprecated barrel aliases are found; `$` names, `async function` and long JSDoc no longer slip past). Importers are files whose imports reach the export through the import graph (re-export chains, `export *`, type-only imports, namespace members like `z.cuid()`, also through `const z = { ...ns, iso: _iso }` objects), not files that mention the name; same-file uses are identifier references. A deprecated overload whose sibling signatures aren't all deprecated is an `overload`, not an issue. `.d.ts` files are skipped. Each file is parsed once (the detector owns the parse cache outside a scan); the regex fallback reads each file once and greps all names in one pass. zod and trpc importer counts drop from name collisions (`ZodErrorMap` 77 → 1, `inferProcedureInput` 23 → 0); 31 new deprecated symbols . #68 follows importers through object-literal namespace aliases (`const z = { ..._schemas }`) | M | DT-5 |
 | 2.11 | **Partial: the `dead_useeffect` smell is on the syntax tree, with a fallback that skips template and block-comment lines (#33); the smells' `code_text` and `scan_code` blank comments, strings, template text and regex literals, so their brace matching no longer trips on them (#57).** Skip comment and string spans in the remaining line-regex detectors (security, logs) | M | DT-7, FX-4 |
 | 2.12 | Zones: `@generated` headers; directory-level issues classified by zone | S | DT-11 |
 | 2.13 | **Done (#26).** A separate `params` category for unused symbols, with every category decided on the syntax tree | S | FX-15 |
@@ -141,13 +149,13 @@ Every adversarial input in the original review broke one of the line-regex fixer
 | 2.20 | **Done (#35).** Every mutating command holds the state lock, then the plan lock, from its first load to its return; read-only commands load unlocked, and the corrupt-file rename and `.bak` restore run under the lock (or in memory if it stays busy). One re-entrant, ranked file lock backs `state_lock`, `plan_lock` and the progression log, whose trim now runs under the append lock. `plan triage --run-stages` and `review --run-batches`/`--scan-after-import` stay unlocked because they wait on desloppify subprocesses | M | CE-4 |
 | 2.21 | **Done (#42).** Deferred and triaged_out issues auto-resolve when a scan confirms they're gone, under the same conditions as open issues, and reconcile supersedes their skip entries. Wontfix stays wontfix: the scan marks it `scan_verified`, so it stops failing strict and verified, and clears the mark if the finding returns; its skip entry is kept. A superseded entry is dropped once its issue reappears so a fresh skip or queue entry isn't stripped | S | CE-5 |
 | 2.22 | **Done (#44).** `docs/scoring.md` (and its bundled copy) and `dev/QUEUE_LIFECYCLE.md` rewritten from the code, citing the functions behind each rule; the lifecycle doc lists the gaps found as 2.38–2.40 | S | CE-6 |
-| 2.23 | First run: headline the objective score (marked provisional) until subjective dimensions are assessed; `--profile ci` prints plain output with a threshold exit code; move `cycles` out of the Security dimension | M | CE-12 |
-| 2.24 | Expire carried-forward subjective dimensions; concerns ignore suppressed issues | S | CE-9, CE-10 |
+| 2.23 | **Done (#63, #64, #66).** Until a subjective dimension is assessed, the scan summary, `status`, the LLM block, `query.json` (`headline`) and the scorecard lead with the objective score marked provisional (`headline_score`); stored scores are unchanged (#63). `scan --profile ci` prints a plain report with no colour, coaching or agent blocks, and `--fail-under SCORE` (`--fail-score`, default objective) exits 1 below the threshold (#64). `cycles` scores under Code quality instead of Security (#66) | M | CE-12 |
+| 2.24 | **Done (#62).** A carried-forward dimension (mechanical; subjective ones are never carried) expires after `CARRIED_FORWARD_MAX_SCANS` (3) scans without its detectors running, counted from `carried_forward_since_scan`. Concerns use only the issues the score counts (not suppressed, inside the scan's `--path`); dismissal cleanup still sees every open issue | S | CE-9, CE-10 |
 | 2.25 | **Done (#21).** Commands with `--path` (autofix, detect, …) default to the last scan's path, as `review` already does, and fall back to `src/` only without one. A bare `scan` re-scans the last scope too | S | — |
-| 2.30 | Plan quarantine coverage: #29 checks the entries of `queue_order`, `skipped`, `clusters` and `overrides`, but only the container type of `superseded`, `execution_log`, `commit_log` and `promoted_ids`. A malformed entry in those still loads as is | S | CE-3 |
+| 2.30 | **Done (#59).** Plan quarantine coverage: the entries of `superseded`, `execution_log`, `commit_log`, `promoted_ids` and `uncommitted_issues` are checked against the fields their readers use (record shape, string `timestamp`/`action`/`sha`, ID-string lists) and bad ones are quarantined like #29's sections; before, one bad entry crashed `plan`, `plan commit-log history` or `scan` | S | CE-3 |
 | 2.31 | **Done (#41).** `tree` and `viz` label the root node with the scanned path relative to the project root (the project's directory name for a whole-project scan) and strip only that prefix, so `--path .` no longer merges `src/` into the root; `--focus` takes scan- or project-relative paths | S | — |
 | 2.32 | **Done (#43).** `cli.main()` configures logging once: a stderr handler on the `desloppify` logger prints `  WARNING: message`, yellow (red for errors) on a terminal unless `NO_COLOR` is set. No global verbosity flag exists, so `DESLOPPIFY_LOG_LEVEL` (e.g. `DEBUG`) sets the threshold | S | — |
-| 2.37 | Wontfix debt totals in the stats and `status` still include wontfix issues a scan confirmed gone (`scan_verified`), though the scores exclude them (#42 follow-up) | S | CE-5 |
+| 2.37 | **Done (#58).** Wontfix debt totals follow strict: a wontfix issue a scan confirmed gone (`scan_verified`) is no longer debt. `is_wontfix_debt()` sits beside `issue_counts_as_failure()`; `stats.wontfix_debt`/`wontfix_debt_by_tier` feed the scan gap warning, Score Integrity, the agent summary, `status` structural areas and tier table, and the narrative; `stats.wontfix` stays the status count | S | CE-5 |
 | 2.38 | **Done (#46).** `plan skip` now changes `open`, `deferred` and `triaged_out` issues, so `--permanent`/`--false-positive` on a deferred issue makes it `wontfix`/`false_positive` in state as well as plan; wontfix, false_positive and resolved issues are left alone in both. The deferred-disposition item suggested `plan skip --permanent "*"`, which wontfixed every open issue and no deferred one; it now suggests the new `--deferred-only` flag | S | CE-5 |
 | 2.39 | **Done (#49).** `fixed`/`false_positive` are marked `scan_verified` only on a confirmed absence (detector ran, zone policy now skips it, or file gone), like the other statuses; issues outside `--path` keep their mark as it was. An already-marked issue is no longer re-marked every scan, and the user's note is kept | S | CE-2 |
 | 2.40 | **Done (#50).** Cluster completion counts every resolved status (`resolved_statuses()`: fixed, wontfix, false_positive, auto_resolved) in scan reconcile and in `plan resolve`. The resolve path was the visible bug: members recovered from the execution log kept a cluster resolved one issue at a time from ever closing ("1 left in cluster") | S | — |
@@ -283,8 +291,8 @@ Status key: **done** (with PR), **partial** (what's left is in §2), **open**, *
 | DT-1 | high | Global `matches[:50]` drops most smells | done (#1) |
 | DT-2 | high | Body extractor grabs param or return-type braces | done (#1, upstream #629; #11 added tests) |
 | DT-3 | low | Function extractor misses async/default/methods | done (#47, #60) |
-| DT-4 | medium | Props detector counts lines, skips extends/generics/intersections | open → 2.8 |
-| DT-5 | medium | Deprecated detector false positives; "safe to delete" on public API | done (#1, #65) |
+| DT-4 | medium | Props detector counts lines, skips extends/generics/intersections | done (#61) |
+| DT-5 | medium | Deprecated detector false positives; "safe to delete" on public API | done (#1, #65, #68) |
 | DT-6 | low | Facade misses multi-line, `export * as`, `'use client'` | done (#5, #22, #36) |
 | DT-7 | medium | eval/innerHTML false positives; comments not stripped | partial (#1, #11, #57) → 2.11 |
 | DT-9 | medium | Non-null, block `@ts-ignore`, double-cast gaps | done (#54) |
@@ -303,16 +311,16 @@ Status key: **done** (with PR), **partial** (what's left is in §2), **open**, *
 |---|---|---|---|
 | CE-1 | high | One plan.json across languages | dropped |
 | CE-2 | high | Strict never recovers from real fixes | done (#38) |
-| CE-3 | medium | One bad issue loses the whole state | done (#25, #29); plan sections → 2.30 |
+| CE-3 | medium | One bad issue loses the whole state | done (#25, #29, #59) |
 | CE-4 | medium | Unlocked read-modify-write | done (#35) |
-| CE-5 | medium | Deferred, triaged_out and wontfix never auto-resolve | done (#42) |
+| CE-5 | medium | Deferred, triaged_out and wontfix never auto-resolve | done (#42, #58) |
 | CE-6 | medium | scoring.md and QUEUE_LIFECYCLE contradict code | done (#44) |
 | CE-7 | low | Subjective scores taken as-is | open |
 | CE-8 | low | Plan subsystem complexity | open → §2E |
-| CE-9 | low | Carried-forward dimensions never expire | open → 2.24 |
-| CE-10 | low | Concerns count suppressed issues | open → 2.24 |
+| CE-9 | low | Carried-forward dimensions never expire | done (#62) |
+| CE-10 | low | Concerns count suppressed issues | done (#62) |
 | CE-11 | low | Recompute is O(dims × issues × modes) | open |
-| CE-12 | medium | Headline score from zeroed subjective dims; ci profile; cycles under Security | open → 2.23 |
+| CE-12 | medium | Headline score from zeroed subjective dims; ci profile; cycles under Security | done (#63, #64, #66) |
 | CE-13 | medium | Exclusions applied after language and state resolution | dropped |
 | CE-14 | medium | Auto-detect walks to an ancestor package.json | dropped |
 | CE-15 | low | No detector or domain disable | open → 3.12 |

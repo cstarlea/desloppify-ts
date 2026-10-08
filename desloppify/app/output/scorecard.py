@@ -35,7 +35,7 @@ from desloppify.app.output.scorecard_parts.theme import (
     score_color,
 )
 from desloppify.base.discovery.paths import get_project_root
-from desloppify.state_scoring import score_snapshot
+from desloppify.state_scoring import headline_score, score_snapshot
 
 logger = logging.getLogger(__name__)
 
@@ -49,8 +49,10 @@ def generate_scorecard(state: dict, output_path: str | Path) -> Path:
     output_path = Path(output_path)
 
     scores = score_snapshot(state)
-    main_score = scores.overall or 0
-    strict_score = scores.strict or 0
+    headline = headline_score(state)
+    main_score = headline.score or 0
+    # A provisional (objective) headline has no strict counterpart to show.
+    strict_score = None if headline.provisional else scores.strict or 0
 
     project_name = resolve_project_name(get_project_root())
     package_version = resolve_package_version(
@@ -99,6 +101,7 @@ def generate_scorecard(state: dict, output_path: str | Path) -> Path:
         lp_right=divider_x - scale(11),
         lp_top=content_top + scale(4),
         lp_bot=content_bot - scale(4),
+        strict_label="objective · provisional" if headline.provisional else "strict",
     )
 
     # Vertical divider with ornament

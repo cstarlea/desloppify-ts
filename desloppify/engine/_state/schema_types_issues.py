@@ -92,6 +92,9 @@ class StateStats(TypedDict, total=False):
     false_positive: int
     deferred: int
     triaged_out: int
+    # wontfix issues strict still fails (not confirmed gone by a scan)
+    wontfix_debt: int
+    wontfix_debt_by_tier: dict[str, int]
     by_tier: dict[str, TierStats]
 
 
@@ -103,6 +106,7 @@ class DimensionScore(TypedDict, total=False):
     failing: int
     tier: int
     carried_forward: bool
+    carried_forward_since_scan: int  # first scan the dimension was carried in
     detectors: dict[str, Any]
     coverage_status: str
     coverage_confidence: float

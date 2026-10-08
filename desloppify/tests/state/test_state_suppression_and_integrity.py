@@ -267,3 +267,48 @@ class TestScoreAntiGaming:
         remove_ignored_issues(st, "unused::*")
         assert st["subjective_integrity"]["target_score"] == 95.0
         assert st["subjective_integrity"]["status"] == "disabled"
+
+
+class TestWontfixDebtTotals:
+    """Debt totals follow strict: a scan-confirmed-gone wontfix is not debt."""
+
+    def _wontfix_then_scan(self, *, still_present: int):
+        from desloppify.state import resolve_issues
+
+        st = empty_state()
+        issues = [
+            _make_raw_issue(f"orphaned::src/m{i}.ts", detector="orphaned", file=f"src/m{i}.ts")
+            for i in range(3)
+        ]
+        opts = MergeScanOptions(lang="typescript", potentials={"orphaned": 3}, force_resolve=True)
+        merge_scan(st, issues, opts)
+        resolve_issues(
+            st,
+            "orphaned",
+            "wontfix",
+            note="plugin entry points",
+            attestation="I have actually reviewed this and I am not gaming the score.",
+        )
+        merge_scan(st, issues[:still_present], opts)
+        return st
+
+    def test_stats_exclude_scan_verified_wontfix(self):
+        st = self._wontfix_then_scan(still_present=1)
+        assert st["stats"]["wontfix"] == 3
+        assert st["stats"]["wontfix_debt"] == 1
+        assert st["stats"]["wontfix_debt_by_tier"] == {"3": 1}
+
+    def test_debt_displays_match_strict(self):
+        from desloppify.app.commands.status.render_structural import build_area_rows
+        from desloppify.intelligence.narrative.dimensions import _analyze_debt
+
+        st = self._wontfix_then_scan(still_present=0)
+        assert st["stats"]["wontfix"] == 3
+        assert st["stats"]["wontfix_debt"] == 0
+        assert st["strict_score"] == st["overall_score"]
+
+        debt = _analyze_debt(st["dimension_scores"], st["issues"], [])
+        assert debt["wontfix_count"] == 0
+
+        areas = [("src", list(st["issues"].values()))]
+        assert build_area_rows(areas)[0][4] == "0"

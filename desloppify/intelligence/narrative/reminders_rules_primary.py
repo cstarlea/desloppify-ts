@@ -7,6 +7,7 @@ from datetime import UTC
 from datetime import datetime as _dt
 
 from desloppify.base.output.fallbacks import log_best_effort_failure
+from desloppify.engine._scoring.policy.core import is_wontfix_debt
 from desloppify.intelligence.narrative._constants import _FEEDBACK_URL, STRUCTURAL_MERGE
 from desloppify.state_io import StateModel
 
@@ -110,7 +111,7 @@ def _wontfix_debt_reminders(
 
     stale_wontfix = []
     for issue in (state.get("work_items") or state.get("issues", {})).values():
-        if issue.get("status") != "wontfix":
+        if not is_wontfix_debt(issue):
             continue
         resolved_at = issue.get("resolved_at")
         if not resolved_at:

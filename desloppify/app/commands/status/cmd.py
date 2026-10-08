@@ -12,7 +12,7 @@ from desloppify.engine._scoring.results.core import compute_health_breakdown
 from desloppify.engine.planning.scorecard_projection import (
     scorecard_dimensions_payload,
 )
-from desloppify.state_scoring import score_snapshot, suppression_metrics
+from desloppify.state_scoring import headline_score, score_snapshot, suppression_metrics
 
 from .flow import render_terminal_status
 
@@ -80,6 +80,7 @@ def _status_json_payload(
         "objective_score": scores.objective,
         "strict_score": scores.strict,
         "verified_strict_score": scores.verified,
+        "headline": headline_score(state)._asdict(),
         "dimension_scores": dim_scores,
         "score_breakdown": compute_health_breakdown(dim_scores) if dim_scores else None,
         "scorecard_dimensions": scorecard_dims,
