@@ -64,7 +64,7 @@ class TestAutoResolveOutOfScope:
                 "detector": "unused",
             },
         }
-        resolved, _lang, out_of_scope, detectors = verify_disappeared(
+        resolved, _lang, detectors = verify_disappeared(
             existing,
             current_ids=set(),
             suspect_detectors=set(),
@@ -74,16 +74,15 @@ class TestAutoResolveOutOfScope:
         )
         assert existing["f1"]["status"] == "open"
         assert existing["f2"]["status"] == "open"
-        assert out_of_scope == 0
         assert resolved == 0
         assert detectors == set()
 
-    def test_out_of_scope_fixed_issues_get_scan_verification(self):
-        """Resolved items can be scan-verified when absent in the current scope."""
+    def test_out_of_scope_fixed_issues_keep_their_mark(self):
+        """A resolved issue outside scan_path is not confirmed absent (2.39)."""
         existing = {
             "f1": {
                 "id": "f1", "status": "fixed", "file": "supabase/fn.ts",
-                "detector": "smells",
+                "detector": "smells", "note": "done",
                 "resolution_attestation": {
                     "kind": "manual",
                     "text": "done",
@@ -91,22 +90,27 @@ class TestAutoResolveOutOfScope:
                     "scan_verified": False,
                 },
             },
+            "f2": {
+                "id": "f2", "status": "false_positive", "file": "supabase/other.ts",
+                "detector": "smells",
+                "resolution_attestation": {"kind": "manual", "scan_verified": True},
+            },
         }
-        resolved, _lang, out_of_scope, detectors = verify_disappeared(
+        resolved, _lang, detectors = verify_disappeared(
             existing,
             current_ids=set(),
             suspect_detectors=set(),
             now="2026-03-01T00:00:00+00:00",
             lang=None,
             scan_path="src",
+            confirmed_detectors={"smells"},
         )
-        attestation = existing["f1"]["resolution_attestation"]
         assert existing["f1"]["status"] == "fixed"
-        assert attestation["scan_verified"] is True
-        assert "Still absent in current scan scope" in existing["f1"]["note"]
-        assert out_of_scope == 1
+        assert existing["f1"]["resolution_attestation"]["scan_verified"] is False
+        assert existing["f1"]["note"] == "done"
+        assert existing["f2"]["resolution_attestation"]["scan_verified"] is True
         assert resolved == 0
-        assert "smells" in detectors
+        assert detectors == set()
 
     def test_no_scan_path_leaves_open_items_unchanged(self):
         """When scan_path is None, open disappeared items still stay open."""
@@ -116,7 +120,7 @@ class TestAutoResolveOutOfScope:
                 "detector": "unused",
             },
         }
-        resolved, _lang, out_of_scope, _detectors = verify_disappeared(
+        resolved, _lang, _detectors = verify_disappeared(
             existing,
             current_ids=set(),
             suspect_detectors=set(),
@@ -126,7 +130,6 @@ class TestAutoResolveOutOfScope:
         )
         assert existing["f1"]["status"] == "open"
         assert resolved == 0
-        assert out_of_scope == 0
 
     def test_dot_scan_path_leaves_open_items_unchanged(self):
         """scan_path='.' still leaves open disappeared items unchanged."""
@@ -136,7 +139,7 @@ class TestAutoResolveOutOfScope:
                 "detector": "unused",
             },
         }
-        resolved, _lang, out_of_scope, _detectors = verify_disappeared(
+        resolved, _lang, _detectors = verify_disappeared(
             existing,
             current_ids=set(),
             suspect_detectors=set(),
@@ -146,31 +149,59 @@ class TestAutoResolveOutOfScope:
         )
         assert existing["f1"]["status"] == "open"
         assert resolved == 0
-        assert out_of_scope == 0
 
-    def test_out_of_scope_verification_adds_to_resolved_detectors(self):
-        """Out-of-scope verification still records affected detectors."""
+    def test_resolved_issues_verified_only_on_confirmed_absence(self):
+        """fixed/false_positive need the detector to have run, like open issues (2.39)."""
+        def _issue(status: str, detector: str) -> dict:
+            return {
+                "id": f"{detector}-{status}", "status": status,
+                "file": "src/file.ts", "detector": detector, "note": "mine",
+                "resolution_attestation": {"kind": "manual", "scan_verified": False},
+            }
+
         existing = {
-            "f1": {
-                "id": "f1", "status": "false_positive", "file": "other/file.ts",
-                "detector": "smells",
-                "resolution_attestation": {
-                    "kind": "manual",
-                    "text": "false positive",
-                    "attested_at": "2026-02-01T00:00:00+00:00",
-                    "scan_verified": False,
-                },
-            },
+            f["id"]: f
+            for f in (
+                _issue("fixed", "smells"),
+                _issue("false_positive", "smells"),
+                _issue("fixed", "unused"),
+                _issue("false_positive", "unused"),
+            )
         }
-        _resolved, _lang, _out_of_scope, detectors = verify_disappeared(
+        resolved, _lang, detectors = verify_disappeared(
             existing,
             current_ids=set(),
             suspect_detectors=set(),
             now="2026-01-01T00:00:00+00:00",
             lang=None,
             scan_path="src",
+            confirmed_detectors={"smells"},
         )
-        assert "smells" in detectors
+        assert resolved == 2
+        assert detectors == {"smells"}
+        for issue_id, verified in (
+            ("smells-fixed", True),
+            ("smells-false_positive", True),
+            ("unused-fixed", False),
+            ("unused-false_positive", False),
+        ):
+            issue = existing[issue_id]
+            assert issue["status"] in {"fixed", "false_positive"}
+            assert issue["resolution_attestation"]["scan_verified"] is verified
+            assert issue["note"] == "mine"
+
+        # Already verified: a later scan doesn't count it again.
+        resolved, _lang, detectors = verify_disappeared(
+            existing,
+            current_ids=set(),
+            suspect_detectors=set(),
+            now="2026-01-02T00:00:00+00:00",
+            lang=None,
+            scan_path="src",
+            confirmed_detectors={"smells"},
+        )
+        assert resolved == 0
+        assert detectors == set()
 
     def test_generated_zone_issue_auto_resolves_when_absent(self):
         """A scan clears historical issues that current zone policy excludes."""
@@ -187,7 +218,7 @@ class TestAutoResolveOutOfScope:
             [generated_file], [ZoneRule(Zone.GENERATED, ["/migrations/"])]
         )
 
-        resolved, _lang, out_of_scope, detectors = verify_disappeared(
+        resolved, _lang, detectors = verify_disappeared(
             existing,
             current_ids=set(),
             suspect_detectors=set(),
@@ -198,7 +229,6 @@ class TestAutoResolveOutOfScope:
         )
 
         assert resolved == 1
-        assert out_of_scope == 0
         assert detectors == {"smells"}
         assert existing["generated-smells"]["status"] == "auto_resolved"
         assert "zone policy now skips smells" in existing["generated-smells"]["note"]

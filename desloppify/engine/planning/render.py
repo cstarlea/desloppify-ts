@@ -7,7 +7,7 @@ from datetime import date
 from desloppify.base.exception_sets import PLAN_LOAD_EXCEPTIONS
 from desloppify.base.output.terminal import LOC_COMPACT_THRESHOLD
 from desloppify.base.registry import dimension_action_type
-from desloppify.engine._scoring.policy.core import DIMENSIONS
+from desloppify.engine._scoring.policy.core import DIMENSIONS, is_loc_weighted_dimension
 from desloppify.engine._scoring.subjective.core import DISPLAY_NAMES
 from desloppify.engine._work_queue.core import QueueBuildOptions
 from desloppify.engine.planning.queue_policy import (
@@ -107,6 +107,7 @@ def _plan_dimension_table(state: PlanState) -> list[str]:
     ]
     static_names: set[str] = set()
     rendered_names: set[str] = set()
+    loc_weighted = False
     subjective_display_names = {
         display.lower() for display in DISPLAY_NAMES.values()
     }
@@ -125,6 +126,8 @@ def _plan_dimension_table(state: PlanState) -> list[str]:
         static_names.add(dim.name)
         rendered_names.add(dim.name)
         checks = ds.get("checks", 0)
+        marker = "\\*" if is_loc_weighted_dimension(ds) else ""
+        loc_weighted = loc_weighted or bool(marker)
         issues = ds.get("failing", 0)
         score_val = ds.get("score", 100)
         strict_val = ds.get("strict", score_val)
@@ -132,7 +135,7 @@ def _plan_dimension_table(state: PlanState) -> list[str]:
         action = dimension_action_type(dim.name)
         lines.append(
             f"| {bold}{dim.name}{bold} | T{dim.tier} | "
-            f"{checks:,} | {issues} | {score_val:.1f}% | {strict_val:.1f}% | {action} |"
+            f"{checks:,}{marker} | {issues} | {score_val:.1f}% | {strict_val:.1f}% | {action} |"
         )
 
     from desloppify.engine.planning.dimension_rows import scorecard_dimension_rows
@@ -194,6 +197,8 @@ def _plan_dimension_table(state: PlanState) -> list[str]:
                 f"— | {issues} | {score_val:.1f}% | {strict_val:.1f}% | review |"
             )
 
+    if loc_weighted:
+        lines.extend(["", "\\* files weighted by √LOC (max 50 each), not a count of checks"])
     lines.append("")
     return lines
 

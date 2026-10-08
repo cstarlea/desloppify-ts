@@ -18,11 +18,18 @@ from desloppify.languages.typescript.detectors.deps.imports import (
     MOCK,
     ImportExtractor,
 )
+from desloppify.languages.typescript.detectors.deps.packages import workspace_entries
 from desloppify.languages.typescript.detectors.deps.reexports import NAMESPACE, definition_files
 from desloppify.languages.typescript.detectors.deps.resolver import project_resolver
 from desloppify.languages.typescript.plugin_contract import TS_BARREL_NAMES
-from desloppify.languages.typescript.syntax.queries import descendants, imports
-from desloppify.languages.typescript.syntax.tree import ParsedSource, parsed_file
+from desloppify.languages.typescript.syntax.queries import descendants, directive, imports
+from desloppify.languages.typescript.syntax.tree import (
+    ParsedSource,
+    get_parser,
+    grammar_for,
+    parse_text,
+    parsed_file,
+)
 
 TS_REEXPORT_RE = re.compile(
     r"""^export\s+(?:\{[^}]*\}|\*)\s+from\s+['\"]([^'\"]+)['\"]""", re.MULTILINE
@@ -100,11 +107,52 @@ def _relative_if_under_root(path_str: str) -> str:
         return path_str
 
 
+# Top-level statements that run no code: types, imports, ambient declarations.
+_TYPE_ONLY_STATEMENTS = frozenset(
+    {
+        "comment",
+        "hash_bang_line",
+        "empty_statement",
+        "import_statement",
+        "type_alias_declaration",
+        "interface_declaration",
+        "ambient_declaration",
+    }
+)
+
+
 def has_testable_logic(filepath: str, content: str) -> bool:
-    """Return True if a TypeScript file has runtime logic worth testing."""
+    """Return True if a TypeScript file has runtime logic worth testing.
+
+    Decided on the syntax tree when tree-sitter is available, so multi-line
+    type aliases (``type A =\\n  | B\\n  | C``) don't count as code; a
+    line heuristic is the fallback.
+    """
     if filepath.endswith(".d.ts"):
         return False
+    parsed = parse_text(content, filepath)
+    if parsed is not None:
+        return any(_is_runtime_statement(parsed, node) for node in parsed.root.named_children)
+    return _has_testable_logic_lines(content)
 
+
+def _is_runtime_statement(parsed: ParsedSource, node) -> bool:
+    if node.type in _TYPE_ONLY_STATEMENTS or directive(parsed, node) is not None:
+        return False
+    if node.type != "export_statement":
+        return True
+    if node.child_by_field_name("source") is not None:
+        return False  # re-export
+    declaration = node.child_by_field_name("declaration")
+    if declaration is not None:
+        return declaration.type not in _TYPE_ONLY_STATEMENTS
+    # ``export { a }`` forwards a binding; ``export default <expr>`` / ``export =`` run code.
+    return node.child_by_field_name("value") is not None or not any(
+        child.type == "export_clause" for child in node.named_children
+    )
+
+
+def _has_testable_logic_lines(content: str) -> bool:
     in_block_comment = False
     brace_context = False  # True when inside type/interface/import/export braces
     brace_depth = 0
@@ -185,6 +233,14 @@ def _production_key(resolved: str, production_files: set[str]) -> str | None:
     return relative if relative in production_files else None
 
 
+def public_entry_files(production_files: set[str]) -> set[str]:
+    """Production files a workspace package exposes (``exports``, ``main``, ``types``...)."""
+    root = get_project_root()
+    candidates = sorted(str(root / path) if not os.path.isabs(path) else path for path in production_files)
+    entries = workspace_entries(project_resolver(root).packages, candidates)
+    return {key for path in entries.public if (key := _production_key(path, production_files))}
+
+
 def resolve_import_spec(
     spec: str, test_path: str, production_files: set[str]
 ) -> str | None:
@@ -237,6 +293,12 @@ def resolve_barrel_reexports(filepath: str, production_files: set[str]) -> set[s
         if resolved:
             results.add(resolved)
     return results
+
+
+def follows_reexport_names() -> bool:
+    """True when ``imported_definitions`` can parse, so name-blind barrel and
+    facade expansion is unnecessary."""
+    return get_parser(grammar_for("x.ts")) is not None and get_parser(grammar_for("x.tsx")) is not None
 
 
 def imported_definitions(test_path: str, production_files: set[str]) -> set[str]:

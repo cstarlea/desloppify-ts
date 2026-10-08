@@ -6,7 +6,7 @@ from desloppify.app.commands.scan.reporting.presentation import dimension_bar
 from desloppify.base.config import DEFAULT_TARGET_STRICT_SCORE
 from desloppify.base.output.terminal import colorize
 from desloppify.base.registry import dimension_action_type
-from desloppify.engine.scoring import DIMENSIONS
+from desloppify.engine.scoring import DIMENSIONS, is_loc_weighted_dimension
 from desloppify.engine.planning.scorecard_projection import (
     scorecard_subjective_entries,
 )
@@ -84,7 +84,7 @@ def render_objective_dimensions(
 
         bar = dimension_bar(score_val, colorize_fn=colorize, bar_len=bar_len)
         focus = colorize(" ←", "yellow") if dim.name == lowest_name else "  "
-        checks_str = f"{checks:>7,}"
+        checks_str = f"{checks:>6,}*" if is_loc_weighted_dimension(ds) else f"{checks:>7,}"
         action = dimension_action_type(dim.name)
         print(
             f"  {dim.name:<22} {checks_str}  {score_val:5.1f}%  {strict_val:5.1f}%  {bar}  T{dim.tier}  {action}{focus}"

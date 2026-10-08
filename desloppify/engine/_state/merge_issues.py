@@ -88,10 +88,16 @@ def _mark_scan_verified(
 # gone resolves all of them the same way.
 _AUTO_RESOLVABLE_STATUSES = frozenset({"open", "deferred", "triaged_out"})
 
-# Statuses that only change on a confirmed absence: the auto-resolvable ones,
-# plus wontfix, which keeps its status and is marked scan-verified instead.
-# A wontfix decision is kept if the finding later comes back.
-_CONFIRMED_ABSENCE_STATUSES = _AUTO_RESOLVABLE_STATUSES | {"wontfix"}
+# Statuses that keep their manual disposition on a confirmed absence and are
+# marked scan-verified instead. If the finding later comes back, a fixed issue
+# is reopened.
+_SCAN_VERIFIABLE_STATUSES = frozenset({"wontfix", "fixed", "false_positive"})
+
+_CONFIRMED_ABSENCE_STATUSES = _AUTO_RESOLVABLE_STATUSES | _SCAN_VERIFIABLE_STATUSES
+
+# User judgements that a reported finding doesn't overturn: a scan never
+# changes these statuses.
+_KEPT_ON_RETURN_STATUSES = frozenset({"wontfix", "false_positive"})
 
 
 def _is_scan_verified(issue: dict) -> bool:
@@ -138,25 +144,23 @@ def verify_disappeared(
     project_root: str | None = None,
     zone_map=None,
     confirmed_detectors: set[str] | None = None,
-) -> tuple[int, int, int, set[str]]:
+) -> tuple[int, int, set[str]]:
     """Update scan corroboration for issues absent from scan.
 
-    Returns (resolved_count, skipped_other_lang, resolved_out_of_scope, changed_detectors).
+    Returns (resolved_count, skipped_other_lang, changed_detectors).
     An absence is confirmed when the detector is known to have run in the
     current scan, the zone policy now skips it, or the source file no longer
     exists. Open, deferred and triaged_out issues then become
-    ``auto_resolved``; wontfix issues keep their status and are marked
-    scan-verified. Manually resolved items (fixed, false_positive) keep their
-    status and are marked scan-verified when they remain absent.
+    ``auto_resolved``; wontfix, fixed and false_positive issues keep their
+    status and are marked scan-verified. Issues outside ``scan_path`` are
+    never confirmed and keep their mark as it was.
     """
-    resolved = skipped_other_lang = resolved_out_of_scope = 0
+    resolved = skipped_other_lang = 0
     resolved_detectors: set[str] = set()
 
     for issue_id, previous in existing.items():
         previous_status = previous.get("status")
-        if issue_id in current_ids or previous_status not in (
-            _CONFIRMED_ABSENCE_STATUSES | {"fixed", "false_positive"}
-        ):
+        if issue_id in current_ids or previous_status not in _CONFIRMED_ABSENCE_STATUSES:
             continue
 
         if lang and previous.get("lang") and previous["lang"] != lang:
@@ -176,71 +180,46 @@ def verify_disappeared(
                 not previous["file"].startswith(prefix)
                 and previous["file"] != scan_path
             ):
-                if previous_status not in _CONFIRMED_ABSENCE_STATUSES:
-                    scope_note = f"Still absent in current scan scope ({scan_path})"
-                    _mark_scan_verified(
-                        previous,
-                        now,
-                        note=scope_note,
-                        attestation_text=scope_note,
-                    )
-                    resolved_detectors.add(previous.get("detector", "unknown"))
-                    resolved_out_of_scope += 1
                 continue
 
         if exclude and any(matches_exclusion(previous["file"], ex) for ex in exclude):
             continue
 
-        if previous_status in _CONFIRMED_ABSENCE_STATUSES:
-            # If the source file no longer exists on disk, auto-resolve:
-            # the issue cannot be actionable for a deleted file.
-            file_path = previous.get("file", "")
-            file_deleted = False
-            if project_root and file_path and file_path != ".":
-                file_deleted = not os.path.exists(
-                    os.path.join(project_root, file_path)
-                )
-            # Auto-resolve if zone policy now says this detector should be
-            # skipped for this file's zone (e.g. test_coverage on test files).
-            # Bug reported by @claytona500 in PR #478.
-            detector = previous.get("detector", "")
-            if zone_map and file_path and should_skip_issue(zone_map, file_path, detector):
-                reason = f"zone policy now skips {detector} for this file"
-            elif file_deleted:
-                reason = "source file no longer exists"
-            elif detector and confirmed_detectors is not None and detector in confirmed_detectors:
-                reason = "absent from latest detector output"
-            else:
+        # If the source file no longer exists on disk, auto-resolve:
+        # the issue cannot be actionable for a deleted file.
+        file_path = previous.get("file", "")
+        file_deleted = False
+        if project_root and file_path and file_path != ".":
+            file_deleted = not os.path.exists(os.path.join(project_root, file_path))
+        # Auto-resolve if zone policy now says this detector should be
+        # skipped for this file's zone (e.g. test_coverage on test files).
+        # Bug reported by @claytona500 in PR #478.
+        detector = previous.get("detector", "")
+        if zone_map and file_path and should_skip_issue(zone_map, file_path, detector):
+            reason = f"zone policy now skips {detector} for this file"
+        elif file_deleted:
+            reason = "source file no longer exists"
+        elif detector and confirmed_detectors is not None and detector in confirmed_detectors:
+            reason = "absent from latest detector output"
+        else:
+            continue
+        if previous_status in _SCAN_VERIFIABLE_STATUSES:
+            if _is_scan_verified(previous):
                 continue
-            if previous_status == "wontfix":
-                if _is_scan_verified(previous):
-                    continue
-                _mark_scan_verified(
-                    previous,
-                    now,
-                    note=None,
-                    attestation_text=f"Scan confirmed the finding is gone: {reason}",
-                )
-                resolved_detectors.add(detector or "unknown")
-                resolved += 1
-                continue
+            _mark_scan_verified(
+                previous,
+                now,
+                note=None,
+                attestation_text=f"Scan confirmed the finding is gone: {reason}",
+            )
+        else:
             _mark_auto_resolved(
                 previous, now, reason=reason, previous_status=previous_status
             )
-            resolved_detectors.add(detector or "unknown")
-            resolved += 1
-            continue
-
-        _mark_scan_verified(
-            previous,
-            now,
-            note="Still absent from scan after manual resolution",
-            attestation_text="Absent from detector output in latest scan",
-        )
-        resolved_detectors.add(previous.get("detector", "unknown"))
+        resolved_detectors.add(detector or "unknown")
         resolved += 1
 
-    return resolved, skipped_other_lang, resolved_out_of_scope, resolved_detectors
+    return resolved, skipped_other_lang, resolved_detectors
 
 
 def upsert_issues(
@@ -317,13 +296,16 @@ def upsert_issues(
         previous["suppressed_at"] = None
         previous["suppression_pattern"] = None
 
-        if previous["status"] == "wontfix" and _is_scan_verified(previous):
-            # The accepted finding is back: it stays wontfix and counts again.
-            _clear_scan_verified(previous)
-            changed_detectors.add(detector)
+        if previous["status"] in _KEPT_ON_RETURN_STATUSES:
+            # A wontfix or false_positive judgement covers the finding being
+            # reported: the status stays, and a scan-verified mark is cleared
+            # so the issue counts again where the mode counts it.
+            if _is_scan_verified(previous):
+                _clear_scan_verified(previous)
+                changed_detectors.add(detector)
             continue
 
-        if previous["status"] in ("fixed", "auto_resolved", "false_positive"):
+        if previous["status"] in ("fixed", "auto_resolved"):
             # Review-request issues are condition-based. When just
             # completed by an agent import, skip reopening to avoid a
             # resolve-then-reopen loop on the same scan cycle.

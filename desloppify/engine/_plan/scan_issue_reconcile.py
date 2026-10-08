@@ -7,6 +7,7 @@ from datetime import UTC, datetime, timedelta
 
 from desloppify.engine._plan.annotations import get_issue_note
 from desloppify.engine._plan.constants import SYNTHETIC_PREFIXES
+from desloppify.base.enums import resolved_statuses
 from desloppify.engine._plan.cluster_semantics import EXECUTION_STATUS_DONE, cluster_is_active
 from desloppify.engine._plan.operations.lifecycle import clear_focus_if_cluster_empty
 from desloppify.engine._plan.operations.meta import append_log_entry
@@ -49,6 +50,17 @@ def _find_candidates(
 
 
 _ALIVE_STATUSES = frozenset({"open", "deferred", "triaged_out"})
+
+# A wontfix or false_positive skip records a user decision the issue keeps
+# (a scan never changes these statuses), so reconcile never drops the entry.
+_DECIDED_SKIP_STATUSES = frozenset({"wontfix", "false_positive"})
+
+
+def _has_decided_skip(plan: PlanModel, state: StateModel, issue_id: str) -> bool:
+    if issue_id not in plan.get("skipped", {}):
+        return False
+    issue = (state.get("work_items") or state.get("issues", {})).get(issue_id)
+    return issue is not None and issue.get("status") in _DECIDED_SKIP_STATUSES
 
 
 def _is_issue_alive(state: StateModel, issue_id: str) -> bool:
@@ -96,26 +108,35 @@ def _supersede_id(
         entry["note"] = override_note
 
     plan["superseded"][issue_id] = entry
+    plan.get("skipped", {}).pop(issue_id, None)
+    _detach_action_references(plan, issue_id, now)
+    return True
 
-    # Remove from queue_order, skipped, promoted_ids, cluster issue_ids
+
+def _detach_action_references(plan: PlanModel, issue_id: str, now: str) -> bool:
+    """Remove an issue from queue_order, promoted_ids and clusters. Returns True if changed."""
+    changed = False
     order: list[str] = plan.get("queue_order", [])
-    skipped: dict = plan.get("skipped", {})
     if issue_id in order:
         order.remove(issue_id)
-    skipped.pop(issue_id, None)
+        changed = True
+    promoted_before = len(plan.get("promoted_ids", []))
     prune_promoted_ids(plan, {issue_id})
+    changed = changed or len(plan.get("promoted_ids", [])) != promoted_before
     for cluster in plan.get("clusters", {}).values():
         ids = cluster.get("issue_ids", [])
         if issue_id in ids:
             ids.remove(issue_id)
+            changed = True
 
     # Clear stale cluster reference from override
     override = plan.get("overrides", {}).get(issue_id)
     if override and override.get("cluster"):
         override["cluster"] = None
         override["updated_at"] = now
+        changed = True
 
-    return True
+    return changed
 
 
 def _prune_old_superseded(plan: PlanModel, now_dt: datetime) -> list[str]:
@@ -163,10 +184,11 @@ def _restore_returned_superseded(plan: PlanModel, state: StateModel) -> None:
     A finding that disappears is superseded; if a later scan reports it again
     the issue reopens. Left in ``superseded``, every reconcile would strip the
     issue from the queue, skips and clusters, undoing a fresh skip or reorder.
+    The same goes for an issue with a wontfix or false_positive skip.
     """
     superseded = plan.get("superseded", {})
     for fid in list(superseded):
-        if _is_issue_alive(state, fid):
+        if _is_issue_alive(state, fid) or _has_decided_skip(plan, state, fid):
             superseded.pop(fid, None)
 
 
@@ -271,6 +293,11 @@ def _supersede_nonactionable_action_references(
         issue = issues.get(fid)
         if issue is None or issue.get("status") in _ALIVE_STATUSES:
             continue
+        if _has_decided_skip(plan, state, fid):
+            # Not actionable work, but the skip entry stays.
+            if _detach_action_references(plan, fid, now):
+                result.changes += 1
+            continue
         if _supersede_id(plan, state, fid, now):
             result.superseded.append(fid)
             result.changes += 1
@@ -327,9 +354,6 @@ def _complete_empty_manual_clusters(
         result.changes += 1
 
 
-_RESOLVED_STATUSES = frozenset({"fixed", "auto_resolved", "wontfix"})
-
-
 def _reconcile_active_clusters_by_item_status(
     plan: PlanModel,
     state: StateModel,
@@ -346,7 +370,7 @@ def _reconcile_active_clusters_by_item_status(
         if not issue_ids:
             continue
         all_resolved = all(
-            issues.get(fid, {}).get("status") in _RESOLVED_STATUSES
+            issues.get(fid, {}).get("status") in resolved_statuses()
             for fid in issue_ids
         )
         if not all_resolved:

@@ -134,8 +134,9 @@ def extract_ts_functions(filepath: str) -> list[FunctionInfo]:
     """Extract function/component bodies from a TS/TSX file.
 
     Named definitions from the syntax tree (declarations, variable-bound
-    functions, class members); functions nested in one are part of its body,
-    and ``obj.member = function`` implementations are left out.
+    functions, class and object-literal members, anonymous default exports);
+    functions nested in one are part of its body, and ``obj.member = function``
+    implementations are left out.
     Without tree-sitter a line regex finds top-level-looking declarations.
     """
     parsed = parsed_file(filepath)
@@ -170,6 +171,7 @@ def extract_ts_functions(filepath: str) -> list[FunctionInfo]:
                 body_hash=hashlib.md5(normalized.encode(), usedforsecurity=False).hexdigest(),
                 params=_param_names(parsed, info),
                 default_export=info.default_export,
+                object_member=definition.object_member,
             )
         )
     return functions

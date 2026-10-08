@@ -7,10 +7,12 @@ from pathlib import Path
 import pytest
 
 import desloppify.languages.typescript.detectors.deps.resolve as deps_resolve_mod
+import desloppify.languages.typescript.test_coverage as ts_coverage_mod
 from desloppify.engine.detectors.coverage.mapping import import_based_mapping, naming_based_mapping
 from desloppify.languages.typescript.detectors.deps.imports import ImportExtractor
 from desloppify.languages.typescript.detectors.deps.resolver import clear_resolver_cache
 from desloppify.languages.typescript.test_coverage import (
+    has_testable_logic,
     imported_definitions,
     map_test_to_source,
     parse_test_import_specs,
@@ -100,6 +102,21 @@ def test_imported_name_is_credited_to_its_definition_through_any_depth(tmp_path)
 
 
 @needs_treesitter
+def test_barrel_siblings_of_an_imported_name_are_not_credited(tmp_path, monkeypatch):
+    files = _chain_project(tmp_path)
+    test = _touch(tmp_path, "test/parse.test.ts", "import { parse } from '../src';\nparse(' a ');\n")
+    production = set(files.values())
+    graph = {test: {"imports": {files["index"]}}, files["index"]: {"imports": {files["api"], files["other"]}}}
+    tested = import_based_mapping(graph, {test}, production, "typescript")
+    assert files["impl"] in tested
+    assert files["other"] not in tested
+
+    # Without tree-sitter the name-blind barrel and facade hops remain the fallback.
+    monkeypatch.setattr(ts_coverage_mod, "follows_reexport_names", lambda: False)
+    assert files["other"] in import_based_mapping(graph, {test}, production, "typescript")
+
+
+@needs_treesitter
 def test_type_only_imports_and_exports_are_not_followed(tmp_path):
     files = _chain_project(tmp_path)
     test = _touch(
@@ -128,8 +145,59 @@ def test_namespace_import_follows_the_members_used(tmp_path):
 
 
 @needs_treesitter
+def test_anonymous_default_export_is_a_definition(tmp_path):
+    files = {
+        "index": _touch(tmp_path, "src/index.ts", "export * as locales from './locales';\n"),
+        "locales": _touch(tmp_path, "src/locales.ts", "export { default as ka } from './ka';\nexport { default as ro } from './ro';\n"),
+        "ka": _touch(tmp_path, "src/ka.ts", "export default function () {\n  return 1;\n}\n"),
+        "ro": _touch(tmp_path, "src/ro.ts", "export default { ro: true };\n"),
+    }
+    test = _touch(tmp_path, "test/ka.test.ts", "import * as z from '../src';\nz.locales.ka();\nz.locales.ro;\n")
+    assert imported_definitions(test, set(files.values())) == {files["ka"], files["ro"]}
+
+
+@needs_treesitter
 def test_star_export_cycles_terminate(tmp_path):
     a = _touch(tmp_path, "src/a.ts", "export * from './b';\n")
     b = _touch(tmp_path, "src/b.ts", "export * from './a';\n")
     test = _touch(tmp_path, "test/a.test.ts", "import { missing } from '../src/a';\n")
     assert imported_definitions(test, {a, b}) == set()
+
+
+# ── testable logic ──────────────────────────────────────────
+
+
+@needs_treesitter
+@pytest.mark.parametrize(
+    "content",
+    [
+        # zod's json-schema.ts: a multi-line union, then a commented-out interface
+        "export type Schema =\n  | ObjectSchema\n  | ArraySchema;\n\n// export interface JSONSchema {\n//   type?: string;\n// }\n",
+        "export type Pick2<T> =\n  T extends string\n    ? 'a'\n    : 'b';\n",
+        "import type { A } from './a';\nexport default interface B extends A {\n  b: string;\n}\n",
+        "'use client';\nexport type { A } from './a';\nexport {};\ndeclare const x: number;\n",
+    ],
+)
+def test_type_only_files_have_no_testable_logic(content):
+    assert has_testable_logic("src/types.ts", content) is False
+
+
+@needs_treesitter
+@pytest.mark.parametrize(
+    "content",
+    [
+        "export type A =\n  | 'a'\n  | 'b';\nexport const a: A = 'a';\n",
+        "export enum Color {\n  Red,\n}\n",
+        "export default {\n  a: 1,\n};\n",
+        "export default function () {\n  return 1;\n}\n",
+        "const a = 1;\nexport { a };\n",
+    ],
+)
+def test_runtime_statements_are_testable_logic(content):
+    assert has_testable_logic("src/mod.ts", content) is True
+
+
+def test_line_heuristic_without_treesitter(monkeypatch):
+    monkeypatch.setattr(ts_coverage_mod, "parse_text", lambda *_args: None)
+    assert has_testable_logic("src/a.ts", "export type A = { a: 1 };\n") is False
+    assert has_testable_logic("src/a.ts", "export const a = 1;\n") is True

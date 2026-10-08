@@ -497,6 +497,41 @@ class TestUpsertIssues:
         assert reopened == 0
         assert existing["det::a.py::fn"]["status"] == "wontfix"
 
+    def test_false_positive_issue_not_reopened(self):
+        """A false-positive judgement covers the finding being reported (2.42)."""
+        old = _make_raw_issue(
+            "det::a.py::fn", detector="det", file="a.py", status="false_positive"
+        )
+        old["note"] = "detector misreads the generic"
+        old["resolution_attestation"] = {"kind": "manual", "scan_verified": False}
+        existing = {"det::a.py::fn": old}
+
+        current = _make_raw_issue("det::a.py::fn", detector="det", file="a.py")
+        _, _new, reopened, _, _ign = self._call(existing, [current])
+        issue = existing["det::a.py::fn"]
+        assert reopened == 0
+        assert issue["status"] == "false_positive"
+        assert issue["note"] == "detector misreads the generic"
+        assert issue.get("reopen_count", 0) == 0
+        assert issue["resolution_attestation"]["kind"] == "manual"
+
+    @pytest.mark.parametrize("status", ["wontfix", "false_positive"])
+    def test_returning_finding_clears_scan_verified_mark(self, status):
+        old = _make_raw_issue("det::a.py::fn", detector="det", file="a.py", status=status)
+        old["resolution_attestation"] = {
+            "kind": "manual",
+            "scan_verified": True,
+            "scan_verified_at": "2025-02-01T00:00:00+00:00",
+        }
+        existing = {"det::a.py::fn": old}
+
+        current = _make_raw_issue("det::a.py::fn", detector="det", file="a.py")
+        self._call(existing, [current])
+        issue = existing["det::a.py::fn"]
+        assert issue["status"] == status
+        assert issue["resolution_attestation"]["scan_verified"] is False
+        assert "scan_verified_at" not in issue["resolution_attestation"]
+
     # -- zone propagation --
 
     def test_zone_propagated_on_existing(self):
@@ -667,11 +702,30 @@ class TestMissingIssuesResolved:
         }
         st["issues"]["det::a.py::fn"] = old
 
-        diff = merge_scan(st, [], MergeScanOptions(lang="python", force_resolve=True))
+        diff = merge_scan(
+            st, [], MergeScanOptions(lang="python", force_resolve=True, potentials={"det": 1})
+        )
         assert diff["auto_resolved"] == 1
         assert st["issues"]["det::a.py::fn"]["status"] == "fixed"
         assert st["issues"]["det::a.py::fn"]["resolution_attestation"]["scan_verified"] is True
         assert "scan_verified_at" in st["issues"]["det::a.py::fn"]["resolution_attestation"]
+
+
+    @pytest.mark.parametrize("status", ["fixed", "false_positive"])
+    def test_missing_resolved_issue_not_verified_when_detector_did_not_run(self, status):
+        """No potential and no finding from the detector: the absence isn't confirmed."""
+        st = empty_state()
+        old = _make_raw_issue("det::a.py::fn", detector="det", file="a.py", status=status)
+        old["lang"] = "python"
+        old["resolution_attestation"] = {"kind": "manual", "scan_verified": False}
+        st["issues"]["det::a.py::fn"] = old
+
+        diff = merge_scan(
+            st, [], MergeScanOptions(lang="python", force_resolve=True, potentials={"other": 1})
+        )
+        assert diff["auto_resolved"] == 0
+        assert st["issues"]["det::a.py::fn"]["status"] == status
+        assert st["issues"]["det::a.py::fn"]["resolution_attestation"]["scan_verified"] is False
 
 
 # ---------------------------------------------------------------------------
