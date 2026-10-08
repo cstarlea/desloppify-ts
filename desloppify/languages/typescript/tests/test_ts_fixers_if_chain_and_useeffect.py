@@ -1,52 +1,23 @@
 """TypeScript fixer tests for if-chain and dead-useEffect cleanup."""
 
+import importlib.util
 import textwrap
 
-from desloppify.languages.typescript.fixers.if_chain import (
-    _find_if_chain_end,
-    fix_empty_if_chain,
-)
+import pytest
+
+from desloppify.languages.typescript.fixers.if_chain import fix_empty_if_chain
 from desloppify.languages.typescript.fixers.useeffect import fix_dead_useeffect
 
 
 # =====================================================================
-# if_chain.py — fix_empty_if_chain, _find_if_chain_end
+# if_chain.py — fix_empty_if_chain
 # =====================================================================
 
 
-class TestFindIfChainEnd:
-    """Tests for _find_if_chain_end()."""
-
-    def test_simple_if_block(self):
-        """Single if block end is found correctly."""
-        lines = ["if (x) {\n", "  doStuff();\n", "}\n"]
-        assert _find_if_chain_end(lines, 0) == 2
-
-    def test_if_else_chain_same_line(self):
-        """if/else chain where else is on the closing-brace line continues tracking."""
-        # When "} else {" is on one line, the brace tracker sees } (depth=0),
-        # recognizes "else" follows, breaks out of the char loop, but does NOT
-        # re-enter the second { on that line.  So brace_depth stays 0 and the
-        # function never finds the closing } of the else branch.  It falls
-        # through and returns `start`.
-        lines = [
-            "if (x) {\n",
-            "  a();\n",
-            "} else {\n",
-            "  b();\n",
-            "}\n",
-        ]
-        result = _find_if_chain_end(lines, 0)
-        # The current implementation returns start (0) for this pattern;
-        # fix_empty_if_chain uses apply_fixer/collapse which handles it
-        assert isinstance(result, int)
-
-    def test_fallback_to_start(self):
-        """If no braces found, returns start index."""
-        lines = ["if (x) doSomething();\n"]
-        assert _find_if_chain_end(lines, 0) == 0
-
-
+@pytest.mark.skipif(
+    importlib.util.find_spec("tree_sitter_language_pack") is None,
+    reason="the empty-if-chain fixer needs tree-sitter",
+)
 class TestFixEmptyIfChain:
     """Tests for fix_empty_if_chain()."""
 

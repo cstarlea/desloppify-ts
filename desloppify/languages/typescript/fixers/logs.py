@@ -42,7 +42,7 @@ from desloppify.languages.typescript.syntax.tree import (
 
 from .edits import apply_edits, whole_statement_range
 from .fixer_io import apply_fixer
-from .nodes import FUNCTIONS, STATEMENT_PARENTS, asi_hazards, node_key
+from .nodes import FUNCTIONS, STATEMENT_PARENTS, asi_hazards, node_key, reads_only
 
 _LOG_METHODS = frozenset({"log", "warn", "info", "debug"})
 _TAGGED_FIRST_ARG_RE = re.compile(
@@ -53,39 +53,7 @@ _DEBUG_COMMENT_RE = re.compile(r"\b(?:debug|temp|log|logging|trace)\b", re.IGNOR
 _LOGGER_NAMES = frozenset(
     {"log", "logger", "info", "warn", "warning", "error", "debug", "trace", "fatal", "notice"}
 )
-_SAFE_LEAVES = frozenset(
-    {
-        "string",
-        "number",
-        "true",
-        "false",
-        "null",
-        "undefined",
-        "identifier",
-        "this",
-        "regex",
-        "arrow_function",
-        "function_expression",
-        "function",
-    }
-)
-_SAFE_WRAPPERS = frozenset(
-    {"parenthesized_expression", "as_expression", "satisfies_expression", "non_null_expression"}
-)
-# Built-ins that only read their arguments.
-_PURE_CALLS = frozenset(
-    {
-        "JSON.stringify",
-        "Object.keys",
-        "Object.values",
-        "Object.entries",
-        "Array.isArray",
-        "String",
-        "Number",
-        "Boolean",
-    }
-)
-_PURE_METHODS = frozenset({"toFixed", "toString", "toISOString"})
+
 
 
 def fix_debug_logs(entries: list[dict], *, dry_run: bool = False) -> FixResult:
@@ -225,85 +193,12 @@ def _removable_statement(parsed: ParsedSource, call):
         return None, "not_standalone"
     args = call.child_by_field_name("arguments")
     if args is not None and not all(
-        _is_log_safe(parsed, arg) for arg in args.named_children if arg.type != "comment"
+        reads_only(parsed, arg) for arg in args.named_children if arg.type != "comment"
     ):
         return None, "side_effects"
     if _in_logger_wrapper(parsed, statement):
         return None, "logger_wrapper"
     return statement, None
-
-
-def _is_log_safe(parsed: ParsedSource, node) -> bool:
-    """Whether evaluating ``node`` only reads values."""
-    kind = node.type
-    if kind in _SAFE_LEAVES:
-        return True
-    if kind == "template_string":
-        return all(
-            bool(sub.named_children) and _is_log_safe(parsed, sub.named_children[0])
-            for sub in node.named_children
-            if sub.type == "template_substitution"
-        )
-    if kind in _SAFE_WRAPPERS:
-        return bool(node.named_children) and _is_log_safe(parsed, node.named_children[0])
-    if kind == "member_expression":
-        obj = node.child_by_field_name("object")
-        return obj is not None and _is_log_safe(parsed, obj)
-    if kind == "subscript_expression":
-        return all(_is_log_safe(parsed, c) for c in node.named_children)
-    if kind == "unary_expression":
-        operator = node.child_by_field_name("operator")
-        argument = node.child_by_field_name("argument")
-        return (
-            operator is not None
-            and operator.type != "delete"
-            and argument is not None
-            and _is_log_safe(parsed, argument)
-        )
-    if kind in ("binary_expression", "ternary_expression"):
-        return all(_is_log_safe(parsed, c) for c in node.named_children)
-    if kind == "array":
-        return all(c.type != "spread_element" and _is_log_safe(parsed, c) for c in node.named_children)
-    if kind == "object":
-        for child in node.named_children:
-            if child.type == "shorthand_property_identifier":
-                continue
-            if child.type != "pair":
-                return False
-            key, value = child.child_by_field_name("key"), child.child_by_field_name("value")
-            if key is None or key.type == "computed_property_name" or value is None:
-                return False
-            if not _is_log_safe(parsed, value):
-                return False
-        return True
-    if kind == "call_expression":
-        return _is_pure_call(parsed, node)
-    return False
-
-
-def _is_pure_call(parsed: ParsedSource, call) -> bool:
-    function = call.child_by_field_name("function")
-    args = call.child_by_field_name("arguments")
-    if function is None or args is None:
-        return False
-    if not all(
-        a.type != "spread_element" and _is_log_safe(parsed, a)
-        for a in args.named_children
-        if a.type != "comment"
-    ):
-        return False
-    if parsed.text(function) in _PURE_CALLS:
-        return True
-    if function.type == "member_expression":
-        prop = function.child_by_field_name("property")
-        obj = function.child_by_field_name("object")
-        return (
-            prop is not None
-            and parsed.text(prop) in _PURE_METHODS
-            and obj is not None
-            and _is_log_safe(parsed, obj)
-        )
-    return False
 
 
 def _in_logger_wrapper(parsed: ParsedSource, statement) -> bool:

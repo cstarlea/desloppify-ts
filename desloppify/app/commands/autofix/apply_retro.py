@@ -139,6 +139,7 @@ _SKIP_REASON_LABELS = {
     "name_taken": "the _-prefixed name is already used in that function",
     "not_standalone": "log is part of a larger expression or an unbraced if/loop/arrow body",
     "logger_wrapper": "log is the body of a logging helper",
+    "not_empty": "a branch has statements or comments",
     "not_found": "not found at the reported position (stale scan?)",
     "needs_treesitter": "needs tree-sitter (install desloppify[full])",
     "other": "other patterns (needs manual review)",

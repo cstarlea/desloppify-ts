@@ -69,11 +69,10 @@ def test_safe_fixer_runs_without_flag() -> None:
     assert calls == [False]
 
 
-def test_typescript_code_rewriting_fixers_are_marked_unsafe() -> None:
+def test_no_typescript_fixer_is_marked_unsafe() -> None:
+    # Every fixer edits syntax-tree ranges now (roadmap 2.3).
     unsafe = {name for name, fixer in get_ts_fixers().items() if fixer.unsafe}
-    assert unsafe == {
-        "empty-if-chain",
-    }
+    assert unsafe == set()
 
 
 def test_unsafe_fixers_are_not_advertised_as_supported() -> None:
@@ -81,6 +80,7 @@ def test_unsafe_fixers_are_not_advertised_as_supported() -> None:
     assert supported == {
         "dead-useeffect",
         "debug-logs",
+        "empty-if-chain",
         "unused-imports",
         "unused-params",
         "unused-vars",

@@ -220,8 +220,8 @@ class TestSmellsActionWithNoReact:
         assert smells_actions
         assert any("dead-useeffect" in a.get("command", "") for a in smells_actions)
 
-    def test_smells_with_empty_if_chain_issue_skips_unsafe_fixer(self, empty_state):
-        """empty-if-chain is marked unsafe, so it is never suggested as an action."""
+    def test_smells_with_empty_if_chain_issue_suggests_fixer(self, empty_state):
+        """empty-if-chain is suggested now that it edits the syntax tree."""
         state = dict(empty_state)
         state["work_items"] = {
             "smells::util.ts::empty_if_chain": {
@@ -241,7 +241,7 @@ class TestSmellsActionWithNoReact:
             )
         )
         smells_actions = [a for a in result if a.get("detector") == "smells"]
-        assert not any("empty-if-chain" in a.get("command", "") for a in smells_actions)
+        assert any("empty-if-chain" in a.get("command", "") for a in smells_actions)
 
 
 class TestComputeTools:
@@ -253,11 +253,11 @@ class TestComputeTools:
 
     def test_fixers_only_when_open(self):
         result = _compute_tools({"smells": 5}, {}, "typescript", {})
-        assert [f["name"] for f in result["fixers"]] == ["dead-useeffect"]
+        assert [f["name"] for f in result["fixers"]] == ["dead-useeffect", "empty-if-chain"]
 
     def test_unsafe_fixers_not_offered(self):
         result = _compute_tools({"unused": 5, "logs": 2}, {}, "typescript", {})
-        # Only empty-if-chain (a smells fixer) is still marked unsafe.
+        # Only fixers whose detectors have open issues are offered.
         assert [f["name"] for f in result["fixers"]] == [
             "unused-imports",
             "unused-vars",
