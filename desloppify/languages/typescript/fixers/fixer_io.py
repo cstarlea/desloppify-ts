@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import difflib
 import logging
 import os
 import stat
@@ -13,6 +14,8 @@ from desloppify.base.output.fallbacks import log_best_effort_failure
 from desloppify.base.discovery.file_paths import rel
 from desloppify.base.output.terminal import colorize
 from desloppify.base.discovery.paths import get_project_root
+from desloppify.languages._framework.treesitter import is_available as treesitter_available
+from desloppify.languages.typescript.syntax.validation import syntax_regression
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +37,15 @@ def apply_fixer(
     by_file = _group_entries(entries, file_key)
     results = []
     skipped_files: list[tuple[str, str]] = []
+    if by_file and not treesitter_available():
+        print(
+            colorize(
+                "  Warn: tree-sitter is not installed, so fixer output is not "
+                "syntax-checked before writing. Install desloppify[full] to enable it.",
+                "yellow",
+            ),
+            file=sys.stderr,
+        )
     for filepath, file_entries in sorted(by_file.items()):
         try:
             changed = _process_fixer_file(
@@ -83,16 +95,40 @@ def _process_fixer_file(
     if new_content == original:
         return None
 
+    problem = syntax_regression(path, original, new_content)
+    if problem:
+        print(
+            colorize(f"  Skip {rel(filepath)}: {problem}; file left unchanged", "yellow"),
+            file=sys.stderr,
+        )
+        return None
+
     if not dry_run:
         restored = new_content.replace("\n", "\r\n") if uses_crlf else new_content
         _write_fixer_content(path, (_UTF8_BOM if has_bom else "") + restored)
 
     lines_removed = len(original.splitlines()) - len(new_content.splitlines())
-    return {
+    result: dict[str, object] = {
         "file": filepath,
         "removed": removed_names,
         "lines_removed": lines_removed,
     }
+    if dry_run:
+        result["diff"] = unified_diff(rel(filepath), original, new_content)
+    return result
+
+
+def unified_diff(label: str, before: str, after: str) -> str:
+    """A unified diff of one file's rewrite, for ``--dry-run`` output."""
+    return "".join(
+        difflib.unified_diff(
+            before.splitlines(keepends=True),
+            after.splitlines(keepends=True),
+            fromfile=f"a/{label}",
+            tofile=f"b/{label}",
+            n=2,
+        )
+    )
 
 
 def _write_fixer_content(path: Path, content: str) -> None:
@@ -115,4 +151,4 @@ def _write_fixer_content(path: Path, content: str) -> None:
         raise
 
 
-__all__ = ["apply_fixer"]
+__all__ = ["apply_fixer", "unified_diff"]

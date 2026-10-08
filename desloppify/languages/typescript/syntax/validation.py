@@ -1,0 +1,70 @@
+"""Syntax checks that stop fixers and ``move`` from writing broken code.
+
+A rewrite is rejected when the new text has more tree-sitter parse errors
+(ERROR and MISSING nodes) than the original. Comparing counts instead of
+requiring zero errors keeps files that already fail to parse fixable.
+
+This catches edits that break syntax, not edits that parse but change
+behaviour; those need the fixers themselves to be correct.
+"""
+
+from __future__ import annotations
+
+import logging
+from pathlib import Path
+
+from desloppify.languages._framework.treesitter import PARSE_INIT_ERRORS, is_available
+from desloppify.languages._framework.treesitter.parsing import _get_parser
+
+logger = logging.getLogger(__name__)
+
+# angle-bracket casts (`<T>value`) are valid here, but parse as JSX under tsx.
+_TYPESCRIPT_GRAMMAR_SUFFIXES = frozenset({".ts", ".mts", ".cts"})
+
+
+def grammar_for(path: str | Path) -> str:
+    """The tree-sitter grammar for a TS/JS file: ``typescript`` or ``tsx``."""
+    suffix = Path(path).suffix.lower()
+    return "typescript" if suffix in _TYPESCRIPT_GRAMMAR_SUFFIXES else "tsx"
+
+
+def count_syntax_errors(text: str, path: str | Path) -> int | None:
+    """Count ERROR and MISSING nodes, or None when tree-sitter can't parse."""
+    if not is_available():
+        return None
+    try:
+        parser, _language = _get_parser(grammar_for(path))
+    except PARSE_INIT_ERRORS as exc:
+        logger.debug("syntax check unavailable for %s: %s", path, exc)
+        return None
+    root = parser.parse(text.encode("utf-8")).root_node
+    if not root.has_error:
+        return 0
+    count = 0
+    stack = [root]
+    while stack:
+        node = stack.pop()
+        if node.is_error or node.is_missing:
+            count += 1
+        if node.has_error:
+            stack.extend(node.children)
+    return count
+
+
+def syntax_regression(path: str | Path, before: str, after: str) -> str | None:
+    """Describe how ``after`` breaks syntax that ``before`` had, or None.
+
+    Returns None when the rewrite is fine or tree-sitter is unavailable;
+    callers that need to know which use ``count_syntax_errors`` directly.
+    """
+    errors_after = count_syntax_errors(after, path)
+    if not errors_after:
+        return None
+    errors_before = count_syntax_errors(before, path) or 0
+    if errors_after <= errors_before:
+        return None
+    added = errors_after - errors_before
+    return f"the rewrite would add {added} syntax error{'s' if added != 1 else ''}"
+
+
+__all__ = ["count_syntax_errors", "grammar_for", "syntax_regression"]

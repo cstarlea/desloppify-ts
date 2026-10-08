@@ -6,7 +6,7 @@ import argparse
 from pathlib import Path
 
 from desloppify.languages import framework as lang_mod
-from desloppify.app.commands.move.apply import apply_file_move
+from desloppify.app.commands.move.apply import apply_file_move, check_rewrite_syntax
 from desloppify.app.commands.move.directory import run_directory_move
 from desloppify.app.commands.move.language import (
     load_move_module,
@@ -70,6 +70,9 @@ def cmd_move(args: argparse.Namespace) -> None:
         force=getattr(args, "force", False),
         rel_fn=rel,
         warn_fn=lambda msg: print(colorize(f"  ⚠ {msg}", "yellow")),
+    )
+    check_rewrite_syntax(
+        {**importer_changes, source_abs: self_changes}, dry_run=dry_run
     )
     if dry_run:
         print(colorize("  Dry run — no files modified.", "yellow"))

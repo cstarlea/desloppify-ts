@@ -68,6 +68,7 @@ def fix_debug_logs(entries: list[dict], *, dry_run: bool = False) -> FixResult:
                 "tags": result["removed"],
                 "lines_removed": result["lines_removed"],
                 "log_count": len(entries_by_file.get(result["file"], [])),
+                **({"diff": result["diff"]} if "diff" in result else {}),
             }
             for result in raw_results
         ]
