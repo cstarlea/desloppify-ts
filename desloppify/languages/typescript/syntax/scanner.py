@@ -107,6 +107,8 @@ class SourceText:
             if self._anchored(offset, anchor):
                 return match
             position = match.start() + 1
+            if position > len(line):  # search() clamps a later start, so an empty match would repeat
+                break
         return None
 
     def _anchored(self, offset: int, anchor: str) -> bool:

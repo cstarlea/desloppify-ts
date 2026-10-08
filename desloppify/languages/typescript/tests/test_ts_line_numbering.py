@@ -101,3 +101,9 @@ def test_detectors_report_tsc_lines(tmp_path, mode, char):
     # In the string and the comment, U+2028 and U+2029 break twice; CR and LF only fit in the comment.
     breaks = {"\u2028": 2, "\u2029": 2, "\r": 1, "\r\n": 1, "\n": 1}.get(char, 0)
     assert first == 2 + breaks
+
+
+@pytest.mark.parametrize("char", BREAKS.values(), ids=BREAKS.keys())
+def test_empty_match_on_an_empty_line_ends(char):
+    """An empty match that isn't anchored used to retry the end of an empty line forever."""
+    assert list(SourceText(f"{char}x").line_matches("", "comment")) == []
