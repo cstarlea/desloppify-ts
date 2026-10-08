@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import importlib.util
 import tomllib
 from pathlib import Path
 from unittest.mock import patch
@@ -18,13 +17,11 @@ from desloppify.base.discovery.file_paths import rel
 from desloppify.base.discovery.paths import get_project_root
 from desloppify.base.tooling import compute_tool_hash
 from desloppify.engine.policy.zones import FileZoneMap, Zone
-from desloppify.languages import available_langs, get_lang
-from desloppify.languages._framework.structure_validation import validate_lang_structure
+from desloppify.languages.framework import get_lang
 
 
 def _full_langs() -> list[str]:
-    """Return only languages with full (non-generic) plugin structure."""
-    return [lang for lang in available_langs() if get_lang(lang).integration_depth == "full"]
+    return ["typescript"]
 
 
 def _load_pyproject() -> dict:
@@ -115,26 +112,6 @@ def test_packaging_includes_lang_plugin_tests():
 
     leaked = [p for p in sorted(pkgs) if p.startswith("desloppify.tests")]
     assert not leaked, f"Top-level test suite leaked into wheel packages: {leaked}"
-
-
-def test_validate_lang_structure_against_importlib_resolved_path():
-    """validate_lang_structure passes at the path Python actually resolves.
-
-    test_each_lang_has_colocated_tests_dir checks get_project_root(), which always
-    passes in source mode even after a bad wheel build. This test uses importlib
-    to find where Python has actually resolved each language package — in a wheel
-    install that excluded tests/, that's site-packages/desloppify/languages/{lang}/
-    which lacks tests/ and triggers the ValueError users saw.
-    """
-    for lang in _full_langs():
-        lang_pkg = f"desloppify.languages.{lang}"
-        spec = importlib.util.find_spec(lang_pkg)
-        assert spec is not None, f"Cannot find installed package {lang_pkg!r}"
-        search_locs = list(spec.submodule_search_locations)
-        assert search_locs, f"No search locations for {lang_pkg}"
-        lang_dir = Path(search_locs[0])
-        # Raises ValueError if tests/ is absent, lacks __init__.py, or has no test_*.py.
-        validate_lang_structure(lang_dir, lang)
 
 
 def test_compute_tool_hash_ignores_colocated_tests(tmp_path):

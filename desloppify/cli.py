@@ -24,7 +24,6 @@ from desloppify.base.output.terminal import colorize
 from desloppify.base.discovery.paths import get_default_scan_path, get_project_root
 from desloppify.base.registry import detector_names, on_detector_registered
 from desloppify.base.runtime_state import runtime_scope
-from desloppify.languages import available_langs
 from desloppify.state_io import load_state
 
 logger = logging.getLogger(__name__)
@@ -74,7 +73,7 @@ on_detector_registered(_invalidate_detector_names_cache)
 
 def create_parser() -> argparse.ArgumentParser:
     """Return the top-level argparse parser."""
-    return _create_parser(langs=available_langs(), detector_names=_get_detector_names())
+    return _create_parser(detector_names=_get_detector_names())
 
 
 def _apply_persisted_exclusions(

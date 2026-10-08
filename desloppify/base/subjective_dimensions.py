@@ -16,7 +16,6 @@ from desloppify.base.subjective_dimension_catalog import (
 from desloppify.base.subjective_dimension_catalog import WEIGHT_BY_DIMENSION
 from desloppify.base.subjective_dimensions_providers import (
     PROVIDER_STATE,
-    default_available_languages,
     default_load_dimensions_payload,
     default_load_dimensions_payload_for_lang,
 )
@@ -40,7 +39,6 @@ def _clear_subjective_dimension_caches() -> None:
 
 def configure_subjective_dimension_providers(
     *,
-    available_languages_provider: Callable[[], list[str]] | None = None,
     load_dimensions_payload_provider: Callable | None = None,
     load_dimensions_payload_for_lang_provider: Callable | None = None,
 ) -> None:
@@ -50,8 +48,6 @@ def configure_subjective_dimension_providers(
     overrides into provider state so callsites/tests that configure providers
     are not silently ignored.
     """
-    if available_languages_provider is not None:
-        PROVIDER_STATE.available_languages_provider = available_languages_provider
     if load_dimensions_payload_provider is not None:
         PROVIDER_STATE.load_dimensions_payload_provider = load_dimensions_payload_provider
     if load_dimensions_payload_for_lang_provider is not None:
@@ -63,7 +59,6 @@ def configure_subjective_dimension_providers(
 
 def reset_subjective_dimension_providers() -> None:
     """Reset provider state back to default callables."""
-    PROVIDER_STATE.available_languages_provider = default_available_languages
     PROVIDER_STATE.load_dimensions_payload_provider = default_load_dimensions_payload
     PROVIDER_STATE.load_dimensions_payload_for_lang_provider = (
         default_load_dimensions_payload_for_lang

@@ -125,17 +125,6 @@ def test_merge_dimension_meta_normalizes_and_merges_defaults() -> None:
     assert target["existing_dim"]["weight"] == 5.0
 
 
-def test_providers_default_available_languages_handles_errors(monkeypatch) -> None:
-    monkeypatch.setattr(providers_mod, "_available_langs", lambda: ("py", "ts"))
-    assert providers_mod.default_available_languages() == ["py", "ts"]
-
-    def _boom() -> list[str]:
-        raise RuntimeError("failed")
-
-    monkeypatch.setattr(providers_mod, "_available_langs", _boom)
-    assert providers_mod.default_available_languages() == []
-
-
 def test_providers_default_payload_loaders_use_dimensions_data(monkeypatch) -> None:
     expected_shared = (
         ["naming_quality"],
@@ -165,7 +154,6 @@ def test_provider_state_and_wrappers_delegate_to_configured_callables(
     monkeypatch,
 ) -> None:
     state = providers_mod.SubjectiveProviderState()
-    assert state.available_languages_provider is providers_mod.default_available_languages
     assert (
         state.load_dimensions_payload_provider
         is providers_mod.default_load_dimensions_payload
@@ -177,11 +165,6 @@ def test_provider_state_and_wrappers_delegate_to_configured_callables(
 
     monkeypatch.setattr(
         providers_mod.PROVIDER_STATE,
-        "available_languages_provider",
-        lambda: ["stub"],
-    )
-    monkeypatch.setattr(
-        providers_mod.PROVIDER_STATE,
         "load_dimensions_payload_provider",
         lambda: (["a"], {}, "stub"),
     )
@@ -191,7 +174,6 @@ def test_provider_state_and_wrappers_delegate_to_configured_callables(
         lambda lang: ([lang], {}, "stub-lang"),
     )
 
-    assert providers_mod.available_languages() == ["stub"]
     assert providers_mod.load_dimensions_payload() == (["a"], {}, "stub")
     assert providers_mod.load_dimensions_payload_for_lang("py") == (
         ["py"],
@@ -204,11 +186,9 @@ def test_configure_and_reset_providers_updates_provider_state() -> None:
     metadata_mod.reset_subjective_dimension_providers()
     try:
         metadata_mod.configure_subjective_dimension_providers(
-            available_languages_provider=lambda: ["xlang"],
             load_dimensions_payload_provider=lambda: (["dim_x"], {}, "x"),
             load_dimensions_payload_for_lang_provider=lambda lang: ([lang], {}, "xlang"),
         )
-        assert providers_mod.available_languages() == ["xlang"]
         assert providers_mod.load_dimensions_payload() == (["dim_x"], {}, "x")
         assert providers_mod.load_dimensions_payload_for_lang("py") == (
             ["py"],

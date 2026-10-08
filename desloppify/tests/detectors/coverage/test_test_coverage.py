@@ -79,18 +79,15 @@ class TestStripTestMarkers:
 
 
 class TestInferLangName:
-    def test_prefers_language_with_matching_extensions(self):
-        result = _infer_lang_name({"tests/test_utils.py"}, {"src/utils.py"})
-        assert result == "python"
+    def test_detects_typescript_from_ts_and_js_files(self):
+        assert _infer_lang_name({"src/utils.test.ts"}, {"src/utils.ts"}) == "typescript"
+        assert _infer_lang_name({"test/a.spec.mjs"}, set()) == "typescript"
 
-    def test_detects_rust_from_rs_files(self):
-        result = _infer_lang_name({"tests/http.rs"}, {"src/lib.rs"})
-        assert result == "rust"
+    def test_returns_none_without_files(self):
+        assert _infer_lang_name(set(), set()) is None
 
-    def test_returns_none_when_no_languages_available(self, monkeypatch):
-        monkeypatch.setattr("desloppify.languages.available_langs", lambda: [])
-        result = _infer_lang_name(set(), set())
-        assert result is None
+    def test_returns_none_for_other_languages(self):
+        assert _infer_lang_name({"tests/test_utils.py"}, {"src/lib.rs"}) is None
 
     def test_returns_none_when_paths_have_no_known_extensions(self):
         result = _infer_lang_name({"docs/test_notes.txt"}, {"docs/notes.txt"})

@@ -3,15 +3,12 @@
 from pathlib import Path
 from types import SimpleNamespace
 
-import pytest
-
 import desloppify.app.commands.move.cmd as move_mod
 from desloppify.app.commands.move.language import (
-    load_lang_move_module,
+    load_move_module,
     resolve_move_verify_hint,
 )
 from desloppify.app.commands.move.planning import dedup_replacements, resolve_dest
-from desloppify.base.exception_sets import CommandError
 from desloppify.base.discovery.file_paths import resolve_path
 from desloppify.base.discovery.file_paths import safe_write_text as safe_write
 
@@ -107,49 +104,12 @@ class TestResolveDest:
         assert result.endswith("foo.ts")
 
 
-class TestLoadLangMoveModule:
-    """Language move-module loading behavior for missing vs broken imports."""
-
-    def test_falls_back_to_scaffold_when_language_module_missing(self, monkeypatch):
-        target_module = "desloppify.languages.python.move"
-        scaffold_module = "desloppify.languages._framework.scaffold_move"
-        scaffold = object()
-
-        def _fake_import(module_name: str):
-            if module_name == target_module:
-                raise ModuleNotFoundError(
-                    f"No module named '{target_module}'",
-                    name=target_module,
-                )
-            if module_name == scaffold_module:
-                return scaffold
-            raise AssertionError(f"unexpected import request: {module_name}")
-
-        monkeypatch.setattr(
-            "desloppify.app.commands.helpers.dynamic_loaders.importlib.import_module",
-            _fake_import,
-        )
-        assert load_lang_move_module("python") is scaffold
-
-    def test_raises_when_language_module_import_is_broken(self, monkeypatch):
-        target_module = "desloppify.languages.python.move"
-
-        def _fake_import(module_name: str):
-            if module_name == target_module:
-                exc = ImportError("cannot import name 'broken' from dependency")
-                exc.name = "dependency"
-                raise exc
-            raise AssertionError(f"unexpected import request: {module_name}")
-
-        monkeypatch.setattr(
-            "desloppify.app.commands.helpers.dynamic_loaders.importlib.import_module",
-            _fake_import,
-        )
-
-        with pytest.raises(CommandError) as exc:
-            load_lang_move_module("python")
-        assert "Failed to import language move module" in str(exc.value)
-        assert target_module in str(exc.value)
+class TestLoadMoveModule:
+    def test_loads_typescript_move_helpers(self):
+        move = load_move_module()
+        assert move.__name__ == "desloppify.languages.typescript.move"
+        assert callable(move.find_replacements)
+        assert callable(move.find_self_replacements)
 
 
 # ---------------------------------------------------------------------------

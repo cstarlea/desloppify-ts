@@ -147,9 +147,6 @@ class LangConfig:
     setting_specs: dict[str, LangValueSpec] = field(default_factory=dict)
     runtime_option_specs: dict[str, LangValueSpec] = field(default_factory=dict)
 
-    # Project-level files that indicate this language is present
-    detect_markers: list[str] = field(default_factory=list)
-
     # External test discovery (outside scanned path)
     external_test_dirs: list[str] = field(default_factory=lambda: ["tests", "test"])
     test_file_extensions: list[str] = field(default_factory=list)
@@ -167,9 +164,6 @@ class LangConfig:
 
     # Zone classification rules
     zone_rules: list[ZoneRule] = field(default_factory=list)
-
-    # Integration depth: "full" | "standard" | "shallow" | "minimal"
-    integration_depth: str = "full"
 
     _default_runtime_settings: dict[str, object] = field(
         default_factory=dict, init=False, repr=False

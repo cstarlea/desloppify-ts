@@ -6,8 +6,6 @@ Use this module from app/engine layers instead of importing
 
 from __future__ import annotations
 
-from desloppify.languages._framework.registry import discovery as _discovery_mod
-from desloppify.languages._framework.registry import state as registry_state
 from desloppify.languages._framework.base.types import (
     BoundaryRule,
     DetectorCoverageRecord,
@@ -25,20 +23,41 @@ from desloppify.languages._framework.runtime_support.runtime import (
     LangRunOverrides,
     make_lang_run,
 )
-from desloppify.languages._framework.registry.resolution import (
-    available_langs,
-    get_lang,
-    make_lang_config,
-)
-
-load_all = _discovery_mod.load_all
 
 DEFAULT_LANG = "typescript"
+
+_DEFAULT_CONFIG: LangConfig | None = None
 
 
 def default_lang() -> LangConfig:
     """The TypeScript language config (the only language plugin)."""
-    return get_lang(DEFAULT_LANG)
+    global _DEFAULT_CONFIG
+    if _DEFAULT_CONFIG is None:
+        from desloppify.languages.typescript import TypeScriptConfig
+
+        _DEFAULT_CONFIG = TypeScriptConfig()
+    return _DEFAULT_CONFIG
+
+
+def get_lang(name: str) -> LangConfig:
+    """Resolve a language name recorded in state or config.
+
+    Raises ValueError for anything but ``typescript``.
+    """
+    if name != DEFAULT_LANG:
+        raise ValueError(
+            f"Unknown language: {name!r}. desloppify only supports {DEFAULT_LANG!r}."
+        )
+    return default_lang()
+
+
+def get_lang_hook(lang_name: str | None, hook_name: str) -> object | None:
+    """Return a TypeScript hook module (e.g. ``test_coverage``), or None."""
+    if lang_name != DEFAULT_LANG:
+        return None
+    from desloppify.languages.typescript import LANG_HOOKS
+
+    return LANG_HOOKS.get(hook_name)
 
 
 def enable_parse_cache() -> None:
@@ -130,17 +149,14 @@ __all__ = [
     "LangRuntimeContract",
     "LangSecurityResult",
     "ScanCoverageRecord",
-    "available_langs",
     "clear_review_phase_prefetch",
     "default_lang",
     "disable_parse_cache",
     "enable_parse_cache",
     "get_lang",
-    "load_all",
+    "get_lang_hook",
     "make_lang_run",
-    "make_lang_config",
     "prewarm_review_phase_detectors",
     "record_grammar_load_failures",
     "reset_grammar_load_failures",
-    "registry_state",
 ]

@@ -95,11 +95,6 @@ CONFIG_SCHEMA: dict[str, ConfigKey] = {
         "desloppify: {status} {count} issue(s) — {summary}",
         "Template for suggested commit messages",
     ),
-    "trust_plugins": ConfigKey(
-        bool,
-        False,
-        "Allow loading user plugins from .desloppify/plugins/ (security opt-in)",
-    ),
     "transition_messages": ConfigKey(
         dict,
         {},

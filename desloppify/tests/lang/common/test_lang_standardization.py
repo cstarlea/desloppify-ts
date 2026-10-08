@@ -5,12 +5,12 @@ from __future__ import annotations
 import importlib
 from pathlib import Path
 
-from desloppify.languages import available_langs, get_lang
+from desloppify.languages.framework import get_lang
+
 
 
 def _full_langs() -> list[str]:
-    """Return only languages with full (non-generic) plugin structure."""
-    return [lang for lang in available_langs() if get_lang(lang).integration_depth == "full"]
+    return ["typescript"]
 
 TOP_LEVEL_MODULES = (
     "extractors",
@@ -91,7 +91,7 @@ def test_each_language_test_coverage_module_contract():
 
 
 def test_detect_command_keys_use_canonical_snake_case():
-    for lang in available_langs():
+    for lang in _full_langs():
         cfg = get_lang(lang)
         assert cfg.detect_commands, f"{lang} has no detect commands"
         for key in cfg.detect_commands:

@@ -17,44 +17,44 @@ import desloppify.intelligence.review.dimensions.validation as dimensions_valida
 from desloppify.intelligence.review.dimensions.holistic import DIMENSIONS
 
 
-def test_collect_holistic_dims_by_lang_filters_empty_entries(monkeypatch):
-    monkeypatch.setattr(dimensions_mod, "available_langs", lambda: ["python", "typescript"])
+def test_collect_holistic_dims_by_lang_keys_typescript(monkeypatch):
     monkeypatch.setattr(
         dimensions_mod,
         "get_lang",
-        lambda name: SimpleNamespace(
-            holistic_review_dimensions=(
-                ["logic_clarity", "contracts"] if name == "python" else []
-            )
-        ),
+        lambda _name: SimpleNamespace(holistic_review_dimensions=["logic_clarity"]),
     )
+    assert dimensions_mod._collect_holistic_dims_by_lang() == {
+        "typescript": ["logic_clarity"]
+    }
 
-    collected = dimensions_mod._collect_holistic_dims_by_lang()
-    assert collected == {"python": ["logic_clarity", "contracts"]}
+    monkeypatch.setattr(
+        dimensions_mod,
+        "get_lang",
+        lambda _name: SimpleNamespace(holistic_review_dimensions=[]),
+    )
+    assert dimensions_mod._collect_holistic_dims_by_lang() == {}
 
 
-def test_collect_lang_guidance_and_get_lang_guidance_cache(monkeypatch):
-    monkeypatch.setattr(dimensions_mod, "available_langs", lambda: ["python"])
+def test_collect_lang_guidance_and_get_lang_guidance(monkeypatch):
     monkeypatch.setattr(
         dimensions_mod,
         "get_lang",
         lambda _name: SimpleNamespace(review_guidance={"patterns": ["check x"]}),
     )
+    assert dimensions_mod._collect_lang_guidance() == {
+        "typescript": {"patterns": ["check x"]}
+    }
 
-    collected = dimensions_mod._collect_lang_guidance()
-    assert collected == {"python": {"patterns": ["check x"]}}
+    monkeypatch.setattr(
+        dimensions_mod, "LANG_GUIDANCE", {"typescript": {"patterns": ["check x"]}}
+    )
+    assert dimensions_mod.get_lang_guidance("typescript") == {"patterns": ["check x"]}
+    assert dimensions_mod.get_lang_guidance("python") == {}
 
-    original = dict(dimensions_mod.LANG_GUIDANCE)
-    dimensions_mod.LANG_GUIDANCE.clear()
-    try:
-        first = dimensions_mod.get_lang_guidance("python")
-        second = dimensions_mod.get_lang_guidance("python")
-        assert first == {"patterns": ["check x"]}
-        assert second == first
-        assert dimensions_mod.LANG_GUIDANCE["python"] == first
-    finally:
-        dimensions_mod.LANG_GUIDANCE.clear()
-        dimensions_mod.LANG_GUIDANCE.update(original)
+
+def test_real_typescript_guidance_is_loaded():
+    assert dimensions_mod.HOLISTIC_DIMENSIONS_BY_LANG["typescript"]
+    assert dimensions_mod.get_lang_guidance("typescript")
 
 
 def test_dimensions_schema_validation_rejects_bad_prompt_shape(monkeypatch):

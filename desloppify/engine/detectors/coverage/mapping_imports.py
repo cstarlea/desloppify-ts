@@ -14,33 +14,16 @@ def _load_lang_test_coverage_module(lang_name: str | None):
     return get_lang_hook(lang_name, "test_coverage") or object()
 
 
+_TS_JS_EXTENSIONS = frozenset(
+    {".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".mjs", ".cjs"}
+)
+
 
 def _infer_lang_name(test_files: set[str], production_files: set[str]) -> str | None:
-    """Infer language from known file extensions when explicit lang is unavailable."""
-    paths = list(test_files) + list(production_files)
-    ext_to_lang = {
-        ".py": "python",
-        ".pyi": "python",
-        ".ts": "typescript",
-        ".tsx": "typescript",
-        ".js": "typescript",
-        ".jsx": "typescript",
-        ".mjs": "typescript",
-        ".cjs": "typescript",
-        ".cs": "csharp",
-        ".php": "php",
-        ".go": "go",
-        ".rs": "rust",
-    }
-    counts: dict[str, int] = {}
-    for file_path in paths:
-        suffix = Path(file_path).suffix.lower()
-        lang_name = ext_to_lang.get(suffix)
-        if not lang_name:
-            continue
-        counts[lang_name] = counts.get(lang_name, 0) + 1
-    if counts:
-        return max(counts.items(), key=lambda item: item[1])[0]
+    """Return ``typescript`` when any path has a TS/JS extension, else None."""
+    for file_path in (*test_files, *production_files):
+        if Path(file_path).suffix.lower() in _TS_JS_EXTENSIONS:
+            return "typescript"
     return None
 
 

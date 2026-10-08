@@ -4,16 +4,6 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from desloppify.languages import available_langs as _available_langs
-
-
-def default_available_languages() -> list[str]:
-    try:
-        return list(_available_langs())
-    except (ImportError, ValueError, TypeError, RuntimeError):
-        return []
-
-
 def default_load_dimensions_payload() -> tuple[
     list[str], dict[str, dict[str, object]], str
 ]:
@@ -34,9 +24,6 @@ def default_load_dimensions_payload_for_lang(
 
 class SubjectiveProviderState:
     def __init__(self) -> None:
-        self.available_languages_provider: Callable[[], list[str]] = (
-            default_available_languages
-        )
         self.load_dimensions_payload_provider: Callable[
             [], tuple[list[str], dict[str, dict[str, object]], str]
         ] = default_load_dimensions_payload
@@ -46,10 +33,6 @@ class SubjectiveProviderState:
 
 
 PROVIDER_STATE = SubjectiveProviderState()
-
-
-def available_languages() -> list[str]:
-    return PROVIDER_STATE.available_languages_provider()
 
 
 def load_dimensions_payload() -> tuple[list[str], dict[str, dict[str, object]], str]:
@@ -64,8 +47,6 @@ def load_dimensions_payload_for_lang(
 
 __all__ = [
     "PROVIDER_STATE",
-    "available_languages",
-    "default_available_languages",
     "default_load_dimensions_payload",
     "default_load_dimensions_payload_for_lang",
     "load_dimensions_payload",

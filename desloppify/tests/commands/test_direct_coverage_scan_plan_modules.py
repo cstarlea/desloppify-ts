@@ -25,7 +25,6 @@ import desloppify.base.enums as enums_mod
 import desloppify.base.search.query_paths as query_paths_mod
 import desloppify.engine.planning.scorecard_policy as scorecard_policy_mod
 import desloppify.engine._plan.triage.core as planning_triage_mod
-import desloppify.languages._framework.scaffold_move as scaffold_move_mod
 
 
 def test_direct_coverage_scan_plan_modules_smoke():
@@ -48,7 +47,6 @@ def test_direct_coverage_scan_plan_modules_smoke():
     assert callable(query_paths_mod.query_file_path)
     assert callable(scorecard_policy_mod._compose_scorecard_dimensions)
     assert callable(planning_triage_mod.collect_triage_input)
-    assert callable(scaffold_move_mod.find_replacements)
     assert callable(resolve_apply_mod._resolve_all_patterns)
     assert callable(resolve_cmd_mod.cmd_resolve)
     assert callable(resolve_selection_mod._validate_resolve_inputs)

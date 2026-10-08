@@ -27,7 +27,6 @@ from desloppify.intelligence.review.dimensions.data import (
 from desloppify.intelligence.review.dimensions.data import (
     load_dimensions_for_lang as _default_load_dimensions_for_lang,
 )
-from desloppify.languages.framework import available_langs as _available_langs
 
 # Kept as module-level names for backward-compatible monkeypatching in tests and
 # downstream callers.
@@ -45,15 +44,7 @@ def _load_dimensions_payload_for_lang(
     return load_dimensions_for_lang(lang_name)
 
 
-def _available_languages() -> list[str]:
-    try:
-        return list(_available_langs())
-    except (ImportError, ValueError, TypeError, RuntimeError):
-        return []
-
-
 configure_subjective_dimension_providers(
-    available_languages_provider=_available_languages,
     load_dimensions_payload_provider=_load_dimensions_payload,
     load_dimensions_payload_for_lang_provider=_load_dimensions_payload_for_lang,
 )
@@ -62,7 +53,6 @@ configure_subjective_dimension_providers(
 def _refresh_provider_wiring() -> None:
     """Keep the base metadata helpers aligned with this compatibility surface."""
     configure_subjective_dimension_providers(
-        available_languages_provider=_available_languages,
         load_dimensions_payload_provider=_load_dimensions_payload,
         load_dimensions_payload_for_lang_provider=_load_dimensions_payload_for_lang,
     )
