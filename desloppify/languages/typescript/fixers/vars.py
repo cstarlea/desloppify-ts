@@ -32,6 +32,7 @@ from desloppify.languages.typescript.syntax.nodes import (
     STATEMENT_PARENTS,
     NameIndex,
     asi_hazards,
+    binding_names,
     byte_offset,
     is_parameter,
     node_key,
@@ -193,7 +194,7 @@ class _Planner:
                 _is_pure(d.child_by_field_name("value")) for d in declarators
             ):
                 return "side_effects"
-            names = [n for d in declarators for n in _binding_names(d.child_by_field_name("name"))]
+            names = [n for d in declarators for n in binding_names(d.child_by_field_name("name"))]
             return self._plan_statement(entry, statement, names)
         if is_parameter(node):
             return "function_param"
@@ -202,7 +203,7 @@ class _Planner:
             declarator.child_by_field_name("name"), node
         ):
             return "other"
-        return self._plan_declarator(entry, declarator, _binding_names(node))
+        return self._plan_declarator(entry, declarator, binding_names(node))
 
     def _plan_statement(self, entry: dict, statement, names: list) -> str | None:
         if statement.parent is None or statement.parent.type not in STATEMENT_PARENTS:
@@ -389,30 +390,6 @@ def _in_array_pattern(node) -> bool:
             return True
         parent = parent.parent
     return False
-
-
-def _binding_names(pattern) -> list:
-    """The names a declarator's name (identifier or pattern) binds."""
-    if pattern is None:
-        return []
-    if pattern.type == "identifier":
-        return [pattern]
-    names = []
-    stack = [pattern]
-    while stack:
-        node = stack.pop()
-        parent = node.parent
-        if node.type == "shorthand_property_identifier_pattern":
-            names.append(node)
-        elif node.type == "identifier" and parent is not None and (
-            parent.type in ("array_pattern", "rest_pattern")
-            or (parent.type == "pair_pattern" and same(parent.child_by_field_name("value"), node))
-            or (parent.type == "assignment_pattern" and same(parent.child_by_field_name("left"), node))
-        ):
-            names.append(node)
-        elif node.type in _PATTERN_WRAPPERS or node.type == "rest_pattern":
-            stack.extend(node.named_children)
-    return names
 
 
 def _scope(node, *, function_scoped: bool):

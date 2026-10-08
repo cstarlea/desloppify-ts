@@ -31,12 +31,12 @@ from desloppify.languages.typescript.detectors.unused_fallback import (
 )
 from desloppify.languages.typescript.syntax.nodes import (
     NameIndex,
-    byte_offset,
     is_parameter,
     parameter_owner,
+    pattern_at,
     same,
 )
-from desloppify.languages.typescript.syntax.tree import ParsedSource, parse_text
+from desloppify.languages.typescript.syntax.tree import parse_text
 
 TS6133_RE = re.compile(
     r"^(.+)\((\d+),(\d+)\): error TS6133: '(\S+)' is declared but its value is never read\."
@@ -297,9 +297,7 @@ def _syntax_category(names: NameIndex, entry: dict) -> str | None:
         return "vars"
     node = names.find(name, line, col) if name != ALL_DESTRUCTURED else None
     if node is None:
-        # tsc reports the only element of a destructuring pattern, like
-        # `({ children }) => ...`, at the pattern itself.
-        pattern = _pattern_at(names.parsed, line, col)
+        pattern = pattern_at(names.parsed, line, col)
         if pattern is None:
             return None
         return "params" if is_parameter(pattern) or _in_catch_parameter(pattern) else "vars"
@@ -311,19 +309,6 @@ def _syntax_category(names: NameIndex, entry: dict) -> str | None:
             return "imports"
         parent = parent.parent
     return "vars"
-
-
-def _pattern_at(parsed: ParsedSource, line: int, col: int):
-    """The destructuring pattern starting at tsc's ``line``/``col``, if any."""
-    offset = byte_offset(parsed.source, line, col)
-    if offset is None:
-        return None
-    node = parsed.root.named_descendant_for_byte_range(offset, offset)
-    while node is not None and node.start_byte == offset:
-        if node.type in ("object_pattern", "array_pattern"):
-            return node
-        node = node.parent
-    return None
 
 
 def _in_catch_parameter(node) -> bool:
