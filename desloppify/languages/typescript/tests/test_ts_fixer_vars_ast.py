@@ -139,6 +139,57 @@ def test_remove_unused_vars(source, targets, expected):
     assert skipped == []
 
 
+# tsc reports a pattern's only element at the pattern's opening bracket.
+@needs_treesitter
+@pytest.mark.parametrize(
+    ("source", "target", "expected"),
+    [
+        pytest.param("const { a } = o;\nuse(1);\n", ("a", 1, 7), "use(1);\n", id="lone-shorthand"),
+        pytest.param(
+            "const {\n  a,\n} = o;\nuse(1);\n", ("a", 1, 7), "use(1);\n", id="multiline"
+        ),
+        pytest.param(
+            "const { a: b } = o, c = 1;\nuse(c);\n",
+            ("b", 1, 7),
+            "const c = 1;\nuse(c);\n",
+            id="lone-renamed-other-declarator-kept",
+        ),
+        pytest.param(
+            "const { a } = o;\nconst { a: x } = p;\nuse(x);\n",
+            ("a", 1, 7),
+            "const { a: x } = p;\nuse(x);\n",
+            id="same-name-as-key-elsewhere",
+        ),
+    ],
+)
+def test_lone_pattern_element_reported_at_pattern(source, target, expected):
+    text, fixed, skipped = _fix(source, target)
+    assert (text, fixed, skipped) == (expected, [target[0]], [])
+
+
+@needs_treesitter
+@pytest.mark.parametrize(
+    ("source", "target", "reason"),
+    [
+        pytest.param(
+            "const { SITE_NAME } = process.env;\n",
+            ("SITE_NAME", 1, 7),
+            "would_empty_pattern",
+            id="getter-initializer",
+        ),
+        pytest.param(
+            "const { a } = f();\n", ("a", 1, 7), "would_empty_pattern", id="call-initializer"
+        ),
+        pytest.param("const [a] = arr;\n", ("a", 1, 7), "array_destructuring", id="array"),
+        pytest.param("const h = ({ p }) => 1;\nh({});\n", ("p", 1, 12), "function_param", id="param"),
+        pytest.param("const { a } = o;\n", ("zzz", 1, 7), "not_found", id="other-name"),
+    ],
+)
+def test_pattern_position_skips(source, target, reason):
+    text, fixed, skipped = _fix(source, target)
+    assert (text, fixed, skipped) == (source, [], [reason])
+
+
 @needs_treesitter
 @pytest.mark.parametrize(
     ("source", "target", "reason"),

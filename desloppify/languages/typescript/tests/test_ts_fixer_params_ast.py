@@ -95,6 +95,74 @@ def test_prefix_unused_params(source, targets, expected):
     assert skipped == []
 
 
+# tsc reports a pattern's only element at the pattern's opening bracket.
+@needs_treesitter
+@pytest.mark.parametrize(
+    ("source", "target", "expected"),
+    [
+        pytest.param(
+            "function C({ children }: Props) {}\n",
+            ("children", 1, 12),
+            "function C({ children: _children }: Props) {}\n",
+            id="lone-shorthand",
+        ),
+        pytest.param(
+            "export default function L({\n  children,\n}: {\n  children: R;\n}) {}\n",
+            ("children", 1, 27),
+            "export default function L({\n  children: _children,\n}: {\n  children: R;\n}) {}\n",
+            id="multiline-with-same-name-in-type",
+        ),
+        pytest.param(
+            "f(({ a: b }) => 0);\n",
+            ("b", 1, 4),
+            "f(({ a: _b }) => 0);\n",
+            id="lone-renamed",
+        ),
+        pytest.param(
+            "f(({ a = 1 }) => 0);\n",
+            ("a", 1, 4),
+            "f(({ a: _a = 1 }) => 0);\n",
+            id="lone-with-default",
+        ),
+        pytest.param("f(([x]) => 0);\n", ("x", 1, 4), "f(([_x]) => 0);\n", id="lone-array-element"),
+        pytest.param(
+            "f(({ a: { b } }) => 0);\n",
+            ("b", 1, 4),
+            "f(({ a: { b: _b } }) => 0);\n",
+            id="lone-nested",
+        ),
+        pytest.param(
+            "try {} catch ({ message }) {}\n",
+            ("message", 1, 15),
+            "try {} catch ({ message: _message }) {}\n",
+            id="lone-catch-element",
+        ),
+    ],
+)
+def test_lone_pattern_element_reported_at_pattern(source, target, expected):
+    text, fixed, skipped = _fix(source, target, path="c.tsx")
+    assert (text, fixed, skipped) == (expected, [target[0]], [])
+
+
+@needs_treesitter
+@pytest.mark.parametrize(
+    ("source", "target", "reason"),
+    [
+        pytest.param("function C({ a }: P) {}\n", ("zzz", 1, 12), "not_found", id="other-name"),
+        pytest.param(
+            "function C({\n  a,\n  b,\n}: P) { return b; }\n",
+            ("a", 1, 12),
+            "not_found",
+            id="two-elements",
+        ),
+        pytest.param("const { a } = o;\n", ("a", 1, 7), "not_a_parameter", id="variable-pattern"),
+    ],
+)
+def test_pattern_position_skips(source, target, reason):
+    text, fixed, skipped = _fix(source, target)
+    assert (text, fixed, skipped) == (source, [], [reason])
+
+
 @needs_treesitter
 def test_jsx_component_props():
     text, fixed, _skipped = _fix(

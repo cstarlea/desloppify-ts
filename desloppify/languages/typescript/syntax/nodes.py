@@ -86,9 +86,11 @@ class NameIndex:
     def find(self, name: str, line: int, col: object):
         """The name node tsc reported at ``line``/``col``.
 
-        Falls back to the only node with that text on the line, since a
-        stale column (or a BOM tsc counted) shouldn't lose an otherwise
-        unambiguous match.
+        tsc reports the only name in a destructuring pattern, like
+        ``({ children }) => ...``, at the pattern itself, so a pattern there
+        resolves to that name. Falls back to the only node with that text on
+        the line, since a stale column (or a BOM tsc counted) shouldn't lose
+        an otherwise unambiguous match.
         """
         source = self.parsed.source
         offset = byte_offset(source, line, col) if isinstance(col, int) else None
@@ -101,8 +103,57 @@ class NameIndex:
                 and self.parsed.text(node) == name
             ):
                 return node
+            pattern = _pattern_at_offset(self.parsed, offset)
+            bound = binding_names(pattern) if pattern is not None else []
+            if len(bound) == 1 and self.parsed.text(bound[0]) == name:
+                return bound[0]
         matches = [n for n in self.get(name) if n.start_point[0] == line - 1]
         return matches[0] if len(matches) == 1 else None
+
+
+_PATTERNS = frozenset({"object_pattern", "array_pattern"})
+_PATTERN_WRAPPERS = frozenset(
+    {"pair_pattern", "object_assignment_pattern", "assignment_pattern", *_PATTERNS}
+)
+
+
+def pattern_at(parsed: ParsedSource, line: int, col: object):
+    """The destructuring pattern starting at tsc's ``line``/``col``, if any."""
+    offset = byte_offset(parsed.source, line, col) if isinstance(col, int) else None
+    return _pattern_at_offset(parsed, offset) if offset is not None else None
+
+
+def _pattern_at_offset(parsed: ParsedSource, offset: int):
+    node = parsed.root.named_descendant_for_byte_range(offset, offset)
+    while node is not None and node.start_byte == offset:
+        if node.type in _PATTERNS:
+            return node
+        node = node.parent
+    return None
+
+
+def binding_names(pattern) -> list:
+    """The names a declarator's or parameter's name (identifier or pattern) binds."""
+    if pattern is None:
+        return []
+    if pattern.type == "identifier":
+        return [pattern]
+    names = []
+    stack = [pattern]
+    while stack:
+        node = stack.pop()
+        parent = node.parent
+        if node.type == "shorthand_property_identifier_pattern":
+            names.append(node)
+        elif node.type == "identifier" and parent is not None and (
+            parent.type in ("array_pattern", "rest_pattern")
+            or (parent.type == "pair_pattern" and same(parent.child_by_field_name("value"), node))
+            or (parent.type == "assignment_pattern" and same(parent.child_by_field_name("left"), node))
+        ):
+            names.append(node)
+        elif node.type in _PATTERN_WRAPPERS or node.type == "rest_pattern":
+            stack.extend(node.named_children)
+    return names
 
 
 def is_parameter(node) -> bool:
@@ -330,6 +381,7 @@ def _is_binding(node) -> bool:
 
 __all__ = [
     "asi_hazards",
+    "binding_names",
     "FUNCTIONS",
     "NAME_TYPES",
     "STATEMENT_PARENTS",
@@ -338,6 +390,7 @@ __all__ = [
     "byte_offset",
     "is_parameter",
     "parameter_owner",
+    "pattern_at",
     "node_key",
     "reads_only",
     "same",
