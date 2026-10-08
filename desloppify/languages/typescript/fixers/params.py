@@ -5,7 +5,8 @@ column. A plain parameter is renamed (``x`` → ``_x``, ``...rest`` →
 ``..._rest``); a destructured shorthand keeps its property and gets an alias
 (``{ a = 1 }`` → ``{ a: _a = 1 }``), since renaming the property itself would
 read a different one. tsc's ``noUnusedParameters`` ignores all of these forms.
-Catch bindings are treated the same way.
+Catch bindings are treated the same way. When tsc reports a whole pattern
+as unused, every name in it is renamed, or none is.
 
 Skipped: names that aren't parameters (the unused-vars fixer's job),
 TypeScript parameter properties (``constructor(private x)``, where the name
@@ -27,8 +28,10 @@ from desloppify.languages._framework.base.types import FixResult
 from desloppify.languages.typescript.syntax.nodes import (
     PARAMETERS,
     NameIndex,
+    binding_names,
     node_key,
     parameter_owner,
+    pattern_at,
     same,
     within,
 )
@@ -41,6 +44,7 @@ from desloppify.languages.typescript.syntax.tree import (
 from .edits import apply_replacements
 from .fixer_io import apply_fixer
 
+ALL_DESTRUCTURED = "(all destructured elements)"
 _PROPERTY_MODIFIERS = frozenset({"accessibility_modifier", "override_modifier", "readonly"})
 
 
@@ -83,32 +87,50 @@ def prefix_unused_params(
     fixed: list[dict] = []
     skipped: list[str] = []
     for entry in file_entries:
-        name, line = entry.get("name"), entry.get("line")
-        if not isinstance(name, str) or not isinstance(line, int) or name.startswith("_"):
-            skipped.append("not_found")
+        nodes = _targets(names, entry)
+        if isinstance(nodes, str):
+            skipped.append(nodes)
             continue
-        node = names.find(name, line, entry.get("col"))
-        if node is None:
-            skipped.append("not_found")
+        reason = next((r for node in nodes if (r := _blocker(names, node)) is not None), None)
+        if reason is not None:
+            skipped.append(reason)
             continue
-        owner = parameter_owner(node)
-        if owner is None:
-            skipped.append("not_a_parameter")
-            continue
-        if _is_parameter_property(node):
-            skipped.append("parameter_property")
-            continue
-        if _named_in_signature(names.get(name), node, owner):
-            skipped.append("used_in_signature")
-            continue
-        new_name = f"_{name}"
-        if any(within(other, owner) for other in names.get(new_name)):
-            skipped.append("name_taken")
-            continue
-        text = new_name if node.type == "identifier" else f"{name}: {new_name}"
-        replacements[node_key(node)] = (node.start_byte, node.end_byte, text.encode("utf-8"))
+        for node in nodes:
+            name = parsed.text(node)
+            text = f"_{name}" if node.type == "identifier" else f"{name}: _{name}"
+            replacements[node_key(node)] = (node.start_byte, node.end_byte, text.encode("utf-8"))
         fixed.append(entry)
     return apply_replacements(parsed.source, list(replacements.values())), fixed, skipped
+
+
+def _targets(names: NameIndex, entry: dict) -> list | str:
+    """The parameter names ``entry`` reports, or why none were found."""
+    name, line, col = entry.get("name"), entry.get("line"), entry.get("col")
+    if not isinstance(name, str) or not isinstance(line, int) or name.startswith("_"):
+        return "not_found"
+    if name == ALL_DESTRUCTURED:
+        pattern = pattern_at(names.parsed, line, col)
+        if pattern is None:
+            return "not_found"
+        nodes = [n for n in binding_names(pattern) if not names.parsed.text(n).startswith("_")]
+        return nodes or "not_found"
+    node = names.find(name, line, col)
+    return [node] if node is not None else "not_found"
+
+
+def _blocker(names: NameIndex, node) -> str | None:
+    """Why ``node`` can't be renamed, or None."""
+    owner = parameter_owner(node)
+    if owner is None:
+        return "not_a_parameter"
+    if _is_parameter_property(node):
+        return "parameter_property"
+    name = names.parsed.text(node)
+    if _named_in_signature(names.get(name), node, owner):
+        return "used_in_signature"
+    if any(within(other, owner) for other in names.get(f"_{name}")):
+        return "name_taken"
+    return None
 
 
 def _named_in_signature(occurrences: list, node, owner) -> bool:

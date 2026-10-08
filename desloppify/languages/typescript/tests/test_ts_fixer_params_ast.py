@@ -164,6 +164,74 @@ def test_pattern_position_skips(source, target, reason):
 
 
 @needs_treesitter
+@pytest.mark.parametrize(
+    ("source", "col", "expected"),
+    [
+        pytest.param(
+            "function C({ a, b }: P) {}\n",
+            12,
+            "function C({ a: _a, b: _b }: P) {}\n",
+            id="shorthands",
+        ),
+        pytest.param(
+            "export function F({\n  a,\n  b = 1,\n  c: d,\n}: {\n  a: A;\n  b?: B;\n  c: C;\n}) {}\n",
+            19,
+            "export function F({\n  a: _a,\n  b: _b = 1,\n  c: _d,\n}: {\n  a: A;\n  b?: B;\n  c: C;\n}) {}\n",
+            id="multiline-with-default-and-rename",
+        ),
+        pytest.param(
+            "f(([x, y]) => 0);\n", 4, "f(([_x, _y]) => 0);\n", id="array-pattern"
+        ),
+        pytest.param(
+            "f(({ a: { b }, ...rest }) => 0);\n",
+            4,
+            "f(({ a: { b: _b }, ..._rest }) => 0);\n",
+            id="nested-and-rest",
+        ),
+        pytest.param(
+            "try {} catch ({ message, stack }) {}\n",
+            15,
+            "try {} catch ({ message: _message, stack: _stack }) {}\n",
+            id="catch-pattern",
+        ),
+    ],
+)
+def test_all_destructured_renames_every_name(source, col, expected):
+    text, fixed, skipped = _fix(source, ("(all destructured elements)", 1, col), path="c.tsx")
+    assert (text, fixed, skipped) == (expected, ["(all destructured elements)"], [])
+
+
+@needs_treesitter
+@pytest.mark.parametrize(
+    ("source", "line", "col", "reason"),
+    [
+        pytest.param("const { a, b } = o;\n", 1, 7, "not_a_parameter", id="variable-pattern"),
+        pytest.param(
+            "const _b = 1;\nfunction k({ a, b }: P) { return _b; }\n",
+            2,
+            12,
+            "name_taken",
+            id="one-name-taken",
+        ),
+        pytest.param(
+            "function k({ a, b }: P): b is X { return true; }\n",
+            1,
+            12,
+            "used_in_signature",
+            id="one-name-in-signature",
+        ),
+        pytest.param(
+            "class C { constructor(private x: number) {} }\n", 1, 24, "not_found", id="not-a-pattern"
+        ),
+        pytest.param("function k({ a, b }: P) {}\n", 1, 99, "not_found", id="bad-column"),
+    ],
+)
+def test_all_destructured_skips_whole_pattern(source, line, col, reason):
+    text, fixed, skipped = _fix(source, ("(all destructured elements)", line, col))
+    assert (text, fixed, skipped) == (source, [], [reason])
+
+
+@needs_treesitter
 def test_jsx_component_props():
     text, fixed, _skipped = _fix(
         "const C = ({ title, onClose }: Props) => <div>{title}</div>;\n",
