@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 
 from desloppify.languages.typescript.syntax.scanner import scan_code
+from desloppify.languages.typescript.syntax.tree import ParsedSource, parse_text, parsed_file
 
 from .helpers import (
     _code_text,
@@ -62,6 +63,20 @@ def _emit(
 ) -> None:
     """Append a smell issue."""
     smell_counts[key].append({"file": ctx.filepath, "line": line, "content": content})
+
+
+def _parsed(ctx) -> ParsedSource | None:
+    """The file's syntax tree, or None without tree-sitter."""
+    return parsed_file(ctx.filepath) or parse_text(ctx.content, ctx.filepath)
+
+
+def _node_line(parsed: ParsedSource, node) -> tuple[int, str]:
+    """``(1-based row, stripped line text[:100])`` where ``node`` starts."""
+    source = parsed.source
+    start = source.rfind(b"\n", 0, node.start_byte) + 1
+    end = source.find(b"\n", node.start_byte)
+    line = source[start : len(source) if end == -1 else end].decode("utf-8", "replace")
+    return node.start_point[0] + 1, line.strip()[:100]
 
 
 def _find_function_start(line: str, next_lines: list[str]) -> str | None:
@@ -212,4 +227,6 @@ __all__ = [
     "_extract_function_body",
     "_find_function_start",
     "_find_opening_brace_line",
+    "_node_line",
+    "_parsed",
 ]

@@ -1,13 +1,12 @@
-"""TypeScript smell helper utilities — block parsing, line-state, code projection."""
+"""TypeScript smell helper utilities — block parsing and code projection."""
 
 from __future__ import annotations
 
-import re
 from typing import NamedTuple
 
 from desloppify.base.text_utils import strip_c_style_comments
 from desloppify.languages._framework.node.js_text import code_text as _code_text
-from desloppify.languages.typescript.syntax.scanner import scan_code
+from desloppify.languages.typescript.syntax.scanner import SourceText, scan_code
 
 
 # ---------------------------------------------------------------------------
@@ -21,7 +20,12 @@ class _FileContext(NamedTuple):
     filepath: str
     content: str
     lines: list[str]
-    line_state: dict[int, str]
+    source: SourceText
+
+
+def _file_context(filepath: str, content: str) -> _FileContext:
+    source = SourceText(content)
+    return _FileContext(filepath, content, source.lines, source)
 
 
 # ---------------------------------------------------------------------------
@@ -34,49 +38,11 @@ def _strip_ts_comments(text: str) -> str:
     return strip_c_style_comments(text)
 
 
-def _ts_match_is_in_string(line: str, match_start: int) -> bool:
-    """Check if a match position falls inside a string literal/comment on one line."""
-    i = 0
-    in_str = None
-
-    while i < len(line):
-        if i == match_start:
-            return in_str is not None
-
-        ch = line[i]
-
-        if in_str and ch == "\\" and i + 1 < len(line):
-            i += 2
-            continue
-
-        if in_str:
-            if ch == in_str:
-                in_str = None
-            i += 1
-            continue
-
-        if ch == "/" and i + 1 < len(line) and line[i + 1] == "/":
-            return match_start > i
-
-        if ch in ("'", '"', "`"):
-            in_str = ch
-            i += 1
-            continue
-
-        i += 1
-
-    return False
-
-
-def _regex_line_matches(ctx: _FileContext, pattern: str):
-    """``(index, line)`` for each line whose first match of ``pattern`` is code,
-    lines inside block comments and template literals left out."""
-    for index, line in enumerate(ctx.lines):
-        if index in ctx.line_state:
-            continue
-        match = re.search(pattern, line)
-        if match and not _ts_match_is_in_string(line, match.start()):
-            yield index, line
+def _regex_line_matches(ctx: _FileContext, pattern: str, anchor: str = "code"):
+    """``(index, line)`` for each line with a match of ``pattern`` that starts
+    in code (or starts a literal or comment: see ``SourceText.line_matches``)."""
+    for index, _match in ctx.source.line_matches(pattern, anchor):
+        yield index, ctx.lines[index]
 
 
 # ---------------------------------------------------------------------------
@@ -141,121 +107,15 @@ def _content_line_info(content: str, pos: int) -> tuple[int, str]:
     return line_no, content[line_start:line_end].strip()[:100]
 
 
-# ---------------------------------------------------------------------------
-# Line-state scanners (formerly _smell_helpers_line_state.py)
-# ---------------------------------------------------------------------------
-
-
-def _scan_template_content(
-    line: str, start: int, brace_depth: int = 0
-) -> tuple[int, bool, int]:
-    """Scan template literal content from *start* in *line*."""
-    j = start
-    while j < len(line):
-        ch = line[j]
-        if ch == "\\" and j + 1 < len(line):
-            j += 2
-            continue
-        if ch == "$" and j + 1 < len(line) and line[j + 1] == "{":
-            brace_depth += 1
-            j += 2
-            continue
-        if ch == "}" and brace_depth > 0:
-            brace_depth -= 1
-            j += 1
-            continue
-        if ch == "`" and brace_depth == 0:
-            return (j + 1, True, brace_depth)
-        j += 1
-    return (j, False, brace_depth)
-
-
-def _scan_code_line(line: str) -> tuple[bool, bool, int]:
-    """Scan a normal code line for block comment or template literal start."""
-    j = 0
-    in_str = None
-    while j < len(line):
-        ch = line[j]
-
-        if in_str and ch == "\\" and j + 1 < len(line):
-            j += 2
-            continue
-
-        if in_str:
-            if ch == in_str:
-                in_str = None
-            j += 1
-            continue
-
-        if ch == "/" and j + 1 < len(line) and line[j + 1] == "/":
-            break
-
-        if ch == "/" and j + 1 < len(line) and line[j + 1] == "*":
-            close = line.find("*/", j + 2)
-            if close != -1:
-                j = close + 2
-                continue
-            return (True, False, 0)
-
-        if ch == "`":
-            end_pos, found_close, depth = _scan_template_content(line, j + 1)
-            if found_close:
-                j = end_pos
-                continue
-            return (False, True, depth)
-
-        if ch in ("'", '"'):
-            in_str = ch
-            j += 1
-            continue
-
-        j += 1
-
-    return (False, False, 0)
-
-
-def _build_ts_line_state(lines: list[str]) -> dict[int, str]:
-    """Build a map of lines inside block comments or template literals."""
-    state: dict[int, str] = {}
-    in_block_comment = False
-    in_template = False
-    template_brace_depth = 0
-
-    for i, line in enumerate(lines):
-        if in_block_comment:
-            state[i] = "block_comment"
-            if "*/" in line:
-                in_block_comment = False
-            continue
-
-        if in_template:
-            state[i] = "template_literal"
-            _, found_close, template_brace_depth = _scan_template_content(
-                line, 0, template_brace_depth
-            )
-            if found_close:
-                in_template = False
-            continue
-
-        in_block_comment, in_template, depth = _scan_code_line(line)
-        if in_template:
-            template_brace_depth = depth
-
-    return state
-
-
 __all__ = [
     "_FileContext",
-    "_build_ts_line_state",
     "_code_text",
     "_content_line_info",
     "_extract_block_body",
+    "_file_context",
     "_find_block_end",
     "_regex_line_matches",
-    "_scan_code_line",
-    "_scan_template_content",
     "_strip_ts_comments",
     "_track_brace_body",
-    "_ts_match_is_in_string",
     "scan_code",
 ]

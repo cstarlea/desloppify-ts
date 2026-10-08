@@ -7,7 +7,7 @@ import re
 from typing import NamedTuple
 
 from desloppify.languages.typescript.syntax.nodes import FUNCTIONS
-from desloppify.languages.typescript.syntax.queries import definitions
+from desloppify.languages.typescript.syntax.queries import definitions, descendants
 from desloppify.languages.typescript.syntax.tree import ParsedSource, parse_text, parsed_file
 
 from .detector_core import (
@@ -33,6 +33,8 @@ from .detector_core import (
     _extract_function_body,
     _find_function_start,
     _find_opening_brace_line,
+    _node_line,
+    _parsed,
 )
 from .helpers import (
     _code_text,
@@ -296,11 +298,45 @@ def _scan_multi_line_chain(ctx, index: int, smell_counts: dict[str, list[dict]])
 
 
 def _detect_empty_if_chains(ctx, smell_counts: dict[str, list[dict]]) -> None:
-    """Find if/else chains where all branches are empty."""
+    """Find if/else chains where every branch is empty (a comment counts as content)."""
+    parsed = _parsed(ctx)
+    if parsed is None:
+        _empty_if_chains_regex(ctx, smell_counts)
+        return
+    for node in descendants(parsed.root, ("if_statement",)):
+        if (node.parent is None or node.parent.type != "else_clause") and _chain_is_empty(node):
+            _emit(smell_counts, "empty_if_chain", ctx, *_node_line(parsed, node))
+
+
+def _chain_is_empty(head) -> bool:
+    node = head
+    while True:
+        if not _empty_branch(node.child_by_field_name("consequence")):
+            return False
+        alternative = node.child_by_field_name("alternative")
+        if alternative is None:
+            return True
+        branches = alternative.named_children
+        if len(branches) != 1:
+            return False
+        if branches[0].type != "if_statement":
+            return _empty_branch(branches[0])
+        node = branches[0]
+
+
+def _empty_branch(branch) -> bool:
+    if branch is None:
+        return False
+    return branch.type == "empty_statement" or (
+        branch.type == "statement_block" and branch.named_child_count == 0
+    )
+
+
+def _empty_if_chains_regex(ctx, smell_counts: dict[str, list[dict]]) -> None:
     index = 0
     while index < len(ctx.lines):
         stripped = ctx.lines[index].strip()
-        if not _IF_START.match(stripped):
+        if not _IF_START.match(stripped) or not _starts_in_code(ctx, index):
             index += 1
             continue
         if _SINGLE_EMPTY_IF.match(stripped):
@@ -312,6 +348,12 @@ def _detect_empty_if_chains(ctx, smell_counts: dict[str, list[dict]]) -> None:
         index += 1
 
 
+def _starts_in_code(ctx, index: int) -> bool:
+    """Whether line ``index``'s first non-blank character is code."""
+    line = ctx.lines[index]
+    return ctx.source.kind_at(ctx.source.line_starts[index] + len(line) - len(line.lstrip())) is None
+
+
 def _detect_error_no_throw(ctx, smell_counts: dict[str, list[dict]]) -> None:
     """Find console.error calls not followed by throw/return or handling."""
     basename = os.path.basename(ctx.filepath).lower()
@@ -319,15 +361,16 @@ def _detect_error_no_throw(ctx, smell_counts: dict[str, list[dict]]) -> None:
     if any(tag in basename_no_ext for tag in _ERROR_HANDLER_BASENAMES):
         return
 
-    for index, line in enumerate(ctx.lines):
-        if "console.error" not in line:
+    code_lines = ctx.source.code_lines
+    for index, code in enumerate(code_lines):
+        if "console.error" not in code:
             continue
-        preceding = "\n".join(ctx.lines[max(0, index - 10) : index])
+        preceding = "\n".join(code_lines[max(0, index - 10) : index])
         if _PRECEDING_SKIP_PATTERNS.search(preceding):
             continue
-        following = "\n".join(ctx.lines[index + 1 : index + 4])
+        following = "\n".join(code_lines[index + 1 : index + 4])
         if not _HANDLED_RE.search(following):
-            _emit(smell_counts, "console_error_no_throw", ctx, index + 1, line.strip()[:100])
+            _emit(smell_counts, "console_error_no_throw", ctx, index + 1, ctx.lines[index].strip()[:100])
 
 
 def _detect_high_cyclomatic_complexity(ctx, smell_counts: dict[str, list[dict]]) -> None:

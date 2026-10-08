@@ -20,6 +20,14 @@ Every `save_state` recomputes the scores (`recompute_stats`), so they always ref
 
 The modes are defined under "Lenient, strict and verified" below.
 
+### Headline score
+
+The scan summary, `status`, the scorecard image and `query.json` (`headline`) lead with one score (`headline_score` in `state_score_snapshot.py`). Normally that is overall. While no subjective dimension has been assessed, it is the objective score, marked **provisional**, because overall and strict can't pass 25 until then (see below). The four stored scores don't change.
+
+### Gating CI on a score
+
+`scan --fail-under SCORE` exits with status 1 when a score is below `SCORE`. `--fail-score` picks which one: objective (the default), verified, strict or overall. With `--profile ci`, which skips the slow and subjective phases, the scan prints a plain report that ends with the gate result.
+
 ## Two pools
 
 Overall and strict blend two pools of dimensions (`MECHANICAL_WEIGHT_FRACTION`, `SUBJECTIVE_WEIGHT_FRACTION`):
@@ -31,7 +39,7 @@ Overall and strict blend two pools of dimensions (`MECHANICAL_WEIGHT_FRACTION`, 
 
 Each pool is a weighted average of its dimension scores.
 
-The subjective pool always contains every default subjective dimension (20 for TypeScript). A dimension that hasn't been assessed scores 0, so **before the first review, overall and strict are at most 25**, which is a quarter of the mechanical average. Objective and verified don't use the subjective pool.
+The subjective pool always contains every default subjective dimension (20 for TypeScript). A dimension that hasn't been assessed scores 0, so **before the first review, overall and strict are at most 25**, which is a quarter of the mechanical average. That's why the headline is the provisional objective score until then. Objective and verified don't use the subjective pool.
 
 If no detector reports any checks and there are no assessments, all four scores are 100 (`_set_perfect_scores`).
 
@@ -44,10 +52,10 @@ Each detector reports a **potential**, the number of checks it ran, along with i
 | Dimension | Weight in pool | Detectors that TypeScript scans emit |
 |---|---|---|
 | **File health** | 2.0 | structural |
-| **Code quality** | 1.0 | unused, logs, exports, deprecated, smells, react, nextjs, next_lint, orphaned, flat_dirs, naming, single_use, coupling, facade, props, patterns, responsibility_cohesion, stale_exclude |
+| **Code quality** | 1.0 | unused, logs, exports, deprecated, smells, react, nextjs, next_lint, orphaned, flat_dirs, naming, single_use, coupling, cycles, facade, props, patterns, responsibility_cohesion, stale_exclude |
 | **Duplication** | 1.0 | dupes, boilerplate_duplication |
 | **Test health** | 1.0 | test_coverage |
-| **Security** | 1.0 | security, cycles |
+| **Security** | 1.0 | security |
 
 The detector-to-dimension mapping comes from the registry (`base/registry/catalog_entries.py`), and the weights come from `MECHANICAL_DIMENSION_WEIGHTS`. The registry also maps some detectors that no TypeScript phase emits, such as the Rust detectors. They never report a potential, so they never count. Review, concerns, `signature`, `stale_wontfix` and a few others create work items but are kept out of scoring (`SCORING_EXCLUDED_DETECTORS`).
 
@@ -57,7 +65,9 @@ A mechanical dimension with fewer than 200 checks (`MIN_SAMPLE`) has its weight 
 
 ### Carried-forward dimensions
 
-If a mechanical dimension is missing from a scan, its previous score is kept and marked `carried_forward` (`_materialize_dimension_scores`). This only happens when none of its detectors reported a potential, meaning none of them ran. If a detector ran and found nothing left to check, the old score is dropped.
+If a mechanical dimension is missing from a scan, its previous score is kept and marked `carried_forward` (`_materialize_dimension_scores`). This only happens when none of its detectors reported a potential, meaning none of them ran (for example, `dupes` under `--skip-slow`). If a detector ran and found nothing left to check, the old score is dropped.
+
+A carried score expires. `carried_forward_since_scan` records the first scan it was carried in, and after `CARRIED_FORWARD_MAX_SCANS` (3) scans without its detectors running, the dimension drops out of the score until they run again. The count is in scans, so the recomputes on saves between scans don't age it.
 
 ## Issue weights
 
@@ -115,7 +125,7 @@ The three modes differ only in which issue statuses count as failures. `issue_co
 | `auto_resolved` | passes | passes | passes |
 
 - **Lenient** (overall, objective) counts only work you haven't done.
-- **Strict** also counts debt you accepted with `wontfix`, for as long as the finding is still there. The gap between overall and strict is your wontfix debt.
+- **Strict** also counts debt you accepted with `wontfix`, for as long as the finding is still there. The gap between overall and strict is your wontfix debt. The debt totals in the scan summary, `status` and the narrative count the same issues (`is_wontfix_debt`, `stats.wontfix_debt`); `stats.wontfix` is the plain status count.
 - **Verified** also counts a manual `fixed` or `false_positive` until a later scan confirms the finding is gone. It covers the mechanical dimensions only.
 
 "Confirmed gone" means the issue's detector ran and no longer reports it, the zone policy now skips that detector for the file, or the file is gone. `dev/QUEUE_LIFECYCLE.md` in the repository gives the details.

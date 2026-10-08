@@ -11,6 +11,7 @@ from desloppify.base.discovery.file_paths import rel, resolve_path
 from desloppify.base.discovery.paths import get_area
 from desloppify.base.discovery.source import find_ts_and_js_files
 from desloppify.base.output.fallbacks import log_best_effort_failure
+from desloppify.languages._framework.node.js_text import code_text
 from desloppify.languages.typescript.detectors.contracts import DetectorResult
 from .catalog import PATTERN_FAMILIES
 
@@ -39,7 +40,7 @@ def _build_census(
         try:
             area = get_area(filepath)
             p = Path(filepath) if Path(filepath).is_absolute() else Path(resolve_path(filepath))
-            content = p.read_text()
+            content = code_text(p.read_text())
         except (OSError, UnicodeDecodeError) as exc:
             log_best_effort_failure(logger, f"read TypeScript pattern candidate {filepath}", exc)
             continue
