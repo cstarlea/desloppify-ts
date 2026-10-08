@@ -102,7 +102,7 @@ def get_ts_fixers() -> dict[str, FixerConfig]:
         ),
         "unused-params": FixerConfig(
             "unused params",
-            _det_unused("vars"),
+            _det_unused("params"),
             fixers_mod.fix_unused_params,
             "unused",
             "Prefixed",

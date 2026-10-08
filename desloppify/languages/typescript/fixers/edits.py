@@ -8,26 +8,6 @@ overlap.
 from __future__ import annotations
 
 
-def byte_offset(source: bytes, line: int, col: int) -> int | None:
-    """The byte offset of tsc's 1-based ``line``/``col`` (col in UTF-16 units)."""
-    if line < 1 or col < 1:
-        return None
-    start = 0
-    for _ in range(line - 1):
-        newline = source.find(b"\n", start)
-        if newline == -1:
-            return None
-        start = newline + 1
-    newline = source.find(b"\n", start)
-    text = source[start : len(source) if newline == -1 else newline].decode("utf-8", "replace")
-    units = 0
-    for index, char in enumerate(text):
-        if units >= col - 1:
-            return start + len(text[:index].encode("utf-8"))
-        units += 2 if ord(char) > 0xFFFF else 1
-    return start + len(text.encode("utf-8")) if units == col - 1 else None
-
-
 def apply_edits(source: bytes, edits: list[tuple[int, int]]) -> bytes:
     """Delete every range, merging ranges that overlap or touch."""
     merged: list[list[int]] = []
@@ -128,7 +108,6 @@ def _jsdoc_start(source: bytes, statement, line_start: int) -> int:
 __all__ = [
     "apply_edits",
     "apply_replacements",
-    "byte_offset",
     "comma_list_edits",
     "whole_statement_range",
 ]

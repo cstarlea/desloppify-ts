@@ -27,24 +27,25 @@ from dataclasses import dataclass, field
 
 from desloppify.base.output.terminal import colorize
 from desloppify.languages._framework.base.types import FixResult
+from desloppify.languages.typescript.syntax.nodes import (
+    FUNCTIONS,
+    STATEMENT_PARENTS,
+    NameIndex,
+    asi_hazards,
+    byte_offset,
+    is_parameter,
+    node_key,
+    same,
+    within,
+)
 from desloppify.languages.typescript.syntax.tree import (
     ParsedSource,
     get_parser,
     parse_text,
 )
 
-from .edits import apply_edits, byte_offset, comma_list_edits, whole_statement_range
+from .edits import apply_edits, comma_list_edits, whole_statement_range
 from .fixer_io import apply_fixer
-from .nodes import (
-    FUNCTIONS,
-    STATEMENT_PARENTS,
-    NameIndex,
-    asi_hazards,
-    is_parameter,
-    node_key,
-    same,
-    within,
-)
 
 ALL_DESTRUCTURED = "(all destructured elements)"
 ALL_VARIABLES = "(all variables)"
