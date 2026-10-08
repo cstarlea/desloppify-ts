@@ -66,7 +66,8 @@ GOLDEN_NODE_DIR := desloppify/languages/typescript/tests/golden/node
 
 tests-golden-node: install-full-tools
 	npm ci --prefix $(GOLDEN_NODE_DIR) --no-audit --no-fund
-	DESLOPPIFY_REQUIRE_NODE_GOLDEN=1 pytest -q -rs desloppify/languages/typescript/tests/test_ts_golden.py
+	DESLOPPIFY_REQUIRE_NODE_GOLDEN=1 pytest -q -rs desloppify/languages/typescript/tests/test_ts_golden.py \
+		desloppify/languages/typescript/tests/test_ts_fixer_roundtrip.py
 
 package-smoke: install-ci-tools
 	rm -rf dist .pkg-smoke

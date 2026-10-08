@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections import defaultdict
 
 from desloppify.languages.typescript.syntax.tree import ParsedSource
@@ -30,20 +31,26 @@ PARAMETERS = frozenset({"required_parameter", "optional_parameter"})
 _DECLARATIONS = frozenset({"lexical_declaration", "variable_declaration"})
 # Nodes whose children are statements that can be deleted outright.
 STATEMENT_PARENTS = frozenset({"program", "statement_block", "switch_case", "switch_default"})
+_JS_LINE_BREAK = re.compile(rb"\r\n?|\n|\xe2\x80[\xa8\xa9]")  # CRLF, CR, LF, U+2028, U+2029
 
 
 def byte_offset(source: bytes, line: int, col: int) -> int | None:
-    """The byte offset of tsc's 1-based ``line``/``col`` (col in UTF-16 units)."""
+    """The byte offset of tsc's 1-based ``line``/``col`` (col in UTF-16 units).
+
+    tsc counts lines the way JavaScript does: a lone CR, U+2028 and U+2029
+    end a line too, so they must here, or every later line is off.
+    """
     if line < 1 or col < 1:
         return None
     start = 0
     for _ in range(line - 1):
-        newline = source.find(b"\n", start)
-        if newline == -1:
+        newline = _JS_LINE_BREAK.search(source, start)
+        if newline is None:
             return None
-        start = newline + 1
-    newline = source.find(b"\n", start)
-    text = source[start : len(source) if newline == -1 else newline].decode("utf-8", "replace")
+        start = newline.end()
+    newline = _JS_LINE_BREAK.search(source, start)
+    end = len(source) if newline is None else newline.start()
+    text = source[start:end].decode("utf-8", "replace")
     units = 0
     for index, char in enumerate(text):
         if units >= col - 1:
