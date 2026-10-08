@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import os
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -165,6 +165,58 @@ def compiler_option(config_path: Path, name: str, depth: int = 0) -> Any:
         if value is not None:
             return value
     return None
+
+
+def extends_chain(config_path: Path) -> list[Path]:
+    """``config_path`` and the configs it extends, nearest first, through the
+    last ``extends`` entry that resolves at each step (the one that wins)."""
+    chain = [config_path]
+    while len(chain) <= _MAX_EXTENDS_DEPTH:
+        data = read_tsconfig(chain[-1])
+        extends = data.get("extends") if data is not None else None
+        specs = [extends] if isinstance(extends, str) else extends if isinstance(extends, list) else []
+        parents = [_resolve_extends(spec, chain[-1].parent) for spec in specs if isinstance(spec, str)]
+        parent = next((found for found in reversed(parents) if found is not None), None)
+        if parent is None or parent in chain:
+            break
+        chain.append(parent)
+    return chain
+
+
+def traced_compiler_option(
+    config_path: Path,
+    name: str,
+    fallback_bases: Callable[[str], dict[str, Any] | None] | None = None,
+    depth: int = 0,
+) -> tuple[Any, bool]:
+    """``compiler_option``, plus whether the answer is known.
+
+    It isn't known when an ``extends`` the lookup has to read through can't be
+    resolved (a package that isn't installed) and ``fallback_bases`` (given the
+    specifier, the options that base sets) doesn't know it either.
+    """
+    if depth > _MAX_EXTENDS_DEPTH:
+        return None, False
+    data = read_tsconfig(config_path)
+    if data is None:
+        return None, False
+    options = data.get("compilerOptions")
+    if isinstance(options, dict) and name in options:
+        return options[name], True
+    extends = data.get("extends")
+    specs = [extends] if isinstance(extends, str) else extends if isinstance(extends, list) else []
+    for spec in reversed(specs):  # later entries override earlier ones
+        if not isinstance(spec, str):
+            continue
+        parent = _resolve_extends(spec, config_path.parent)
+        if parent is not None:
+            value, known = traced_compiler_option(parent, name, fallback_bases, depth + 1)
+        else:
+            base = fallback_bases(spec) if fallback_bases is not None else None
+            value, known = (None, False) if base is None else (base.get(name), True)
+        if value is not None or not known:
+            return value, known
+    return None, True
 
 
 def _effective_paths(

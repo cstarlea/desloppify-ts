@@ -52,7 +52,7 @@ Each detector reports a **potential**, the number of checks it ran, along with i
 | Dimension | Weight in pool | Detectors that TypeScript scans emit |
 |---|---|---|
 | **File health** | 2.0 | structural |
-| **Code quality** | 1.0 | unused, logs, exports, deprecated, smells, react, nextjs, next_lint, orphaned, flat_dirs, naming, single_use, coupling, cycles, facade, props, patterns, responsibility_cohesion, stale_exclude |
+| **Code quality** | 1.0 | unused, logs, exports, deprecated, smells, react, nextjs, next_lint, orphaned, flat_dirs, naming, single_use, coupling, cycles, facade, props, patterns, responsibility_cohesion, stale_exclude, tsconfig_health |
 | **Duplication** | 1.0 | dupes, boilerplate_duplication |
 | **Test health** | 1.0 | test_coverage |
 | **Security** | 1.0 | security |
@@ -84,7 +84,7 @@ Some issues don't count at all:
 
 - Suppressed issues (matched by an ignore pattern) are skipped.
 - Issues outside the last scan's `--path` are skipped.
-- Issues in the **test**, **config**, **generated** and **vendor** zones are skipped. Production and script files count. The script zone covers `scripts/`, `bin/`, `examples/` and `example/` directories; its files aren't expected to have tests, so Test health scores production files only.
+- Issues in the **test**, **config**, **generated** and **vendor** zones are skipped. Production and script files count. The script zone covers `scripts/`, `bin/`, `examples/` and `example/` directories; its files aren't expected to have tests, so Test health scores production files only. `tsconfig_health` reports on tsconfig files, so its issues count in the config zone too.
 
 ### File-based detectors
 

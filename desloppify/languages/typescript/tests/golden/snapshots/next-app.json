@@ -83,6 +83,20 @@
       "confidence": "high",
       "zone": "production",
       "summary": "Untested module (12 LOC, 0 importers) — no test files found"
+    },
+    {
+      "id": "tsconfig_health::tsconfig.json::noUncheckedIndexedAccess",
+      "tier": 3,
+      "confidence": "medium",
+      "zone": "production",
+      "summary": "tsconfig never sets noUncheckedIndexedAccess: `arr[i]` and `record[key]` are typed as never undefined"
+    },
+    {
+      "id": "tsconfig_health::tsconfig.json::verbatimModuleSyntax",
+      "tier": 2,
+      "confidence": "medium",
+      "zone": "production",
+      "summary": "tsconfig never sets verbatimModuleSyntax: type-only imports can be emitted as runtime imports"
     }
   ],
   "potentials": {
@@ -105,6 +119,7 @@
     "smells": 14,
     "structural": 14,
     "test_coverage": 35,
+    "tsconfig_health": 3,
     "unused": 14
   },
   "reduced_coverage": [

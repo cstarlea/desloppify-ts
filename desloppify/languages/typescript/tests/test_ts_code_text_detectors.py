@@ -12,13 +12,14 @@ from pathlib import Path
 import pytest
 
 import desloppify.languages.typescript.syntax.tree as tree_mod
+from desloppify.engine.detectors.security.detector import detect_security_issues
 from desloppify.languages._framework.node.js_text import literal_spans
 from desloppify.languages.typescript.detectors.concerns import detect_mixed_concerns
 from desloppify.languages.typescript.detectors.logs import detect_logs
 from desloppify.languages.typescript.detectors.security.detector import detect_ts_security
 from desloppify.languages.typescript.detectors.smells import detect_smells
 from desloppify.languages.typescript.phases_config import TS_COMPLEXITY_SIGNALS
-from desloppify.languages.typescript.syntax.scanner import SourceText
+from desloppify.languages.typescript.syntax.scanner import SourceText, jsx_text_spans
 
 HAS_TREESITTER = importlib.util.find_spec("tree_sitter_language_pack") is not None
 needs_treesitter = pytest.mark.skipif(not HAS_TREESITTER, reason="needs tree-sitter")
@@ -68,6 +69,29 @@ def test_source_text_anchors():
     assert [i for i, _ in source.line_matches("'TODO", "literal")] == [1]
     # The first match on a line may be in a string; a later one in code still counts.
     assert [i for i, _ in SourceText("f('rgba(1'); rgba(2)").line_matches(r"rgba\(")] == [0]
+
+
+@needs_treesitter
+def test_jsx_text_is_not_code(tmp_path):
+    text = "const a = <p>Don't {x} //stop é</p>; f('q'); // c\nconst b = <b>it's</b>; g();\n"
+    source = SourceText(text, tmp_path / "a.tsx")
+    assert source.code_lines == [
+        "const a = <p>" + " " * 6 + "{x}" + " " * 9 + "</p>; f(   );     ",
+        "const b = <b>    </b>; g();",
+    ]
+    assert source.kind_at(text.index("Don")) == "jsx"
+    # The same text in a .ts file has no JSX; without a path the lexer can't tell.
+    assert jsx_text_spans(text, tmp_path / "a.ts") == []
+    assert SourceText(text).code_lines[0].startswith("const a = <p>Don ")
+
+
+@needs_treesitter
+def test_jsx_text_spans_reuse_the_file_parse(tmp_path):
+    path = tmp_path / "a.jsx"
+    path.write_text("const a = <p>x</p>;\n")
+    assert jsx_text_spans(path.read_text(), path) == [(13, 14)]
+    # Text that differs from the file on disk is parsed on its own.
+    assert jsx_text_spans("const b = <i>yz</i>;\n", path) == [(13, 15)]
 
 
 # ── smells ───────────────────────────────────────────────────
@@ -172,6 +196,59 @@ def test_security_ignores_comments_and_strings(tmp_path):
     )
     entries = detect_ts_security([str(path)], None).entries
     assert [(e["detail"]["kind"], e["detail"]["line"]) for e in entries] == [("eval_injection", 11)]
+
+
+def _cross_language_security(tmp_path: Path, content: str, name: str = "a.ts") -> list[tuple[str, int]]:
+    (tmp_path / name).write_text(content)
+    entries, _ = detect_security_issues([name], None, "typescript", scan_root=tmp_path)
+    return [(e["detail"]["kind"], e["detail"]["line"]) for e in entries]
+
+
+def test_cross_language_security_finds_secrets_in_any_text(tmp_path):
+    content = (
+        "const apiKey = 'sk_" "live_abcdefghijklmnopqrstuvwx';\n"  # 1: in a string (split so push protection passes)
+        "// AKIAIOSFODNN7EXAMPLE\n"  # 2: in a comment
+        "const password = `Qwerty123456`;\n"  # 3: a template is a literal too
+    )
+    assert _cross_language_security(tmp_path, content) == [
+        ("hardcoded_secret_value", 1),
+        ("hardcoded_secret_value", 2),
+        ("hardcoded_secret_name", 3),
+    ]
+
+
+def test_cross_language_security_names_and_calls_are_code(tmp_path):
+    content = (
+        "/**\n"
+        " * @example\n"
+        "\tapi({ token: 'secret123abc' })\n"  # 3: in a doc comment
+        " */\n"
+        "const msg = \"token = 'Zx81sk29Fq0p'\";\n"  # 5: in a string
+        "f(); // const secret = 'Zx81sk29Fq0p'\n"  # 6: after code, in a comment
+        "console.error('Invalid token');\n"  # 7: a message mentions a token
+        "console.log(`token is ${token}`);\n"  # 8: logs one
+        "const x = Math.random(); // not a session id\n"  # 9
+        "const sessionId = Math.random().toString(36);\n"  # 10
+        "localStorage.setItem('nonce', Math.random());\n"  # 11: a string key is context
+        "const s = 'Math.random() token';\n"  # 12
+        "const o = { rejectUnauthorized: false };\n"  # 13
+        "const d = 'rejectUnauthorized: false';\n"  # 14
+    )
+    assert _cross_language_security(tmp_path, content) == [
+        ("log_sensitive", 8),
+        ("insecure_random", 10),
+        ("insecure_random", 11),
+        ("weak_crypto_tls", 13),
+    ]
+
+
+@needs_treesitter
+def test_cross_language_security_reads_jsx_text(tmp_path):
+    content = (
+        "export const A = () => <p>Don't share your token = 'Zx81sk29Fq0p'</p>;\n"
+        "export const B = () => <p>It's</p>; const secret = 'Zx81sk29Fq0p';\n"
+    )
+    assert _cross_language_security(tmp_path, content, "a.tsx") == [("hardcoded_secret_name", 2)]
 
 
 # ── file-level heuristics ────────────────────────────────────

@@ -45,7 +45,7 @@ CONFIG_SCHEMA: dict[str, ConfigKey] = {
     "ignore": ConfigKey(list, [], "Issue patterns to suppress"),
     "ignore_metadata": ConfigKey(dict, {}, "Ignore metadata {pattern: {note, added_at}}"),
     "zone_overrides": ConfigKey(
-        dict, {}, "Manual zone overrides {rel_path: zone_name}"
+        dict, {}, "Manual zone overrides {rel_path or glob: zone_name}"
     ),
     "review_dimensions": ConfigKey(
         list,
