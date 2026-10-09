@@ -190,7 +190,7 @@ Every adversarial input in the original review broke one of the line-regex fixer
   - replace `inspect.getsource` and `callable(fn)` tripwire tests with behaviour tests (E9);
   - delete the duplicate `tests/review/integration/*` wrappers (E10);
   - fold `tests/lang/typescript/` into `languages/typescript/tests/` (E13).
-- **Grammar preflight:** `desloppify setup --grammars`, and make `is_available()` actually load the tsx grammar (PK-2).
+- **Grammar preflight, done.** `desloppify setup --grammars` downloads the missing tsx and typescript grammars, loads each and fails naming any that will not load; the reduced-coverage warning now points at it. `is_available()` loads the tsx grammar once per process: when it cannot load, AST paths treat tree-sitter as absent and every call re-records the failure, so each scan still reports reduced coverage. Building the plugin checks only that the pack imports, so `--help` never fetches grammars (PK-2).
 - **Dead code:**
   - `dev test-hermes` (AR-4);
   - `base/optional_deps`;
@@ -343,7 +343,7 @@ Status key: **done** (with PR), **partial** (what's left is in §2), **open**, *
 | E12 | low | No test timeout | open → §2E |
 | E13 | low | TS tests in two trees | open → §2E |
 | PK-1 | medium | tree-sitter floor crashes; cap blocks working releases | done (#1) |
-| PK-2 | medium | Offline grammar download silently drops findings | partial (#1 reports reduced coverage) → §2E |
+| PK-2 | medium | Offline grammar download silently drops findings | done (#1 reduced coverage; `setup --grammars`, grammar-loading `is_available()`) |
 | PK-3 | medium | Wheel omits elixir/php/r review data | dropped |
 | PK-4 | medium | Fork inherits PyPI name and upstream URLs | done (#4 gated publish, #94 `desloppify-ts` + release-triggered publish); first release → §2F |
 | AR-1 | medium | New TS detector touches 6–8 files | open → §2E |

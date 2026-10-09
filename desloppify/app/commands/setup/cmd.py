@@ -15,6 +15,7 @@ from desloppify.app.skill_docs import GLOBAL_TARGETS, SKILL_VERSION, SKILL_VERSI
 from desloppify.base.discovery.file_paths import safe_write_text
 from desloppify.base.exception_sets import CommandError
 from desloppify.base.output.terminal import colorize
+from desloppify.languages.framework import prepare_grammars
 
 RESOURCE_PACKAGE = "desloppify.data.global"
 
@@ -147,8 +148,36 @@ def _run_global_setup(interface: str | None) -> None:
         print(colorize(f"Up to date: {', '.join(skipped_current)}", "dim"))
 
 
+def _run_grammar_setup() -> None:
+    """Make sure the tree-sitter grammars load, downloading missing ones."""
+    try:
+        errors, downloaded = prepare_grammars()
+    except ImportError as exc:
+        raise CommandError(
+            "tree-sitter-language-pack is not installed, so AST-based detectors are skipped. "
+            "Install it with `pip install 'desloppify-ts[treesitter]'`."
+        ) from exc
+    for grammar, error in errors.items():
+        if error is None:
+            note = " (downloaded)" if grammar in downloaded else ""
+            print(colorize(f"  {grammar}: ok{note}", "green"))
+        else:
+            print(colorize(f"  {grammar}: failed — {error[:200]}", "red"))
+    failed = sorted(grammar for grammar, error in errors.items() if error is not None)
+    if failed:
+        raise CommandError(
+            f"tree-sitter grammar(s) failed to load: {', '.join(failed)}. "
+            "The language pack downloads grammars on first use; rerun "
+            "`desloppify setup --grammars` with network access."
+        )
+    print(colorize("tree-sitter grammars ready.", "green"))
+
+
 def cmd_setup(args: argparse.Namespace) -> None:
-    """Install skill documents globally."""
+    """Install skill documents globally, or prepare tree-sitter grammars."""
+    if getattr(args, "grammars", False):
+        _run_grammar_setup()
+        return
     interface = getattr(args, "interface", None)
     interface = interface.lower() if isinstance(interface, str) else None
     _run_global_setup(interface)
