@@ -26,7 +26,7 @@ def _resource_text(filename: str) -> str:
     except (FileNotFoundError, ModuleNotFoundError, OSError) as exc:
         raise CommandError(
             f"Bundled skill resource {filename!r} is unavailable. "
-            "Reinstall desloppify or check package data."
+            "Reinstall desloppify-ts or check package data."
         ) from exc
 
 

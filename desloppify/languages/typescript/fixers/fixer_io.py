@@ -46,7 +46,7 @@ def apply_fixer(
         print(
             colorize(
                 "  Warn: tree-sitter is not installed, so fixer output is not "
-                "syntax-checked before writing. Install desloppify[full] to enable it.",
+                "syntax-checked before writing. Install desloppify-ts[full] to enable it.",
                 "yellow",
             ),
             file=sys.stderr,

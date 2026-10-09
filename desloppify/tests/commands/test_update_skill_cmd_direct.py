@@ -54,7 +54,7 @@ def test_resolve_interface_prefers_explicit_then_install_metadata(monkeypatch) -
     assert update_skill_cmd_mod.resolve_interface() == "cursor"
 
 
-def test_update_installed_skill_handles_download_and_shared_file_write(
+def test_update_installed_skill_handles_bundled_read_and_shared_file_write(
     monkeypatch,
     tmp_path: Path,
     capsys,
@@ -76,7 +76,7 @@ def test_update_installed_skill_handles_download_and_shared_file_write(
 
     monkeypatch.setattr(
         update_skill_cmd_mod,
-        "_download",
+        "_read_bundled",
         lambda filename: skill_content if filename == "SKILL.md" else overlay_content,
     )
     monkeypatch.setattr(update_skill_cmd_mod, "get_project_root", lambda: tmp_path)
@@ -111,3 +111,9 @@ def test_cmd_update_skill_handles_missing_and_unknown_interfaces(monkeypatch, ca
     update_skill_cmd_mod.cmd_update_skill(argparse.Namespace(interface=None))
     out = capsys.readouterr().out
     assert "Unknown interface 'unknown_thing'." in out
+
+
+def test_read_bundled_returns_packaged_skill_docs() -> None:
+    skill = update_skill_cmd_mod._read_bundled("SKILL.md")
+    assert "desloppify-skill-version" in skill
+    assert update_skill_cmd_mod._read_bundled("CLAUDE.md").strip()

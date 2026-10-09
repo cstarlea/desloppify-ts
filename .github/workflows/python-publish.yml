@@ -1,17 +1,20 @@
-# Publish to PyPI on every push to main.
-# The "Check if version exists" step makes this idempotent — if the version
-# is already on PyPI, the job skips the publish cleanly.
+# Publish desloppify-ts to PyPI when a GitHub release is published.
 #
-# Fork: off until the repository variable PYPI_PUBLISH is "true". This fork
-# can't publish the upstream "desloppify" name; set the distribution name in
-# pyproject.toml, the environment URL and the PyPI check below first.
+# Gates, in order:
+#   1. the repository variable PYPI_PUBLISH must be "true";
+#   2. the full CI workflow must pass on the release tag;
+#   3. the tag must be "v" + [project].version from pyproject.toml;
+#   4. the version must not already be on PyPI (re-running is a no-op).
+#
+# Uploads use PyPI trusted publishing (OIDC): no API token is stored. The
+# pypi.org project "desloppify-ts" must list this repository, this workflow
+# file (python-publish.yml) and the environment "pypi" as a trusted publisher.
 
 name: Publish to PyPI
 
 on:
-  push:
-    branches: [main]
-  workflow_dispatch:
+  release:
+    types: [published]
 
 permissions:
   contents: read
@@ -21,15 +24,21 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  ci:
+    if: vars.PYPI_PUBLISH == 'true'
+    uses: ./.github/workflows/ci.yml
+
   publish:
+    needs: ci
     if: vars.PYPI_PUBLISH == 'true'
     runs-on: ubuntu-latest
     permissions:
+      contents: read
       id-token: write  # required for trusted publishing
 
     environment:
       name: pypi
-      url: https://pypi.org/p/desloppify
+      url: https://pypi.org/p/desloppify-ts
 
     steps:
       - uses: actions/checkout@v4
@@ -38,22 +47,39 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Get version from pyproject.toml
+      - name: Get distribution name and version from pyproject.toml
         id: version
         run: |
-          VERSION=$(python -c "import tomllib; print(tomllib.loads(open('pyproject.toml').read())['project']['version'])")
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          python - <<'EOF' >> "$GITHUB_OUTPUT"
+          import tomllib
+          project = tomllib.loads(open("pyproject.toml").read())["project"]
+          print(f"name={project['name']}")
+          print(f"version={project['version']}")
+          EOF
+
+      - name: Check the release tag matches the version
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          if [ "$TAG" != "v$VERSION" ]; then
+            echo "::error::Release tag $TAG does not match pyproject version v$VERSION."
+            exit 1
+          fi
 
       - name: Check if version exists on PyPI
         id: check
+        env:
+          NAME: ${{ steps.version.outputs.name }}
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://pypi.org/pypi/desloppify/${{ steps.version.outputs.version }}/json")
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://pypi.org/pypi/$NAME/$VERSION/json")
           if [ "$STATUS" = "200" ]; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
-            echo "Version ${{ steps.version.outputs.version }} already on PyPI — skipping publish."
+            echo "$NAME $VERSION already on PyPI — skipping publish."
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
-            echo "Version ${{ steps.version.outputs.version }} not on PyPI — will publish."
+            echo "$NAME $VERSION not on PyPI — will publish."
           fi
 
       - name: Run packaging smoke gate

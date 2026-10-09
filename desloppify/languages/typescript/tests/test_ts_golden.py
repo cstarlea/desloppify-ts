@@ -44,7 +44,7 @@ def _tsx_grammar_loads() -> bool:
 
 pytestmark = pytest.mark.skipif(
     not _tsx_grammar_loads(),
-    reason="golden scans need tree-sitter with the tsx grammar (pip install 'desloppify[full]')",
+    reason="golden scans need tree-sitter with the tsx grammar (pip install 'desloppify-ts[full]')",
 )
 
 EXPECTATIONS = json.loads((harness.GOLDEN_DIR / "expectations.json").read_text())

@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import logging
 import os
+import re
 import sys
 from collections.abc import Mapping
 from functools import lru_cache
@@ -241,7 +242,7 @@ def _looks_like_desloppify_checkout(root: Path) -> bool:
         text = pyproject.read_text(encoding="utf-8")
     except OSError:
         return False
-    return 'name = "desloppify"' in text or "name='desloppify'" in text
+    return bool(re.search(r"""^name\s*=\s*["']desloppify(-ts)?["']""", text, re.MULTILINE))
 
 
 def _running_installed_package_from_checkout(

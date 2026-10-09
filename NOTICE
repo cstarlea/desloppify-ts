@@ -1,0 +1,47 @@
+desloppify-ts
+https://github.com/cstarlea/desloppify
+
+desloppify-ts is a modified fork of desloppify by Peter O'Malley
+(https://github.com/peteromallet/desloppify), distributed under the Open
+Source Native License (OSNL) 0.2. The full license is in LICENSE.
+
+Copyright (c) 2025-2026 Peter O'Malley.
+
+Changes in this fork: the fork narrows desloppify to TypeScript and
+JavaScript, removes the other language plugins, and changes detectors,
+fixers, scoring, packaging and documentation throughout. The last
+multi-language version is tagged `pre-ts-only`; `git log pre-ts-only..`
+lists every change made since. Files under `desloppify/` and `docs/` may
+have been modified by the fork.
+
+Upstream contributions
+----------------------
+
+desloppify was written by Peter O'Malley with contributions from the
+upstream community; `git log pre-ts-only` records every upstream author.
+
+These upstream pull requests were merged into the fork after upstream
+stopped merging changes. Some covered languages the fork has since dropped;
+their authors are credited all the same.
+
+- awdemos: peteromallet/desloppify#744, which reviewed and integrated 27
+  pull requests, and the orphan-detector fix in it. The batch included work by:
+  - ApexWorm: #673, #685, #687, #688, #689, #690, #691, #692, #695
+  - AashrayAnand: #741
+  - AustenMan: #729, #730, #732, #733
+  - daBOB: #699
+  - dopamine-pixels: #737, #738
+  - dudell-bud: #703
+  - GDownes: #713
+  - grinidx: #682
+  - liorp: #743
+  - tallclouds: #676, #677
+  - violinyanev: #680
+  - wkeuppens: #696, #697
+  - XenuIsWatching: #731
+- elfensky: #617
+- jimmybrancaccio: #760
+- sandeep-patel-alepo-fifth: #750
+- treygoff24: #629
+
+Pull request numbers refer to https://github.com/peteromallet/desloppify/pull/<number>.

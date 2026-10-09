@@ -202,14 +202,12 @@ Every adversarial input in the original review broke one of the line-regex fixer
 
 ### 2F. Fork identity and release
 
-- **Distribution name (PK-4).** The fork can't publish as `desloppify`. Pick a name such as `desloppify-ng`, but keep the `desloppify` import package and console script so migrating is a one-line install change. Then set `PYPI_PUBLISH`, switch publishing to `release: published` / tag `v*`, check that the tag matches the version, and gate it on CI.
-- **Upstream pointers.** These still point at `peteromallet/desloppify`:
-  - `update_skill/cmd.py` downloads SKILL.md from upstream main; install it from bundled package data instead;
-  - `docs/SKILL.md` (clone, issues and `uvx` install);
-  - `README.md`;
-  - `pyproject.toml [project.urls]`;
-  - the release checklist.
-- **Attribution.** Keep the upstream LICENSE and copyright. Add a NOTICE/CREDITS section naming upstream and the cherry-picked contributors (awdemos's #744 batch, #617, #760, #629, #750). Keep merging with merge commits so authorship survives.
+- **Distribution name (PK-4), done in #94.** PyPI name `desloppify-ts`, proposed version 1.1.0. The import package and the `desloppify` command are kept, plus a `desloppify-ts` alias so `uvx desloppify-ts` works. Publishing runs only on `release: published`, reuses CI as a gate and checks that the tag is `v<version>`. Left for the maintainer:
+  - add the pypi.org trusted publisher for `desloppify-ts`;
+  - set `PYPI_PUBLISH`;
+  - cut the first release (`dev/release/RELEASE_CHECKLIST.md`).
+- **Upstream pointers, done in #94.** `update-skill` installs the bundled SKILL.md. `docs/SKILL.md`, the README, `[project.urls]`, the runtime install hints and the release checklist now point at `cstarlea/desloppify` and `desloppify-ts`. Historical release notes are left as they were.
+- **Attribution, done in #94.** The upstream LICENSE and copyright are kept. `NOTICE` names upstream, states that the fork modified the files, and credits every cherry-picked upstream PR author: the #744 batch with its 13 contributors, and #617, #629, #750 and #760. Keep merging with merge commits so authorship survives.
 - **Upstream intake.** New upstream PRs are checked against the fork as #11 did: apply the PR's regression test to fork `main` first, then port only what reproduces. Still to review: the MercurialUroboros TS false-positive commits (UP-3) and #704 (Codex token footer).
 - **Community.** Required checks on `main`, Actions enabled for outside contributors, and an announcement on the busiest upstream issues (#501, #615, #705, #665, #715).
 
@@ -347,7 +345,7 @@ Status key: **done** (with PR), **partial** (what's left is in §2), **open**, *
 | PK-1 | medium | tree-sitter floor crashes; cap blocks working releases | done (#1) |
 | PK-2 | medium | Offline grammar download silently drops findings | partial (#1 reports reduced coverage) → §2E |
 | PK-3 | medium | Wheel omits elixir/php/r review data | dropped |
-| PK-4 | medium | Fork inherits PyPI name and upstream URLs | partial (#4 gated publish) → §2F |
+| PK-4 | medium | Fork inherits PyPI name and upstream URLs | done (#4 gated publish, #94 `desloppify-ts` + release-triggered publish); first release → §2F |
 | AR-1 | medium | New TS detector touches 6–8 files | open → §2E |
 | AR-2 | medium | Regex-based TS plugin | partial (#3 imports on tree-sitter, #40 shared helper, 2.33 one parse per file) |
 | AR-3 | medium | Plugin guide describes nonexistent files | done (#14) |

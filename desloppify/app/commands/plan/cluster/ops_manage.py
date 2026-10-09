@@ -31,7 +31,7 @@ def _import_yaml_module() -> Any | None:
         print(
             colorize(
                 "  YAML import/export requires PyYAML. "
-                "Install with: pip install \"desloppify[plan-yaml]\"",
+                "Install with: pip install \"desloppify-ts[plan-yaml]\"",
                 "red",
             )
         )

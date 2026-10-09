@@ -102,7 +102,7 @@ def fix_unused_vars(entries: list[dict], *, dry_run: bool = False) -> FixResult:
     if entries and get_parser("tsx") is None:
         print(
             colorize(
-                "  Skip: the unused-vars fixer needs tree-sitter (install desloppify[full]).",
+                "  Skip: the unused-vars fixer needs tree-sitter (install desloppify-ts[full]).",
                 "yellow",
             ),
             file=sys.stderr,
