@@ -273,13 +273,19 @@ def test_ts_command_registry_canonical_surface_and_wrapper_passthrough(
     cli_mod.cmd_gods(SimpleNamespace(path=str(tmp_path), json=False, top=5))
     assert display_calls and display_calls[0]["label"] == "God components and classes"
 
-    monkeypatch.setattr(cli_mod, "get_src_path", lambda: "src")
-    monkeypatch.setattr(cli_mod.coupling_detector_mod, "detect_coupling_violations", lambda *_args, **_kwargs: ([{"file": "src/shared/a.ts", "target": "src/tools/x.ts", "tool": "x"}], 1))
-    monkeypatch.setattr(cli_mod.coupling_detector_mod, "detect_boundary_candidates", lambda *_args, **_kwargs: ([{"file": "src/shared/only.ts", "loc": 20, "sole_tool": "x", "importer_count": 1}], 1))
-    monkeypatch.setattr(cli_mod.coupling_detector_mod, "detect_cross_tool_imports", lambda *_args, **_kwargs: ([{"file": "src/tools/a.ts", "target": "src/tools/b.ts", "source_tool": "a", "target_tool": "b"}], 1))
+    monkeypatch.setattr(cli_mod.coupling_detector_mod, "detect_layer_violations", lambda *_args, **_kwargs: ([{"file": "src/shared/a.ts", "target": "src/tools/x.ts", "direction": "shared→tools"}], 1))
+    monkeypatch.setattr(cli_mod.coupling_detector_mod, "detect_boundary_candidates", lambda *_args, **_kwargs: ([{"file": "src/shared/only.ts", "loc": 20, "sole_slice": "src/tools/x", "importer_count": 1}], 1))
 
+    layer_settings = {"layers": [{"name": "tools", "paths": ["src/tools"], "sliced": True}, {"name": "shared", "paths": ["src/shared"]}]}
     printed.clear()
-    cli_mod.cmd_coupling(SimpleNamespace(path=str(tmp_path), json=True, top=5))
+    cli_mod.cmd_coupling(
+        SimpleNamespace(
+            path=str(tmp_path),
+            json=True,
+            top=5,
+            lang_run=SimpleNamespace(runtime_setting=layer_settings.get),
+        )
+    )
     coupling_payload = json.loads(printed[-1])
     assert coupling_payload["violations"] == 1
     assert coupling_payload["boundary_candidates"] == 1

@@ -152,15 +152,16 @@ def make_cmd_passthrough(
 def make_cmd_naming(
     file_finder: Callable[..., Any],
     skip_names: set[str],
-    skip_dirs: set[str] | None = None,
+    skip_dirs: set[str] | Callable[[], set[str]] | None = None,
     module_name: str | None = None,
 ) -> Callable[[argparse.Namespace], None]:
-    """Factory: detect naming inconsistencies."""
+    """Factory: detect naming inconsistencies (``skip_dirs`` may be computed per run)."""
 
     def cmd_naming(args: argparse.Namespace) -> None:
         kwargs = dict(file_finder=file_finder, skip_names=skip_names)
-        if skip_dirs:
-            kwargs["skip_dirs"] = skip_dirs
+        dirs = skip_dirs() if callable(skip_dirs) else skip_dirs
+        if dirs:
+            kwargs["skip_dirs"] = dirs
         entries, _ = naming_detector.detect_naming_inconsistencies(
             Path(args.path), **kwargs
         )

@@ -87,13 +87,10 @@ TS_SKIP_NAMES = {
     for ext in (".ts", ".tsx", ".js", ".jsx")
 } | {"App.tsx", "App.jsx", "vite-env.d.ts"}
 
-TS_SKIP_DIRS = {"src/shared/components/ui"}
-
 
 __all__ = [
     "TS_COMPLEXITY_SIGNALS",
     "TS_CLASS_GOD_RULES",
     "TS_GOD_RULES",
-    "TS_SKIP_DIRS",
     "TS_SKIP_NAMES",
 ]

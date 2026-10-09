@@ -69,7 +69,7 @@ def test_patterns_cli_json_output(monkeypatch, capsys) -> None:
     monkeypatch.setattr(
         patterns_cli_mod,
         "_build_census",
-        lambda _path: (
+        lambda _path, _families: (
             {"ui": {"state": {"redux"}}},
             {},
         ),
@@ -77,7 +77,7 @@ def test_patterns_cli_json_output(monkeypatch, capsys) -> None:
     monkeypatch.setattr(
         patterns_cli_mod,
         "detect_pattern_anomalies",
-        lambda _path: SimpleNamespace(
+        lambda _path, _families: SimpleNamespace(
             entries=[
                 {
                     "area": "ui",
@@ -88,7 +88,10 @@ def test_patterns_cli_json_output(monkeypatch, capsys) -> None:
             ]
         ),
     )
-    args = argparse.Namespace(path=".", json=True, top=5)
+    families = {"state": {"patterns": {"redux": r"\bcreateStore\("}}}
+    args = argparse.Namespace(
+        path=".", json=True, top=5, lang_run=SimpleNamespace(runtime_setting={"pattern_families": families}.get)
+    )
     patterns_cli_mod.cmd_patterns(args)
     payload = json.loads(capsys.readouterr().out)
     assert payload["areas"] == 1

@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from desloppify.base.discovery.file_paths import rel, resolve_path
-from desloppify.base.discovery.paths import get_project_root, get_src_path
+from desloppify.base.discovery.paths import get_project_root
 from desloppify.base.discovery.sfc import SFC_SUFFIXES
 from desloppify.base.output.terminal import log
 from desloppify.engine.detectors import coupling as coupling_detector_mod
@@ -14,6 +14,7 @@ from desloppify.engine.detectors import naming as naming_detector_mod
 from desloppify.engine.detectors import orphaned as orphaned_detector_mod
 from desloppify.engine.detectors import single_use as single_use_detector_mod
 from desloppify.engine._state.filtering import make_issue
+from desloppify.engine.detectors.coupling import Layer
 from desloppify.engine.policy.zones import adjust_potential, filter_entries
 from desloppify.languages._framework.base.types import LangRuntimeContract
 from desloppify.languages._framework.frameworks.detection import injected_class_decorators
@@ -31,8 +32,10 @@ import desloppify.languages.typescript.detectors.deps.packages as packages_mod
 import desloppify.languages.typescript.detectors.facade as facade_detector_mod
 import desloppify.languages.typescript.detectors.knip_adapter as knip_adapter_mod
 import desloppify.languages.typescript.detectors.patterns.analysis as patterns_detector_mod
-from desloppify.languages.typescript.phases_config import TS_SKIP_DIRS, TS_SKIP_NAMES
+from desloppify.languages.typescript.phases_config import TS_SKIP_NAMES
 from desloppify.languages.typescript.plugin_contract import TS_BARREL_NAMES
+from desloppify.languages.typescript.detectors.patterns.catalog import configured_pattern_families
+from desloppify.languages.typescript.presets import resolve_layers, shadcn_ui_dirs
 from desloppify.state_io import Issue
 
 
@@ -64,20 +67,37 @@ def _declares_injected_class(filepath: str, decorators: frozenset[str]) -> bool:
     return any(cls.has_decorator(decorators) for cls in iter_classes(text))
 
 
-def detect_coupling_violations(
+def detect_layer_issues(
     path: Path,
     graph: dict,
     lang: LangRuntimeContract,
-    shared_prefix: str,
-    tools_prefix: str,
+    layers: tuple[Layer, ...],
 ) -> tuple[list[Issue], int]:
-    """Detect backwards coupling violations."""
-    coupling_entries, coupling_edge_counts = coupling_detector_mod.detect_coupling_violations(
-        path, graph, shared_prefix=shared_prefix, tools_prefix=tools_prefix
-    )
-    coupling_entries = filter_entries(lang.zone_map, coupling_entries, "coupling")
+    """Imports up the layer stack and across slices of a layer."""
+    if not layers:
+        return [], 0
+    entries, edge_counts = coupling_detector_mod.detect_layer_violations(path, graph, layers)
+    entries = filter_entries(lang.zone_map, entries, "coupling")
     results: list[Issue] = []
-    for entry in coupling_entries:
+    for entry in entries:
+        if entry["kind"] == "upward":
+            summary = (
+                f"Layer violation: {entry['layer']} imports {entry['target_layer']} "
+                f"({entry['target']})"
+            )
+            detail = {
+                key: entry[key]
+                for key in ("target", "layer", "target_layer", "slice", "direction")
+            }
+        else:
+            summary = (
+                f"Cross-slice import in {entry['layer']}: "
+                f"{entry['source_slice']}→{entry['target_slice']} ({entry['target']})"
+            )
+            detail = {
+                key: entry[key]
+                for key in ("target", "layer", "source_slice", "target_slice", "direction")
+            }
         results.append(
             make_issue(
                 "coupling",
@@ -85,52 +105,14 @@ def detect_coupling_violations(
                 entry["target"],
                 tier=2,
                 confidence="high",
-                summary=f"Backwards coupling: shared imports {entry['target']} (tool: {entry['tool']})",
-                detail={
-                    "target": entry["target"],
-                    "tool": entry["tool"],
-                    "direction": entry["direction"],
-                },
+                summary=summary,
+                detail=detail,
             )
         )
-    return results, coupling_edge_counts.eligible_edges
-
-
-def detect_cross_tool_imports(
-    path: Path,
-    graph: dict,
-    lang: LangRuntimeContract,
-    tools_prefix: str,
-) -> tuple[list[Issue], int]:
-    """Detect cross-tool import violations."""
-    cross_tool, cross_edge_counts = coupling_detector_mod.detect_cross_tool_imports(
-        path, graph, tools_prefix=tools_prefix
-    )
-    cross_tool = filter_entries(lang.zone_map, cross_tool, "coupling")
-    results: list[Issue] = []
-    for entry in cross_tool:
-        results.append(
-            make_issue(
-                "coupling",
-                entry["file"],
-                entry["target"],
-                tier=2,
-                confidence="high",
-                summary=(
-                    f"Cross-tool import: {entry['source_tool']}→{entry['target_tool']} "
-                    f"({entry['target']})"
-                ),
-                detail={
-                    "target": entry["target"],
-                    "source_tool": entry["source_tool"],
-                    "target_tool": entry["target_tool"],
-                    "direction": entry["direction"],
-                },
-            )
-        )
-    if cross_tool:
-        log(f"         cross-tool: {len(cross_tool)} imports")
-    return results, cross_edge_counts.eligible_edges
+    cross = sum(1 for entry in entries if entry["kind"] == "cross_slice")
+    if cross:
+        log(f"         cross-slice: {cross} imports")
+    return results, edge_counts.eligible_edges
 
 
 def package_context(
@@ -273,9 +255,14 @@ def detect_facades(
     return make_facade_issues(facade_entries, log)
 
 
-def detect_pattern_anomalies(path: Path) -> tuple[list[Issue], int]:
-    """Detect pattern consistency anomalies across areas."""
-    pattern_result = patterns_detector_mod.detect_pattern_anomalies(path)
+def detect_pattern_anomalies(
+    path: Path, lang: LangRuntimeContract | None = None
+) -> tuple[list[Issue], int]:
+    """Detect competing patterns across areas, for the families the project configures."""
+    families = configured_pattern_families(lang)
+    if not families:
+        return [], 0
+    pattern_result = patterns_detector_mod.detect_pattern_anomalies(path, families)
     pattern_entries = pattern_result.entries
     total_areas = pattern_result.population_size
     results: list[Issue] = []
@@ -307,7 +294,7 @@ def detect_naming_inconsistencies(
         path,
         file_finder=lang.file_finder,
         skip_names=TS_SKIP_NAMES,
-        skip_dirs=TS_SKIP_DIRS,
+        skip_dirs=set(shadcn_ui_dirs()),
     )
     results: list[Issue] = []
     for entry in naming_entries:
@@ -339,10 +326,11 @@ def make_boundary_issues(
     path: Path,
     graph: dict,
     lang: LangRuntimeContract,
-    shared_prefix: str,
-    tools_prefix: str,
+    layers: tuple[Layer, ...],
 ) -> tuple[list[Issue], int]:
     """Create boundary-candidate issues, deduplicated against single-use."""
+    if not layers:
+        return [], 0
     single_use_emitted = set()
     for entry in single_entries:
         is_size_ok = 50 <= entry["loc"] <= 200
@@ -357,9 +345,9 @@ def make_boundary_issues(
     boundary_entries, total_shared = coupling_detector_mod.detect_boundary_candidates(
         path,
         graph,
-        shared_prefix=shared_prefix,
-        tools_prefix=tools_prefix,
+        layers,
         skip_basenames=TS_BARREL_NAMES,
+        skip_dirs=shadcn_ui_dirs(),
     )
     for entry in boundary_entries:
         if rel(entry["file"]) in single_use_emitted:
@@ -369,15 +357,15 @@ def make_boundary_issues(
             make_issue(
                 "coupling",
                 entry["file"],
-                f"boundary::{entry['sole_tool']}",
+                f"boundary::{entry['sole_slice']}",
                 tier=3,
                 confidence="medium",
                 summary=(
-                    f"Boundary candidate ({entry['loc']} LOC): only used by {entry['sole_tool']} "
+                    f"Boundary candidate ({entry['loc']} LOC): only used by {entry['sole_slice']} "
                     f"({entry['importer_count']} importers)"
                 ),
                 detail={
-                    "sole_tool": entry["sole_tool"],
+                    "sole_slice": entry["sole_slice"],
                     "importer_count": entry["importer_count"],
                     "loc": entry["loc"],
                 },
@@ -405,24 +393,12 @@ def phase_coupling(
     )
     results.extend(single_use_issues)
 
-    src_path = get_src_path()
-    shared_prefix = f"{src_path}/shared/"
-    tools_prefix = f"{src_path}/tools/"
-
-    coupling_issues, coupling_edges = detect_coupling_violations(
-        path, graph, lang, shared_prefix, tools_prefix
-    )
+    layers = resolve_layers(path, lang)
+    coupling_issues, coupling_edges = detect_layer_issues(path, graph, lang, layers)
     results.extend(coupling_issues)
 
-    boundary_issues, _ = make_boundary_issues(
-        single_entries, path, graph, lang, shared_prefix, tools_prefix
-    )
+    boundary_issues, _ = make_boundary_issues(single_entries, path, graph, lang, layers)
     results.extend(boundary_issues)
-
-    cross_tool_issues, cross_edges = detect_cross_tool_imports(
-        path, graph, lang, tools_prefix
-    )
-    results.extend(cross_tool_issues)
 
     packages, entries = package_context(path, graph)
     cycle_orphan_issues, total_graph_files = detect_cycles_and_orphans(
@@ -432,7 +408,7 @@ def phase_coupling(
 
     results.extend(detect_facades(graph, lang, entries.public))
 
-    pattern_issues, total_areas = detect_pattern_anomalies(path)
+    pattern_issues, total_areas = detect_pattern_anomalies(path, lang)
     results.extend(pattern_issues)
 
     naming_issues, total_dirs = detect_naming_inconsistencies(path, lang)
@@ -441,7 +417,7 @@ def phase_coupling(
     log(f"         → {len(results)} coupling/structural issues total")
     potentials = {
         "single_use": adjust_potential(zone_map, single_candidates),
-        "coupling": coupling_edges + cross_edges,
+        "coupling": coupling_edges,
         "cycles": adjust_potential(zone_map, total_graph_files),
         "orphaned": adjust_potential(zone_map, total_graph_files),
         "patterns": total_areas,
@@ -453,8 +429,7 @@ def phase_coupling(
 
 __all__ = [
     "coupling_detector_mod",
-    "detect_coupling_violations",
-    "detect_cross_tool_imports",
+    "detect_layer_issues",
     "detect_cycles_and_orphans",
     "detect_facades",
     "detect_naming_inconsistencies",

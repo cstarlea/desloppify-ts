@@ -14,13 +14,13 @@ from desloppify.base.output.fallbacks import log_best_effort_failure
 from desloppify.languages.typescript.syntax.scanner import file_code_text
 from desloppify.languages.typescript.syntax.lines import line_number
 from desloppify.languages.typescript.detectors.contracts import DetectorResult
-from .catalog import PATTERN_FAMILIES
 
 logger = logging.getLogger(__name__)
 
 
 def _build_census(
     path: Path,
+    families: dict[str, dict],
 ) -> tuple[dict[str, dict[str, set[str]]], dict[str, dict[str, dict[str, list[dict]]]]]:
     """Build matrix: area -> family -> set(pattern names), with file/line evidence."""
     files = find_ts_and_js_files(path)
@@ -34,7 +34,7 @@ def _build_census(
             name: re.compile(regex)
             for name, regex in family["patterns"].items()
         }
-        for family_name, family in PATTERN_FAMILIES.items()
+        for family_name, family in families.items()
     }
 
     for filepath in files:
@@ -66,9 +66,11 @@ def _build_census(
     }
 
 
-def detect_pattern_anomalies(path: Path) -> DetectorResult[dict]:
+def detect_pattern_anomalies(path: Path, families: dict[str, dict]) -> DetectorResult[dict]:
     """Detect areas with competing pattern fragmentation."""
-    census, evidence = _build_census(path)
+    if not families:
+        return DetectorResult(entries=[], population_kind="areas", population_size=0)
+    census, evidence = _build_census(path, families)
     if not census:
         return DetectorResult(entries=[], population_kind="areas", population_size=0)
 
@@ -78,7 +80,7 @@ def detect_pattern_anomalies(path: Path) -> DetectorResult[dict]:
 
     competing_families = {
         name: fam
-        for name, fam in PATTERN_FAMILIES.items()
+        for name, fam in families.items()
         if fam["type"] == "competing"
     }
 

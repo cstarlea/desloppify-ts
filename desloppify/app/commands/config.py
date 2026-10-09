@@ -65,6 +65,8 @@ def _config_set(args: argparse.Namespace):
     try:
         if key == "disabled":
             value = canonical_disabled_entry(value)
+        elif key == "presets":
+            value = _known_preset(value)
         set_config_value(config, key, value)
     except (KeyError, ValueError) as e:
         raise CommandError(str(e)) from e
@@ -79,6 +81,19 @@ def _config_set(args: argparse.Namespace):
     print(colorize(f"  Set {key} = {display}", "green"))
     if key == "disabled":
         _apply_disabled_to_state(runtime)
+    elif key == "presets":
+        print(colorize("  Run `desloppify scan` to apply it.", "dim"))
+
+
+def _known_preset(value: str) -> str:
+    from desloppify.languages.typescript.presets import preset_catalog
+
+    catalog = preset_catalog()
+    name = value.strip().lower()
+    if name not in catalog:
+        known = "\n".join(f"    {key:<20} {desc}" for key, desc in catalog.items())
+        raise ValueError(f"Unknown preset '{value}'. Known presets:\n{known}")
+    return name
 
 
 def _config_unset(args: argparse.Namespace):

@@ -10,7 +10,6 @@ from desloppify.languages._framework.base.phase_builders import (
     shared_subjective_duplicates_tail,
 )
 from desloppify.languages._framework.base.types import (
-    BoundaryRule,
     DetectorPhase,
     LangConfig,
     LangSecurityResult,
@@ -38,7 +37,6 @@ from desloppify.languages.typescript.phases_basic import (
 from desloppify.languages.typescript.phases_config import (
     TS_COMPLEXITY_SIGNALS,
     TS_GOD_RULES,
-    TS_SKIP_DIRS,
     TS_SKIP_NAMES,
 )
 from desloppify.languages.typescript.phases_coupling import phase_coupling
@@ -130,9 +128,6 @@ class TypeScriptConfig(LangConfig):
             fixers=get_ts_fixers(),
             get_area=get_area,
             detect_commands=ts_commands_mod.get_detect_commands(),
-            boundaries=[
-                BoundaryRule("shared/", "tools/", "shared→tools"),
-            ],
             typecheck_cmd="npx tsc --noEmit",
             file_finder=iter_typescript_sources,
             large_threshold=TS_LARGE_THRESHOLD,
@@ -150,6 +145,20 @@ class TypeScriptConfig(LangConfig):
             extract_functions=_ts_extract_functions,
             zone_rules=TS_ZONE_RULES,
             setting_specs={
+                # Copied from the top-level ``presets`` key (see presets.py).
+                "presets": LangValueSpec(list, [], "Presets and frameworks the config turns on"),
+                "layers": LangValueSpec(
+                    list,
+                    [],
+                    "Architecture layers, top first: [{name, paths, sliced?}]; replaces a "
+                    "preset's layers",
+                ),
+                "pattern_families": LangValueSpec(
+                    dict,
+                    {},
+                    "Competing approaches to report when one area mixes them: "
+                    "{family: {patterns: {name: regex}, threshold?}}",
+                ),
                 "auth_functions": LangValueSpec(
                     list,
                     [],
