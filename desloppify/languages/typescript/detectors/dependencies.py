@@ -28,7 +28,8 @@ from pathlib import Path
 from typing import Any
 
 from desloppify.base.discovery.file_paths import rel, resolve_path
-from desloppify.base.discovery.source import find_ts_and_js_files
+from desloppify.base.discovery.sfc import read_code_text
+from desloppify.base.discovery.source import find_component_files, find_ts_and_js_files
 from desloppify.engine.policy.zones import Zone
 from desloppify.languages._framework.base.types import DetectorCoverageStatus
 from desloppify.languages.typescript.detectors.knip_adapter import (
@@ -126,7 +127,7 @@ def _imported_packages(files: list[str]) -> dict[str, set[str]]:
     for filepath in files:
         resolved = resolve_path(filepath)
         try:
-            text = Path(resolved).read_text(encoding="utf-8", errors="replace")
+            text = read_code_text(resolved, errors="replace")
         except OSError:
             continue
         for specifier in _SPECIFIER_RE.findall(text):
@@ -253,7 +254,8 @@ def detect_dependencies(
         for manifest, names in declared.items()
         if any(not _is_installed(name, manifest.parent) for name in names)
     }
-    imported = _imported_packages(sources)
+    # Components import packages too.
+    imported = _imported_packages([*sources, *find_component_files(path)])
     mentions = _manifest_mentions(manifests)
 
     entries: list[dict] = []

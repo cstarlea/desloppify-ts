@@ -13,6 +13,8 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from desloppify.base.discovery.sfc import is_sfc, read_sfc
+
 # Edge kinds. ``deferred`` kinds can't take part in an initialization cycle.
 STATIC = "static"  # import ... from / export ... from / import x = require()
 SIDE_EFFECT = "side_effect"  # import './x'
@@ -301,7 +303,9 @@ class ImportExtractor:
                 return extract_mdx_imports(Path(filepath).read_text(encoding="utf-8", errors="replace"))
             except OSError:
                 return []
-        if self._parser is not None and not filepath.endswith((".vue", ".svelte", ".astro")):
+        if is_sfc(filepath):
+            return self._component_imports(filepath)
+        if self._parser is not None:
             refs = extract_imports_treesitter(filepath)
             if refs is not None:
                 return refs
@@ -310,6 +314,16 @@ class ImportExtractor:
         except OSError:
             return []
         return extract_imports_regex(text)
+
+    def _component_imports(self, filepath: str) -> list[ImportRef]:
+        """A component's script imports, plus each external ``<script src>``."""
+        component = read_sfc(filepath)
+        if component is None:
+            return []
+        refs = [ImportRef(block.src, SIDE_EFFECT) for block in component.blocks if block.src]
+        found = extract_imports_treesitter(filepath) if self._parser is not None else None
+        refs.extend(found if found is not None else extract_imports_regex(component.view))
+        return refs
 
 
 __all__ = [

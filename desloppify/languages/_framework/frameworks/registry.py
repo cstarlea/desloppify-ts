@@ -37,11 +37,15 @@ def _register_builtin_specs() -> None:
     """Register built-in framework specs shipped with the repo."""
     if FRAMEWORK_SPECS:
         return
+    from .specs.astro import ASTRO_SPEC
     from .specs.nextjs import NEXTJS_SPEC
+    from .specs.nuxt import NUXT_SPEC
     from .specs.react_router import REACT_ROUTER_SPEC
+    from .specs.sveltekit import SVELTEKIT_SPEC
+    from .specs.vue import VUE_SPEC
 
-    register_framework_spec(NEXTJS_SPEC)
-    register_framework_spec(REACT_ROUTER_SPEC)
+    for spec in (NEXTJS_SPEC, NUXT_SPEC, VUE_SPEC, SVELTEKIT_SPEC, ASTRO_SPEC, REACT_ROUTER_SPEC):
+        register_framework_spec(spec)
 
 
 def ensure_builtin_specs_loaded() -> None:
@@ -52,11 +56,14 @@ def ensure_builtin_specs_loaded() -> None:
 def framework_entry_conventions(*, ecosystem: str = "node") -> tuple[EntryConventions, ...]:
     """File-system entry conventions declared by the built-in framework specs."""
     ensure_builtin_specs_loaded()
-    return tuple(
-        spec.entry_conventions
-        for spec in list_framework_specs(ecosystem=ecosystem).values()
-        if spec.entry_conventions is not None
-    )
+    conventions: list[EntryConventions] = []
+    for spec in list_framework_specs(ecosystem=ecosystem).values():
+        declared = spec.entry_conventions
+        if isinstance(declared, EntryConventions):
+            conventions.append(declared)
+        elif declared:
+            conventions.extend(declared)
+    return tuple(conventions)
 
 
 __all__ = [

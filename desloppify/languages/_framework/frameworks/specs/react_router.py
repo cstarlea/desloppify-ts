@@ -27,7 +27,7 @@ _CONFIG_FILES = (
 REACT_ROUTER_ENTRY_CONVENTIONS = EntryConventions(
     config_files=_CONFIG_FILES,
     extensions=frozenset({".ts", ".tsx", ".js", ".jsx"}),
-    dependencies=("@react-router/", "@remix-run/"),
+    marker_dependencies=("@react-router/", "@remix-run/"),
     # Beside the routes directory (app/root.tsx); app/routes.ts is the route config.
     root_stems=frozenset(
         {
@@ -42,7 +42,7 @@ REACT_ROUTER_ENTRY_CONVENTIONS = EntryConventions(
     ),
     root_depth=3,
     # Everything under app/routes/ is a route module.
-    entry_dirs=frozenset({"routes"}),
+    entry_dir_names=frozenset({"routes"}),
     # Route modules app/routes.ts names from elsewhere in the app directory.
     declared_entries=declared_route_modules,
 )

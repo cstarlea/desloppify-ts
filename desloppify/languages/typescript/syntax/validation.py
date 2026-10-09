@@ -12,15 +12,26 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from desloppify.languages.typescript.syntax.tree import grammar_for, parse_text
+from desloppify.base.discovery.sfc import is_sfc, sfc_code
+from desloppify.languages.typescript.syntax.tree import get_parser, grammar_for, parse_text
 
 
 def count_syntax_errors(text: str, path: str | Path) -> int | None:
-    """Count ERROR and MISSING nodes, or None when tree-sitter can't parse."""
-    parsed = parse_text(text, path)
-    if parsed is None:
-        return None
-    root = parsed.root
+    """Count ERROR and MISSING nodes, or None when tree-sitter can't parse.
+
+    ``text`` is the file's content; a component's script code is what's parsed.
+    """
+    if is_sfc(path):
+        component = sfc_code(text, path)
+        parser = get_parser(component.grammar)
+        if parser is None:
+            return None
+        root = parser.parse(component.view.encode("utf-8")).root_node
+    else:
+        parsed = parse_text(text, path)
+        if parsed is None:
+            return None
+        root = parsed.root
     if not root.has_error:
         return 0
     count = 0

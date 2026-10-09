@@ -16,6 +16,7 @@ from desloppify.base.discovery.file_paths import (
     safe_relpath as _safe_relpath,
 )
 from desloppify.base.discovery.paths import get_project_root
+from desloppify.base.discovery.sfc import SFC_SUFFIXES
 from desloppify.base.runtime_state import (
     FileTextReadResult,
     RuntimeContext,
@@ -311,6 +312,13 @@ def find_ts_and_js_files(
     return _sources(path, SOURCE_EXTENSIONS, runtime)
 
 
+def find_component_files(
+    path: str | Path, *, runtime: RuntimeContext | None = None
+) -> list[str]:
+    """Find single-file components (``.vue``, ``.svelte``, ``.astro``); see ``sfc``."""
+    return _sources(path, SFC_SUFFIXES, runtime)
+
+
 def find_tsx_and_jsx_files(
     path: str | Path, *, runtime: RuntimeContext | None = None
 ) -> list[str]:
@@ -339,6 +347,7 @@ __all__ = [
     "clear_source_file_cache_for_tests",
     "find_source_files",
     "find_ts_and_js_files",
+    "find_component_files",
     "find_tsx_and_jsx_files",
     "find_py_files",
 ]

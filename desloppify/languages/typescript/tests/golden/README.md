@@ -12,6 +12,8 @@ coverage) is compared with `snapshots/<project>.json`.
 | `node-lib` | NodeNext `./x.js` specifiers, package `exports`/`bin`, AVA tests, deprecated public API, `page.$eval` (not `eval`) |
 | `pnpm-monorepo` | `pnpm-workspace.yaml`, workspace package imports, `paths` inherited through `extends`, a type-only import cycle |
 | `mixed-js` | JavaScript project mid-migration (`allowJs`): a `.ts` file imported only from JS, extensionless and `index.js` imports, a `.cjs` module, a JS test, a JS orphan, a minified bundle that must be ignored |
+| `vue-vite` | Vue SFCs (`<script setup lang="ts">`, `<script>` + `<script setup>`, `<script src>`, a template-only page): smells, logs and line numbers in `.vue`, components imported only by components, an orphan component, an `unplugin-auto-import` registry, tsc's shim-less `import './X.vue'` |
+| `sveltekit-app` | SvelteKit routes (`+page.svelte`, `+page.server.ts`, `+server.ts`), hooks and param matchers, `$lib`/`$app` imports, a module script, an orphan component, a tsconfig extending the generated `.svelte-kit/tsconfig.json` |
 
 `expectations.json` holds the intent behind each project: findings that must
 or must not appear, plus **known false positives / negatives** that are still

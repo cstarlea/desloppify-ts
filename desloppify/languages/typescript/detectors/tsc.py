@@ -17,6 +17,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from desloppify.base.discovery.source import find_component_files
+
 logger = logging.getLogger(__name__)
 _proc_runtime = subprocess
 
@@ -188,7 +190,27 @@ def run_tsc(
     return run
 
 
+def unchecked_components_note(path: Path) -> str | None:
+    """Why tsc's findings leave out the scan's components, or None without any.
+
+    tsc doesn't read ``.vue``/``.svelte``/``.astro`` files; their framework's
+    checker (vue-tsc, svelte-check, astro check) does, and desloppify doesn't
+    run those.
+    """
+    count = len(find_component_files(path))
+    if not count:
+        return None
+    return (
+        f"{count} components (.vue/.svelte/.astro) were not type-checked: tsc doesn't read them"
+        " (vue-tsc, svelte-check or astro check does)"
+    )
+
+
+COMPONENTS_REMEDIATION = "Run vue-tsc, svelte-check or astro check for the components."
+
+
 __all__ = [
+    "COMPONENTS_REMEDIATION",
     "TSC_TIMEOUT",
     "TscDiagnostic",
     "TscRun",
@@ -198,4 +220,5 @@ __all__ = [
     "run_tsc",
     "run_tsc_check",
     "tsc_failure_reason",
+    "unchecked_components_note",
 ]

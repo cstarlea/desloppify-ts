@@ -124,22 +124,24 @@ class _PackageScopeLookup:
         return result
 
 
+_CONFIG_EXTS = ("ts", "mts", "js", "mjs", "cjs")
 _DOCUSAURUS_SITE_PREFIX = "@site/"
-_DOCUSAURUS_CONFIGS = tuple(f"docusaurus.config.{ext}" for ext in ("ts", "mts", "js", "mjs", "cjs"))
+_DOCUSAURUS_CONFIGS = tuple(f"docusaurus.config.{ext}" for ext in _CONFIG_EXTS)
 
 
 @lru_cache(maxsize=4096)
-def _docusaurus_root_of_dir(directory: str) -> str | None:
+def _nearest_dir_with(directory: str, names: tuple[str, ...]) -> str | None:
+    """The nearest directory, from *directory* up, holding one of the files *names*."""
     path = Path(directory)
-    if any((path / name).is_file() for name in _DOCUSAURUS_CONFIGS):
+    if any((path / name).is_file() for name in names):
         return directory
     parent = path.parent
-    return None if parent == path else _docusaurus_root_of_dir(str(parent))
+    return None if parent == path else _nearest_dir_with(str(parent), names)
 
 
 def docusaurus_site_root(filepath: str) -> Path | None:
     """The Docusaurus site holding *filepath*: the nearest directory with a ``docusaurus.config``."""
-    root = _docusaurus_root_of_dir(str(Path(filepath).parent))
+    root = _nearest_dir_with(str(Path(filepath).parent), _DOCUSAURUS_CONFIGS)
     return Path(root) if root is not None else None
 
 
@@ -150,6 +152,56 @@ def _resolve_docusaurus_site(specifier: str, from_abs: str) -> str | None:
     if root is None:
         return None
     return resolve_target(root / specifier[len(_DOCUSAURUS_SITE_PREFIX) :])
+
+
+_NUXT_CONFIGS = tuple(f"nuxt.config.{ext}" for ext in _CONFIG_EXTS)
+_SVELTEKIT_CONFIGS = tuple(f"svelte.config.{ext}" for ext in _CONFIG_EXTS)
+# Nuxt's aliases for its source directory and its root, set in the
+# generated .nuxt/tsconfig.json that a fresh checkout doesn't have.
+_NUXT_SRC_ALIASES = ("~/", "@/")
+_NUXT_ROOT_ALIASES = ("~~/", "@@/")
+# SvelteKit's modules provided by the framework, not by a file.
+_SVELTEKIT_VIRTUAL = ("$app/", "$env/", "$service-worker")
+
+
+def _nuxt_src_dir(root: Path) -> Path:
+    """Nuxt 4's ``app/`` when the project has one, else the root (Nuxt 3)."""
+    app = root / "app"
+    if any((app / name).exists() for name in ("app.vue", "pages", "components", "layouts")):
+        return app
+    return root
+
+
+def _resolve_framework_alias(specifier: str, from_abs: str) -> str | None:
+    """Aliases Nuxt and SvelteKit define in a tsconfig they generate on install:
+    ``~/x``/``@/x`` (Nuxt source dir), ``~~/x``/``@@/x`` and ``#shared/x``
+    (Nuxt root), ``$lib/x`` (SvelteKit ``src/lib``)."""
+    directory = str(Path(from_abs).parent)
+    if specifier == "$lib" or specifier.startswith("$lib/"):
+        root = _nearest_dir_with(directory, _SVELTEKIT_CONFIGS)
+        if root is None:
+            return None
+        return resolve_target(Path(root) / "src" / "lib" / specifier[len("$lib/") :])
+    if not specifier.startswith((*_NUXT_SRC_ALIASES, *_NUXT_ROOT_ALIASES, "#shared")):
+        return None
+    root = _nearest_dir_with(directory, _NUXT_CONFIGS)
+    if root is None:
+        return None
+    if specifier.startswith(_NUXT_SRC_ALIASES):
+        return resolve_target(_nuxt_src_dir(Path(root)) / specifier[2:])
+    if specifier.startswith(_NUXT_ROOT_ALIASES):
+        return resolve_target(Path(root) / specifier[3:])
+    return resolve_target(Path(root) / "shared" / specifier[len("#shared/") :])
+
+
+def _is_framework_virtual(specifier: str, from_abs: str) -> bool:
+    """SvelteKit's ``$app/*``/``$env/*`` modules and Nuxt's ``#imports``-style ones."""
+    directory = str(Path(from_abs).parent)
+    if specifier.startswith(_SVELTEKIT_VIRTUAL):
+        return _nearest_dir_with(directory, _SVELTEKIT_CONFIGS) is not None
+    if specifier.startswith("#"):
+        return _nearest_dir_with(directory, _NUXT_CONFIGS) is not None
+    return False
 
 
 class ModuleResolver:
@@ -172,9 +224,14 @@ class ModuleResolver:
         )
         resolved = resolve_target(target) if target is not None else None
         if resolved is None and specifier.startswith("#"):
-            return self._resolve_package_import(specifier, from_abs)
+            resolved = self._resolve_package_import(specifier, from_abs)
+            if resolved is None and specifier.startswith("#shared"):
+                resolved = _resolve_framework_alias(specifier, from_abs)
+            return resolved
         if resolved is None and specifier.startswith(_DOCUSAURUS_SITE_PREFIX):
             return _resolve_docusaurus_site(specifier, from_abs)
+        if resolved is None and specifier.startswith(("$lib", *_NUXT_SRC_ALIASES, *_NUXT_ROOT_ALIASES)):
+            return _resolve_framework_alias(specifier, from_abs)
         if resolved is None and self.workspace and is_bare(specifier):
             # tsconfig paths take precedence, as in TypeScript; then the
             # workspace package that node_modules would symlink to.
@@ -201,8 +258,11 @@ class ModuleResolver:
         """npm dependencies, Node builtins and bundler virtual modules (``virtual:x``).
 
         A ``#subpath`` is external when the importer's package.json maps it
-        to such a package (``"#fetch": "node-fetch"``).
+        to such a package (``"#fetch": "node-fetch"``). SvelteKit's ``$app/*``
+        and ``$env/*`` and Nuxt's ``#imports`` are the framework's own.
         """
+        if from_file is not None and _is_framework_virtual(specifier, self._absolute(from_file)):
+            return True
         if specifier.startswith("#"):
             if from_file is None:
                 return False
@@ -271,7 +331,7 @@ def project_resolver(project_root: Path) -> ModuleResolver:
 
 def clear_resolver_cache() -> None:
     _cached_resolver.cache_clear()
-    _docusaurus_root_of_dir.cache_clear()
+    _nearest_dir_with.cache_clear()
 
 
 __all__ = [

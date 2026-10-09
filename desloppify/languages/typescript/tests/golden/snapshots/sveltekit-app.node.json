@@ -1,0 +1,60 @@
+{
+  "issues": [
+    {
+      "id": "logs::src/routes/+page.svelte::Home",
+      "tier": 1,
+      "confidence": "high",
+      "zone": "production",
+      "summary": "1 tagged logs [Home]"
+    },
+    {
+      "id": "orphaned::src/lib/components/Unused.svelte",
+      "tier": 3,
+      "confidence": "high",
+      "zone": "production",
+      "summary": "Orphaned file (11 LOC): zero importers, not an entry point; Knip agrees"
+    },
+    {
+      "id": "security::src/lib/api.ts::security::json_parse_unguarded::src/lib/api.ts::9",
+      "tier": 2,
+      "confidence": "low",
+      "zone": "production",
+      "summary": "JSON.parse() without try/catch - may throw on malformed input"
+    },
+    {
+      "id": "test_coverage::src/lib/api.ts",
+      "tier": 3,
+      "confidence": "high",
+      "zone": "production",
+      "summary": "Untested module (15 LOC, 2 importers) — no test files found"
+    }
+  ],
+  "potentials": {
+    "coupling": 0,
+    "cycles": 11,
+    "dependencies": 0,
+    "deprecated": 0,
+    "dupes": 8,
+    "exports": 9,
+    "facade": 11,
+    "flat_dirs": 10,
+    "logs": 11,
+    "naming": 8,
+    "orphaned": 11,
+    "patterns": 0,
+    "props": 0,
+    "react": 0,
+    "security": 11,
+    "single_use": 0,
+    "smells": 11,
+    "structural": 11,
+    "test_coverage": 4,
+    "tsconfig_health": 2,
+    "unused": 6
+  },
+  "reduced_coverage": [
+    "dependencies: dependencies_not_installed",
+    "type_error: tsconfig_extends_missing",
+    "unused: tsconfig_error"
+  ]
+}

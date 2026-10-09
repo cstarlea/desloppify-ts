@@ -13,7 +13,6 @@ from desloppify.base.discovery.file_paths import count_lines, resolve_path
 
 _DUNDER_ALL_RE = re.compile(r"^__all__\s*[:=]", re.MULTILINE)
 
-
 @dataclass(frozen=True)
 class EntryConventions:
     """Files a framework loads by file-system convention, so nothing imports them.
@@ -21,14 +20,11 @@ class EntryConventions:
     A framework spec declares these (``FrameworkSpec.entry_conventions``) and
     the language passes them in; a matching file is an entry point. Paths are
     matched relative to a package root, and only for packages that have one
-    of ``config_files`` at their root or one of ``dependencies`` in their
-    package.json.
+    of ``config_files`` at their root, or list one of ``marker_dependencies``.
     """
 
     config_files: tuple[str, ...]
     extensions: frozenset[str]
-    # A name ending in "/" matches every package in that scope.
-    dependencies: tuple[str, ...] = ()
     # Stems that are entry points near the package root: at most ``root_depth``
     # path parts, so 2 is the root or one directory down (``src/``).
     root_stems: frozenset[str] = frozenset()
@@ -36,24 +32,39 @@ class EntryConventions:
     # Stems that are entry points anywhere beneath a ``route_dir`` segment.
     route_dir: str | None = None
     route_stems: frozenset[str] = frozenset()
-    # Every file beneath one of these directory segments is an entry point.
-    entry_dirs: frozenset[str] = frozenset()
-    # Entry points a package names in its own files (a route config, a
-    # loader's directory), relative to the package root. A path ending in
-    # "/" covers everything beneath that directory.
+    # Stems starting with this are entry points beneath ``route_dir`` too
+    # (SvelteKit's ``+page``, ``+layout.server``, ``+page@group``).
+    route_stem_prefix: str | None = None
+    # Every file beneath these package-relative directories is an entry point
+    # (Nuxt's auto-imported ``components/``, Astro's ``src/pages/``).
+    entry_dirs: tuple[str, ...] = ()
+    # Package-relative paths without their extension (``src/content/config``).
+    entry_paths: frozenset[str] = frozenset()
+    # When set, the package must also list one of these in package.json:
+    # a convention of a Vite plugin applies only where the plugin is used.
+    dependencies: tuple[str, ...] = ()
+    # Listing one of these marks the package even without a config file (a
+    # framework whose template ships none). A name ending in "/" matches
+    # every package in that scope.
+    marker_dependencies: tuple[str, ...] = ()
+    # Every file beneath a directory with one of these names, at any depth
+    # (React Router's ``routes/``).
+    entry_dir_names: frozenset[str] = frozenset()
+    # Entry points a package names in its own files (a route config, the
+    # app entries of a CLI config), relative to the package root. A path
+    # ending in "/" covers everything beneath that directory.
     declared_entries: Callable[[Path], frozenset[str]] | None = None
 
     def applies_to(self, package_root: Path) -> bool:
         """Whether the package at *package_root* uses this framework."""
-        if any((package_root / name).exists() for name in self.config_files):
-            return True
-        if not self.dependencies:
-            return False
-        names = package_dependency_names(package_root)
-        return any(
-            name.startswith(dep) if dep.endswith("/") else name == dep
-            for dep in self.dependencies
-            for name in names
+        if not any((package_root / name).exists() for name in self.config_files):
+            return bool(self.marker_dependencies) and any(
+                name.startswith(dep) if dep.endswith("/") else name == dep
+                for dep in self.marker_dependencies
+                for name in package_dependency_names(package_root)
+            )
+        return not self.dependencies or bool(
+            set(self.dependencies) & package_dependency_names(package_root)
         )
 
     def is_entry(self, rel_path: str) -> bool:
@@ -63,12 +74,16 @@ class EntryConventions:
             return False
         if path.stem in self.root_stems and len(path.parts) <= self.root_depth:
             return True
-        if self.entry_dirs and not self.entry_dirs.isdisjoint(path.parts[:-1]):
+        if self.entry_dir_names and not self.entry_dir_names.isdisjoint(path.parts[:-1]):
             return True
-        return (
-            self.route_dir is not None
-            and path.stem in self.route_stems
-            and self.route_dir in path.parts
+        if self.entry_dirs and rel_path.startswith(tuple(d + "/" for d in self.entry_dirs)):
+            return True
+        if self.entry_paths and path.with_suffix("").as_posix() in self.entry_paths:
+            return True
+        if self.route_dir is None or self.route_dir not in path.parts[:-1]:
+            return False
+        return path.stem in self.route_stems or (
+            self.route_stem_prefix is not None and path.stem.startswith(self.route_stem_prefix)
         )
 
 
@@ -82,9 +97,9 @@ def package_dependency_names(package_root: Path) -> set[str]:
         return set()
     names: set[str] = set()
     for key in ("dependencies", "devDependencies", "peerDependencies", "optionalDependencies"):
-        deps = payload.get(key)
-        if isinstance(deps, dict):
-            names.update(str(name) for name in deps)
+        section = payload.get(key)
+        if isinstance(section, dict):
+            names.update(str(name) for name in section)
     return names
 
 
