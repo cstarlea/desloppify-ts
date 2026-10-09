@@ -7,10 +7,8 @@ from unittest.mock import patch
 
 from desloppify.engine.detectors.orphaned import (
     OrphanedDetectionOptions,
-    _detect_react_router_project,
     _has_dunder_all,
     _is_dynamically_imported,
-    _is_react_router_convention_entry,
     detect_orphaned_files,
 )
 from desloppify.languages._framework.frameworks.registry import (
@@ -21,7 +19,12 @@ from desloppify.languages._framework.frameworks.specs.nextjs import (
     NEXTJS_ENTRY_CONVENTIONS,
     NEXTJS_SPEC,
 )
+from desloppify.languages._framework.frameworks.specs.react_router import (
+    REACT_ROUTER_ENTRY_CONVENTIONS,
+)
 
+_detect_react_router_project = REACT_ROUTER_ENTRY_CONVENTIONS.applies_to
+_is_react_router_convention_entry = REACT_ROUTER_ENTRY_CONVENTIONS.is_entry
 _detect_nextjs_project = NEXTJS_ENTRY_CONVENTIONS.applies_to
 _is_nextjs_convention_entry = NEXTJS_ENTRY_CONVENTIONS.is_entry
 

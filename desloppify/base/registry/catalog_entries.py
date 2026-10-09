@@ -212,6 +212,18 @@ DETECTORS: dict[str, DetectorMeta] = {
         marks_dims_stale=True,
         subjective_dimensions=("design_coherence", "logic_clarity"),
     ),
+    "react_router": DetectorMeta(
+        "react_router",
+        "react router",
+        "Code quality",
+        "refactor",
+        "fix React Router / Remix framework smells (route config, data hooks, Remix leftovers)",
+        needs_judgment=True,
+        standalone_threshold="medium",
+        tier=3,
+        marks_dims_stale=True,
+        subjective_dimensions=("design_coherence", "logic_clarity"),
+    ),
     "next_lint": DetectorMeta(
         "next_lint",
         "next lint",
