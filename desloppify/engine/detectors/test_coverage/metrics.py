@@ -13,6 +13,9 @@ _MIN_LOC = 10
 # Files above this are risky enough without tests to warrant tier 2.
 _COMPLEXITY_TIER_UPGRADE = 20
 
+# Line coverage (percent) at which a measured file stops costing Test health.
+_LINE_COVERAGE_TARGET = 80
+
 
 def _file_loc(filepath: str) -> int:
     """Count lines in a file, returning 0 when unreadable."""
