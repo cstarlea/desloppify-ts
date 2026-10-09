@@ -48,6 +48,7 @@
     "single_use": 0,
     "smells": 11,
     "structural": 11,
+    "sveltekit": 6,
     "test_coverage": 4,
     "tsconfig_health": 2,
     "unused": 6
