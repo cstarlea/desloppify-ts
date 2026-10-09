@@ -302,11 +302,19 @@ def set_config_value(config: dict, key: str, raw: str) -> None:
     config[key] = raw
 
 
-def unset_config_value(config: dict, key: str) -> None:
-    """Reset a config key to its default value."""
+def unset_config_value(config: dict, key: str, value: str | None = None) -> None:
+    """Reset a config key to its default value, or remove one value of a list key."""
     if key not in CONFIG_SCHEMA:
         raise KeyError(f"Unknown config key: {key}")
-    config[key] = copy.deepcopy(CONFIG_SCHEMA[key].default)
+    if value is None:
+        config[key] = copy.deepcopy(CONFIG_SCHEMA[key].default)
+        return
+    if CONFIG_SCHEMA[key].type is not list:
+        raise ValueError(f"'{key}' is not a list; unset it without a value")
+    current = config.get(key) or []
+    if value not in current:
+        raise ValueError(f"'{value}' is not in {key}")
+    config[key] = [item for item in current if item != value]
 
 
 def config_for_query(config: dict[str, Any]) -> dict[str, Any]:
