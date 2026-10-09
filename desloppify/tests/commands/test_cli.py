@@ -15,15 +15,15 @@ from desloppify.app.commands.helpers.runtime_options import (
     LangRuntimeOptionsError,
     resolve_lang_runtime_options,
 )
+from desloppify.base.runtime_state import RuntimeContext, runtime_scope
 from desloppify.cli import (
     _get_detector_names,
-    _running_installed_package_from_checkout,
     _resolve_default_path,
+    _running_installed_package_from_checkout,
     _warn_if_running_installed_package_from_checkout,
     create_parser,
     state_path,
 )
-from desloppify.base.runtime_state import RuntimeContext, runtime_scope
 from desloppify.languages._framework.base.types_shared import LangValueSpec
 from desloppify.languages.typescript import TypeScriptConfig
 

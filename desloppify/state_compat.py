@@ -52,9 +52,9 @@ from desloppify.engine._state.schema import (
     migrate_state_keys,
     scan_inventory_available,
     scan_metadata,
+    scan_metrics_available,
     scan_reconstructed_issue_count,
     scan_source,
-    scan_metrics_available,
     utc_now,
     validate_state_invariants,
 )

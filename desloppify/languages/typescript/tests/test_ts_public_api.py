@@ -11,7 +11,9 @@ import pytest
 import desloppify.languages.typescript.detectors.exports as exports_mod
 from desloppify.base.discovery.source import clear_source_file_cache_for_tests
 from desloppify.base.runtime_state import RuntimeContext, runtime_scope
-from desloppify.languages.typescript.detectors.deps.public_api import public_export_names
+from desloppify.languages.typescript.detectors.deps.public_api import (
+    public_export_names,
+)
 from desloppify.languages.typescript.detectors.deps.resolver import clear_resolver_cache
 from desloppify.languages.typescript.syntax.tree import get_parser
 

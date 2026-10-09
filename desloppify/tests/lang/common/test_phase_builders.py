@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-
 from desloppify.languages._framework.base.phase_builders import (
     detector_phase_boilerplate_duplication,
     detector_phase_duplicates,

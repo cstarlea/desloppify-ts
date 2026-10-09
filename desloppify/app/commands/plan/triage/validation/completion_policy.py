@@ -4,9 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from desloppify.engine.plan_triage import TRIAGE_CMD_ORGANIZE
 from desloppify.base.output.terminal import colorize
-from desloppify.engine.plan_triage import extract_issue_citations
+from desloppify.engine.plan_triage import TRIAGE_CMD_ORGANIZE, extract_issue_citations
 
 from ..display.dashboard import show_plan_summary
 from ..review_coverage import (

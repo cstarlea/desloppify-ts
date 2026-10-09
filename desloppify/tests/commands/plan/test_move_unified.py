@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from desloppify.app.commands.plan.shared.patterns import resolve_ids_from_patterns
 from desloppify.app.commands.plan.reorder_handlers import resolve_target
+from desloppify.app.commands.plan.shared.patterns import resolve_ids_from_patterns
 from desloppify.engine._plan.operations.queue import move_items
 from desloppify.engine._plan.schema import empty_plan
 

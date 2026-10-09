@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import shlex
 
-from desloppify.engine.plan_triage import TRIAGE_STAGE_SPECS
 from desloppify.engine._plan.constants import (
     WORKFLOW_COMMUNICATE_SCORE_ID,
     WORKFLOW_CREATE_PLAN_ID,
@@ -20,12 +19,13 @@ from desloppify.engine._plan.refresh_lifecycle import (
 from desloppify.engine._plan.sync.workflow import (
     pending_import_scores_meta,
 )
+from desloppify.engine._work_queue.types import WorkflowActionItem
 from desloppify.engine.plan_triage import (
+    TRIAGE_STAGE_SPECS,
     triage_manual_stage_command,
     triage_run_stages_command,
     triage_runner_commands,
 )
-from desloppify.engine._work_queue.types import WorkflowActionItem
 
 
 def _workflow_action_item(

@@ -11,8 +11,8 @@ from unittest.mock import patch
 from desloppify.base.discovery.file_paths import rel
 from desloppify.base.registry import _DISPLAY_ORDER, DETECTORS
 from desloppify.engine._scoring.policy.core import (
-    DIMENSIONS,
     _NON_OBJECTIVE_DETECTORS,
+    DIMENSIONS,
 )
 from desloppify.engine.detectors.review_coverage import (
     detect_holistic_review_staleness,

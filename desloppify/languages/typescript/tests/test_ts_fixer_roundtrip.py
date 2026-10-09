@@ -52,7 +52,11 @@ from desloppify.base.runtime_state import RuntimeContext, runtime_scope
 from desloppify.languages.typescript._fixers import get_ts_fixers
 from desloppify.languages.typescript.fixers.params import prefix_unused_params
 from desloppify.languages.typescript.syntax.nodes import byte_offset
-from desloppify.languages.typescript.syntax.tree import ParsedSource, get_parser, parse_text
+from desloppify.languages.typescript.syntax.tree import (
+    ParsedSource,
+    get_parser,
+    parse_text,
+)
 from desloppify.languages.typescript.syntax.validation import count_syntax_errors
 
 needs_treesitter = pytest.mark.skipif(

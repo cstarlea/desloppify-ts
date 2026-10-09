@@ -13,7 +13,11 @@ from __future__ import annotations
 from pathlib import Path
 
 from desloppify.base.discovery.sfc import is_sfc, sfc_code
-from desloppify.languages.typescript.syntax.tree import get_parser, grammar_for, parse_text
+from desloppify.languages.typescript.syntax.tree import (
+    get_parser,
+    grammar_for,
+    parse_text,
+)
 
 
 def count_syntax_errors(text: str, path: str | Path) -> int | None:

@@ -5,9 +5,9 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from desloppify.engine.concerns import cleanup_stale_dismissals, generate_concerns
 from desloppify.engine._state.merge import MergeScanOptions, merge_scan
 from desloppify.engine._state.schema import StateModel, utc_now
+from desloppify.engine.concerns import cleanup_stale_dismissals, generate_concerns
 from desloppify.engine.scoring import HOLISTIC_POTENTIAL
 from desloppify.intelligence.review.dimensions import normalize_dimension_name
 from desloppify.intelligence.review.dimensions.data import load_dimensions_for_lang

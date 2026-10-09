@@ -12,7 +12,7 @@ from desloppify.app.commands.resolve.render_support import (
     score_snapshot_or_error,
 )
 from desloppify.base.config import load_config
-from desloppify.base.exception_sets import CommandError, PLAN_LOAD_EXCEPTIONS
+from desloppify.base.exception_sets import PLAN_LOAD_EXCEPTIONS, CommandError
 from desloppify.base.git_context import detect_git_context
 from desloppify.base.output.terminal import colorize
 from desloppify.engine._scoring.policy.core import is_wontfix_debt

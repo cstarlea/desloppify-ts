@@ -8,19 +8,13 @@ from pathlib import Path
 from typing import Any
 
 from desloppify.base.discovery.file_paths import rel
-from desloppify.base.output.fallbacks import log_best_effort_failure
-
 from desloppify.base.discovery.source import (
-
     disable_file_cache,
-
     enable_file_cache,
-
     is_file_cache_enabled,
-
     read_file_text,
-
 )
+from desloppify.base.output.fallbacks import log_best_effort_failure
 from desloppify.intelligence.review._prepare.helpers import append_full_sweep_batch
 from desloppify.intelligence.review.context import (
     abs_path,

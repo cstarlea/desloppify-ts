@@ -8,6 +8,18 @@ from pathlib import Path
 
 from desloppify.base.discovery.sfc import is_sfc, read_code_text, read_sfc
 from desloppify.base.output.fallbacks import log_best_effort_failure
+from desloppify.languages.typescript.detectors.io import (
+    iter_typescript_sources,
+    resolve_typescript_source,
+)
+
+from .assets import (
+    detect_non_ts_asset_smells,
+)
+from .catalog import (
+    SEVERITY_ORDER,
+    TS_SMELL_CHECKS,
+)
 from .detector_flow import (
     _detect_async_no_await,
     _detect_empty_if_chains,
@@ -29,17 +41,6 @@ from .detector_types import TYPE_SAFETY_SMELLS, _detect_type_safety
 from .helpers import (
     _file_context,
     _regex_line_matches,
-)
-from .assets import (
-    detect_non_ts_asset_smells,
-)
-from .catalog import (
-    SEVERITY_ORDER,
-    TS_SMELL_CHECKS,
-)
-from desloppify.languages.typescript.detectors.io import (
-    iter_typescript_sources,
-    resolve_typescript_source,
 )
 
 logger = logging.getLogger(__name__)

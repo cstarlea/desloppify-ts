@@ -6,8 +6,8 @@ import argparse
 
 import desloppify.app.commands.plan.triage.command as triage_mod
 from desloppify.app.commands.plan.triage.services import TriageServices
-from desloppify.engine._plan.schema import empty_plan
 from desloppify.engine._plan.constants import TRIAGE_STAGE_IDS
+from desloppify.engine._plan.schema import empty_plan
 from desloppify.engine.plan_ops import append_log_entry
 
 # ---------------------------------------------------------------------------

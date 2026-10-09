@@ -5,16 +5,16 @@ from __future__ import annotations
 import argparse
 
 from desloppify.base.output.terminal import colorize
-from desloppify.engine.plan_state import (
-    load_plan,
-    plan_lock,
-    save_plan,
-)
 from desloppify.engine.plan_ops import (
     append_log_entry,
     normalize_step,
     parse_steps_file,
     step_summary,
+)
+from desloppify.engine.plan_state import (
+    load_plan,
+    plan_lock,
+    save_plan,
 )
 from desloppify.state_io import utc_now
 

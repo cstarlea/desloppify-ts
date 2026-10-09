@@ -14,9 +14,9 @@ from desloppify.app.skill_docs import (
     SkillInstall,
     find_installed_skill,
 )
-from desloppify.base.exception_sets import CommandError
 from desloppify.base.discovery.file_paths import safe_write_text
 from desloppify.base.discovery.paths import get_project_root
+from desloppify.base.exception_sets import CommandError
 from desloppify.base.output.terminal import colorize
 
 _RESOURCE_PACKAGE = "desloppify.data.global"

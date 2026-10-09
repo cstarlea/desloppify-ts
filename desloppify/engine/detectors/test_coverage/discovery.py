@@ -8,7 +8,13 @@ from desloppify.base.discovery.paths import get_project_root
 from desloppify.engine.policy.zones import FileZoneMap, Zone
 
 from .heuristics import _has_testable_logic, _is_runtime_entrypoint
-from .metrics import _COMPLEXITY_TIER_UPGRADE, _MIN_LOC, _file_loc, _importer_count, _loc_weight
+from .metrics import (
+    _COMPLEXITY_TIER_UPGRADE,
+    _MIN_LOC,
+    _file_loc,
+    _importer_count,
+    _loc_weight,
+)
 
 # Max untested modules to report when there are zero tests
 _MAX_NO_TESTS_ENTRIES = 50

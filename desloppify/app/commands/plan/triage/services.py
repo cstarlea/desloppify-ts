@@ -5,21 +5,20 @@ from __future__ import annotations
 import argparse
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
-from typing import Protocol
-
 from pathlib import Path
+from typing import Protocol
 
 from desloppify.app.commands.helpers.command_runtime import (
     CommandRuntime,
     command_runtime,
 )
 from desloppify.app.commands.helpers.state_persistence import save_state_or_exit
+from desloppify.engine.plan_ops import append_log_entry
 from desloppify.engine.plan_state import (
     PlanModel,
     load_plan,
     save_plan,
 )
-from desloppify.engine.plan_ops import append_log_entry
 from desloppify.engine.plan_triage import (
     TriageInput,
     build_triage_prompt,

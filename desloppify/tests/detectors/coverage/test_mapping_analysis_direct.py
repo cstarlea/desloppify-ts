@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-import sys
-
-import pytest
-
 import logging
 import re
+import sys
 from types import SimpleNamespace
+
+import pytest
 
 import desloppify.engine.detectors.coverage.mapping_analysis as analysis_mod
 

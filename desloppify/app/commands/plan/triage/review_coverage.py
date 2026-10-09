@@ -3,20 +3,35 @@
 from __future__ import annotations
 
 from desloppify.app.commands.plan.shared.cluster_membership import cluster_issue_ids
+from desloppify.engine._plan.policy.stale import open_review_ids
 from desloppify.engine._plan.triage.lifecycle import ensure_active_triage_issue_ids
 from desloppify.engine._state.schema import StateModel
 from desloppify.engine.plan_state import Cluster, PlanModel
 from desloppify.engine.plan_triage import (
     active_triage_issue_ids as _active_triage_issue_ids,
+)
+from desloppify.engine.plan_triage import (
     coverage_open_ids as _coverage_open_ids,
+)
+from desloppify.engine.plan_triage import (
     find_cluster_for as _find_cluster_for,
+)
+from desloppify.engine.plan_triage import (
     live_active_triage_issue_ids as _live_active_triage_issue_ids,
+)
+from desloppify.engine.plan_triage import (
     manual_clusters_with_issues as _manual_clusters_with_issues,
+)
+from desloppify.engine.plan_triage import (
     plan_review_ids as _plan_review_ids,
+)
+from desloppify.engine.plan_triage import (
     triage_coverage as _triage_coverage,
+)
+from desloppify.engine.plan_triage import (
     undispositioned_triage_issue_ids as _undispositioned_triage_issue_ids,
 )
-from desloppify.engine._plan.policy.stale import open_review_ids
+
 from .plan_state_access import ensure_triage_meta
 
 _ACTIVE_TRIAGE_ISSUE_IDS_KEY = "active_triage_issue_ids"

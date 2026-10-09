@@ -23,7 +23,10 @@ from desloppify.base.discovery.source import find_ts_and_js_files
 from desloppify.languages._framework.base.types import DetectorCoverageStatus
 from desloppify.languages.typescript.detectors.bounded import Budget
 from desloppify.languages.typescript.detectors.deps.packages import discover_packages
-from desloppify.languages.typescript.detectors.deps.resolve import find_nearest_tsconfig, read_tsconfig
+from desloppify.languages.typescript.detectors.deps.resolve import (
+    find_nearest_tsconfig,
+    read_tsconfig,
+)
 from desloppify.languages.typescript.detectors.tsc import (
     COMPONENTS_REMEDIATION,
     UNUSED_CODES,
@@ -32,7 +35,9 @@ from desloppify.languages.typescript.detectors.tsc import (
     run_tsc,
     unchecked_components_note,
 )
-from desloppify.languages.typescript.detectors.unused_fallback import should_use_deno_fallback
+from desloppify.languages.typescript.detectors.unused_fallback import (
+    should_use_deno_fallback,
+)
 
 # Compiler-option and project errors (TS5xxx, TS6xxx, "no inputs"): config, not code.
 _CONFIG_CODE_RE = re.compile(r"^TS(5\d{3}|6\d{3}|18003)$")

@@ -7,9 +7,12 @@ import re
 from collections.abc import Iterator
 from pathlib import Path
 
-from desloppify.base.discovery.source import find_ts_and_js_files
 from desloppify.base.discovery.paths import get_project_root
-from desloppify.languages._framework.node.js_functions import FunctionLiteral, function_at
+from desloppify.base.discovery.source import find_ts_and_js_files
+from desloppify.languages._framework.node.js_functions import (
+    FunctionLiteral,
+    function_at,
+)
 
 from .common import SourceFile, source_files
 

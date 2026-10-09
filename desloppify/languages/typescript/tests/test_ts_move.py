@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
-
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -29,7 +28,9 @@ class TestMoveSafety:
     """Directory moves, ESM specifiers and the unrewritable-importer gate."""
 
     def test_intra_package_relative_rewrites_are_dropped(self):
-        from desloppify.languages.typescript.move import filter_intra_package_importer_changes
+        from desloppify.languages.typescript.move import (
+            filter_intra_package_importer_changes,
+        )
 
         replacements = [("'./y'", "'../../new/y'"), ("'@/feature/y'", "'@/new/y'")]
         kept = filter_intra_package_importer_changes("/p/src/feature/x.ts", replacements, set())

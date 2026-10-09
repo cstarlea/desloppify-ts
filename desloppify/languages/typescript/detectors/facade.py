@@ -28,7 +28,11 @@ from pathlib import Path
 
 from desloppify.base.discovery.file_paths import resolve_path
 from desloppify.languages._framework.facade_common import detect_reexport_facades_common
-from desloppify.languages.typescript.syntax.queries import directive, export_info, import_info
+from desloppify.languages.typescript.syntax.queries import (
+    directive,
+    export_info,
+    import_info,
+)
 from desloppify.languages.typescript.syntax.tree import ParsedSource, parsed_file
 
 _BOUNDARY_DIRECTIVES = frozenset({"use client", "use server"})

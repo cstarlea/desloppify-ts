@@ -20,11 +20,8 @@ import tempfile
 from pathlib import Path
 
 from desloppify.base.discovery.source import (
-
     collect_exclude_dirs,
-
     get_exclusions,
-
 )
 from desloppify.base.output.fallbacks import warn_best_effort
 

@@ -16,15 +16,18 @@ import desloppify.languages.typescript.phases_basic as phases_basic_mod
 from desloppify.base.runtime_state import RuntimeContext, runtime_scope
 from desloppify.engine.policy.zones import Zone
 from desloppify.languages.typescript.detectors.lint import detect_lint_result
+from desloppify.languages.typescript.detectors.lint.biome import parse_biome_output
 from desloppify.languages.typescript.detectors.lint.configs import (
     find_lint_configs,
     nested_config_dirs,
 )
-from desloppify.languages.typescript.detectors.lint.biome import parse_biome_output
 from desloppify.languages.typescript.detectors.lint.eslint import parse_eslint_output
-from desloppify.languages.typescript.detectors.lint.oxlint import parse_oxlint_output, rule_name
-from desloppify.languages.typescript.detectors.lint.runner import LinterRun
+from desloppify.languages.typescript.detectors.lint.oxlint import (
+    parse_oxlint_output,
+    rule_name,
+)
 from desloppify.languages.typescript.detectors.lint.rules import classify
+from desloppify.languages.typescript.detectors.lint.runner import LinterRun
 
 
 def _write(root: Path, name: str, text: str = "") -> Path:

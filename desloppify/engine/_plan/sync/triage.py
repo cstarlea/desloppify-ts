@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from desloppify.engine._plan.policy import stale as stale_policy_mod
 from desloppify.engine._plan.constants import (
     TRIAGE_IDS,
     TRIAGE_STAGE_IDS,
@@ -11,8 +10,9 @@ from desloppify.engine._plan.constants import (
     normalize_queue_workflow_and_triage_prefix,
     recorded_unconfirmed_triage_stage_names,
 )
-from desloppify.engine._plan.schema import PlanModel, ensure_plan_defaults
+from desloppify.engine._plan.policy import stale as stale_policy_mod
 from desloppify.engine._plan.policy.subjective import SubjectiveVisibility
+from desloppify.engine._plan.schema import PlanModel, ensure_plan_defaults
 from desloppify.engine._plan.triage.lifecycle import (
     ensure_active_triage_issue_ids,
     inject_triage_stages,

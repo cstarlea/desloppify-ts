@@ -9,7 +9,9 @@ import pytest
 
 from desloppify.app.commands.config import _known_preset
 from desloppify.app.commands.helpers.lang import resolve_lang_settings
-from desloppify.languages._framework.frameworks.detection import detect_ecosystem_frameworks
+from desloppify.languages._framework.frameworks.detection import (
+    detect_ecosystem_frameworks,
+)
 from desloppify.languages._framework.runtime_support.runtime import (
     LangRunOverrides,
     make_lang_run,

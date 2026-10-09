@@ -9,9 +9,9 @@ from typing import Any, cast
 from desloppify.base.discovery.paths import get_project_root
 from desloppify.base.enums import Status, canonical_issue_status, issue_status_tokens
 from desloppify.engine._state.issue_semantics import (
-    ensure_work_item_semantics,
     WORK_ITEM_KINDS,
     WORK_ITEM_ORIGINS,
+    ensure_work_item_semantics,
 )
 from desloppify.engine._state.schema_scores import (
     json_default,
@@ -23,13 +23,12 @@ from desloppify.engine._state.schema_types import (
     DimensionScore,
     IgnoreIntegrityModel,
     Issue,
-    WorkItem,
     LangCapability,
     QuarantinedWorkItem,
     ReviewCacheModel,
-    ScanMetadataModel,
     ScanDiff,
     ScanHistoryEntry,
+    ScanMetadataModel,
     ScoreConfidenceDetector,
     ScoreConfidenceModel,
     StateModel,
@@ -38,6 +37,7 @@ from desloppify.engine._state.schema_types import (
     SubjectiveAssessmentJudgment,
     SubjectiveIntegrity,
     TierStats,
+    WorkItem,
 )
 
 __all__ = [

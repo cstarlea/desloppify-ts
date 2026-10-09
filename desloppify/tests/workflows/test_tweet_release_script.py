@@ -8,7 +8,6 @@ from uuid import uuid4
 
 import pytest
 
-
 SCRIPT_PATH = (
     Path(__file__).resolve().parents[3]
     / ".github"

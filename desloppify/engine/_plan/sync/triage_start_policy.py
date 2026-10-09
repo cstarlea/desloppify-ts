@@ -9,8 +9,8 @@ from desloppify.engine._plan.constants import (
     TRIAGE_IDS,
     recorded_unconfirmed_triage_stage_names,
 )
-from desloppify.engine._plan.schema import PlanModel
 from desloppify.engine._plan.policy.subjective import SubjectiveVisibility
+from desloppify.engine._plan.schema import PlanModel
 from desloppify.engine._state.schema import StateModel
 
 from .context import has_objective_backlog, is_mid_cycle

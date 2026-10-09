@@ -28,12 +28,12 @@ from .stage_prompts_observe import (
     _observe_batch_instructions,
     build_observe_batch_prompt,
 )
-from .stage_prompts_strategist import build_strategist_prompt
 from .stage_prompts_sense import (
     build_sense_check_content_prompt,
     build_sense_check_structure_prompt,
     build_sense_check_value_prompt,
 )
+from .stage_prompts_strategist import build_strategist_prompt
 from .stage_prompts_validation import _validation_requirements
 
 

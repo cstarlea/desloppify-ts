@@ -2,15 +2,14 @@
 
 from __future__ import annotations
 
-
+from desloppify.app.commands.plan.triage.confirmations.basic import (
+    _AUTO_SKIP_VERDICTS,
+    _apply_observe_auto_skips,
+    _undo_observe_auto_skips,
+)
 from desloppify.app.commands.plan.triage.stage_queue import cascade_clear_dispositions
 from desloppify.app.commands.plan.triage.stages.evidence_parsing import (
     resolve_short_hash_to_full_id,
-)
-from desloppify.app.commands.plan.triage.confirmations.basic import (
-    _apply_observe_auto_skips,
-    _undo_observe_auto_skips,
-    _AUTO_SKIP_VERDICTS,
 )
 from desloppify.app.commands.plan.triage.validation.organize_policy import (
     validate_organize_against_dispositions,
@@ -24,7 +23,6 @@ from desloppify.engine._plan.skip_policy import (
     skip_kind_requires_attestation,
     skip_kind_state_status,
 )
-
 
 # ---------------------------------------------------------------------------
 # Schema: IssueDisposition exists and is well-typed

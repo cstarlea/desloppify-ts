@@ -12,13 +12,13 @@ consistent and changes propagate everywhere at once.
 
 from __future__ import annotations
 
-from desloppify.engine._plan.schema import PlanModel
 from desloppify.engine._plan.policy.subjective import (
     NON_OBJECTIVE_DETECTORS as _NON_OBJECTIVE_DETECTORS,
 )
 from desloppify.engine._plan.policy.subjective import (
     SubjectiveVisibility,
 )
+from desloppify.engine._plan.schema import PlanModel
 from desloppify.engine._state.schema import StateModel
 
 

@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from collections import defaultdict
 
-from desloppify.base.output.terminal import colorize
 from desloppify.base.discovery.paths import get_area
+from desloppify.base.output.terminal import colorize
 from desloppify.engine._scoring.policy.core import is_wontfix_debt
 from desloppify.engine._state.filtering import path_scoped_issues
 

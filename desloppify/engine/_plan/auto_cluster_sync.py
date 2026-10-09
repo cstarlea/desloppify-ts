@@ -9,17 +9,17 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from desloppify.engine._plan.policy import stale as stale_policy_mod
-from desloppify.engine._plan.sync.context import (
-    has_objective_backlog as _has_objective_backlog,
-)
 from desloppify.engine._plan.auto_cluster_sync_issue import (
     _sync_auto_cluster,
     sync_issue_clusters,
 )
 from desloppify.engine._plan.constants import SUBJECTIVE_PREFIX
+from desloppify.engine._plan.policy import stale as stale_policy_mod
 from desloppify.engine._plan.policy.subjective import SubjectiveVisibility
 from desloppify.engine._plan.sync.auto_prune import prune_stale_clusters
+from desloppify.engine._plan.sync.context import (
+    has_objective_backlog as _has_objective_backlog,
+)
 from desloppify.engine._plan.sync.dimensions import (
     current_under_target_ids,
     current_unscored_ids,

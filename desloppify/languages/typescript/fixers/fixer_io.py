@@ -10,12 +10,14 @@ import sys
 import tempfile
 from pathlib import Path
 
-from desloppify.base.output.fallbacks import log_best_effort_failure
 from desloppify.base.discovery.file_paths import rel
-from desloppify.base.discovery.sfc import apply_view_change, is_sfc, sfc_code
-from desloppify.base.output.terminal import colorize
 from desloppify.base.discovery.paths import get_project_root
-from desloppify.languages._framework.treesitter import is_available as treesitter_available
+from desloppify.base.discovery.sfc import apply_view_change, is_sfc, sfc_code
+from desloppify.base.output.fallbacks import log_best_effort_failure
+from desloppify.base.output.terminal import colorize
+from desloppify.languages._framework.treesitter import (
+    is_available as treesitter_available,
+)
 from desloppify.languages.typescript.syntax.validation import syntax_regression
 
 logger = logging.getLogger(__name__)

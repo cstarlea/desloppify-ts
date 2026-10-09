@@ -4,19 +4,19 @@ import importlib.util
 
 import pytest
 
+import desloppify.languages.typescript.detectors.smells.detector_flow as flow_mod
 import desloppify.languages.typescript.detectors.smells.detector_safety as safety_mod
 from desloppify.languages.typescript.detectors.smells import TS_SMELL_CHECKS
 from desloppify.languages.typescript.detectors.smells.detector_core import (
     _find_function_start,
 )
-import desloppify.languages.typescript.detectors.smells.detector_flow as flow_mod
 from desloppify.languages.typescript.detectors.smells.detector_flow import (
     _detect_async_no_await,
-    _detect_high_cyclomatic_complexity,
-    _detect_nested_closures,
     _detect_empty_if_chains,
     _detect_error_no_throw,
+    _detect_high_cyclomatic_complexity,
     _detect_monster_functions,
+    _detect_nested_closures,
     _detect_stub_functions,
 )
 from desloppify.languages.typescript.detectors.smells.detector_safety import (
@@ -29,12 +29,11 @@ from desloppify.languages.typescript.detectors.smells.helpers import (
     _code_text,
     _content_line_info,
     _extract_block_body,
-    _FileContext,
     _file_context,
+    _FileContext,
     _strip_ts_comments,
     _track_brace_body,
 )
-
 
 needs_treesitter = pytest.mark.skipif(
     importlib.util.find_spec("tree_sitter_language_pack") is None,

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+
 from desloppify.intelligence.narrative.headline import compute_headline
 from desloppify.intelligence.narrative.reminders import compute_reminders
 from desloppify.intelligence.review.selection import (

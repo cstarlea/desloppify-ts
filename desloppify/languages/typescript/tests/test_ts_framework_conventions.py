@@ -15,7 +15,9 @@ from desloppify.languages._framework.frameworks.registry import (
     framework_entry_conventions,
     get_framework_spec,
 )
-from desloppify.languages.typescript.detectors.deps.auto_imports import auto_import_entries
+from desloppify.languages.typescript.detectors.deps.auto_imports import (
+    auto_import_entries,
+)
 from desloppify.languages.typescript.detectors.deps.resolver import (
     ModuleResolver,
     clear_resolver_cache,

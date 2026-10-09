@@ -16,7 +16,9 @@ from desloppify.engine.detectors.security.detector import detect_security_issues
 from desloppify.languages._framework.node.js_text import literal_spans
 from desloppify.languages.typescript.detectors.concerns import detect_mixed_concerns
 from desloppify.languages.typescript.detectors.logs import detect_logs
-from desloppify.languages.typescript.detectors.security.detector import detect_ts_security
+from desloppify.languages.typescript.detectors.security.detector import (
+    detect_ts_security,
+)
 from desloppify.languages.typescript.detectors.smells import detect_smells
 from desloppify.languages.typescript.phases_config import TS_COMPLEXITY_SIGNALS
 from desloppify.languages.typescript.syntax.scanner import SourceText, jsx_text_spans

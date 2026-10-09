@@ -3,15 +3,19 @@
 from __future__ import annotations
 
 from desloppify.base.config import DEFAULT_TARGET_STRICT_SCORE
-from desloppify.engine._plan.cluster_semantics import cluster_is_active
-from desloppify.engine._plan.constants import AUTO_PREFIX
 from desloppify.engine._plan.auto_cluster_sync import (
     prune_stale_clusters as _prune_stale_clusters,
+)
+from desloppify.engine._plan.auto_cluster_sync import (
     sync_issue_clusters as _sync_issue_clusters,
+)
+from desloppify.engine._plan.auto_cluster_sync import (
     sync_subjective_clusters as _sync_subjective_clusters,
 )
-from desloppify.engine._plan.schema import PlanModel, ensure_plan_defaults
+from desloppify.engine._plan.cluster_semantics import cluster_is_active
+from desloppify.engine._plan.constants import AUTO_PREFIX
 from desloppify.engine._plan.policy.subjective import SubjectiveVisibility
+from desloppify.engine._plan.schema import PlanModel, ensure_plan_defaults
 from desloppify.engine._plan.sync.context import is_mid_cycle
 from desloppify.engine._state.schema import StateModel, utc_now
 

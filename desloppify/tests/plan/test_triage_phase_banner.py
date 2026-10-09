@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from desloppify.engine._plan.schema import empty_plan
 from desloppify.engine._plan.constants import TRIAGE_STAGE_IDS
+from desloppify.engine._plan.schema import empty_plan
 from desloppify.engine.plan_triage import triage_phase_banner
 
 

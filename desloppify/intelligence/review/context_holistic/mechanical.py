@@ -29,7 +29,11 @@ from .clusters.security import (
     _build_signal_density,
     _build_systemic_patterns,
 )
-from .clusters.toolchain import _build_coverage_gaps, _build_lint_rules, _build_type_errors
+from .clusters.toolchain import (
+    _build_coverage_gaps,
+    _build_lint_rules,
+    _build_type_errors,
+)
 
 
 def _normalize_allowed_files(

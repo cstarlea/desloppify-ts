@@ -8,7 +8,6 @@ from pathlib import Path
 from desloppify.languages.framework import get_lang
 
 
-
 def _full_langs() -> list[str]:
     return ["typescript"]
 

@@ -8,12 +8,12 @@ from pathlib import Path
 
 from desloppify.base.discovery.paths import get_project_root
 from desloppify.base.discovery.source import find_tsx_and_jsx_files
-from desloppify.languages.typescript.syntax.scanner import file_code_text
-from desloppify.languages.typescript.syntax.lines import line_number, split_lines
 from desloppify.languages.typescript.detectors.smells.helpers import (
     _strip_ts_comments,
     scan_code,
 )
+from desloppify.languages.typescript.syntax.lines import line_number, split_lines
+from desloppify.languages.typescript.syntax.scanner import file_code_text
 
 MAX_EFFECT_BODY = 1000
 logger = logging.getLogger(__name__)

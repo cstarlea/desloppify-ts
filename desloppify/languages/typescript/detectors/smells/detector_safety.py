@@ -5,7 +5,12 @@ from __future__ import annotations
 import re
 
 from desloppify.languages.typescript.syntax.nodes import FUNCTIONS
-from desloppify.languages.typescript.syntax.queries import calls, descendants, function_info, statements
+from desloppify.languages.typescript.syntax.queries import (
+    calls,
+    descendants,
+    function_info,
+    statements,
+)
 from desloppify.languages.typescript.syntax.tree import ParsedSource, parsed_file
 
 from .detector_core import (
@@ -22,7 +27,6 @@ from .helpers import (
     _extract_block_body,
     _strip_ts_comments,
 )
-
 
 _CATCH_RE = re.compile(r"catch\s*\([^)]*\)\s*\{")
 _DEFAULT_VALUES = frozenset({"false", "null", "undefined", "0", "''", '""'})

@@ -24,7 +24,12 @@ from desloppify.intelligence.narrative.strategy_engine import (
 from desloppify.intelligence.narrative.strategy_engine import (
     open_files_by_detector as _open_files_by_detector,
 )
-from desloppify.tests.narrative.test_narrative import _history_entry, _issue, _issues_dict
+from desloppify.tests.narrative.test_narrative import (
+    _history_entry,
+    _issue,
+    _issues_dict,
+)
+
 # compute_headline
 # ===================================================================
 

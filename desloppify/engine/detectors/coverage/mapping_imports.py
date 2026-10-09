@@ -8,7 +8,6 @@ from desloppify.engine.detectors.test_coverage.io import read_coverage_file
 from desloppify.engine.hook_registry import get_lang_hook
 
 
-
 def _load_lang_test_coverage_module(lang_name: str | None):
     """Load language-specific test coverage helpers from ``lang/<name>/test_coverage.py``."""
     return get_lang_hook(lang_name, "test_coverage") or object()

@@ -8,25 +8,25 @@ from pathlib import Path
 from typing import NamedTuple
 
 from desloppify.app.commands.helpers.transition_messages import emit_transition_message
+from desloppify.app.commands.resolve.plan_load import warn_plan_load_degraded_once
 from desloppify.base.config import target_strict_score_from_config
 from desloppify.base.enums import resolved_statuses
 from desloppify.base.exception_sets import PLAN_LOAD_EXCEPTIONS
 from desloppify.base.output.terminal import colorize
-from desloppify.app.commands.resolve.plan_load import warn_plan_load_degraded_once
-from desloppify.engine._plan.sync import live_planned_queue_empty, reconcile_plan
 from desloppify.engine._plan.cluster_semantics import EXECUTION_STATUS_DONE
-from desloppify.engine.plan_ops import (
-    append_log_entry,
-    auto_complete_steps,
-    purge_ids,
-)
 from desloppify.engine._plan.refresh_lifecycle import (
     current_lifecycle_phase,
     invalidate_postflight_scan,
 )
+from desloppify.engine._plan.sync import live_planned_queue_empty, reconcile_plan
 from desloppify.engine._state.progression import (
     maybe_append_entered_planning,
     maybe_append_execution_drain,
+)
+from desloppify.engine.plan_ops import (
+    append_log_entry,
+    auto_complete_steps,
+    purge_ids,
 )
 from desloppify.engine.plan_state import (
     add_uncommitted_issues,

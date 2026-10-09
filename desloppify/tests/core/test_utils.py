@@ -5,14 +5,15 @@ from pathlib import Path
 
 import pytest
 
-import desloppify.base.text_utils as utils_text_mod
 import desloppify.base.discovery.paths as paths_api_mod
+import desloppify.base.text_utils as utils_text_mod
 import desloppify.base.tooling as tooling_mod
 from desloppify.base.discovery.file_paths import (
     matches_exclusion,
     rel,
     resolve_path,
 )
+from desloppify.base.discovery.paths import read_code_snippet
 from desloppify.base.discovery.source import (
     SourceDiscoveryOptions,
     clear_source_file_cache_for_tests,
@@ -20,8 +21,11 @@ from desloppify.base.discovery.source import (
     get_exclusions,
     set_exclusions,
 )
-from desloppify.base.search.grep import grep_count_files, grep_files, grep_files_containing
-from desloppify.base.discovery.paths import read_code_snippet
+from desloppify.base.search.grep import (
+    grep_count_files,
+    grep_files,
+    grep_files_containing,
+)
 from desloppify.base.tooling import check_tool_staleness, compute_tool_hash
 
 

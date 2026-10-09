@@ -15,7 +15,6 @@ from desloppify.engine._plan.schema.version_upgrades import (
     upgrade_plan_to_v8,
 )
 
-
 __all__ = [
     "ensure_container_types",
     "upgrade_plan_to_v7",

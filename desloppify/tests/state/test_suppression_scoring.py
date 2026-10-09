@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 from desloppify.engine._scoring.detection import _iter_scoring_candidates
+from desloppify.engine._scoring.state_integration import _count_issues
 from desloppify.engine._state.filtering import (
     issue_suppression_fingerprint,
     open_scope_breakdown,
     remove_ignored_issues,
 )
 from desloppify.engine._state.merge_issues import upsert_issues
-from desloppify.engine._scoring.state_integration import _count_issues
 
 # ---------------------------------------------------------------------------
 # Helpers

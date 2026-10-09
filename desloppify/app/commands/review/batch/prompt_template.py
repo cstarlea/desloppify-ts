@@ -9,7 +9,10 @@ from desloppify.intelligence.review.feedback_contract import (
     DIMENSION_NOTE_ISSUES_KEY,
     HIGH_SCORE_ISSUES_NOTE_THRESHOLD,
 )
-from desloppify.intelligence.review.personas import render_persona_block, resolve_persona
+from desloppify.intelligence.review.personas import (
+    render_persona_block,
+    resolve_persona,
+)
 
 from ..prompt_sections import (
     PromptBatchContext,

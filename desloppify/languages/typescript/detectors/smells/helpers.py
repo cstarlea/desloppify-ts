@@ -9,7 +9,6 @@ from desloppify.languages._framework.node.js_text import code_text as _code_text
 from desloppify.languages.typescript.syntax.lines import line_number, split_lines
 from desloppify.languages.typescript.syntax.scanner import SourceText, scan_code
 
-
 # ---------------------------------------------------------------------------
 # Data types
 # ---------------------------------------------------------------------------

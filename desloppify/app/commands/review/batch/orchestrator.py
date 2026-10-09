@@ -10,6 +10,12 @@ from pathlib import Path
 from typing import cast
 
 from desloppify.app.commands.helpers.query import write_query_best_effort
+from desloppify.app.commands.runner.codex_batch import (
+    CodexBatchRunnerDeps,
+    FollowupScanDeps,
+    run_codex_batch,
+    run_followup_scan,
+)
 from desloppify.base.discovery.file_paths import safe_write_text
 from desloppify.base.exception_sets import CommandError, PacketValidationError
 from desloppify.base.output.terminal import colorize, log
@@ -33,6 +39,7 @@ from ..packet.build import (
 from ..packet.policy import redacted_review_config
 from ..prompt_sections import explode_to_single_dimension
 from ..runner_failures import print_failures, print_failures_and_raise
+from ..runner_opencode import run_opencode_batch
 from ..runner_packets import (
     build_batch_import_provenance,
     build_blind_packet,
@@ -41,14 +48,11 @@ from ..runner_packets import (
     selected_batch_indexes,
     write_packet_snapshot,
 )
-from ..runner_parallel import BatchExecutionOptions, collect_batch_results, execute_batches
-from desloppify.app.commands.runner.codex_batch import (
-    CodexBatchRunnerDeps,
-    FollowupScanDeps,
-    run_codex_batch,
-    run_followup_scan,
+from ..runner_parallel import (
+    BatchExecutionOptions,
+    collect_batch_results,
+    execute_batches,
 )
-from ..runner_opencode import run_opencode_batch
 from ..runner_rovodev import run_rovodev_batch
 from ..runtime.setup import setup_lang_concrete as _setup_lang
 from ..runtime_paths import (
@@ -63,21 +67,23 @@ from ..runtime_paths import (
 from ..runtime_paths import (
     subagent_runs_dir as _subagent_runs_dir,
 )
+from . import execution as review_batches_mod
+from . import execution_phases as review_batch_phases_mod
 from .core_merge_support import assessment_weight  # noqa: F401 — re-exported
 from .core_models import BatchResultPayload
+from .core_normalize import normalize_batch_result
+from .core_parse import extract_json_payload, parse_batch_selection
+from .execution_results import (
+    enforce_import_coverage as _enforce_import_coverage,
+)
+from .execution_results import (
+    merge_and_write_results as _merge_and_write_results,
+)
+from .merge import merge_batch_results
+from .prompt_template import render_batch_prompt
 from .scope import (
     normalize_dimension_list,
     scored_dimensions_for_lang,
-)
-from .core_normalize import normalize_batch_result
-from .core_parse import extract_json_payload, parse_batch_selection
-from . import execution_phases as review_batch_phases_mod
-from .merge import merge_batch_results
-from .prompt_template import render_batch_prompt
-from . import execution as review_batches_mod
-from .execution_results import (
-    enforce_import_coverage as _enforce_import_coverage,
-    merge_and_write_results as _merge_and_write_results,
 )
 
 FOLLOWUP_SCAN_TIMEOUT_SECONDS = 45 * 60

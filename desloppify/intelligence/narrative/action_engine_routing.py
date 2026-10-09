@@ -8,8 +8,8 @@ from typing import Any
 from desloppify.engine._scoring.results.core import get_dimension_for_detector
 from desloppify.engine._state.issue_semantics import (
     ASSESSMENT_REQUEST,
-    REVIEW_DEFECT,
     REVIEW_CONCERN,
+    REVIEW_DEFECT,
     infer_work_item_kind,
 )
 from desloppify.intelligence.narrative._constants import DETECTOR_TOOLS

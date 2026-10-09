@@ -10,12 +10,12 @@ from importlib.metadata import version as get_version
 
 from desloppify import DIST_NAME
 from desloppify.app.cli_support.parser_groups import (
+    _add_autofix_parser,
     _add_backlog_parser,
     _add_config_parser,
     _add_detect_parser,
     _add_directives_parser,
     _add_exclude_parser,
-    _add_autofix_parser,
     _add_move_parser,
     _add_next_parser,
     _add_review_parser,

@@ -15,7 +15,9 @@ from desloppify.languages.typescript.detectors.logs import detect_logs
 from desloppify.languages.typescript.detectors.patterns.analysis import (
     detect_pattern_anomalies,
 )
-from desloppify.languages.typescript.detectors.security.detector import detect_ts_security
+from desloppify.languages.typescript.detectors.security.detector import (
+    detect_ts_security,
+)
 
 
 def _write(tmp_path: Path, rel_path: str, content: str) -> None:

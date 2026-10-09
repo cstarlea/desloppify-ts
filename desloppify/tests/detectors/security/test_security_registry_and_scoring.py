@@ -12,7 +12,6 @@ from desloppify.engine._scoring.results.core import compute_dimension_scores
 from desloppify.engine.policy.zones import ZONE_POLICIES, Zone
 from desloppify.intelligence.narrative.headline import compute_headline
 
-
 # ═══════════════════════════════════════════════════════════
 # Integration Tests
 # ═══════════════════════════════════════════════════════════

@@ -5,13 +5,6 @@ from __future__ import annotations
 from collections import defaultdict
 from pathlib import Path
 
-from desloppify.base.discovery.file_paths import rel
-from desloppify.base.output.terminal import log
-from desloppify.engine._state.filtering import make_issue
-from desloppify.engine.policy.zones import EXCLUDED_ZONES, Zone, adjust_potential
-from desloppify.languages._framework.base.shared_phases_helpers import record_reduced_coverage
-from desloppify.languages._framework.base.types import LangRuntimeContract
-from desloppify.languages._framework.issue_factories import make_unused_issues
 import desloppify.languages.typescript.detectors.dependencies as dependencies_detector_mod
 import desloppify.languages.typescript.detectors.deprecated as deprecated_detector_mod
 import desloppify.languages.typescript.detectors.exports as exports_detector_mod
@@ -20,6 +13,15 @@ import desloppify.languages.typescript.detectors.logs as logs_detector_mod
 import desloppify.languages.typescript.detectors.tsconfig_health as tsconfig_health_detector_mod
 import desloppify.languages.typescript.detectors.type_errors as type_errors_detector_mod
 import desloppify.languages.typescript.detectors.unused as unused_detector_mod
+from desloppify.base.discovery.file_paths import rel
+from desloppify.base.output.terminal import log
+from desloppify.engine._state.filtering import make_issue
+from desloppify.engine.policy.zones import EXCLUDED_ZONES, Zone, adjust_potential
+from desloppify.languages._framework.base.shared_phases_helpers import (
+    record_reduced_coverage,
+)
+from desloppify.languages._framework.base.types import LangRuntimeContract
+from desloppify.languages._framework.issue_factories import make_unused_issues
 from desloppify.languages.typescript.monorepo import monorepo_budget
 from desloppify.state_io import Issue
 

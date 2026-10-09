@@ -8,7 +8,6 @@ import pytest
 from desloppify.languages.typescript.fixers.if_chain import fix_empty_if_chain
 from desloppify.languages.typescript.fixers.useeffect import fix_dead_useeffect
 
-
 # =====================================================================
 # if_chain.py — fix_empty_if_chain
 # =====================================================================

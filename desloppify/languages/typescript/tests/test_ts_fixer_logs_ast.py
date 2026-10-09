@@ -7,7 +7,10 @@ import importlib.util
 import pytest
 
 import desloppify.languages.typescript.fixers.logs as logs_mod
-from desloppify.languages.typescript.fixers.logs import fix_debug_logs, remove_debug_logs
+from desloppify.languages.typescript.fixers.logs import (
+    fix_debug_logs,
+    remove_debug_logs,
+)
 from desloppify.languages.typescript.syntax.tree import parse_text
 from desloppify.languages.typescript.syntax.validation import count_syntax_errors
 

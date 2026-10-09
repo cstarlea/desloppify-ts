@@ -35,6 +35,13 @@ from collections import defaultdict
 from desloppify.base.output.terminal import colorize
 from desloppify.languages._framework.base.types import FixResult
 from desloppify.languages.typescript.detectors.logs import tagged_console_calls
+from desloppify.languages.typescript.syntax.nodes import (
+    FUNCTIONS,
+    STATEMENT_PARENTS,
+    asi_hazards,
+    node_key,
+    reads_only,
+)
 from desloppify.languages.typescript.syntax.tree import (
     ParsedSource,
     get_parser,
@@ -43,7 +50,6 @@ from desloppify.languages.typescript.syntax.tree import (
 
 from .edits import apply_edits, whole_statement_range
 from .fixer_io import apply_fixer
-from desloppify.languages.typescript.syntax.nodes import FUNCTIONS, STATEMENT_PARENTS, asi_hazards, node_key, reads_only
 
 # A `//` comment directly above a removed log that only explains the log.
 _DEBUG_COMMENT_RE = re.compile(r"\b(?:debug|temp|log|logging|trace)\b", re.IGNORECASE)

@@ -7,7 +7,10 @@ from types import SimpleNamespace
 
 import desloppify.languages.typescript.detectors.tsc as tsc_mod
 import desloppify.languages.typescript.detectors.unused as unused_mod
-from desloppify.languages.typescript.detectors.tsc import TscDiagnostic, parse_tsc_output
+from desloppify.languages.typescript.detectors.tsc import (
+    TscDiagnostic,
+    parse_tsc_output,
+)
 
 
 def test_parse_joins_message_chains_and_collects_listed_files():

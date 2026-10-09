@@ -8,8 +8,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
-from desloppify.base.discovery.file_paths import rel
-from desloppify.base.discovery.file_paths import count_lines, resolve_path
+from desloppify.base.discovery.file_paths import count_lines, rel, resolve_path
 
 _DUNDER_ALL_RE = re.compile(r"^__all__\s*[:=]", re.MULTILINE)
 

@@ -10,15 +10,15 @@ import pytest
 from desloppify.engine._plan.refresh_lifecycle import (
     _LEGACY_PHASE_TO_MODE,
     carry_forward_subjective_review,
+    current_lifecycle_phase,
     derive_display_phase,
     invalidate_postflight_scan,
-    current_lifecycle_phase,
     mark_postflight_scan_completed,
     migrate_legacy_phase,
     postflight_scan_pending,
 )
-from desloppify.engine._plan.sync.workflow import _subjective_review_current_for_cycle
 from desloppify.engine._plan.schema import empty_plan
+from desloppify.engine._plan.sync.workflow import _subjective_review_current_for_cycle
 
 _PACKAGE_ROOT = Path(__file__).resolve().parents[2]
 _REFRESH_LIFECYCLE = _PACKAGE_ROOT / "engine" / "_plan" / "refresh_lifecycle.py"

@@ -7,7 +7,9 @@ from types import SimpleNamespace
 
 import pytest
 
-from desloppify.languages._framework.frameworks.detection import detect_ecosystem_frameworks
+from desloppify.languages._framework.frameworks.detection import (
+    detect_ecosystem_frameworks,
+)
 from desloppify.languages._framework.node.frameworks.nextjs.info import (
     nextjs_info_from_evidence,
 )

@@ -19,9 +19,10 @@ from desloppify.base.discovery.paths import get_project_root
 from desloppify.base.exception_sets import CommandError
 from desloppify.base.output.terminal import colorize
 
-from ..stage_queue import has_triage_in_queue, inject_triage_stages
 from ..lifecycle import TriageLifecycleDeps, ensure_triage_started
 from ..services import TriageServices, default_triage_services
+from ..stage_queue import has_triage_in_queue, inject_triage_stages
+from ..stages.helpers import value_check_targets
 from ..validation.reflect_accounting import (
     analyze_reflect_issue_accounting,
     validate_reflect_accounting,
@@ -44,12 +45,15 @@ from .orchestrator_codex_pipeline_execution import (
     DEFAULT_STAGE_HANDLERS,
     StageExecutionDependencies,
     StageHandler,
+)
+from .orchestrator_codex_pipeline_execution import (
     execute_stage as execute_stage_impl,
+)
+from .orchestrator_codex_pipeline_execution import (
     read_stage_output as read_stage_output_impl,
 )
 from .orchestrator_common import STAGES, run_stamp
 from .stage_prompts import build_stage_prompt
-from ..stages.helpers import value_check_targets
 
 # Module-level override for the per-stage runner. The default (``None``)
 # means "use the codex stage runner". The wrapper helpers in

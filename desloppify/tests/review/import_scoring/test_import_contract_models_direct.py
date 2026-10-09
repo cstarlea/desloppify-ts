@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from desloppify.intelligence.review.importing.contracts_types import (
-    NormalizedReviewImportPayload,
-    ReviewImportPayload,
-)
 from desloppify.intelligence.review.importing.contracts_models import (
     AssessmentImportPolicyModel,
     AssessmentProvenanceModel,
+)
+from desloppify.intelligence.review.importing.contracts_types import (
+    NormalizedReviewImportPayload,
+    ReviewImportPayload,
 )
 
 

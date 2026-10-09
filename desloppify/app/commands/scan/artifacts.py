@@ -6,18 +6,20 @@ import logging
 import os
 from pathlib import Path
 
-from desloppify.app.commands.helpers.dynamic_loaders import load_optional_scorecard_module
+from desloppify.app.commands.helpers.dynamic_loaders import (
+    load_optional_scorecard_module,
+)
 from desloppify.app.commands.scan.contracts import ScanQueryPayload
 from desloppify.app.commands.scan.workflow import (
     ScanMergeResult,
     ScanNoiseSnapshot,
 )
 from desloppify.base.config import config_for_query
+from desloppify.base.discovery.paths import get_project_root
 from desloppify.base.exception_sets import PLAN_LOAD_EXCEPTIONS
+from desloppify.base.output.contract import OutputResult
 from desloppify.base.output.fallbacks import log_best_effort_failure
 from desloppify.base.output.terminal import colorize
-from desloppify.base.output.contract import OutputResult
-from desloppify.base.discovery.paths import get_project_root
 from desloppify.engine._scoring.results.core import compute_health_breakdown
 from desloppify.engine._state.filtering import open_scope_breakdown
 from desloppify.engine.plan_state import load_plan

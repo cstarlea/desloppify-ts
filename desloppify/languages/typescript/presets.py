@@ -20,7 +20,9 @@ from desloppify.base.discovery.paths import get_project_root
 from desloppify.engine.detectors.coupling import Layer
 from desloppify.engine.detectors.orphaned import package_dependency_names
 from desloppify.languages._framework.base.types import LangRuntimeContract
-from desloppify.languages._framework.frameworks.detection import detect_ecosystem_frameworks
+from desloppify.languages._framework.frameworks.detection import (
+    detect_ecosystem_frameworks,
+)
 from desloppify.languages._framework.frameworks.registry import (
     ensure_builtin_specs_loaded,
     list_framework_specs,

@@ -9,7 +9,12 @@ from pathlib import Path
 
 from desloppify.base.discovery.file_paths import rel
 from desloppify.base.discovery.source import find_ts_and_js_files
-from desloppify.base.output.terminal import colorize, display_entries, plural, print_table
+from desloppify.base.output.terminal import (
+    colorize,
+    display_entries,
+    plural,
+    print_table,
+)
 from desloppify.engine.detectors import coupling as coupling_detector_mod
 from desloppify.engine.detectors import dupes as dupes_detector_mod
 from desloppify.engine.detectors import gods as gods_detector_mod
@@ -27,19 +32,20 @@ from desloppify.languages._framework.commands.registry import (
     build_standard_detect_registry,
     compose_detect_registry,
 )
-from desloppify.languages.typescript.detectors.deps import (
-    build_dep_graph,
-)
-from desloppify.languages.typescript.detectors.facade import detect_reexport_facades
-from desloppify.languages.typescript.detectors.smells import detect_smells
 from desloppify.languages.typescript.detectors.concerns import cmd_concerns
 from desloppify.languages.typescript.detectors.deprecated import cmd_deprecated
-from desloppify.languages.typescript.detectors.deps import cmd_cycles, cmd_deps
+from desloppify.languages.typescript.detectors.deps import (
+    build_dep_graph,
+    cmd_cycles,
+    cmd_deps,
+)
 from desloppify.languages.typescript.detectors.exports import cmd_exports
+from desloppify.languages.typescript.detectors.facade import detect_reexport_facades
 from desloppify.languages.typescript.detectors.logs import cmd_logs
 from desloppify.languages.typescript.detectors.patterns.cli import cmd_patterns
 from desloppify.languages.typescript.detectors.props import cmd_props
 from desloppify.languages.typescript.detectors.react.cli import cmd_react
+from desloppify.languages.typescript.detectors.smells import detect_smells
 from desloppify.languages.typescript.detectors.unused import cmd_unused
 from desloppify.languages.typescript.extractors_classes import extract_ts_classes
 from desloppify.languages.typescript.extractors_components import (
@@ -47,19 +53,21 @@ from desloppify.languages.typescript.extractors_components import (
     extract_ts_components,
 )
 from desloppify.languages.typescript.extractors_functions import extract_ts_functions
-from desloppify.languages.typescript.phases_coupling import find_orphans, package_context
 from desloppify.languages.typescript.phases_config import (
     TS_CLASS_GOD_RULES,
     TS_COMPLEXITY_SIGNALS,
     TS_GOD_RULES,
     TS_SKIP_NAMES,
 )
-from desloppify.languages.typescript.presets import resolve_layers, shadcn_ui_dirs
+from desloppify.languages.typescript.phases_coupling import (
+    find_orphans,
+    package_context,
+)
 from desloppify.languages.typescript.plugin_contract import (
     TS_BARREL_NAMES,
     TS_LARGE_THRESHOLD,
 )
-
+from desloppify.languages.typescript.presets import resolve_layers, shadcn_ui_dirs
 
 cmd_large = make_cmd_large(
     find_ts_and_js_files,

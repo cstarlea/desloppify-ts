@@ -1,12 +1,16 @@
 """Validation and guardrail helpers for triage stage workflow."""
 
 from __future__ import annotations
+
 from collections.abc import Callable
 
 from desloppify.app.commands.helpers.command_runtime import command_runtime
 from desloppify.base.output.terminal import colorize
 from desloppify.engine.plan_state import save_plan
-from desloppify.engine.plan_triage import collect_triage_input, detect_recurring_patterns
+from desloppify.engine.plan_triage import (
+    collect_triage_input,
+    detect_recurring_patterns,
+)
 from desloppify.state_io import utc_now
 
 from .completion_policy import (
@@ -41,12 +45,6 @@ from .enrich_checks import (
     _steps_without_effort,
     _underspecified_steps,
 )
-from .reflect_accounting import (
-    ReflectDisposition,
-    analyze_reflect_issue_accounting,
-    parse_reflect_dispositions,
-    validate_reflect_accounting,
-)
 from .organize_policy import (
     LedgerMismatch,
     _clusters_enriched_or_error,
@@ -55,6 +53,12 @@ from .organize_policy import (
     _unclustered_review_issues_or_error,
     _validate_organize_against_ledger_or_error,
     validate_organize_against_reflect_ledger,
+)
+from .reflect_accounting import (
+    ReflectDisposition,
+    analyze_reflect_issue_accounting,
+    parse_reflect_dispositions,
+    validate_reflect_accounting,
 )
 from .stage_policy import (
     AutoConfirmStageRequest,

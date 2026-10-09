@@ -11,8 +11,8 @@ import desloppify.engine._work_queue.finalize as work_queue_finalize_mod
 import desloppify.engine._work_queue.inputs as work_queue_inputs_mod
 import desloppify.engine._work_queue.selection as work_queue_selection_mod
 import desloppify.languages.typescript.detectors.smells.helpers as ts_smell_helpers_mod
-from desloppify.languages.typescript.syntax.scanner import SourceText
 from desloppify.engine._work_queue.models import QueueBuildOptions, QueueVisibility
+from desloppify.languages.typescript.syntax.scanner import SourceText
 
 
 def test_work_queue_split_modules_have_direct_behavior(monkeypatch):

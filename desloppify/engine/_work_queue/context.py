@@ -17,9 +17,9 @@ from desloppify.base.config import (
 from desloppify.engine._plan.persistence import (
     resolve_plan_load_status as resolve_persisted_plan_load_status,
 )
-from desloppify.engine.plan_state import PlanLoadStatus
 from desloppify.engine._state.schema import StateModel
 from desloppify.engine._work_queue.snapshot import QueueSnapshot, build_queue_snapshot
+from desloppify.engine.plan_state import PlanLoadStatus
 
 
 class _PlanAutoLoad:

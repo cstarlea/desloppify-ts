@@ -7,8 +7,8 @@ from typing import Any
 
 from desloppify.engine._plan.cluster_semantics import cluster_autofix_hint
 from desloppify.engine._plan.schema import (
-    Cluster,
     EPIC_PREFIX,
+    Cluster,
     PlanModel,
     ensure_plan_defaults,
     triage_clusters,

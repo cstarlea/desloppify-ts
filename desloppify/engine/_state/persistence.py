@@ -30,12 +30,13 @@ from desloppify.base.discovery.file_paths import (
     exclusive_file_lock,
     safe_copy_file,
     safe_write_text,
+)
+from desloppify.base.discovery.file_paths import (
     set_aside_corrupted as _set_aside_corrupted,
 )
 from desloppify.base.text_utils import is_numeric
 from desloppify.engine._plan.persistence import load_plan as load_plan_state
 from desloppify.engine._plan.persistence import plan_path_for_state
-from desloppify.engine.plan_state import PlanLoadStatus
 from desloppify.engine._state.recovery import (
     has_saved_plan_without_scan,
     reconstruct_state_from_saved_plan,
@@ -51,6 +52,7 @@ from desloppify.engine._state.schema import (
     scan_source,
     validate_state_invariants,
 )
+from desloppify.engine.plan_state import PlanLoadStatus
 
 logger = logging.getLogger(__name__)
 

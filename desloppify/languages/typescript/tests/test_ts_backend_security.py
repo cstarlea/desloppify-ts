@@ -9,7 +9,9 @@ from pathlib import Path
 
 import pytest
 
-from desloppify.languages.typescript.detectors.security.detector import detect_ts_security
+from desloppify.languages.typescript.detectors.security.detector import (
+    detect_ts_security,
+)
 from desloppify.languages.typescript.syntax.tree import get_parser
 
 needs_treesitter = pytest.mark.skipif(get_parser("tsx") is None, reason="needs tree-sitter with the tsx grammar")

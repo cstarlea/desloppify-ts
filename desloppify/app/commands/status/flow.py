@@ -29,9 +29,12 @@ from desloppify.engine._work_queue.context import queue_context
 from desloppify.engine.plan_state import load_plan
 from desloppify.intelligence.narrative.core import NarrativeContext, compute_narrative
 from desloppify.state_io import StateModel
-from desloppify.state_scoring import ScoreSnapshot, score_snapshot, subjective_unassessed
+from desloppify.state_scoring import (
+    ScoreSnapshot,
+    score_snapshot,
+    subjective_unassessed,
+)
 
-from .render_io import show_disabled_summary
 from .render import (
     StatusQueryRequest,
     print_open_scope_breakdown,
@@ -48,6 +51,7 @@ from .render import (
     show_tier_progress_table,
     write_status_query,
 )
+from .render_io import show_disabled_summary
 
 _logger = logging.getLogger(__name__)
 

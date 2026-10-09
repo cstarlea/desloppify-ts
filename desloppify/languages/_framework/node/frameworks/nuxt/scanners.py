@@ -11,7 +11,11 @@ from collections.abc import Iterator
 from pathlib import Path
 
 from desloppify.languages._framework.node.js_classes import matching, split_top_level
-from desloppify.languages._framework.node.js_functions import FunctionLiteral, call_arguments, function_at
+from desloppify.languages._framework.node.js_functions import (
+    FunctionLiteral,
+    call_arguments,
+    function_at,
+)
 from desloppify.languages._framework.node.js_text import code_text
 
 from ..component_sources import SourceFile, body_span, dependency_major, package_sources

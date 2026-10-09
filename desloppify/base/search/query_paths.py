@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from desloppify.base.runtime_state import current_runtime_context
 from desloppify.base.discovery.paths import get_project_root
+from desloppify.base.runtime_state import current_runtime_context
 
 
 def query_file_path() -> Path:

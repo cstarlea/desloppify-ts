@@ -9,6 +9,12 @@ from desloppify.base.output.terminal import colorize
 from desloppify.base.output.user_message import print_user_message
 from desloppify.engine.plan_triage import build_triage_snapshot
 
+from ..review_coverage import (
+    cluster_issue_ids,
+    triage_coverage,
+)
+from ..services import TriageServices, default_triage_services
+from ..stage_queue import print_cascade_clear_feedback
 from .layout import (
     print_action_guidance,
     print_dashboard_header,
@@ -17,12 +23,6 @@ from .layout import (
     show_plan_summary,
 )
 from .primitives import print_stage_progress
-from ..review_coverage import (
-    cluster_issue_ids,
-    triage_coverage,
-)
-from ..stage_queue import print_cascade_clear_feedback
-from ..services import TriageServices, default_triage_services
 
 
 def _cluster_tags(cluster: dict) -> str:

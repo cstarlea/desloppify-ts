@@ -6,10 +6,10 @@ from desloppify.app.commands.scan.reporting.presentation import dimension_bar
 from desloppify.base.config import DEFAULT_TARGET_STRICT_SCORE
 from desloppify.base.output.terminal import colorize
 from desloppify.base.registry import dimension_action_type
-from desloppify.engine.scoring import DIMENSIONS, is_loc_weighted_dimension
 from desloppify.engine.planning.scorecard_projection import (
     scorecard_subjective_entries,
 )
+from desloppify.engine.scoring import DIMENSIONS, is_loc_weighted_dimension
 
 
 def scorecard_subjective_entries_for_status(state: dict, dim_scores: dict) -> list[dict]:

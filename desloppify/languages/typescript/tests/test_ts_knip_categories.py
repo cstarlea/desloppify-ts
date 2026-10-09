@@ -11,14 +11,16 @@ from unittest.mock import patch
 import pytest
 
 import desloppify.languages.typescript.detectors.knip_adapter as knip_mod
-from desloppify.base.runtime_state import RuntimeContext, runtime_scope
 from desloppify.base.discovery.source import clear_source_file_cache_for_tests
+from desloppify.base.runtime_state import RuntimeContext, runtime_scope
 from desloppify.engine.policy.zones import Zone
 from desloppify.languages.typescript.detectors.dependencies import (
     detect_dependencies,
     package_name,
 )
-from desloppify.languages.typescript.phases_coupling import corroborate_orphans_with_knip
+from desloppify.languages.typescript.phases_coupling import (
+    corroborate_orphans_with_knip,
+)
 
 _RUN = "desloppify.languages.typescript.detectors.knip_adapter.subprocess.run"
 

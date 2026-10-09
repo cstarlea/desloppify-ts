@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+from desloppify.engine._plan.schema import empty_plan
 from desloppify.engine._plan.triage.apply import apply_triage_to_plan
 from desloppify.engine._plan.triage.prompt import DismissedIssue, TriageResult
-from desloppify.engine._plan.schema import empty_plan
 
 
 def _state_with_review_issues(*ids: str) -> dict:

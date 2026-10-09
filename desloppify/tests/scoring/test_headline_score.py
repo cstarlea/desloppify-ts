@@ -66,7 +66,9 @@ def test_state_without_subjective_dimensions_is_not_provisional():
 
 
 def test_scan_summary_prints_the_provisional_headline(capsys):
-    from desloppify.app.commands.scan.reporting.summary import _print_provisional_headline
+    from desloppify.app.commands.scan.reporting.summary import (
+        _print_provisional_headline,
+    )
 
     state = _scanned([])
     _print_provisional_headline(state)

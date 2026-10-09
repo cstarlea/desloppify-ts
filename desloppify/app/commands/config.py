@@ -5,13 +5,13 @@ from __future__ import annotations
 import argparse
 
 from desloppify.app.commands.helpers.command_runtime import command_runtime
+from desloppify.app.commands.helpers.state_persistence import save_state_or_exit
 from desloppify.base.config import (
     CONFIG_SCHEMA,
     save_config,
     set_config_value,
     unset_config_value,
 )
-from desloppify.app.commands.helpers.state_persistence import save_state_or_exit
 from desloppify.base.exception_sets import CommandError
 from desloppify.base.output.terminal import colorize
 from desloppify.engine._state.disabled import apply_disabled, canonical_disabled_entry

@@ -10,7 +10,9 @@ import pytest
 import desloppify.languages.typescript.detectors.tsc as tsc_mod
 import desloppify.languages.typescript.phases_basic as phases_basic_mod
 from desloppify.base.runtime_state import RuntimeContext, runtime_scope
-from desloppify.languages.typescript.detectors.type_errors import detect_type_errors_result
+from desloppify.languages.typescript.detectors.type_errors import (
+    detect_type_errors_result,
+)
 
 
 def _write(root: Path, name: str, text: str = "") -> Path:

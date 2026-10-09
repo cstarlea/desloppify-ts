@@ -12,7 +12,6 @@ import json
 from pathlib import Path
 from unittest.mock import MagicMock
 
-
 from desloppify.app.commands.review.runner_process_impl.attempts import (
     handle_early_attempt_return,
     handle_failed_attempt,
@@ -22,16 +21,15 @@ from desloppify.app.commands.review.runner_process_impl.attempts import (
 )
 from desloppify.app.commands.review.runner_process_impl.io import (
     _check_stall,
-    extract_text_from_opencode_json_stream,
     _output_file_has_json_payload,
     _output_file_status_text,
     extract_payload_from_log,
+    extract_text_from_opencode_json_stream,
 )
 from desloppify.app.commands.review.runner_process_impl.types import (
     CodexBatchRunnerDeps,
     _ExecutionResult,
 )
-
 
 # ── Helpers ──────────────────────────────────────────────────────
 

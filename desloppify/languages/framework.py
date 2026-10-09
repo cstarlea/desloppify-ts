@@ -61,14 +61,18 @@ def get_lang_hook(lang_name: str | None, hook_name: str) -> object | None:
 
 def enable_parse_cache() -> None:
     """Enable tree-sitter parse cache via facade boundary."""
-    from desloppify.languages._framework.treesitter import enable_parse_cache as _enable_parse_cache
+    from desloppify.languages._framework.treesitter import (
+        enable_parse_cache as _enable_parse_cache,
+    )
 
     _enable_parse_cache()
 
 
 def disable_parse_cache() -> None:
     """Disable tree-sitter parse cache via facade boundary."""
-    from desloppify.languages._framework.treesitter import disable_parse_cache as _disable_parse_cache
+    from desloppify.languages._framework.treesitter import (
+        disable_parse_cache as _disable_parse_cache,
+    )
 
     _disable_parse_cache()
 

@@ -4,6 +4,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import desloppify.languages.typescript.detectors.react.context as react_context_mod
+import desloppify.languages.typescript.detectors.react.hook_bloat as react_hook_bloat_mod
+import desloppify.languages.typescript.detectors.react.state_sync as react_state_sync_mod
+import desloppify.languages.typescript.detectors.smells as smells_detector_mod
 from desloppify.base.output.terminal import log
 from desloppify.engine._state.filtering import make_issue
 from desloppify.engine.policy.zones import adjust_potential
@@ -12,10 +16,6 @@ from desloppify.languages._framework.base.smell_contracts import (
 )
 from desloppify.languages._framework.base.types import LangRuntimeContract
 from desloppify.languages._framework.issue_factories import make_smell_issues
-import desloppify.languages.typescript.detectors.react.context as react_context_mod
-import desloppify.languages.typescript.detectors.react.hook_bloat as react_hook_bloat_mod
-import desloppify.languages.typescript.detectors.react.state_sync as react_state_sync_mod
-import desloppify.languages.typescript.detectors.smells as smells_detector_mod
 from desloppify.state_io import Issue
 
 

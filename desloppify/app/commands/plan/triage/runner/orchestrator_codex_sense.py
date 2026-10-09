@@ -21,12 +21,12 @@ from .codex_runner import (
     _output_file_has_text,
 )
 from .orchestrator_codex_parallel import run_parallel_batches
-from .stage_runner_override import active_stage_runner
 from .stage_prompts import (
     build_sense_check_content_prompt,
     build_sense_check_structure_prompt,
 )
 from .stage_prompts_sense import build_sense_check_value_prompt
+from .stage_runner_override import active_stage_runner
 
 
 def _noop_log(_msg: str) -> None:

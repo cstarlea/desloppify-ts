@@ -14,13 +14,16 @@ from typing import Any
 
 from desloppify.base.discovery.file_paths import rel
 from desloppify.base.output.terminal import log
+from desloppify.engine._state.filtering import make_issue
 from desloppify.engine.detectors.dupes import detect_duplicates
 from desloppify.engine.detectors.jscpd_adapter import detect_with_jscpd
 from desloppify.engine.detectors.security.detector import (
     detect_security_issues as _detect_security_issues_default,
 )
-from desloppify.engine.detectors.test_coverage.detector import CoverageResult, run_test_coverage
-from desloppify.engine._state.filtering import make_issue
+from desloppify.engine.detectors.test_coverage.detector import (
+    CoverageResult,
+    run_test_coverage,
+)
 from desloppify.engine.policy.zones import EXCLUDED_ZONES, filter_entries
 from desloppify.languages._framework.base.types import (
     DetectorCoverageStatus,

@@ -5,8 +5,8 @@ from __future__ import annotations
 import argparse
 import sys
 
-from desloppify.app.commands.helpers.lang import resolve_lang, resolve_lang_settings
 from desloppify.app.commands.helpers.command_runtime import command_runtime
+from desloppify.app.commands.helpers.lang import resolve_lang, resolve_lang_settings
 from desloppify.app.commands.helpers.runtime_options import (
     LangRuntimeOptionsError,
     print_lang_runtime_options_error,

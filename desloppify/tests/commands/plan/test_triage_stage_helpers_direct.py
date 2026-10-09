@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import desloppify.app.commands.plan.triage.stages.helpers as stage_helpers_mod
 import desloppify.app.commands.plan.triage.stages.flow_helpers as flow_stage_helpers_mod
+import desloppify.app.commands.plan.triage.stages.helpers as stage_helpers_mod
 from desloppify.app.commands.plan.triage.helpers import inject_triage_stages
 from desloppify.engine._plan.constants import TRIAGE_STAGE_IDS
 

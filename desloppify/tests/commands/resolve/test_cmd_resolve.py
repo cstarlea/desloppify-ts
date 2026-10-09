@@ -7,10 +7,10 @@ from pathlib import Path
 import pytest
 
 import desloppify.app.commands.helpers.command_runtime as command_runtime_mod
+import desloppify.app.commands.helpers.state_persistence as state_persistence_mod
 import desloppify.app.commands.resolve.cmd as resolve_mod
 import desloppify.app.commands.resolve.selection as resolve_selection_mod
 import desloppify.app.commands.suppress as suppress_mod
-import desloppify.app.commands.helpers.state_persistence as state_persistence_mod
 import desloppify.engine.plan_state as plan_mod
 import desloppify.intelligence.narrative.core as narrative_mod
 import desloppify.state as state_mod

@@ -7,9 +7,10 @@ import json
 import logging
 from pathlib import Path
 
-from .schema import CONFIG_SCHEMA
 from desloppify.base.discovery.file_paths import safe_write_text
 from desloppify.base.output.fallbacks import log_best_effort_failure
+
+from .schema import CONFIG_SCHEMA
 
 logger = logging.getLogger(__name__)
 

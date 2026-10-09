@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import desloppify.languages.typescript.commands as ts_commands_mod
+import desloppify.languages.typescript.detectors.deps as deps_detector_mod
 from desloppify.base.discovery.paths import get_area
 from desloppify.languages._framework.base.phase_builders import (
     detector_phase_security,
@@ -16,18 +18,22 @@ from desloppify.languages._framework.base.types import (
     LangValueSpec,
 )
 from desloppify.languages._framework.frameworks.phases import framework_phases
+from desloppify.languages.typescript import test_coverage as ts_test_coverage_hooks
+from desloppify.languages.typescript._fixers import get_ts_fixers
+from desloppify.languages.typescript._zones import TS_ZONE_RULES
+from desloppify.languages.typescript.detectors.io import iter_typescript_sources
+from desloppify.languages.typescript.detectors.lint import DEFAULT_TYPE_AWARE_MAX_FILES
+from desloppify.languages.typescript.detectors.security import (
+    hooks as ts_security_hooks,
+)
+from desloppify.languages.typescript.detectors.security.detector import (
+    detect_ts_security,
+)
+from desloppify.languages.typescript.extractors_functions import extract_ts_functions
 from desloppify.languages.typescript.monorepo import (
     DEFAULT_BUDGET_SECONDS,
     DEFAULT_MAX_MEMORY_MB,
 )
-from desloppify.languages.typescript import test_coverage as ts_test_coverage_hooks
-from desloppify.languages.typescript.detectors.security import hooks as ts_security_hooks
-from desloppify.languages.typescript._fixers import get_ts_fixers
-import desloppify.languages.typescript.commands as ts_commands_mod
-import desloppify.languages.typescript.detectors.deps as deps_detector_mod
-from desloppify.languages.typescript.detectors.security.detector import detect_ts_security
-from desloppify.languages.typescript.detectors.lint import DEFAULT_TYPE_AWARE_MAX_FILES
-from desloppify.languages.typescript.extractors_functions import extract_ts_functions
 from desloppify.languages.typescript.phases_basic import (
     phase_dependencies,
     phase_deprecated,
@@ -41,17 +47,6 @@ from desloppify.languages.typescript.phases_basic import (
 from desloppify.languages.typescript.phases_coupling import phase_coupling
 from desloppify.languages.typescript.phases_smells import phase_smells
 from desloppify.languages.typescript.phases_structural import phase_structural
-from desloppify.languages.typescript.detectors.io import iter_typescript_sources
-from desloppify.languages.typescript.review import (
-    HOLISTIC_REVIEW_DIMENSIONS as TS_HOLISTIC_REVIEW_DIMENSIONS,
-    LOW_VALUE_PATTERN as TS_LOW_VALUE_PATTERN,
-    MIGRATION_MIXED_EXTENSIONS as TS_MIGRATION_MIXED_EXTENSIONS,
-    MIGRATION_PATTERN_PAIRS as TS_MIGRATION_PATTERN_PAIRS,
-    REVIEW_GUIDANCE as TS_REVIEW_GUIDANCE,
-    api_surface as ts_review_api_surface,
-    module_patterns as ts_review_module_patterns,
-)
-from desloppify.languages.typescript._zones import TS_ZONE_RULES
 from desloppify.languages.typescript.plugin_contract import (
     TS_BARREL_NAMES,
     TS_COMPLEXITY_THRESHOLD,
@@ -60,6 +55,27 @@ from desloppify.languages.typescript.plugin_contract import (
     TS_EXCLUSIONS,
     TS_EXTENSIONS,
     TS_LARGE_THRESHOLD,
+)
+from desloppify.languages.typescript.review import (
+    HOLISTIC_REVIEW_DIMENSIONS as TS_HOLISTIC_REVIEW_DIMENSIONS,
+)
+from desloppify.languages.typescript.review import (
+    LOW_VALUE_PATTERN as TS_LOW_VALUE_PATTERN,
+)
+from desloppify.languages.typescript.review import (
+    MIGRATION_MIXED_EXTENSIONS as TS_MIGRATION_MIXED_EXTENSIONS,
+)
+from desloppify.languages.typescript.review import (
+    MIGRATION_PATTERN_PAIRS as TS_MIGRATION_PATTERN_PAIRS,
+)
+from desloppify.languages.typescript.review import (
+    REVIEW_GUIDANCE as TS_REVIEW_GUIDANCE,
+)
+from desloppify.languages.typescript.review import (
+    api_surface as ts_review_api_surface,
+)
+from desloppify.languages.typescript.review import (
+    module_patterns as ts_review_module_patterns,
 )
 
 

@@ -14,12 +14,14 @@ import re
 from pathlib import Path
 
 from desloppify.base.discovery.file_paths import rel, resolve_path
-
+from desloppify.base.discovery.paths import get_project_root
 from desloppify.base.discovery.source import find_ts_and_js_files
 from desloppify.base.output.fallbacks import log_best_effort_failure
 from desloppify.base.output.terminal import colorize, print_table
-from desloppify.base.discovery.paths import get_project_root
-from desloppify.languages.typescript.detectors.deps.resolver import ModuleResolver, project_resolver
+from desloppify.languages.typescript.detectors.deps.resolver import (
+    ModuleResolver,
+    project_resolver,
+)
 from desloppify.languages.typescript.syntax.queries import (
     TypeDeclaration,
     exports,
@@ -27,7 +29,12 @@ from desloppify.languages.typescript.syntax.queries import (
     string_value,
     type_declarations,
 )
-from desloppify.languages.typescript.syntax.tree import ParsedSource, get_parser, grammar_for, parsed_file
+from desloppify.languages.typescript.syntax.tree import (
+    ParsedSource,
+    get_parser,
+    grammar_for,
+    parsed_file,
+)
 
 logger = logging.getLogger(__name__)
 

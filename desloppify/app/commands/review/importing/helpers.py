@@ -22,8 +22,10 @@ from .output import (
 from .parse import (
     ImportParseOptions,
     ImportPayloadLoadError,
-    load_import_issues_data as parse_load_import_issues_data,
     resolve_override_context,
+)
+from .parse import (
+    load_import_issues_data as parse_load_import_issues_data,
 )
 from .policy import (
     assessment_mode_label,

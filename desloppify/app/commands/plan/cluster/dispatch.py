@@ -8,25 +8,26 @@ import re
 from desloppify.app.commands.helpers.command_runtime import command_runtime
 from desloppify.app.commands.helpers.state import require_issue_inventory
 from desloppify.app.commands.plan.shared.cluster_membership import cluster_issue_ids
-from desloppify.engine.plan_state import (
-    load_plan,
-    save_plan,
-)
+from desloppify.app.commands.plan.shared.patterns import resolve_ids_from_patterns
+from desloppify.base.output.terminal import colorize
 from desloppify.engine.plan_ops import (
     add_to_cluster,
     append_log_entry,
     remove_from_cluster,
 )
-from desloppify.app.commands.plan.shared.patterns import resolve_ids_from_patterns
-from desloppify.base.output.terminal import colorize
+from desloppify.engine.plan_state import (
+    load_plan,
+    save_plan,
+)
 
-from .ops_display import _cmd_cluster_list
-from .ops_display import _cmd_cluster_show
-from .ops_manage import _cmd_cluster_create
-from .ops_manage import _cmd_cluster_delete
-from .ops_manage import _cmd_cluster_export
-from .ops_manage import _cmd_cluster_import
-from .ops_manage import _cmd_cluster_merge
+from .ops_display import _cmd_cluster_list, _cmd_cluster_show
+from .ops_manage import (
+    _cmd_cluster_create,
+    _cmd_cluster_delete,
+    _cmd_cluster_export,
+    _cmd_cluster_import,
+    _cmd_cluster_merge,
+)
 from .ops_reorder import _cmd_cluster_reorder
 from .update import cmd_cluster_update as _cmd_cluster_update_impl
 

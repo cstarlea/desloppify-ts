@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
-
 from desloppify.base.registry import DETECTORS
+from desloppify.engine._plan.auto_cluster_sync_issue import (
+    _auto_cluster_execution_status,
+)
 from desloppify.engine._plan.cluster_semantics import (
     EXECUTION_POLICY_EPHEMERAL_AUTOPROMOTE,
     EXECUTION_POLICY_PLANNED_ONLY,
@@ -15,9 +17,6 @@ from desloppify.engine._plan.cluster_semantics import (
     infer_cluster_execution_policy,
     infer_cluster_execution_status,
 )
-from desloppify.engine._plan.auto_cluster_sync_issue import (
-    _auto_cluster_execution_status,
-)
 from desloppify.engine._plan.refresh_lifecycle import (
     LIFECYCLE_PHASE_REVIEW_INITIAL,
     LIFECYCLE_PHASE_SCAN,
@@ -27,7 +26,6 @@ from desloppify.engine._plan.refresh_lifecycle import (
 from desloppify.engine._work_queue.policy import (
     explain_queue,
 )
-
 
 # ── auto_queue registry tests ──────────────────────────────────────
 

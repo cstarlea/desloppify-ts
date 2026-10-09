@@ -6,8 +6,8 @@ import os
 import re
 from typing import TypedDict
 
-from desloppify.base.discovery.source import read_file_text as _read_file_text
 from desloppify.base.discovery.paths import get_project_root
+from desloppify.base.discovery.source import read_file_text as _read_file_text
 from desloppify.base.runtime_state import current_runtime_context
 
 

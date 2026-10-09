@@ -12,7 +12,11 @@ from pathlib import Path
 from typing import Any
 
 from desloppify.languages.typescript.detectors.lint.configs import LinterConfig
-from desloppify.languages.typescript.detectors.lint.runner import LinterRun, LintMessage, run_linter
+from desloppify.languages.typescript.detectors.lint.runner import (
+    LinterRun,
+    LintMessage,
+    run_linter,
+)
 
 _GROUP_META: dict[str, dict[str, Any]] = {
     "correctness": {"type": "problem"},

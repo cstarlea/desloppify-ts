@@ -16,12 +16,11 @@ import argparse
 import desloppify.app.commands.plan.override.misc as misc_mod
 import desloppify.app.commands.plan.override.resolve_cmd as resolve_mod
 import desloppify.app.commands.plan.override.resolve_workflow as resolve_workflow_mod
-from desloppify.engine._plan.schema import empty_plan
 from desloppify.engine._plan.constants import (
     WORKFLOW_CREATE_PLAN_ID,
     WORKFLOW_SCORE_CHECKPOINT_ID,
 )
-
+from desloppify.engine._plan.schema import empty_plan
 
 # ---------------------------------------------------------------------------
 # Helpers

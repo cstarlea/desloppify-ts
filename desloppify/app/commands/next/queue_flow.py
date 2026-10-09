@@ -17,12 +17,12 @@ from desloppify.base.output.user_message import print_user_message
 from desloppify.engine._state.filtering import path_scoped_issues
 from desloppify.engine._work_queue.context import queue_context
 from desloppify.engine._work_queue.core import QueueBuildOptions
-from desloppify.engine._work_queue.policy import explain_queue
-from desloppify.engine._work_queue.snapshot import build_queue_snapshot
 from desloppify.engine._work_queue.plan_order import (
     collapse_clusters,
     filter_cluster_focus,
 )
+from desloppify.engine._work_queue.policy import explain_queue
+from desloppify.engine._work_queue.snapshot import build_queue_snapshot
 from desloppify.engine.plan_state import load_plan
 from desloppify.engine.planning.queue_policy import (
     build_backlog_queue,

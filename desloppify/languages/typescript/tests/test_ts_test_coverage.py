@@ -8,7 +8,10 @@ import pytest
 
 import desloppify.languages.typescript.detectors.deps.resolve as deps_resolve_mod
 import desloppify.languages.typescript.test_coverage as ts_coverage_mod
-from desloppify.engine.detectors.coverage.mapping import import_based_mapping, naming_based_mapping
+from desloppify.engine.detectors.coverage.mapping import (
+    import_based_mapping,
+    naming_based_mapping,
+)
 from desloppify.languages.typescript.detectors.deps.imports import ImportExtractor
 from desloppify.languages.typescript.detectors.deps.resolver import clear_resolver_cache
 from desloppify.languages.typescript.test_coverage import (

@@ -30,16 +30,16 @@ from desloppify.languages.typescript.detectors.deps.imports import (
     ImportRef,
     extract_imports_regex,
 )
-from desloppify.languages.typescript.detectors.deps.resolver import (
-    ModuleResolver,
-    docusaurus_site_root,
-    is_bare,
-)
 from desloppify.languages.typescript.detectors.deps.resolve import (
     load_tsconfig_paths as _load_tsconfig_paths,
 )
 from desloppify.languages.typescript.detectors.deps.resolve import (
     specifier_target as _specifier_target,
+)
+from desloppify.languages.typescript.detectors.deps.resolver import (
+    ModuleResolver,
+    docusaurus_site_root,
+    is_bare,
 )
 from desloppify.languages.typescript.detectors.deps.runtime import (
     build_dynamic_import_targets as _build_dynamic_import_targets,

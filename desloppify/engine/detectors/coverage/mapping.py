@@ -6,6 +6,19 @@ import logging
 import os
 
 from desloppify.base.discovery.paths import get_project_root
+from desloppify.engine.detectors.coverage.mapping_analysis import (
+    _build_prod_by_module,
+    transitive_coverage,
+)
+from desloppify.engine.detectors.coverage.mapping_analysis import (
+    analyze_test_quality as _analyze_test_quality,
+)
+from desloppify.engine.detectors.coverage.mapping_analysis import (
+    build_test_import_index as _build_test_import_index,
+)
+from desloppify.engine.detectors.coverage.mapping_analysis import (
+    get_test_files_for_prod as _get_test_files_for_prod,
+)
 from desloppify.engine.detectors.coverage.mapping_imports import (
     _infer_lang_name,
     _load_lang_test_coverage_module,
@@ -13,13 +26,6 @@ from desloppify.engine.detectors.coverage.mapping_imports import (
     _resolve_barrel_reexports,
 )
 from desloppify.engine.detectors.test_coverage.io import read_coverage_file
-from desloppify.engine.detectors.coverage.mapping_analysis import (
-    _build_prod_by_module,
-    analyze_test_quality as _analyze_test_quality,
-    build_test_import_index as _build_test_import_index,
-    get_test_files_for_prod as _get_test_files_for_prod,
-    transitive_coverage,
-)
 
 logger = logging.getLogger(__name__)
 

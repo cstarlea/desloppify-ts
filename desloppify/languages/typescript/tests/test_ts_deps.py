@@ -607,7 +607,9 @@ class TestFrameworkFiles:
         assert graph[str((tmp_path / "lib/util.ts").resolve())]["importers"] == set()
 
     def test_mdx_esm_forms(self):
-        from desloppify.languages.typescript.detectors.deps.imports import extract_mdx_imports
+        from desloppify.languages.typescript.detectors.deps.imports import (
+            extract_mdx_imports,
+        )
 
         text = (
             "import Hero, {\n  Logo,\n} from '@/components/hero';\n"

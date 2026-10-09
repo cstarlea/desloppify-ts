@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
+
 def default_load_dimensions_payload() -> tuple[
     list[str], dict[str, dict[str, object]], str
 ]:

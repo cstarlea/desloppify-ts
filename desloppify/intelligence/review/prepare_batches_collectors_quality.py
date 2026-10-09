@@ -4,7 +4,10 @@ from __future__ import annotations
 
 from desloppify.intelligence.review._context.models import HolisticContext
 
-from .prepare_batches_core import _collect_unique_files, _representative_files_for_directory
+from .prepare_batches_core import (
+    _collect_unique_files,
+    _representative_files_for_directory,
+)
 
 
 def _arch_coupling_files(

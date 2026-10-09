@@ -18,7 +18,6 @@ from desloppify.intelligence.review.context_holistic.orchestrator import (
 )
 from desloppify.state import empty_state as make_empty_state
 
-
 # ── Integration: build_review_context ─────────────────────────────
 
 

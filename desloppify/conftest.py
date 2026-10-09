@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from desloppify.base.runtime_state import RuntimeContext, runtime_scope
 from desloppify.base.discovery.source import clear_source_file_cache_for_tests
+from desloppify.base.runtime_state import RuntimeContext, runtime_scope
 
 _REPO_STATE_DIR = Path(__file__).resolve().parent.parent / ".desloppify"
 

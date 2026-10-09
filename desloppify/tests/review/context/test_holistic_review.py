@@ -38,7 +38,9 @@ from desloppify.intelligence.review.prepare_batches_builders import (
 from desloppify.intelligence.review.prepare_batches_builders import (
     build_investigation_batches as _build_investigation_batches,
 )
-from desloppify.intelligence.review.prepare_batches_builders import filter_batches_to_dimensions
+from desloppify.intelligence.review.prepare_batches_builders import (
+    filter_batches_to_dimensions,
+)
 from desloppify.state import empty_state, path_scoped_issues
 
 

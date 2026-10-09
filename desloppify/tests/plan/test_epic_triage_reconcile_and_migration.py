@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
-from desloppify.engine._plan.triage.core import TriageResult, apply_triage_to_plan
 from desloppify.engine._plan.scan_issue_reconcile import reconcile_plan_after_scan
-from desloppify.engine._plan.schema import empty_plan, ensure_plan_defaults, triage_clusters
+from desloppify.engine._plan.schema import (
+    empty_plan,
+    ensure_plan_defaults,
+    triage_clusters,
+)
+from desloppify.engine._plan.triage.core import TriageResult, apply_triage_to_plan
 
 
 def _state_with_review_issues(*ids: str) -> dict:

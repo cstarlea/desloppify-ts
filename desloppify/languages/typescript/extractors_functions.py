@@ -12,7 +12,9 @@ from desloppify.base.discovery.sfc import read_code_text
 from desloppify.engine.detectors.base import FunctionInfo
 from desloppify.languages.typescript.syntax.lines import split_lines
 from desloppify.languages.typescript.syntax.nodes import PARAMETERS, binding_names
-from desloppify.languages.typescript.syntax.queries import FunctionInfo as SyntaxFunctionInfo
+from desloppify.languages.typescript.syntax.queries import (
+    FunctionInfo as SyntaxFunctionInfo,
+)
 from desloppify.languages.typescript.syntax.queries import definitions
 from desloppify.languages.typescript.syntax.tree import ParsedSource, parsed_file
 

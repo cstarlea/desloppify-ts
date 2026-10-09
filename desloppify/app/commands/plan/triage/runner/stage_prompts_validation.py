@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-
 _STAGES = ("strategize", "observe", "reflect", "organize", "enrich", "sense-check")
 
 

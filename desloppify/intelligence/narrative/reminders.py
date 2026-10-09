@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from desloppify.engine._state.filtering import path_scoped_issues
 from desloppify.intelligence.narrative.reminders_rules_followup import (
     _apply_decay,
     _decorate_reminder_metadata,
@@ -23,7 +24,6 @@ from desloppify.intelligence.narrative.reminders_rules_primary import (
     _wontfix_debt_reminders,
     _zone_classification_reminder,
 )
-from desloppify.engine._state.filtering import path_scoped_issues
 from desloppify.state_io import StateModel
 from desloppify.state_scoring import score_snapshot
 

@@ -8,12 +8,17 @@ from types import SimpleNamespace
 
 import pytest
 
-from desloppify.engine.detectors.orphaned import OrphanedDetectionOptions, detect_orphaned_files
+from desloppify.engine.detectors.orphaned import (
+    OrphanedDetectionOptions,
+    detect_orphaned_files,
+)
 from desloppify.languages._framework.frameworks.detection import (
     detect_ecosystem_frameworks,
     framework_values,
 )
-from desloppify.languages._framework.frameworks.specs.supabase import SUPABASE_ENTRY_CONVENTIONS
+from desloppify.languages._framework.frameworks.specs.supabase import (
+    SUPABASE_ENTRY_CONVENTIONS,
+)
 from desloppify.languages._framework.node.frameworks.supabase import (
     edge_function_entries,
     scan_rls_disabled_in_public,

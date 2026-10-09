@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from desloppify.engine._state.schema import StateModel
 from desloppify.engine._work_queue.context import QueueContext
 from desloppify.engine._work_queue.finalize import finalize_queue
 from desloppify.engine._work_queue.helpers import ATTEST_EXAMPLE
@@ -14,7 +15,7 @@ from desloppify.engine._work_queue.models import (
 from desloppify.engine._work_queue.plan_order import collapse_clusters
 from desloppify.engine._work_queue.ranking import group_queue_items
 from desloppify.engine._work_queue.selection import select_queue_items
-from desloppify.engine._state.schema import StateModel
+
 
 def build_work_queue(
     state: StateModel,

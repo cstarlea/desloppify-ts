@@ -14,8 +14,8 @@ import desloppify.app.commands.review.runner_failures as runner_failures_mod
 import desloppify.app.commands.review.runner_packets as runner_packets_mod
 import desloppify.app.commands.review.runner_parallel as runner_parallel_mod
 import desloppify.app.commands.runner.codex_batch as runner_process_mod
-from desloppify.app.commands.review.batch.orchestrator import do_run_batches
 from desloppify.app.commands.review.batch.execution import CollectBatchResultsRequest
+from desloppify.app.commands.review.batch.orchestrator import do_run_batches
 from desloppify.base.exception_sets import CommandError
 
 runner_helpers_mod = SimpleNamespace(

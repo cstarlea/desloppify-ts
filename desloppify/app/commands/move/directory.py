@@ -4,8 +4,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from desloppify.languages import framework as lang_mod
-from desloppify.app.commands.move.apply import apply_directory_move, check_rewrite_syntax
+from desloppify.app.commands.move.apply import (
+    apply_directory_move,
+    check_rewrite_syntax,
+)
 from desloppify.app.commands.move.language import (
     load_move_module,
     resolve_move_verify_hint,
@@ -22,6 +24,7 @@ from desloppify.base.discovery.file_paths import rel
 from desloppify.base.discovery.paths import get_project_root
 from desloppify.base.exception_sets import CommandError
 from desloppify.base.output.terminal import colorize
+from desloppify.languages import framework as lang_mod
 
 
 def run_directory_move(args, source_abs: str, resolve_path_fn) -> None:

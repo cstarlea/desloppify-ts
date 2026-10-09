@@ -2,6 +2,11 @@
 
 from __future__ import annotations
 
+from .analysis import (
+    _count_signature_params,
+    _extract_type_names,
+    _score_clamped,
+)
 from .axes import (
     _assemble_context,
     _build_abstraction_leverage_context,
@@ -12,17 +17,12 @@ from .axes import (
     _build_type_discipline_context,
     _compute_sub_axes,
 )
-from .scan import _abstractions_context
-from .analysis import (
-    _count_signature_params,
-    _extract_type_names,
-    _score_clamped,
-)
 from .patterns_wrappers import (
     _find_delegation_heavy_classes,
     _find_facade_modules,
     _find_passthrough_wrappers,
 )
+from .scan import _abstractions_context
 
 
 def _codebase_stats(file_contents: dict[str, str]) -> dict[str, int]:

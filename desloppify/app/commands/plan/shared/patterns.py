@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import fnmatch
 
-from desloppify.engine.plan_state import PlanModel
-from desloppify.engine._work_queue.core import QueueBuildOptions, build_work_queue
 from desloppify.engine._state.resolution import match_issues
+from desloppify.engine._work_queue.core import QueueBuildOptions, build_work_queue
+from desloppify.engine.plan_state import PlanModel
 from desloppify.state_io import StateModel
 
 from .cluster_membership import cluster_issue_ids

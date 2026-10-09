@@ -6,17 +6,20 @@ import argparse
 import logging
 from dataclasses import dataclass
 
+from desloppify.app.commands.helpers.command_runtime import command_runtime
 from desloppify.app.commands.helpers.guardrails import print_triage_guardrail_info
 from desloppify.app.commands.helpers.lang import resolve_lang
 from desloppify.app.commands.helpers.query import write_query
-from desloppify.app.commands.helpers.command_runtime import command_runtime
 from desloppify.app.commands.helpers.state import require_issue_inventory
 from desloppify.app.skill_docs import check_skill_version
 from desloppify.base.config import target_strict_score_from_config
 from desloppify.base.exception_sets import PLAN_LOAD_EXCEPTIONS, CommandError
 from desloppify.base.output.terminal import colorize
-from desloppify.engine._state.disabled import canonical_disabled_entry, disabled_detectors
 from desloppify.base.tooling import check_config_staleness
+from desloppify.engine._state.disabled import (
+    canonical_disabled_entry,
+    disabled_detectors,
+)
 from desloppify.engine.plan_state import load_plan
 from desloppify.intelligence.narrative.core import NarrativeContext, compute_narrative
 

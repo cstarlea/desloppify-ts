@@ -8,12 +8,19 @@ import logging
 
 from desloppify.base.output.terminal import colorize
 from desloppify.engine._plan.triage.strategist_data import collect_strategist_input
-from desloppify.engine._state.progression import append_progression_event, load_progression
+from desloppify.engine._state.progression import (
+    append_progression_event,
+    load_progression,
+)
 from desloppify.engine._state.schema import utc_now
 
 from ..lifecycle import TriageLifecycleDeps, ensure_triage_started
 from ..services import TriageServices, default_triage_services
-from ..stage_queue import has_triage_in_queue, inject_triage_stages, print_cascade_clear_feedback
+from ..stage_queue import (
+    has_triage_in_queue,
+    inject_triage_stages,
+    print_cascade_clear_feedback,
+)
 from .records import record_strategize_stage, resolve_reusable_report
 
 _logger = logging.getLogger(__name__)
@@ -177,7 +184,9 @@ def _create_strategic_work_items(
     if new_ids:
         non_strategy = [fid for fid in queue_order if not fid.startswith("strategy::")]
         queue_order[:] = new_ids + non_strategy
-        from desloppify.engine._plan.constants import normalize_queue_workflow_and_triage_prefix
+        from desloppify.engine._plan.constants import (
+            normalize_queue_workflow_and_triage_prefix,
+        )
         normalize_queue_workflow_and_triage_prefix(queue_order)
 
 
@@ -276,7 +285,9 @@ def cmd_stage_strategize(
         if resolved_services.save_state is not None:
             resolved_services.save_state(state, runtime.state_path)
         else:
-            from desloppify.app.commands.helpers.state_persistence import save_state_or_exit
+            from desloppify.app.commands.helpers.state_persistence import (
+                save_state_or_exit,
+            )
             save_state_or_exit(state, runtime.state_path)
 
     resolved_services.save_plan(plan)

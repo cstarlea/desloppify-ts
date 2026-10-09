@@ -11,7 +11,9 @@ from desloppify.engine.detectors.orphaned import (
     OrphanedDetectionOptions,
     detect_orphaned_files,
 )
-from desloppify.languages._framework.frameworks.detection import detect_ecosystem_frameworks
+from desloppify.languages._framework.frameworks.detection import (
+    detect_ecosystem_frameworks,
+)
 from desloppify.languages._framework.frameworks.specs.react_router import (
     REACT_ROUTER_ENTRY_CONVENTIONS,
 )

@@ -316,7 +316,9 @@ def _cmd_cluster_list(args: argparse.Namespace) -> None:
     sorted_clusters, min_pos_cache = _sorted_clusters_by_queue_pos(clusters, queue_order)
 
     if missing_steps:
-        from desloppify.app.commands.plan.triage.stages.helpers import unenriched_clusters
+        from desloppify.app.commands.plan.triage.stages.helpers import (
+            unenriched_clusters,
+        )
 
         gaps = unenriched_clusters(plan)
         if not gaps:

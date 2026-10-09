@@ -5,7 +5,10 @@ from __future__ import annotations
 from desloppify.intelligence.review._context.models import HolisticContext
 from desloppify.intelligence.review.context_signals.auth import is_auth_runtime_path
 
-from .prepare_batches_core import _collect_unique_files, _representative_files_for_directory
+from .prepare_batches_core import (
+    _collect_unique_files,
+    _representative_files_for_directory,
+)
 
 _AUTH_SIBLING_PER_DIRECTORY_LIMIT = 2
 _AUTH_SIBLING_PER_MODULE_LIMIT = 1

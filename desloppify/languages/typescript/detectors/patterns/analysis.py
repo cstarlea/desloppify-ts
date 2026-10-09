@@ -11,9 +11,9 @@ from desloppify.base.discovery.file_paths import rel, resolve_path
 from desloppify.base.discovery.paths import get_area
 from desloppify.base.discovery.source import find_ts_and_js_files
 from desloppify.base.output.fallbacks import log_best_effort_failure
-from desloppify.languages.typescript.syntax.scanner import file_code_text
-from desloppify.languages.typescript.syntax.lines import line_number
 from desloppify.languages.typescript.detectors.contracts import DetectorResult
+from desloppify.languages.typescript.syntax.lines import line_number
+from desloppify.languages.typescript.syntax.scanner import file_code_text
 
 logger = logging.getLogger(__name__)
 

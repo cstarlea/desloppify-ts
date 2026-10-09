@@ -7,7 +7,6 @@ from types import SimpleNamespace
 
 import desloppify.app.commands.plan.commit_log.dispatch as commit_log_mod
 
-
 # ---------------------------------------------------------------------------
 # Helpers — realistic plan/state builders
 # ---------------------------------------------------------------------------

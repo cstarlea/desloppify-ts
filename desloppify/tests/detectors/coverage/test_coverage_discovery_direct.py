@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-
 import desloppify.engine.detectors.test_coverage.discovery as discovery_mod
 from desloppify.engine.policy.zones import Zone
 

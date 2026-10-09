@@ -26,7 +26,9 @@ def test_typescript_overrides_replace_python_flavoured_prompts():
 
 
 def test_scan_evidence_focus_points_at_toolchain_evidence():
-    from desloppify.app.commands.review.prompt_sections import render_scan_evidence_focus
+    from desloppify.app.commands.review.prompt_sections import (
+        render_scan_evidence_focus,
+    )
 
     text = render_scan_evidence_focus({"type_safety", "dependency_health", "test_strategy"})
     assert "abstractions.type_errors" in text

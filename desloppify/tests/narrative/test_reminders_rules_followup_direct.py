@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import UTC
+from datetime import UTC, timedelta
 from datetime import datetime as _dt
-from datetime import timedelta
 
 import desloppify.intelligence.narrative.reminders_rules_followup as followup_mod
 

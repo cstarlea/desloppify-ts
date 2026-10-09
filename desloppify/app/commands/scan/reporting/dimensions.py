@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import desloppify.engine._scoring.results.core as scoring_mod
+import desloppify.intelligence.narrative._constants as narrative_constants_mod
 from desloppify import state as state_mod
 from desloppify.app.commands.scan.reporting.subjective import (
     SubjectiveFollowup,
@@ -14,8 +15,8 @@ from desloppify.app.commands.scan.reporting.subjective import (
     subjective_integrity_notice_lines,
     subjective_rerun_command,
 )
-from desloppify.base.config import DEFAULT_TARGET_STRICT_SCORE
 from desloppify.base import registry as registry_mod
+from desloppify.base.config import DEFAULT_TARGET_STRICT_SCORE
 from desloppify.base.output.terminal import colorize
 from desloppify.engine.planning.scorecard_projection import (
     dimension_cli_key,
@@ -23,7 +24,6 @@ from desloppify.engine.planning.scorecard_projection import (
     scorecard_dimension_rows,
     scorecard_subjective_entries,
 )
-import desloppify.intelligence.narrative._constants as narrative_constants_mod
 
 from . import presentation as presentation_mod
 

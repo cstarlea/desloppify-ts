@@ -9,15 +9,10 @@ from __future__ import annotations
 from collections.abc import Callable
 from functools import lru_cache
 
-from desloppify.base.subjective_dimension_catalog import DISPLAY_NAMES
 from desloppify.base.subjective_dimension_catalog import (
+    DISPLAY_NAMES,
     RESET_ON_SCAN_DIMENSIONS,
-)
-from desloppify.base.subjective_dimension_catalog import WEIGHT_BY_DIMENSION
-from desloppify.base.subjective_dimensions_providers import (
-    PROVIDER_STATE,
-    default_load_dimensions_payload,
-    default_load_dimensions_payload_for_lang,
+    WEIGHT_BY_DIMENSION,
 )
 from desloppify.base.subjective_dimensions_constants import (
     normalize_dimension_name as _normalize_dimension_name,
@@ -29,6 +24,11 @@ from desloppify.base.subjective_dimensions_constants import (
     title_display_name as _title_display_name,
 )
 from desloppify.base.subjective_dimensions_merge import merge_dimension_meta
+from desloppify.base.subjective_dimensions_providers import (
+    PROVIDER_STATE,
+    default_load_dimensions_payload,
+    default_load_dimensions_payload_for_lang,
+)
 from desloppify.base.text_utils import is_numeric
 
 

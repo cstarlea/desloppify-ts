@@ -7,13 +7,14 @@ from dataclasses import dataclass
 
 from desloppify.app.commands.helpers.command_runtime import command_runtime
 from desloppify.base.output.terminal import colorize
-from desloppify.engine.plan_triage import (
-    StagePrerequisite,
-    TRIAGE_STAGE_PREREQUISITES,
-    compute_triage_progress,
-)
 from desloppify.engine.plan_state import save_plan
-from desloppify.engine.plan_triage import collect_triage_input, detect_recurring_patterns
+from desloppify.engine.plan_triage import (
+    TRIAGE_STAGE_PREREQUISITES,
+    StagePrerequisite,
+    collect_triage_input,
+    compute_triage_progress,
+    detect_recurring_patterns,
+)
 from desloppify.state_io import utc_now
 
 from ..confirmations.basic import MIN_ATTESTATION_LEN, validate_attestation
