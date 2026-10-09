@@ -184,7 +184,7 @@ Every adversarial input in the original review broke one of the line-regex fixer
 
 - **CI, done.** `tests-core` runs on Python 3.11–3.14, every version pyproject declares (3.14 classifier added); `tests-full` runs on 3.11 and 3.14 (E7). A `tests-windows` job runs the core suite on `windows-latest` (CE-16). It found real bugs, now fixed: subprocess output and source files were decoded with the locale encoding (cp1252), which broke the Codex runner's readers and shifted lines and columns in non-ASCII files; coverage discovery left backslash-separated graph keys; tsc/lint coverage notes used native separators. Every pytest run has a per-test `--timeout` (pytest-timeout, `PYTEST_TIMEOUT`, default 120s) (E12).
 - **Lint and types:** enforce the configured ruff `E,F,I,B,UP` and `ruff format --check` (deferred: the whole-codebase fix and format sweep would conflict with every open PR, so it waits for a quiet moment). CI checks only `E9,F63,F7,F82` today, and some F401/F841 debt remains. Extend mypy past its 16 files into `languages/typescript` and `_framework`, ratcheting with per-module ignores. Add import-linter contracts that already hold: `languages` ↛ `app`, `engine` ↛ `app` (E6).
-- **Dev tooling:** a `dev` extra with pinned pytest, ruff, mypy, import-linter and pytest-xdist, and make targets that don't `pip install`. Fix the release checklist (E11).
+- **Dev tooling, done.** A `dev` extra pins pytest, pytest-xdist, pytest-timeout, ruff, mypy, import-linter, PyYAML, build and twine. `make install-dev` and `make install-full` install once. The gate targets (`lint`, `typecheck`, `arch`, `ci-contracts`, `tests*`, `package-smoke`) no longer `pip install`; CI and the publish job run the install target as a separate step. `tests-full` stops early without the `[full]` extra, and `install-hooks` works in a worktree. The release checklist's local-validation step now says to install first, and its description of the publish workflow includes the install step (E11).
 - **Tests:**
   - an autouse isolation fixture plus a guard that fails if the repo's `.desloppify/` is touched (E5);
   - replace `inspect.getsource` and `callable(fn)` tripwire tests with behaviour tests (E9);
@@ -339,7 +339,7 @@ Status key: **done** (with PR), **partial** (what's left is in §2), **open**, *
 | E8 | medium | Ruby and R tests never collected | dropped |
 | E9 | medium | getsource and callable tripwire tests | open → §2E |
 | E10 | low | Review tests run twice | open → §2E |
-| E11 | low | Make targets reinstall; release checklist drift | open → §2E |
+| E11 | low | Make targets reinstall; release checklist drift | done (§2E: pinned `dev` extra, install-free gates; #94 fixed the checklist paths) |
 | E12 | low | No test timeout | done (§2E: pytest-timeout, 120s per test) |
 | E13 | low | TS tests in two trees | open → §2E |
 | PK-1 | medium | tree-sitter floor crashes; cap blocks working releases | done (#1) |

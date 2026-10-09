@@ -24,6 +24,8 @@ jobs:
           python-version: "3.11"
           cache: pip
           cache-dependency-path: pyproject.toml
+      - name: Install the package and pinned tools
+        run: make install-dev
       - name: Run lint gate
         run: make lint
 
@@ -37,6 +39,8 @@ jobs:
           python-version: "3.11"
           cache: pip
           cache-dependency-path: pyproject.toml
+      - name: Install the package and pinned tools
+        run: make install-dev
       - name: Run typecheck gate
         run: make typecheck
 
@@ -50,6 +54,8 @@ jobs:
           python-version: "3.11"
           cache: pip
           cache-dependency-path: pyproject.toml
+      - name: Install the package and pinned tools
+        run: make install-dev
       - name: Run architecture contracts gate
         run: make arch
 
@@ -63,6 +69,8 @@ jobs:
           python-version: "3.11"
           cache: pip
           cache-dependency-path: pyproject.toml
+      - name: Install the package and pinned tools
+        run: make install-dev
       - name: Run CI contracts gate
         run: make ci-contracts
 
@@ -80,6 +88,8 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: pip
           cache-dependency-path: pyproject.toml
+      - name: Install the package and pinned tools
+        run: make install-dev
       - name: Run core tests
         run: make tests PYTEST_XML=pytest-core.xml
       - name: Upload core test report
@@ -102,6 +112,8 @@ jobs:
           python-version: "3.11"
           cache: pip
           cache-dependency-path: pyproject.toml
+      - name: Install the package and pinned tools
+        run: make install-dev
       - name: Run core tests
         run: make tests PYTEST_XML=pytest-windows.xml
       - name: Upload Windows test report
@@ -125,6 +137,8 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: pip
           cache-dependency-path: pyproject.toml
+      - name: Install the package and pinned tools
+        run: make install-full
       - name: Run full tests (with optional deps)
         run: make tests-full PYTEST_XML=pytest-full.xml
       - name: Upload full test report
@@ -149,6 +163,8 @@ jobs:
           node-version: "22"
           cache: npm
           cache-dependency-path: desloppify/languages/typescript/tests/golden/node/package-lock.json
+      - name: Install the package and pinned tools
+        run: make install-full
       - name: Run TypeScript golden scans with real tsc/knip
         run: make tests-golden-node
 
@@ -162,6 +178,8 @@ jobs:
           python-version: "3.11"
           cache: pip
           cache-dependency-path: pyproject.toml
+      - name: Install the package and pinned tools
+        run: make install-dev
       - name: Run packaging smoke gate
         run: make package-smoke
       - name: Upload distribution artifacts
