@@ -130,7 +130,9 @@ def test_spent_time_budget_skips_the_remaining_packages(workspace):
         "packages/b/src/index.ts(1,1): error TS2304: Cannot find name 'q'.\n",
         ("packages/b/src/index.ts",),
     )
-    result = detect_type_errors_result(root, cache={}, monorepo=Budget(1e-9, 1024))
+    ticks = iter([0.0, 15.0])  # the first package run takes 15 of the 10 seconds
+    budget = Budget(10, 1024, clock=lambda: next(ticks))
+    result = detect_type_errors_result(root, cache={}, monorepo=budget)
 
     assert [p.skipped for p in result.packages] == [None, "time_budget"]
     assert "packages/b/tsconfig.json" not in calls

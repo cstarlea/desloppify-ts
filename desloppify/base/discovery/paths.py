@@ -65,17 +65,6 @@ def get_default_scan_path(
     )
 
 
-def get_src_path(
-    *,
-    project_root: Path | str | None = None,
-    runtime: RuntimeContext | None = None,
-) -> Path:
-    """Return the configured source root directory."""
-    return get_project_root(project_root=project_root, runtime=runtime) / os.environ.get(
-        "DESLOPPIFY_SRC", "src"
-    )
-
-
 class _PathProxy(os.PathLike[str]):
     """Backwards-compatible dynamic path reference."""
 
@@ -110,10 +99,9 @@ class _PathProxy(os.PathLike[str]):
         return getattr(self._path(), name)
 
 
-# Deprecated compatibility exports: prefer get_project_root/get_default_path/get_src_path.
+# Deprecated compatibility exports: prefer get_project_root/get_default_path.
 PROJECT_ROOT = _PathProxy(get_project_root)
 DEFAULT_PATH = _PathProxy(get_default_path)
-SRC_PATH = _PathProxy(get_src_path)
 
 
 def read_code_snippet(
@@ -150,11 +138,9 @@ def get_area(filepath: str, *, min_depth: int = 2) -> str:
 __all__ = [
     "PROJECT_ROOT",
     "DEFAULT_PATH",
-    "SRC_PATH",
     "get_area",
     "get_project_root",
     "get_default_path",
     "get_default_scan_path",
-    "get_src_path",
     "read_code_snippet",
 ]
