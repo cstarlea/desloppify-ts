@@ -114,11 +114,6 @@ def _abstractions_files(
         for item in ctx.abstractions.get("facade_modules", [])
         if isinstance(item, dict)
     ]
-    type_violation_files = [
-        {"file": item.get("file", "")}
-        for item in ctx.abstractions.get("typed_dict_violations", [])
-        if isinstance(item, dict)
-    ]
     complexity_files = [
         {"file": item.get("file", "")}
         for item in ctx.abstractions.get("complexity_hotspots", [])
@@ -139,7 +134,6 @@ def _abstractions_files(
             interface_files,
             delegation_files,
             facade_files,
-            type_violation_files,
             complexity_files,
             cycle_files,
         ],

@@ -405,8 +405,6 @@ def render_abstraction_focus(dim_set: set[str]) -> str:
         "object — entries include class_name, delegate_target, sample_methods, and line number.\n"
         "  - `facade_modules`: re-export-only modules with high re_export_ratio — entries "
         "include samples (re-exported names) and loc.\n"
-        "  - `typed_dict_violations`: TypedDict fields accessed via .get()/.setdefault()/.pop() "
-        "— entries include typed_dict_name, violation_type, field, and line number.\n"
         "  - `complexity_hotspots`: files where mechanical analysis found extreme parameter "
         "counts, deep nesting, or disconnected responsibility clusters.\n"
         "  Include `delegation_density`, `definition_directness`, and `type_discipline` "

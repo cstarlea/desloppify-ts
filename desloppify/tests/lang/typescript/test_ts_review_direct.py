@@ -23,3 +23,15 @@ def test_module_patterns_detects_default_and_named_exports():
     patterns = ts_review.module_patterns(content)
     assert "default_export" in patterns
     assert "named_export" in patterns
+
+
+def test_review_prompts_carry_no_python_file_examples():
+    from desloppify.intelligence.review.dimensions.data import load_dimensions_for_lang
+
+    _dims, prompts, system_prompt = load_dimensions_for_lang("typescript")
+    for dim in ("convention_outlier", "package_organization"):
+        text = str(prompts[dim])
+        for python_term in ("__init__.py", "TypedDict", "dataclass", ".py", "__pycache__"):
+            assert python_term not in text, (dim, python_term)
+    assert ".py" not in system_prompt
+    assert "__init__" not in system_prompt

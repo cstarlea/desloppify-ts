@@ -19,8 +19,6 @@ def test_budget_abstractions_axes_compute_and_assemble_context() -> None:
         one_impl_interfaces=[{"interface": "IThing"}],
         delegation_classes=[{"delegation_ratio": 0.8}],
         facade_modules=[{"re_export_ratio": 0.9}],
-        typed_dict_violation_files={"src/a.py"},
-        total_typed_dict_violations=2,
         dict_any_count=1,
         enum_bypass_count=1,
     )
@@ -44,8 +42,6 @@ def test_budget_abstractions_axes_compute_and_assemble_context() -> None:
         wide_param_bags=[{"file": "src/a.py", "wide_functions": 2, "config_bag_mentions": 12}],
         delegation_classes=[{"class_name": "Facade", "delegation_ratio": 0.8}],
         facade_modules=[{"file": "src/facade.py", "re_export_ratio": 0.9}],
-        typed_dict_violations=[{"file": "src/a.py", "count": 2}],
-        total_typed_dict_violations=2,
         sub_axes=sub_axes,
         dict_any_annotations=[{"file": "src/a.py"}],
         enum_bypass_patterns=[{"file": "src/a.py"}],

@@ -16,7 +16,6 @@ from desloppify.intelligence.review.context_holistic.budget.patterns_enums impor
 )
 from desloppify.intelligence.review.context_holistic.budget.patterns_types import (
     _find_dict_any_annotations,
-    _guess_alternative,
     _is_dict_str_any,
 )
 
@@ -57,24 +56,6 @@ class TestIsDictStrAny:
         assert _is_dict_str_any(fn.args.args[0].annotation) is False
 
 
-# ── _guess_alternative ───────────────────────────────────
-
-
-class TestGuessAlternative:
-
-    def test_exact_match(self):
-        assert _guess_alternative("config", {"Config"}) == "Config"
-
-    def test_substring_match(self):
-        assert _guess_alternative("state", {"StateModel"}) == "StateModel"
-
-    def test_no_match(self):
-        assert _guess_alternative("data", {"Config", "Options"}) is None
-
-    def test_empty_dict_names(self):
-        assert _guess_alternative("config", set()) is None
-
-
 # ── _find_dict_any_annotations ───────────────────────────
 
 
@@ -87,7 +68,7 @@ class TestFindDictAnyAnnotations:
             "    pass\n"
         )
         trees = {"/fake/mod.py": _parse(content)}
-        results = _find_dict_any_annotations(trees, set())
+        results = _find_dict_any_annotations(trees)
         assert len(results) == 1
         assert results[0]["param"] == "state"
         assert results[0]["function"] == "process"
@@ -99,7 +80,7 @@ class TestFindDictAnyAnnotations:
             "    return {}\n"
         )
         trees = {"/fake/mod.py": _parse(content)}
-        results = _find_dict_any_annotations(trees, set())
+        results = _find_dict_any_annotations(trees)
         assert len(results) == 1
         assert results[0]["param"] == "(return)"
 
@@ -110,7 +91,7 @@ class TestFindDictAnyAnnotations:
             "    pass\n"
         )
         trees = {"/fake/mod.py": _parse(content)}
-        results = _find_dict_any_annotations(trees, set())
+        results = _find_dict_any_annotations(trees)
         assert len(results) == 2
 
     def test_kwonly_params_detected(self):
@@ -120,37 +101,15 @@ class TestFindDictAnyAnnotations:
             "    pass\n"
         )
         trees = {"/fake/mod.py": _parse(content)}
-        results = _find_dict_any_annotations(trees, set())
+        results = _find_dict_any_annotations(trees)
         assert len(results) == 1
         assert results[0]["param"] == "config"
 
     def test_non_dict_any_params_ignored(self):
         content = "def f(x: int, y: str, z: list[str]) -> bool:\n    return True\n"
         trees = {"/fake/mod.py": _parse(content)}
-        results = _find_dict_any_annotations(trees, set())
+        results = _find_dict_any_annotations(trees)
         assert results == []
-
-    def test_known_alternative_suggested(self):
-        content = (
-            "from typing import Any\n"
-            "def process(config: dict[str, Any]) -> None:\n"
-            "    pass\n"
-        )
-        trees = {"/fake/mod.py": _parse(content)}
-        results = _find_dict_any_annotations(trees, {"Config"})
-        assert len(results) == 1
-        assert results[0]["known_alternative"] == "Config"
-
-    def test_no_alternative_when_unrelated(self):
-        content = (
-            "from typing import Any\n"
-            "def process(data: dict[str, Any]) -> None:\n"
-            "    pass\n"
-        )
-        trees = {"/fake/mod.py": _parse(content)}
-        results = _find_dict_any_annotations(trees, {"Config"})
-        assert len(results) == 1
-        assert results[0]["known_alternative"] is None
 
     def test_vararg_kwarg_detected(self):
         content = (
@@ -159,12 +118,12 @@ class TestFindDictAnyAnnotations:
             "    pass\n"
         )
         trees = {"/fake/mod.py": _parse(content)}
-        results = _find_dict_any_annotations(trees, set())
+        results = _find_dict_any_annotations(trees)
         params = {r["param"] for r in results}
         assert params == {"args", "kwargs"}
 
     def test_empty_trees(self):
-        assert _find_dict_any_annotations({}, set()) == []
+        assert _find_dict_any_annotations({}) == []
 
 
 # ── _collect_enum_defs ───────────────────────────────────
