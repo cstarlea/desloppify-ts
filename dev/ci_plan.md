@@ -86,8 +86,11 @@ Enforcement notes:
 
 ## Local Parity Commands
 
-Use the `Makefile` targets:
+Install once per venv, then use the `Makefile` targets. The gate targets
+never `pip install`; CI runs the install target as its own step.
 
+- `make install-dev`: the package plus the pinned tools from the `dev` extra
+- `make install-full`: the same plus the `full` extra (tree-sitter, Pillow, PyYAML)
 - `make ci-fast`: lint + typecheck + import contracts + tests
 - `make ci`: `ci-fast` + full tests + package smoke
 - `make ci-contracts`: verify CI/workflow/docs contracts

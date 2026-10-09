@@ -58,12 +58,17 @@ def test_ci_workflow_jobs_are_bound_to_make_targets() -> None:
 
     assert set(expected).issubset(jobs), "CI workflow missing required jobs."
 
+    full_jobs = {"tests-full", "tests-golden-node"}
     for job_name, expected_cmd in expected.items():
         job = jobs[job_name]
         runs = _run_commands(job)
         assert any(expected_cmd in run for run in runs), (
             f"{job_name} must execute `{expected_cmd}` for local/CI parity."
         )
+        install = "make install-full" if job_name in full_jobs else "make install-dev"
+        assert install in runs and runs.index(install) < next(
+            i for i, run in enumerate(runs) if expected_cmd in run
+        ), f"{job_name} must run `{install}` before its gate."
         assert any(step.get("uses") == "actions/setup-python@v5" for step in job["steps"]), (
             f"{job_name} should use actions/setup-python@v5."
         )
@@ -145,6 +150,7 @@ def test_publish_workflow_keeps_release_safety_gates() -> None:
         assert job.get("if") == "vars.PYPI_PUBLISH == 'true'"
 
     names = _step_names(publish_job)
+    assert "make install-dev" in _run_commands(publish_job)
     assert "Check the release tag matches the version" in names
     assert "Check if version exists on PyPI" in names
     assert "Run packaging smoke gate" in names
@@ -200,7 +206,7 @@ def test_full_extra_includes_all_optional_dependency_groups() -> None:
     full = set(optional.get("full", []))
     missing_dependencies: dict[str, list[str]] = {}
     for extra, deps in optional.items():
-        if extra == "full":
+        if extra in {"full", "dev"}:
             continue
         extra_missing = sorted(dep for dep in deps if dep not in full)
         if extra_missing:
@@ -238,3 +244,41 @@ def test_ci_plan_required_checks_match_ci_workflow() -> None:
     for context in expected_contexts:
         job_name = context.split("CI / ", 1)[1].split(" (", 1)[0]
         assert job_name in ci["jobs"], f"{context} has no matching CI workflow job."
+
+
+GATE_TARGETS = (
+    "lint",
+    "typecheck",
+    "arch",
+    "ci-contracts",
+    "tests",
+    "tests-full",
+    "tests-golden-node",
+    "package-smoke",
+)
+
+
+def _make_rule(text: str, target: str) -> tuple[str, str]:
+    """A target's prerequisites and recipe."""
+    match = re.search(rf"^{re.escape(target)}:(.*)\n((?:\t.*\n?)*)", text, flags=re.MULTILINE)
+    assert match, f"Makefile has no `{target}` target."
+    return match.group(1).strip(), match.group(2)
+
+
+def test_make_gates_do_not_install_anything() -> None:
+    text = MAKEFILE.read_text()
+    for target in GATE_TARGETS:
+        prerequisites, recipe = _make_rule(text, target)
+        assert "install" not in prerequisites, f"`{target}` must not depend on an install target."
+        assert "$(PIP)" not in recipe, f"`{target}` must not pip install; use make install-dev."
+    for target, extras in (("install-dev", ".[dev]"), ("install-full", ".[full,dev]")):
+        _prerequisites, recipe = _make_rule(text, target)
+        assert f'install -e "{extras}"' in recipe
+
+
+def test_dev_extra_pins_the_gate_tools() -> None:
+    dev = _optional_dependencies()["dev"]
+    names = {re.split(r"[=<>!~ ]", dep, maxsplit=1)[0].lower() for dep in dev}
+    assert {"pytest", "pytest-xdist", "pytest-timeout", "ruff", "mypy", "import-linter"} <= names
+    unpinned = [dep for dep in dev if "==" not in dep]
+    assert not unpinned, f"dev tools must be pinned: {unpinned}"
