@@ -21,7 +21,7 @@ from .analysis import (
 from .patterns_wrappers import (
     _find_delegation_heavy_classes,
     _find_facade_modules,
-    _find_python_passthrough_wrappers,
+    _find_passthrough_wrappers,
 )
 
 
@@ -48,6 +48,6 @@ __all__ = [
     "_extract_type_names",
     "_find_delegation_heavy_classes",
     "_find_facade_modules",
-    "_find_python_passthrough_wrappers",
+    "_find_passthrough_wrappers",
     "_score_clamped",
 ]

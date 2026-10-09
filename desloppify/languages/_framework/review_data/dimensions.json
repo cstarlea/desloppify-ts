@@ -233,7 +233,7 @@
         "Sibling modules following different behavioral protocols (e.g. most call a shared function, one doesn't)",
         "Inconsistent plugin organization: sibling plugins structured differently",
         "Large `index.ts` barrels re-exporting whole directories, obscuring internal module structure",
-        "Mixed type strategies for domain objects (interfaces for some, type aliases for others, classes or schema-inferred types for yet others) without documented rationale"
+        "Mixed type strategies for domain objects (interfaces for some, type aliases for others, classes or schema-inferred types for yet others) without documented rationale — see type_strategy_census evidence"
       ],
       "skip": [
         "Intentional variation for different module types (config vs logic)",

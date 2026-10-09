@@ -12,12 +12,17 @@ def _compute_sub_axes(
     indirection_hotspots: list,
     wide_param_bags: list,
     one_impl_interfaces: list,
-    delegation_classes: list,
+    delegation_classes: list | None,
     facade_modules: list,
-    dict_any_count: int = 0,
-    enum_bypass_count: int = 0,
+    dict_any_count: int | None = None,
+    enum_bypass_count: int | None = None,
 ) -> dict[str, float]:
-    """Compute all 6 sub-axis scores for the abstractions dimension."""
+    """Compute the sub-axis scores for the abstractions dimension.
+
+    ``delegation_density`` and ``type_discipline`` come from syntax trees and
+    are left out when there are none (``None`` inputs), rather than reported
+    as a perfect score.
+    """
     abstraction_leverage = _score_clamped(
         100 - (wrapper_rate * 120) - (len(util_files) * 1.5)
     )
@@ -28,36 +33,28 @@ def _compute_sub_axes(
     )
     interface_honesty = _score_clamped(100 - (len(one_impl_interfaces) * 8))
 
-    top10_delegation = delegation_classes[:10]
-    avg_delegation_ratio = (
-        sum(d["delegation_ratio"] for d in top10_delegation) / len(top10_delegation)
-        if top10_delegation
-        else 0.0
-    )
-    delegation_density = _score_clamped(
-        100 - (avg_delegation_ratio * 80) - (len(delegation_classes) * 5)
-    )
-    avg_facade_ratio = (
-        sum(f["re_export_ratio"] for f in facade_modules[:10]) / len(facade_modules[:10])
-        if facade_modules
-        else 0.0
-    )
-    definition_directness = _score_clamped(
-        100 - (len(facade_modules) * 8) - (avg_facade_ratio * 50)
-    )
-    type_discipline = _score_clamped(
-        100
-        - (dict_any_count * 1.0)
-        - (enum_bypass_count * 2.0)
-    )
-    return {
+    definition_directness = _score_clamped(100 - (len(facade_modules) * 8))
+    axes: dict[str, float] = {
         "abstraction_leverage": abstraction_leverage,
         "indirection_cost": indirection_cost,
         "interface_honesty": interface_honesty,
-        "delegation_density": delegation_density,
-        "definition_directness": definition_directness,
-        "type_discipline": type_discipline,
     }
+    if delegation_classes is not None:
+        top10_delegation = delegation_classes[:10]
+        avg_delegation_ratio = (
+            sum(d["delegation_ratio"] for d in top10_delegation) / len(top10_delegation)
+            if top10_delegation
+            else 0.0
+        )
+        axes["delegation_density"] = _score_clamped(
+            100 - (avg_delegation_ratio * 80) - (len(delegation_classes) * 5)
+        )
+    axes["definition_directness"] = definition_directness
+    if dict_any_count is not None and enum_bypass_count is not None:
+        axes["type_discipline"] = _score_clamped(
+            100 - (dict_any_count * 1.0) - (enum_bypass_count * 2.0)
+        )
+    return axes
 
 
 def _build_abstraction_leverage_context(
@@ -100,7 +97,7 @@ def _build_delegation_density_context(
     delegation_classes: list[dict],
 ) -> dict[str, object]:
     if delegation_classes:
-        return {"delegation_heavy_classes": delegation_classes}
+        return {"delegation_heavy_classes": delegation_classes[:20]}
     return {}
 
 
@@ -109,7 +106,7 @@ def _build_definition_directness_context(
     facade_modules: list[dict],
 ) -> dict[str, object]:
     if facade_modules:
-        return {"facade_modules": facade_modules}
+        return {"facade_modules": facade_modules[:20]}
     return {}
 
 
@@ -121,9 +118,9 @@ def _build_type_discipline_context(
 ) -> dict[str, object]:
     context: dict[str, object] = {}
     if dict_any_annotations:
-        context["dict_any_annotations"] = dict_any_annotations
+        context["dict_any_annotations"] = dict_any_annotations[:30]
     if enum_bypass_patterns:
-        context["enum_bypass_patterns"] = enum_bypass_patterns
+        context["enum_bypass_patterns"] = enum_bypass_patterns[:30]
     if type_strategy_census:
         context["type_strategy_census"] = {
             strategy: len(items)

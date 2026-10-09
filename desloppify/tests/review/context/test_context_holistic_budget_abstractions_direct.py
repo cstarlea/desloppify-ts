@@ -44,5 +44,31 @@ def test_budget_abstractions_compute_sub_axes_callable() -> None:
         "interface_honesty",
         "delegation_density",
         "definition_directness",
-        "type_discipline",
     }
+
+
+def test_budget_abstractions_tree_axes_dropped_without_tree_data() -> None:
+    sub_axes = axes_mod._compute_sub_axes(
+        wrapper_rate=0.0,
+        util_files=[],
+        indirection_hotspots=[],
+        wide_param_bags=[],
+        one_impl_interfaces=[],
+        delegation_classes=None,
+        facade_modules=[],
+    )
+    assert "delegation_density" not in sub_axes
+    assert "type_discipline" not in sub_axes
+
+    scored = axes_mod._compute_sub_axes(
+        wrapper_rate=0.0,
+        util_files=[],
+        indirection_hotspots=[],
+        wide_param_bags=[],
+        one_impl_interfaces=[],
+        delegation_classes=[],
+        facade_modules=[],
+        dict_any_count=3,
+        enum_bypass_count=2,
+    )
+    assert scored["type_discipline"] == 93
