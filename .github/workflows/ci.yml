@@ -26,7 +26,7 @@ jobs:
           cache-dependency-path: pyproject.toml
       - name: Install the package and pinned tools
         run: make install-dev
-      - name: Run lint gate
+      - name: Run lint gate (ruff check + ruff format --check)
         run: make lint
 
   typecheck:

@@ -1,6 +1,28 @@
 #!/usr/bin/env bash
-# Auto-sync docs/*.md → desloppify/data/global/ before commit.
-# Only runs the sync if any docs/*.md files are staged.
+# 1. Lint and format-check staged Python files with ruff (the `make lint` gate).
+# 2. Auto-sync docs/*.md → desloppify/data/global/ when any are staged.
+
+set -o pipefail
+
+if [ -n "$(git diff --cached --name-only --diff-filter=ACMR -- '*.py')" ]; then
+    if command -v ruff >/dev/null 2>&1; then
+        ruff=ruff
+    elif [ -x .venv/bin/ruff ]; then
+        ruff=.venv/bin/ruff
+    else
+        ruff=
+        echo "pre-commit: ruff not found; skipping lint (run make install-dev)." >&2
+    fi
+    if [ -n "$ruff" ]; then
+        git diff --cached --name-only -z --diff-filter=ACMR -- '*.py' \
+            | xargs -0 "$ruff" check --force-exclude || exit 1
+        git diff --cached --name-only -z --diff-filter=ACMR -- '*.py' \
+            | xargs -0 "$ruff" format --check --force-exclude || {
+                echo "pre-commit: run 'ruff format' on the files above." >&2
+                exit 1
+            }
+    fi
+fi
 
 staged_docs=$(git diff --cached --name-only -- 'docs/*.md')
 
