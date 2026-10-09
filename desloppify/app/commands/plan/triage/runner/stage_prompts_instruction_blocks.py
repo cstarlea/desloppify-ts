@@ -369,7 +369,7 @@ strategy from old triage runs unless you find a concrete mismatch you need to ex
 
 ### Requirements (ALL BLOCKING — confirmation will reject if not met)
 
-1. Every step MUST have `--detail` with 80+ chars INCLUDING at least one file path (src/... or supabase/...)
+1. Every step MUST have `--detail` with 80+ chars INCLUDING at least one repo-relative file path (e.g. src/lib/format.ts)
 2. Every step MUST have `--issue-refs` linking it to specific review issue hash(es)
 3. Every step MUST have `--effort` tag (trivial/small/medium/large) — set INDIVIDUALLY, not bulk
 4. File paths in detail MUST exist on disk (validator checks this)
