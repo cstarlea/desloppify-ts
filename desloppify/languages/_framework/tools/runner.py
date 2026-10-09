@@ -77,6 +77,8 @@ def run_tool_result(
             cwd=str(path),
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=120,
         )
     except FileNotFoundError as exc:

@@ -29,6 +29,8 @@ def _run_git_command(*args: str) -> subprocess.CompletedProcess[str]:
         [git_path, *args],
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
         timeout=_GIT_TIMEOUT,
     )
 
@@ -76,6 +78,8 @@ def update_pr_body(pr_number: int, body: str) -> bool:
             [gh_path, "pr", "edit", str(pr_number), "--body", body],
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=_GIT_TIMEOUT * 3,
         )  # nosec B603
         if result.returncode != 0:
