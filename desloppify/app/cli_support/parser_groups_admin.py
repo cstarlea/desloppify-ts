@@ -197,3 +197,8 @@ def _add_setup_parser(sub) -> None:
         choices=["amp", "claude", "codex", "gemini", "opencode", "qwen", "rovodev"],
         help="Install for a specific interface only",
     )
+    p.add_argument(
+        "--grammars",
+        action="store_true",
+        help="Check the tree-sitter grammars load, downloading missing ones, instead of installing skills",
+    )

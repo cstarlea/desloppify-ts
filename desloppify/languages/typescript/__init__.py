@@ -68,10 +68,12 @@ from desloppify.languages.typescript.plugin_contract import (
 
 def _ts_treesitter_phases() -> list[DetectorPhase]:
     """Cherry-pick tree-sitter phases that complement TS's own detectors."""
-    from desloppify.languages._framework.treesitter import TYPESCRIPT_SPEC, is_available
+    from desloppify.languages._framework.treesitter import TYPESCRIPT_SPEC, is_installed
     from desloppify.languages._framework.treesitter.cohesion import make_cohesion_phase
 
-    if not is_available():
+    # The phase records a grammar that fails to load; checking here would
+    # fetch grammars whenever the plugin is built, even for --help.
+    if not is_installed():
         return []
 
     return [make_cohesion_phase(TYPESCRIPT_SPEC)]
