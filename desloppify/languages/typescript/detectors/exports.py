@@ -10,9 +10,11 @@ from pathlib import Path
 from typing import Any
 
 from desloppify.base.discovery.file_paths import rel, resolve_path
+from desloppify.base.discovery.paths import get_project_root
 from desloppify.base.discovery.source import find_ts_and_js_files
 from desloppify.base.output.terminal import colorize, print_table
 from desloppify.languages._framework.base.types import DetectorCoverageStatus
+from desloppify.languages.typescript.detectors.deps.public_api import public_export_names
 from desloppify.languages.typescript.detectors.knip_adapter import detect_with_knip_result
 
 _EXPORT_STATEMENT_RE = re.compile(r"^\s*export\b", re.MULTILINE)
@@ -32,6 +34,30 @@ def _count_exports(path: Path) -> int:
             continue
         total += len(_EXPORT_STATEMENT_RE.findall(text))
     return total
+
+
+def _published(entry: dict, public: set[tuple[str, str]]) -> bool:
+    """Whether a published package exposes the export (or the enum holding the member)."""
+    if entry.get("kind") == "duplicate":
+        return False
+    name = entry["name"].split(".", 1)[0] if entry.get("kind") == "enum_member" else entry["name"]
+    return (entry["file"], name) in public
+
+
+def drop_public_api(path: Path, entries: list[dict]) -> list[dict]:
+    """Drop exports a published package's entry points expose, directly or
+    through re-exports: they are its public API, used outside the repo.
+
+    Knip without a config of the project's own doesn't map a manifest's
+    ``exports`` (often ``dist/``) back to source, so it reports them.
+    """
+    if not any(entry.get("kind") != "duplicate" for entry in entries):
+        return entries
+    candidates = [resolve_path(f) for f in find_ts_and_js_files(path)]
+    public = public_export_names(candidates, get_project_root())
+    if not public:
+        return entries
+    return [entry for entry in entries if not _published(entry, public)]
 
 
 def detect_dead_exports_result(
@@ -57,6 +83,7 @@ def detect_dead_exports_result(
             reason=reason or "knip_failed",
         )
         return [], 0, coverage
+    entries = drop_public_api(path, entries)
     return entries, max(len(entries), _count_exports(path)), None
 
 
