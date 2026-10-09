@@ -24,6 +24,7 @@ import desloppify.languages.typescript.detectors.deps as deps_detector_mod
 from desloppify.languages.typescript.detectors.security.detector import detect_ts_security
 from desloppify.languages.typescript.extractors_functions import extract_ts_functions
 from desloppify.languages.typescript.phases_basic import (
+    phase_dependencies,
     phase_deprecated,
     phase_exports,
     phase_logs,
@@ -108,6 +109,7 @@ class TypeScriptConfig(LangConfig):
                 DetectorPhase("Type errors (tsc)", phase_type_errors),
                 DetectorPhase("tsconfig health", phase_tsconfig_health),
                 DetectorPhase("Dead exports", phase_exports),
+                DetectorPhase("Dependencies (knip)", phase_dependencies),
                 DetectorPhase("Deprecated", phase_deprecated),
                 DetectorPhase("Structural analysis", phase_structural),
                 DetectorPhase(

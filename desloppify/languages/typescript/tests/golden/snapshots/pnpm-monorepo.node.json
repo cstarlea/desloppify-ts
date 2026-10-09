@@ -8,6 +8,13 @@
       "summary": "Import cycle (2 files): packages/config/src/index.ts -> packages/utils/src/money.ts"
     },
     {
+      "id": "dependencies::packages/utils/package.json::unlisted::@acme/config",
+      "tier": 2,
+      "confidence": "high",
+      "zone": "production",
+      "summary": "Unlisted dependency: @acme/config is imported but not declared (packages/utils/src/money.ts:1)"
+    },
+    {
       "id": "test_coverage::apps/docs/app/layout.tsx::untested_module",
       "tier": 3,
       "confidence": "high",
@@ -74,6 +81,7 @@
   "potentials": {
     "coupling": 0,
     "cycles": 12,
+    "dependencies": 1,
     "deprecated": 0,
     "dupes": 13,
     "exports": 19,
@@ -95,6 +103,7 @@
     "unused": 12
   },
   "reduced_coverage": [
+    "dependencies: dependencies_not_installed",
     "type_error: partial"
   ]
 }

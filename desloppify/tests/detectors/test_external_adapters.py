@@ -103,6 +103,7 @@ class TestKnipAdapter:
         assert result == [
             {"file": "src/lib.ts", "name": "deadHelper", "line": 2, "kind": "export"},
             {"file": "src/lib.ts", "name": "DeadType", "line": 3, "kind": "type"},
+            {"file": "src/lib.ts", "name": "E.B", "line": 4, "kind": "enum_member"},
         ]
 
     def test_skips_files_outside_scan_path(self, tmp_path, set_project_root):
