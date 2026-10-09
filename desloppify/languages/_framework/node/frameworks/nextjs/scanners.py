@@ -989,7 +989,10 @@ def scan_nextjs_pages_router_apis_in_app_router(
 def scan_nextjs_env_leaks_in_client(
     path: Path, info: NextjsFrameworkInfo
 ) -> tuple[list[dict], int]:
-    """Find 'use client' modules that reference non-NEXT_PUBLIC_* env vars via process.env."""
+    """Find 'use client' modules that reference non-NEXT_PUBLIC_* env vars via process.env.
+
+    One entry per module and variable, at the variable's first use.
+    """
     if not info.uses_app_router:
         return [], 0
 
@@ -1007,15 +1010,17 @@ def scan_nextjs_env_leaks_in_client(
         if not _has_use_client_directive(content):
             continue
 
-        code = _code_text(_strip_ts_comments(content))
+        uncommented = _strip_ts_comments(content)
+        code = _code_text(uncommented)
         occurrences: list[tuple[str, int]] = []
         for m in _PROCESS_ENV_DOT_RE.finditer(code):
             name = m.group(1)
             line_no = code[: m.start()].count("\n") + 1
             occurrences.append((name, line_no))
-        for m in _PROCESS_ENV_BRACKET_RE.finditer(code):
+        # The key is a string literal, which the code text blanks out.
+        for m in _PROCESS_ENV_BRACKET_RE.finditer(uncommented):
             name = m.group(1)
-            line_no = code[: m.start()].count("\n") + 1
+            line_no = uncommented[: m.start()].count("\n") + 1
             occurrences.append((name, line_no))
 
         bad_occurrences = [
@@ -1026,9 +1031,11 @@ def scan_nextjs_env_leaks_in_client(
         if not bad_occurrences:
             continue
 
-        bad_vars = sorted({name for (name, _) in bad_occurrences})
-        first_line = min(line_no for (_, line_no) in bad_occurrences)
-        entries.append({"file": filepath, "line": first_line, "vars": bad_vars})
+        first_lines: dict[str, int] = {}
+        for name, line_no in bad_occurrences:
+            first_lines[name] = min(line_no, first_lines.get(name, line_no))
+        for name in sorted(first_lines):
+            entries.append({"file": filepath, "line": first_lines[name], "var": name})
 
     return entries, scanned
 
