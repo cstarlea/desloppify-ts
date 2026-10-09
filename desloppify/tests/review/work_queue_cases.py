@@ -881,6 +881,7 @@ def test_registry_standalone_threshold_count():
         "express",
         "hono",
         "fastify",
+        "angular",
         "patterns",
         "props",
         "react",

@@ -37,6 +37,7 @@ def _register_builtin_specs() -> None:
     """Register built-in framework specs shipped with the repo."""
     if FRAMEWORK_SPECS:
         return
+    from .specs.angular import ANGULAR_SPEC
     from .specs.astro import ASTRO_SPEC
     from .specs.nestjs import NESTJS_SPEC
     from .specs.nextjs import NEXTJS_SPEC
@@ -57,6 +58,7 @@ def _register_builtin_specs() -> None:
         EXPRESS_SPEC,
         HONO_SPEC,
         FASTIFY_SPEC,
+        ANGULAR_SPEC,
     ):
         register_framework_spec(spec)
 

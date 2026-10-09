@@ -272,6 +272,18 @@ DETECTORS: dict[str, DetectorMeta] = {
         marks_dims_stale=True,
         subjective_dimensions=("design_coherence", "logic_clarity"),
     ),
+    "angular": DetectorMeta(
+        "angular",
+        "angular",
+        "Code quality",
+        "refactor",
+        "fix Angular compile errors (missing component resources, standalone mismatches)",
+        needs_judgment=True,
+        standalone_threshold="medium",
+        tier=3,
+        marks_dims_stale=True,
+        subjective_dimensions=("design_coherence", "logic_clarity"),
+    ),
     "next_lint": DetectorMeta(
         "next_lint",
         "next lint",
