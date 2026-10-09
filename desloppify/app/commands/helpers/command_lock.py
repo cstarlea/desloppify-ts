@@ -32,7 +32,6 @@ READ_ONLY_COMMANDS = frozenset(
         "detect",
         "tree",
         "viz",
-        "dev",
         "move",
         "setup",
         "update-skill",

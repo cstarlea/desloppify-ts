@@ -33,12 +33,6 @@ def _isolate_plan(monkeypatch):
 class TestResolveModuleSanity:
     """Verify the module imports and has expected exports."""
 
-    def test_cmd_resolve_callable(self):
-        assert callable(cmd_resolve)
-
-    def test_cmd_suppress_callable(self):
-        assert callable(cmd_suppress)
-
     def test_cmd_resolve_signature(self):
         sig = inspect.signature(cmd_resolve)
         params = list(sig.parameters.keys())

@@ -41,7 +41,7 @@ def _build_census(
         try:
             area = get_area(filepath)
             p = Path(filepath) if Path(filepath).is_absolute() else Path(resolve_path(filepath))
-            content = file_code_text(p.read_text(), p)
+            content = file_code_text(p.read_text(encoding="utf-8"), p)
         except (OSError, UnicodeDecodeError) as exc:
             log_best_effort_failure(logger, f"read TypeScript pattern candidate {filepath}", exc)
             continue

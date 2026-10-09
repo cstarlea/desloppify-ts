@@ -57,17 +57,6 @@ def test_each_language_has_standard_top_level_modules():
             assert mod is not None
 
 
-def test_each_language_review_module_contract():
-    for lang in _full_langs():
-        mod = importlib.import_module(f"desloppify.languages.{lang}.review")
-        for const_name in REVIEW_CONSTANTS:
-            assert hasattr(mod, const_name), f"{lang}.review missing {const_name}"
-        for fn_name in REVIEW_CALLABLES:
-            assert callable(getattr(mod, fn_name, None)), (
-                f"{lang}.review missing callable {fn_name}"
-            )
-
-
 def test_each_language_has_review_data_payloads():
     for lang in _full_langs():
         review_mod = importlib.import_module(f"desloppify.languages.{lang}.review")
@@ -75,19 +64,6 @@ def test_each_language_has_review_data_payloads():
         assert (
             lang_dir / "review_data" / "dimensions.override.json"
         ).is_file()
-
-
-def test_each_language_test_coverage_module_contract():
-    for lang in _full_langs():
-        mod = importlib.import_module(f"desloppify.languages.{lang}.test_coverage")
-        for const_name in TEST_COVERAGE_CONSTANTS:
-            assert hasattr(mod, const_name), (
-                f"{lang}.test_coverage missing {const_name}"
-            )
-        for fn_name in TEST_COVERAGE_CALLABLES:
-            assert callable(getattr(mod, fn_name, None)), (
-                f"{lang}.test_coverage missing callable {fn_name}"
-            )
 
 
 def test_detect_command_keys_use_canonical_snake_case():

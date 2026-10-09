@@ -18,13 +18,6 @@ def test_keys_are_strings():
         assert isinstance(key, str)
 
 
-def test_values_are_callable():
-    """All values in the command registry are callable."""
-    cmds = get_detect_commands()
-    for key, val in cmds.items():
-        assert callable(val), f"Command '{key}' is not callable"
-
-
 def test_expected_commands_present():
     """Core detect commands are present in the registry."""
     cmds = get_detect_commands()

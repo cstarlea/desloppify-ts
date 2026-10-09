@@ -166,12 +166,6 @@ def _add_viz_parser(sub) -> None:
     p_viz.add_argument("--state", type=str, default=None, help="Path to state file")
 
 
-def _add_dev_parser(sub) -> None:
-    p_dev = sub.add_parser("dev", help="Developer utilities")
-    dev_sub = p_dev.add_subparsers(dest="dev_action", required=True)
-    dev_sub.add_parser("test-hermes", help="Test Hermes model switching (switch and switch back)")
-
-
 def _add_update_skill_parser(sub) -> None:
     p = sub.add_parser(
         "update-skill",
@@ -196,4 +190,9 @@ def _add_setup_parser(sub) -> None:
         default=None,
         choices=["amp", "claude", "codex", "gemini", "opencode", "qwen", "rovodev"],
         help="Install for a specific interface only",
+    )
+    p.add_argument(
+        "--grammars",
+        action="store_true",
+        help="Check the tree-sitter grammars load, downloading missing ones, instead of installing skills",
     )

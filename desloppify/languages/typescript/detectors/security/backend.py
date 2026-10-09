@@ -800,7 +800,7 @@ class _AppAuthContext:
 
     def _inspect(self, directory: Path, manifest: Path) -> tuple[bool, bool]:
         try:
-            data = json.loads(manifest.read_text(errors="replace"))
+            data = json.loads(manifest.read_text(encoding="utf-8", errors="replace"))
         except (OSError, ValueError):
             data = {}
         names: set[str] = set()
@@ -821,7 +821,7 @@ class _AppAuthContext:
                     parsed = parsed_file(path)
                     if parsed is None:
                         try:
-                            parsed = parse_text(path.read_text(errors="replace"), path)
+                            parsed = parse_text(path.read_text(encoding="utf-8", errors="replace"), path)
                         except OSError:
                             parsed = None
                     if parsed is None:

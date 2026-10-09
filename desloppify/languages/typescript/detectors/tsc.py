@@ -104,6 +104,8 @@ def run_tsc_check(
         ],
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
         stdin=subprocess.DEVNULL,
         cwd=project_root,
         timeout=TSC_TIMEOUT,

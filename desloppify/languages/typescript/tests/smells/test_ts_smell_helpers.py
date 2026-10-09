@@ -517,6 +517,29 @@ class TestDetectErrorNoThrow:
         _detect_error_no_throw(_ctx("\n".join(lines)), counts)
         assert len(counts["console_error_no_throw"]) == 0
 
+    @pytest.mark.parametrize(
+        "follow",
+        [
+            "toast.error('Something went wrong');",
+            "setError(err);",
+            "presentError(err);",
+            "normalizeAndPresentError(err);",
+            "reportError(err);",
+            "Sentry.captureException(err);",
+        ],
+    )
+    def test_conventional_handlers_count_as_handled(self, follow):
+        lines = ["function handle() {", "  console.error('bad');", f"  {follow}", "}"]
+        counts = _make_counts()
+        _detect_error_no_throw(_ctx("\n".join(lines)), counts)
+        assert len(counts["console_error_no_throw"]) == 0
+
+    def test_unrelated_call_is_not_handling(self):
+        lines = ["function handle() {", "  console.error('bad');", "  cleanup();", "}"]
+        counts = _make_counts()
+        _detect_error_no_throw(_ctx("\n".join(lines)), counts)
+        assert len(counts["console_error_no_throw"]) == 1
+
 
 class TestDetectEmptyIfChains:
     def test_single_line_empty_if(self):

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import inspect
 import json
 from pathlib import Path
 from types import SimpleNamespace
@@ -12,38 +11,7 @@ import desloppify.languages.typescript.commands as ts_detector_cli_api_mod
 import desloppify.languages.typescript.detectors.security.detector as ts_security_mod
 import desloppify.languages.typescript.detectors.smells.assets as ts_assets_mod
 import desloppify.languages.typescript.detectors.unused_fallback as ts_unused_mod
-import desloppify.languages.typescript as ts_lang_mod
 from desloppify.languages.typescript.detectors.contracts import DetectorResult
-
-
-def test_typescript_config_uses_direct_imports_for_wiring() -> None:
-    src = inspect.getsource(ts_lang_mod)
-    assert "import desloppify.languages.typescript.commands as ts_commands_mod" in src
-    assert "languages.typescript.phases import (" not in src
-    assert "languages.typescript._detectors import (" not in src
-
-
-def test_typescript_top_level_surface_removes_legacy_tools_and_compat_layers() -> None:
-    package_root = Path(__file__).resolve().parents[3]
-    # Legacy compat layers are fully removed.
-    assert not (package_root / "languages/typescript/compat").exists()
-    assert not (package_root / "languages/typescript/tools/__init__.py").exists()
-    assert not (package_root / "languages/typescript/tools/logs.py").exists()
-    assert not (package_root / "languages/typescript/tools/patterns.py").exists()
-    assert not (package_root / "languages/typescript/tools/react.py").exists()
-    # commands.py is now the canonical detect-command surface.
-    assert (package_root / "languages/typescript/commands.py").exists()
-    assert not (package_root / "languages/typescript/phases.py").exists()
-
-
-def test_typescript_detector_surface_splits_cli_and_analysis_roles() -> None:
-    cli_source = inspect.getsource(ts_detector_cli_api_mod)
-    assert "build_standard_detect_registry(" in cli_source
-    assert "compose_detect_registry(" in cli_source
-
-    assert callable(ts_detector_cli_api_mod.cmd_logs)
-    assert callable(ts_detector_cli_api_mod.build_dep_graph)
-
 
 
 def test_ts_fixer_helpers_and_registry(monkeypatch) -> None:

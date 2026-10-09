@@ -82,6 +82,17 @@ def reset_grammar_load_failures() -> None:
     _reset()
 
 
+def prepare_grammars() -> tuple[dict[str, str | None], list[str]]:
+    """Download and load the tree-sitter grammars scans need.
+
+    Returns each grammar's load error (None when it loads) and the grammars
+    that had to be downloaded. Raises ImportError without the language pack.
+    """
+    from desloppify.languages._framework.treesitter import prepare_grammars as _prepare
+
+    return _prepare()
+
+
 def record_grammar_load_failures(lang) -> None:
     """Report grammars that failed to load as reduced scan coverage.
 
@@ -107,10 +118,7 @@ def record_grammar_load_failures(lang) -> None:
             confidence=0.5,
             summary=f"tree-sitter grammar(s) failed to load: {grammars} ({first_error[:160]})",
             impact="AST-based detectors (imports, complexity, cohesion, smells) were skipped for these languages.",
-            remediation=(
-                "Run `python -c \"import tree_sitter_language_pack as t; "
-                f"t.download({sorted(failures)!r})\"` with network access, then rerun scan."
-            ),
+            remediation="Run `desloppify setup --grammars` with network access, then rerun scan.",
             tool="tree-sitter-language-pack",
             reason="grammar_unavailable",
         ),
@@ -154,6 +162,7 @@ __all__ = [
     "get_lang",
     "get_lang_hook",
     "make_lang_run",
+    "prepare_grammars",
     "prewarm_review_phase_detectors",
     "record_grammar_load_failures",
     "reset_grammar_load_failures",

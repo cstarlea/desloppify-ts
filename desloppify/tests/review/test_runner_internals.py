@@ -820,3 +820,49 @@ class TestOpenCodeProvenanceSupport:
         )
 
         assert "opencode" in SUPPORTED_BLIND_REVIEW_RUNNERS
+
+
+def test_runner_decodes_child_output_as_utf8_whatever_the_locale(tmp_path):
+    """Codex prints UTF-8; a cp1252 locale (Windows) must not break the reader."""
+    import subprocess
+    import sys
+    from unittest.mock import patch
+
+    import desloppify.app.commands.runner.codex_batch as runner_mod
+
+    log_file = tmp_path / "batch.log"
+    output_file = tmp_path / "out.json"
+    command = [
+        sys.executable,
+        "-c",
+        (
+            "import pathlib,sys;"
+            "pathlib.Path(sys.argv[1]).write_text('{\"assessments\":{},\"issues\":[]}');"
+            "sys.stdout.buffer.write('check \\u2713 '.encode() + b'bad \\xff\\n');"
+            "sys.stdout.flush()"
+        ),
+        str(output_file),
+    ]
+    for use_popen in (True, False):
+        with patch(
+            "desloppify.app.commands.runner.codex_batch.codex_batch_command",
+            return_value=command,
+        ):
+            code = runner_mod.run_codex_batch(
+                prompt="p",
+                repo_root=tmp_path,
+                output_file=output_file,
+                log_file=log_file,
+                deps=runner_mod.CodexBatchRunnerDeps(
+                    timeout_seconds=30,
+                    subprocess_run=subprocess.run,
+                    timeout_error=subprocess.TimeoutExpired,
+                    safe_write_text_fn=lambda p, t: p.write_text(t, encoding="utf-8"),
+                    use_popen_runner=use_popen,
+                    subprocess_popen=subprocess.Popen,
+                    live_log_interval_seconds=0.2,
+                ),
+            )
+        assert code == 0
+        log_text = log_file.read_text(encoding="utf-8")
+        assert "check ✓ bad �" in log_text

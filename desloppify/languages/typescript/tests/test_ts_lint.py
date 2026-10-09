@@ -30,7 +30,7 @@ from desloppify.languages.typescript.detectors.lint.rules import classify
 def _write(root: Path, name: str, text: str = "") -> Path:
     path = root / name
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(text)
+    path.write_text(text, encoding="utf-8", newline="")
     return path
 
 

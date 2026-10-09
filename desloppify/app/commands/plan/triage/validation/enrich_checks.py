@@ -10,7 +10,11 @@ from desloppify.base.output.terminal import colorize
 from ..review_coverage import cluster_issue_ids
 from .stage_policy import require_prerequisite
 
-_PATH_RE = re.compile(r"(?:[\w./-]+/)?(?:src|supabase)/[\w./-]+\.\w+(?::\d+(?:[-:]\d+)?)?")
+# A relative path with a directory and an extension (``lib/format.ts:12``).
+# Not part of a URL or an import alias (``@/lib/x.ts``, ``~/x.ts``).
+_PATH_RE = re.compile(
+    r"(?<![\w@~#$:/.-])(?:\./)?((?:[\w-][\w.-]*/)+[\w.-]*\w\.[A-Za-z]\w*(?::\d+(?:[-:]\d+)?)?)"
+)
 _LINE_SUFFIX_RE = re.compile(r":\d+(?:[-:]\d+)?$")
 _EXT_SWAPS = {".ts": ".tsx", ".tsx": ".ts", ".js": ".jsx", ".jsx": ".js"}
 _VALID_EFFORTS = {"trivial", "small", "medium", "large"}

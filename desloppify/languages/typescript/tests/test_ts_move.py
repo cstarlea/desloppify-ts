@@ -5,17 +5,14 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import sys
+
 import pytest
 
 import desloppify.languages.typescript.detectors.deps as deps_detector_mod
 import desloppify.languages.typescript.detectors.deps.resolve as deps_resolve_mod
 import desloppify.languages.typescript.move as ts_move
 from desloppify.languages.typescript.detectors.deps.resolver import clear_resolver_cache
-
-
-def test_move_ts_module_imports():
-    assert callable(ts_move.find_replacements)
-    assert callable(ts_move.find_self_replacements)
 
 
 class TestMoveTsHelpers:
@@ -38,6 +35,7 @@ class TestMoveSafety:
         kept = filter_intra_package_importer_changes("/p/src/feature/x.ts", replacements, set())
         assert kept == [("'@/feature/y'", "'@/new/y'")]
 
+    @pytest.mark.skipif(sys.platform == "win32", reason="POSIX absolute paths")
     def test_self_rewrites_to_files_moving_together_are_dropped(self):
         from desloppify.languages.typescript.move import filter_directory_self_changes
 

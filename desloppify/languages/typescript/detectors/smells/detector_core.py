@@ -22,12 +22,19 @@ _SWITCH_CASE_MINIMUM = 2
 _MAX_CATCH_BODY = 1000
 _MAX_SWITCH_BODY_SCAN = 5000
 
-_ERROR_HANDLER_BASENAMES = ("logger", "errorpresentation", "errorhandler", "errorreporting")
+# Files whose job is logging or reporting errors.
+_ERROR_HANDLER_BASENAMES = ("logger", "logging", "errorhandler", "errorreport", "errorpresent")
 _PRECEDING_SKIP_PATTERNS = re.compile(
     r"componentDidCatch|import\.meta\.env\.DEV|process\.env\.NODE_ENV"
 )
+# What counts as handling the error after console.error: leaving (throw,
+# return, rethrow), telling the user (toast, toast.error), recording it in
+# state (setError) or passing it to a handler or reporter by the usual
+# names (handleError, presentError, reportError, Sentry's captureException).
 _HANDLED_RE = re.compile(
-    r"\b(?:throw|return)\b|toast\(|normalizeAndPresentError\(|presentError\(|rethrow"
+    r"\b(?:throw|return)\b|\btoast\s*[.(]|rethrow"
+    r"|\b\w*(?:[Hh]andle|[Pp]resent|[Rr]eport|[Nn]otify|[Ss]how|[Ss]et|[Ll]og)\w*Error\s*\("
+    r"|\bcapture(?:Exception|Error)\s*\("
 )
 
 _FUNC_RE = re.compile(r"\bfunction\b\s*\*?\s*[\w(]")

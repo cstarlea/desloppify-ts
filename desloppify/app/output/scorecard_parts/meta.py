@@ -34,6 +34,8 @@ def resolve_project_name(project_root: Path) -> str:
             cwd=str(project_root),
             stderr=subprocess.DEVNULL,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=5,
         ).strip()  # nosec B603
         if "/" in name:
@@ -54,6 +56,8 @@ def resolve_project_name(project_root: Path) -> str:
             cwd=str(project_root),
             stderr=subprocess.DEVNULL,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=5,
         ).strip()  # nosec B603
         if url.startswith("git@") and ":" in url:

@@ -37,7 +37,7 @@ _BOUNDARY_DIRECTIVES = frozenset({"use client", "use server"})
 def is_ts_facade(filepath: str) -> dict | None:
     """Check if a TypeScript file is a pure re-export facade."""
     try:
-        content = Path(resolve_path(filepath)).read_text()
+        content = Path(resolve_path(filepath)).read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError):
         return None
 
@@ -45,14 +45,20 @@ def is_ts_facade(filepath: str) -> dict | None:
     if "export" not in content or "from" not in content:
         return None
 
-    parsed = parsed_file(filepath)
-    if parsed is None:
-        imports_from = _reexport_sources_regex(content)
-    else:
-        imports_from = _reexport_sources_tree(parsed)
+    imports_from = reexport_sources(content, parsed_file(filepath))
     if not imports_from:
         return None
     return {"imports_from": imports_from, "loc": len(content.splitlines())}
+
+
+def reexport_sources(content: str, parsed: ParsedSource | None) -> list[str] | None:
+    """Module sources a facade forwards, or None when the file is not a facade.
+
+    Uses the syntax tree when there is one, else the regex fallback.
+    """
+    if parsed is None:
+        return _reexport_sources_regex(content)
+    return _reexport_sources_tree(parsed)
 
 
 # ── Syntax tree ─────────────────────────────────────────────

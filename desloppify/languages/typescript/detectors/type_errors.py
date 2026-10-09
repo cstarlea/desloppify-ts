@@ -298,9 +298,9 @@ def _coverage(
 
 def _display(config: Path, root: Path) -> str:
     try:
-        return str(config.relative_to(root.resolve()))
+        return config.relative_to(root.resolve()).as_posix()
     except ValueError:
-        return str(config)
+        return config.as_posix()
 
 
 __all__ = ["TypeErrorResult", "detect_type_errors_result"]

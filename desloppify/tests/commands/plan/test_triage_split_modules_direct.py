@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import sys
 import time
 from pathlib import Path
 from types import SimpleNamespace
@@ -1306,15 +1307,12 @@ def test_orchestrator_pipeline_summary_writer_includes_finalization_fields(tmp_p
     assert '"finalization_reason": "partial_stage_run"' in text
 
 
-def test_orchestrator_pipeline_entrypoint_is_exposed() -> None:
-    assert callable(orchestrator_pipeline_mod.run_codex_pipeline)
-
-
 def test_orchestrator_pipeline_writes_exact_cli_helper(tmp_path: Path) -> None:
     helper = orchestrator_pipeline_mod._write_desloppify_cli_helper(tmp_path)
     text = helper.read_text(encoding="utf-8")
     assert helper.exists()
-    assert helper.stat().st_mode & 0o111
+    if sys.platform != "win32":
+        assert helper.stat().st_mode & 0o111
     assert "PYTHONPATH=" in text
     assert "-m desloppify.cli" in text
 

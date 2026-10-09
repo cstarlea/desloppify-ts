@@ -32,9 +32,6 @@ class _FakeLangBase:
 class TestDetectModuleSanity:
     """Verify the module imports and has expected exports."""
 
-    def test_cmd_detect_callable(self):
-        assert callable(cmd_detect)
-
     def test_cmd_detect_signature(self):
         sig = inspect.signature(cmd_detect)
         params = list(sig.parameters.keys())

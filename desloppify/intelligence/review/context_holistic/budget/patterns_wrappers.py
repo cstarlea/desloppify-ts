@@ -2,168 +2,161 @@
 
 from __future__ import annotations
 
-import ast
+from desloppify.languages.typescript.detectors.facade import reexport_sources
+from desloppify.languages.typescript.syntax.queries import (
+    Definition,
+    classes,
+    definitions,
+    statements,
+)
+from desloppify.languages.typescript.syntax.tree import ParsedSource
 
-from .analysis import _strip_docstring
 
-
-def _python_passthrough_target(stmt: ast.stmt) -> str | None:
-    """Return passthrough call target when stmt is `return target(...)`."""
-    if not isinstance(stmt, ast.Return):
+def _single_expression(info) -> object | None:
+    """The one expression a function body evaluates: an arrow's expression body,
+    or the value of a body's only statement (``return x`` or ``x;``)."""
+    body = info.body_node
+    if body is None:
         return None
-    value = stmt.value
-    if not isinstance(value, ast.Call):
+    if info.expression_body:
+        value = body
+    else:
+        stmts = statements(body)
+        if len(stmts) != 1 or stmts[0].type not in ("return_statement", "expression_statement"):
+            return None
+        value = stmts[0].named_children[0] if stmts[0].named_children else None
+    while value is not None and value.type in ("await_expression", "parenthesized_expression"):
+        value = value.named_children[0] if value.named_children else None
+    return value
+
+
+def _forwarded_call_target(parsed: ParsedSource, definition: Definition) -> str | None:
+    """The callee when a function's whole body calls it with exactly its own
+    parameters, in order (``(a, ...rest) => f(a, ...rest)``)."""
+    info = definition.function
+    if info.accessor is not None or info.is_generator:
         return None
-    target = value.func
-    if isinstance(target, ast.Name):
-        return target.id
-    return None
-
-
-def _find_python_passthrough_wrappers(tree: ast.Module) -> list[tuple[str, str]]:
-    """Find Python wrapper pairs via AST traversal."""
-    wrappers: list[tuple[str, str]] = []
-    for node in ast.walk(tree):
-        if not isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
+    call = _single_expression(info)
+    if call is None or call.type != "call_expression":
+        return None
+    callee = call.child_by_field_name("function")
+    args = call.child_by_field_name("arguments")
+    if callee is None or args is None or not _is_plain_reference(callee):
+        return None
+    expected = [("...", p.name) if p.rest else ("", p.name) for p in info.params]
+    actual = []
+    for arg in args.named_children:
+        if arg.type == "comment":
             continue
+        if arg.type == "spread_element" and arg.named_children and arg.named_children[0].type == "identifier":
+            actual.append(("...", parsed.text(arg.named_children[0])))
+        elif arg.type == "identifier":
+            actual.append(("", parsed.text(arg)))
+        else:
+            return None
+    target = parsed.text(callee)
+    if actual != expected or target == info.name:
+        return None
+    return target
 
-        body = _strip_docstring(list(node.body))
-        if len(body) != 1:
+
+def _is_plain_reference(node) -> bool:
+    """``f``, ``this.inner.f`` or ``api.f``: a callee reached without calling anything."""
+    while node.type == "member_expression":
+        node = node.child_by_field_name("object")
+        if node is None:
+            return False
+    return node.type in ("identifier", "this")
+
+
+def _find_passthrough_wrappers(parsed: ParsedSource) -> list[tuple[str, str]]:
+    """(wrapper, target) pairs for named functions and methods that only forward
+    their arguments. Object-literal members are left out: those are adapters
+    satisfying an interface (an observer's ``next``), not layers."""
+    wrappers = []
+    for definition in definitions(parsed):
+        if definition.object_member:
             continue
-
-        target_name = _python_passthrough_target(body[0])
-        if target_name and node.name != target_name:
-            wrappers.append((node.name, target_name))
+        target = _forwarded_call_target(parsed, definition)
+        if target is not None:
+            wrappers.append((definition.name, target))
     return wrappers
 
 
-def _is_delegation_stmt(stmt: ast.stmt) -> str | None:
-    """Return delegate attribute when *stmt* is a pure delegation call/access."""
-    if isinstance(stmt, ast.Expr):
-        value = stmt.value
-    elif isinstance(stmt, ast.Return) and stmt.value is not None:
-        value = stmt.value
-    else:
+def _delegate_member(parsed: ParsedSource, value) -> str | None:
+    """``inner`` when *value* is ``this.inner.x``, ``this.inner.x(...)`` or deeper."""
+    if value.type == "call_expression":
+        value = value.child_by_field_name("function")
+    if value is None or value.type != "member_expression":
         return None
-
-    if isinstance(value, ast.Call):
-        value = value.func
-
     node = value
-    depth = 0
-    while isinstance(node, ast.Attribute):
-        node = node.value
-        depth += 1
-    if depth < 1 or not isinstance(node, ast.Name) or node.id != "self":
-        return None
-
-    first = value
-    while isinstance(first, ast.Attribute) and isinstance(first.value, ast.Attribute):
-        first = first.value
-    if isinstance(first, ast.Attribute) and isinstance(first.value, ast.Name):
-        return first.attr
+    while node.type == "member_expression":
+        obj = node.child_by_field_name("object")
+        if obj is None:
+            return None
+        if obj.type == "this":
+            # ``this.x`` alone is the class's own state, not a delegate.
+            return None if node is value else parsed.text(node.child_by_field_name("property"))
+        node = obj
     return None
 
 
-def _find_delegation_heavy_classes(tree: ast.Module) -> list[dict]:
-    """Find classes where most methods delegate to a single inner object."""
+def _find_delegation_heavy_classes(parsed: ParsedSource) -> list[dict]:
+    """Classes where most methods forward to one member object."""
     results: list[dict] = []
-    for node in ast.walk(tree):
-        if not isinstance(node, ast.ClassDef):
-            continue
-
-        methods: list[ast.FunctionDef | ast.AsyncFunctionDef] = [
-            child
-            for child in node.body
-            if isinstance(child, ast.FunctionDef | ast.AsyncFunctionDef)
-            and child.name != "__init__"
+    for info in classes(parsed):
+        methods = [
+            m
+            for m in info.members
+            if m.kind in ("method", "getter", "setter") and m.name is not None
         ]
         if len(methods) <= 3:
             continue
-
-        delegating_methods: dict[str, list[str]] = {}
-        for method in methods:
-            body = _strip_docstring(list(method.body))
-            if len(body) != 1:
+        delegating: dict[str, list[str]] = {}
+        for member in methods:
+            body = member.node.child_by_field_name("body")  # type: ignore[attr-defined]
+            stmts = statements(body) if body is not None else []
+            if len(stmts) != 1 or stmts[0].type not in ("return_statement", "expression_statement"):
                 continue
-            attr = _is_delegation_stmt(body[0])
+            value = stmts[0].named_children[0] if stmts[0].named_children else None
+            while value is not None and value.type == "await_expression":
+                value = value.named_children[0] if value.named_children else None
+            attr = _delegate_member(parsed, value) if value is not None else None
             if attr:
-                delegating_methods.setdefault(attr, []).append(method.name)
-
-        if not delegating_methods:
+                delegating.setdefault(attr, []).append(str(member.name))
+        if not delegating:
             continue
-
-        top_attr = max(delegating_methods, key=lambda a: len(delegating_methods[a]))
-        delegate_count = len(delegating_methods[top_attr])
+        top_attr = max(delegating, key=lambda a: len(delegating[a]))
+        delegate_count = len(delegating[top_attr])
         ratio = delegate_count / len(methods)
         if ratio > 0.5:
             results.append(
                 {
-                    "class_name": node.name,
-                    "line": node.lineno,
+                    "class_name": info.name or "(anonymous)",
+                    "line": info.line,
                     "delegation_ratio": round(ratio, 2),
                     "method_count": len(methods),
                     "delegate_count": delegate_count,
                     "delegate_target": top_attr,
-                    "sample_methods": delegating_methods[top_attr][:5],
+                    "sample_methods": delegating[top_attr][:5],
                 }
             )
     return results
 
 
-def _find_facade_modules(tree: ast.Module, *, loc: int) -> dict | None:
-    """Detect modules where >70% of public names come from imports."""
-    import_names: set[str] = set()
-    defined_names: set[str] = set()
-
-    for node in ast.iter_child_nodes(tree):
-        if isinstance(node, ast.Import):
-            for alias in node.names:
-                name = alias.asname or alias.name.split(".")[-1]
-                import_names.add(name)
-        elif isinstance(node, ast.ImportFrom):
-            for alias in node.names:
-                if alias.name == "*":
-                    continue
-                name = alias.asname or alias.name
-                import_names.add(name)
-        elif isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
-            defined_names.add(node.name)
-        elif isinstance(node, ast.ClassDef):
-            defined_names.add(node.name)
-        elif isinstance(node, ast.Assign):
-            for target in node.targets:
-                if isinstance(target, ast.Name) and target.id == "__all__":
-                    continue
-                if isinstance(target, ast.Name):
-                    defined_names.add(target.id)
-
-    public_imports = {n for n in import_names if not n.startswith("_")}
-    public_defs = {n for n in defined_names if not n.startswith("_")}
-
-    total_public = len(public_imports | public_defs)
-    if total_public < 3:
+def _find_facade_modules(content: str, parsed: ParsedSource | None, *, loc: int) -> dict | None:
+    """A pure re-export module, as the ``facade`` detector defines one."""
+    found = reexport_sources(content, parsed) if "export" in content and "from" in content else None
+    if not found:
         return None
-
-    re_exported = public_imports - public_defs
-    re_export_ratio = len(re_exported) / total_public
-
-    if re_export_ratio < 0.7 or len(public_defs) > 3:
-        return None
-
-    return {
-        "re_export_ratio": round(re_export_ratio, 2),
-        "defined_symbols": len(public_defs),
-        "re_exported_symbols": len(re_exported),
-        "samples": sorted(re_exported)[:5],
-        "loc": loc,
-    }
+    sources = list(dict.fromkeys(found))
+    return {"imports_from": sources[:10], "source_count": len(sources), "loc": loc}
 
 
 __all__ = [
+    "_delegate_member",
     "_find_delegation_heavy_classes",
     "_find_facade_modules",
-    "_find_python_passthrough_wrappers",
-    "_is_delegation_stmt",
-    "_python_passthrough_target",
+    "_find_passthrough_wrappers",
+    "_forwarded_call_target",
 ]

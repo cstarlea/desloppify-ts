@@ -47,7 +47,7 @@ def check_rewrite_syntax(
         if not replacements:
             continue
         try:
-            original = Path(filepath).read_text()
+            original = Path(filepath).read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError):
             continue  # the write path reports unreadable files
         problem = syntax_regression(
@@ -78,12 +78,12 @@ def apply_file_move(
     """Move a file and apply import replacements with rollback on failure."""
     new_contents: dict[str, str] = {}
     if self_changes:
-        content = Path(source_abs).read_text()
+        content = Path(source_abs).read_text(encoding="utf-8")
         content = apply_replacements(content, self_changes)
         new_contents[dest_abs] = content
 
     for filepath, replacements in importer_changes.items():
-        content = Path(filepath).read_text()
+        content = Path(filepath).read_text(encoding="utf-8")
         content = apply_replacements(content, replacements)
         new_contents[filepath] = content
 
@@ -94,12 +94,12 @@ def apply_file_move(
         shutil.move(source_abs, dest_abs)
 
         if dest_abs in new_contents:
-            written_files[dest_abs] = Path(dest_abs).read_text()
+            written_files[dest_abs] = Path(dest_abs).read_text(encoding="utf-8")
             safe_write_text(dest_abs, new_contents[dest_abs])
 
         for filepath in importer_changes:
             if filepath in new_contents:
-                written_files[filepath] = Path(filepath).read_text()
+                written_files[filepath] = Path(filepath).read_text(encoding="utf-8")
                 safe_write_text(filepath, new_contents[filepath])
 
     except (OSError, UnicodeDecodeError, shutil.Error) as ex:
@@ -127,13 +127,13 @@ def apply_directory_move(
         for src_file, changes in internal_changes.items():
             rel_in_dir = Path(src_file).relative_to(source_path)
             dest_file = Path(dest_abs) / rel_in_dir
-            original = dest_file.read_text()
+            original = dest_file.read_text(encoding="utf-8")
             content = apply_replacements(original, changes)
             written_files[str(dest_file)] = original
             safe_write_text(dest_file, content)
 
         for filepath, replacements in external_changes.items():
-            original = Path(filepath).read_text()
+            original = Path(filepath).read_text(encoding="utf-8")
             content = apply_replacements(original, replacements)
             written_files[filepath] = original
             safe_write_text(filepath, content)
