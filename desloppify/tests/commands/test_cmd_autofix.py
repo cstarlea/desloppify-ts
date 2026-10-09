@@ -7,9 +7,6 @@ from desloppify.app.commands.autofix.apply_flow import (
     _print_fix_summary,
     _resolve_fixer_results,
 )
-from desloppify.app.commands.autofix.cmd import (
-    cmd_autofix,
-)
 from desloppify.languages._framework.base.types import FixerConfig, FixResult
 
 # ---------------------------------------------------------------------------
@@ -19,14 +16,6 @@ from desloppify.languages._framework.base.types import FixerConfig, FixResult
 
 class TestFixModuleSanity:
     """Verify the module imports and has expected exports."""
-
-    def test_cmd_autofix_callable(self):
-        assert callable(cmd_autofix)
-
-    def test_fix_result_is_dataclass(self):
-        r = FixResult(entries=[])
-        assert hasattr(r, "entries")
-        assert hasattr(r, "skip_reasons")
 
     def test_skip_reason_labels_is_dict(self):
         assert isinstance(_SKIP_REASON_LABELS, dict)

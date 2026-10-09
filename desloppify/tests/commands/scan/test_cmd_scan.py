@@ -29,19 +29,6 @@ from desloppify.base.exception_sets import CommandError
 # ---------------------------------------------------------------------------
 
 
-class TestScanModuleSanity:
-    """Verify the module imports and has expected exports."""
-
-    def test_cmd_scan_callable(self):
-        assert callable(cmd_scan)
-
-    def test_helper_functions_callable(self):
-        assert callable(audit_excluded_dirs)
-        assert callable(collect_codebase_metrics)
-        assert callable(format_delta)
-        assert callable(show_diff_summary)
-
-
 class TestCmdScanExecution:
     """cmd_scan should execute the scan workflow, not just helpers."""
 

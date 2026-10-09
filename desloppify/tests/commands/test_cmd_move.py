@@ -3,7 +3,6 @@
 from pathlib import Path
 from types import SimpleNamespace
 
-import desloppify.app.commands.move.cmd as move_mod
 from desloppify.app.commands.move.language import (
     load_move_module,
     resolve_move_verify_hint,
@@ -15,13 +14,6 @@ from desloppify.base.discovery.file_paths import safe_write_text as safe_write
 # ---------------------------------------------------------------------------
 # Module imports
 # ---------------------------------------------------------------------------
-
-
-class TestMoveModuleSanity:
-    """Verify move modules import cleanly."""
-
-    def test_move_module_imports(self):
-        assert callable(move_mod.cmd_move)
 
 
 # ---------------------------------------------------------------------------

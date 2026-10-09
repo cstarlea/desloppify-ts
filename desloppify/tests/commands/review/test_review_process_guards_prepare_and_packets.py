@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import inspect
 import json
 from pathlib import Path
 from types import SimpleNamespace
@@ -10,9 +9,6 @@ from unittest.mock import patch
 
 import pytest
 
-import desloppify.app.commands.review.coordinator as coordinator_mod
-import desloppify.app.commands.review.external as external_mod
-import desloppify.app.commands.review.prepare as prepare_mod
 from desloppify.app.commands.review.batch.scope import require_batches
 from desloppify.app.commands.review.prepare import do_prepare
 from desloppify.app.commands.review.runner_packets import write_packet_snapshot
@@ -165,17 +161,3 @@ def test_intelligence_review_modules_do_not_import_app_review_commands() -> None
         if "desloppify.app.commands.review" in text:
             offenders.append(str(module_path.relative_to(package_root)))
     assert offenders == []
-
-
-def test_review_packet_payload_ownership_is_centered_in_packet_build() -> None:
-    prepare_src = inspect.getsource(prepare_mod)
-    external_src = inspect.getsource(external_mod)
-    coordinator_src = inspect.getsource(coordinator_mod)
-
-    assert "from .coordinator import build_review_packet_payload" not in prepare_src
-    assert "from .coordinator import (" not in external_src
-    assert "from .packet.build import" in prepare_src
-    assert "from .packet.build import" in external_src
-
-    assert "def build_review_packet_payload(" not in coordinator_src
-    assert "def write_review_packet_snapshot(" not in coordinator_src

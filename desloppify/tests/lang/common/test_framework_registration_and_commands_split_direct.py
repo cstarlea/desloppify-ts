@@ -2,25 +2,12 @@
 
 from __future__ import annotations
 
-import inspect
 import json
 from pathlib import Path
 from types import SimpleNamespace
 
-import desloppify.app.commands.detect as detect_cmd_mod
-import desloppify.app.commands.review.runtime.setup as review_runtime_setup_mod
-import desloppify.app.commands.scan.contracts as scan_contracts_mod
-import desloppify.app.commands.scan.coverage as scan_coverage_mod
-import desloppify.app.commands.scan.workflow as scan_workflow_mod
-import desloppify.engine._scoring.state_coverage as state_coverage_mod
-import desloppify.engine._state.schema_types as state_schema_types_mod
-import desloppify.engine.planning.scan as planning_scan_mod
-import desloppify.languages.framework as public_framework_mod
-import desloppify.languages._framework as framework_root_mod
 import desloppify.languages._framework.commands.registry as registry_cmd_mod
 import desloppify.languages._framework.runtime_support.accessors as accessors_mod
-import desloppify.languages.typescript.commands as ts_commands_mod
-import desloppify.languages.typescript.commands as ts_detector_cli_mod
 
 
 def test_standard_detect_registry_builder() -> None:
@@ -42,62 +29,12 @@ def test_standard_detect_registry_builder() -> None:
     }
 
 
-def test_framework_root_contract_is_types_only_and_explicit() -> None:
-    src = inspect.getsource(framework_root_mod)
-    assert "Top-level role" in src
-    assert "Non-role" in src
-    assert "types only" in src.lower()
-    assert "catch-all entrypoint" in src
-    assert framework_root_mod.__all__ == [
-        "BoundaryRule",
-        "DetectorPhase",
-        "FixerConfig",
-        "FixResult",
-        "LangConfig",
-        "LangValueSpec",
-    ]
-
-
-def test_public_framework_facade_exposes_operational_accessors() -> None:
-    source = inspect.getsource(public_framework_mod)
-    assert "Public framework facade" in source
-    assert callable(public_framework_mod.default_lang)
-    assert callable(public_framework_mod.get_lang_hook)
-    assert callable(public_framework_mod.enable_parse_cache)
-
-
-def test_app_and_engine_runtime_paths_use_public_framework_facade() -> None:
-    for module in (
-        detect_cmd_mod,
-        review_runtime_setup_mod,
-        scan_contracts_mod,
-        scan_coverage_mod,
-        scan_workflow_mod,
-        planning_scan_mod,
-        state_coverage_mod,
-        state_schema_types_mod,
-    ):
-        source = inspect.getsource(module)
-        assert "from desloppify.languages.framework import" in source
-        assert "desloppify.languages._framework" not in source
-
-
 def test_languages_readme_documents_current_runtime_boundary() -> None:
     repo_root = Path(__file__).resolve().parents[3]
     readme_path = repo_root / "languages/README.md"
     source = readme_path.read_text(encoding="utf-8")
     assert "default_lang()" in source
     assert "`desloppify.languages.framework`" in source
-
-
-def test_typescript_command_registry_uses_base_composition_pattern() -> None:
-    ts_source = inspect.getsource(ts_detector_cli_mod)
-    assert "build_standard_detect_registry(" in ts_source
-    assert "compose_detect_registry(" in ts_source
-
-    ts_commands_source = inspect.getsource(ts_commands_mod)
-    assert "build_standard_detect_registry(" in ts_commands_source
-    assert "compose_detect_registry(" in ts_commands_source
 
 
 def test_make_cmd_deps_json_and_text_paths(monkeypatch, tmp_path) -> None:

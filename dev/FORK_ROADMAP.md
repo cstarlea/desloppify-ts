@@ -186,10 +186,10 @@ Every adversarial input in the original review broke one of the line-regex fixer
 - **Lint and types:** enforce the configured ruff `E,F,I,B,UP` and `ruff format --check` (deferred: the whole-codebase fix and format sweep would conflict with every open PR, so it waits for a quiet moment). CI checks only `E9,F63,F7,F82` today, and some F401/F841 debt remains. Extend mypy past its 16 files into `languages/typescript` and `_framework`, ratcheting with per-module ignores. Add import-linter contracts that already hold: `languages` ↛ `app`, `engine` ↛ `app` (E6).
 - **Dev tooling, done.** A `dev` extra pins pytest, pytest-xdist, pytest-timeout, ruff, mypy, import-linter, PyYAML, build and twine. `make install-dev` and `make install-full` install once. The gate targets (`lint`, `typecheck`, `arch`, `ci-contracts`, `tests*`, `package-smoke`) no longer `pip install`; CI and the publish job run the install target as a separate step. `tests-full` stops early without the `[full]` extra, and `install-hooks` works in a worktree. The release checklist's local-validation step now says to install first, and its description of the publish workflow includes the install step (E11).
 - **Tests:**
-  - an autouse isolation fixture plus a guard that fails if the repo's `.desloppify/` is touched (E5);
-  - replace `inspect.getsource` and `callable(fn)` tripwire tests with behaviour tests (E9);
-  - delete the duplicate `tests/review/integration/*` wrappers (E10);
-  - fold `tests/lang/typescript/` into `languages/typescript/tests/` (E13).
+  - done (#82): an autouse isolation fixture plus a guard that fails if the repo's `.desloppify/` is touched (E5);
+  - done: the `inspect.getsource` and `callable(fn)` tripwire tests are gone (E9). Four of them checked import boundaries; those are now import-linter contracts (`engine` ↛ `app`, `languages` ↛ `app`, and `app`/`engine` reach `languages._framework` only through the `languages.framework` facade). The others either checked source text or only checked that a name exists. Since `callable()` never runs the function, none of them executed any code. Three things they were standing in for are now behaviour tests: the review session baseline and its drift reasons, the subjective-assessment store, and `cmd_deprecated --json`. Some functions were referenced only by tripwires and are run by no test at all, notably `render_plan_item`, `write_status_query`, `_show_concerns`, `cmd_plan_reorder` and `write_review_packet_snapshot`. `languages/typescript/detectors/deps/resolve.resolve_module` has no callers;
+  - done: deleted the duplicate `tests/review/integration/*` wrappers, which ran 178 tests a second time (E10);
+  - done: `tests/lang/typescript/` folded into `languages/typescript/tests/` (E13).
 - **Grammar preflight, done.** `desloppify setup --grammars` downloads the missing tsx and typescript grammars, loads each and fails naming any that will not load; the reduced-coverage warning now points at it. `is_available()` loads the tsx grammar once per process: when it cannot load, AST paths treat tree-sitter as absent and every call re-records the failure, so each scan still reports reduced coverage. Building the plugin checks only that the pack imports, so `--help` never fetches grammars (PK-2).
 - **Dead code:**
   - done: the `dev` command, whose only action was `test-hermes` (AR-4);
@@ -333,15 +333,15 @@ Status key: **done** (with PR), **partial** (what's left is in §2), **open**, *
 | E2 | high | tsc and knip always mocked; no Node in CI | done (#2) |
 | E3 | high | CI red on main; PyPI publish ungated | done (#1, #4); name → §2F |
 | E4 | medium | Glob-order test fails on tmpfs | done (#1, upstream #617) |
-| E5 | medium | Tests write into the repo's `.desloppify` | open → §2E |
-| E6 | low | Lint 4 codes, mypy 16 files, 1 import contract | open → §2E |
+| E5 | medium | Tests write into the repo's `.desloppify` | done (#82) |
+| E6 | low | Lint 4 codes, mypy 16 files, 1 import contract | partial (§2E: 4 import contracts); ruff and mypy → §2E |
 | E7 | low | CI only on py3.11 | done (§2E: core on 3.11–3.14, full on 3.11 and 3.14) |
 | E8 | medium | Ruby and R tests never collected | dropped |
-| E9 | medium | getsource and callable tripwire tests | open → §2E |
-| E10 | low | Review tests run twice | open → §2E |
+| E9 | medium | getsource and callable tripwire tests | done (§2E) |
+| E10 | low | Review tests run twice | done (§2E) |
 | E11 | low | Make targets reinstall; release checklist drift | done (§2E: pinned `dev` extra, install-free gates; #94 fixed the checklist paths) |
 | E12 | low | No test timeout | done (§2E: pytest-timeout, 120s per test) |
-| E13 | low | TS tests in two trees | open → §2E |
+| E13 | low | TS tests in two trees | done (§2E) |
 | PK-1 | medium | tree-sitter floor crashes; cap blocks working releases | done (#1) |
 | PK-2 | medium | Offline grammar download silently drops findings | done (#1 reduced coverage; `setup --grammars`, grammar-loading `is_available()`) |
 | PK-3 | medium | Wheel omits elixir/php/r review data | dropped |

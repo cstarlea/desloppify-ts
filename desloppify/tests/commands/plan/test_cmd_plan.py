@@ -14,9 +14,6 @@ from desloppify.app.commands.plan.cmd import cmd_plan_output
 class TestPlanModuleSanity:
     """Verify the module imports and has expected exports."""
 
-    def test_cmd_plan_output_callable(self):
-        assert callable(cmd_plan_output)
-
     def test_cmd_plan_output_signature(self):
         sig = inspect.signature(cmd_plan_output)
         params = list(sig.parameters.keys())

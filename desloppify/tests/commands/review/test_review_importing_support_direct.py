@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import inspect
 from types import SimpleNamespace
 
 import pytest
@@ -63,13 +62,6 @@ def _patch_basic_plan_sync_runtime(
 
 def _sync_request(**kwargs) -> object:
     return plan_sync_mod.PlanImportSyncRequest(**kwargs)
-
-
-def test_plan_sync_uses_narrow_plan_facades() -> None:
-    src = inspect.getsource(plan_sync_mod)
-    assert "from desloppify.engine.plan import" not in src
-    assert "desloppify.engine._plan.persistence" in src
-    assert "@dataclass(frozen=True)\nclass PlanImportSyncRequest" in src
 
 
 def test_flags_validation_and_assessment_state_helpers() -> None:
@@ -1072,49 +1064,3 @@ def test_report_review_import_outcome_reports_provisional_warning(capsys, monkey
 
     out = capsys.readouterr().out
     assert "manual override assessments are provisional" in out
-
-
-def test_plan_sync_source_preserves_scoped_sync_pipeline_contract() -> None:
-    src = inspect.getsource(plan_sync_mod.sync_plan_after_import)
-    assert "request: PlanImportSyncRequest | None = None" in src
-    assert "state_file = request.state_file if request is not None else None" in src
-    assert "plan_path = None" in src
-    assert "plan_path_for_state(Path(state_file))" in src
-    assert "if not has_living_plan(plan_path):" in src
-    assert 'return PlanImportSyncOutcome(status="skipped")' in src
-    assert "plan = load_plan(plan_path)" in src
-    assert 'trusted = assessment_mode in {"trusted_internal", "attested_external"}' in src
-    assert "sync_inputs = _build_import_sync_inputs(diff, import_payload)" in src
-    assert "was_boundary_ready = live_planned_queue_empty(plan)" in src
-    assert "transition = _apply_import_plan_transitions(" in src
-    assert "import_result = transition.import_result" in src
-    assert "covered_pruned = transition.covered_pruned" in src
-    assert "import_scores_result = transition.import_scores_result" in src
-    assert "result = transition.reconcile_result" in src
-    assert "_append_review_import_sync_log(" in src
-    assert "save_plan(plan, plan_path)" in src
-    assert "_print_review_import_sync(" in src
-    assert 'return PlanImportSyncOutcome(status="degraded", message=message)' in src
-
-
-def test_results_source_preserves_query_and_narrative_contract() -> None:
-    src = inspect.getsource(results_mod.report_review_import_outcome)
-    assert "narrative_core.compute_narrative(" in src
-    assert 'NarrativeContext(lang=lang_name, command="review")' in src
-    assert 'print(colorize(f"\\n  {label} imported:", "bold"))' in src
-    assert 'issue_count = int(diff.get("new", 0) or 0)' in src
-    assert "print_skipped_validation_details(diff, colorize_fn=colorize)" in src
-    assert "print_assessments_summary(state, colorize_fn=colorize)" in src
-    assert "next_command = print_open_review_summary(" in src
-    assert "show_score_with_plan_context(state, prev)" in src
-    assert "print_review_import_scores_and_integrity(" in src
-    assert 'f"  Next command to improve subjective scores: `{next_command}`"' in src
-    assert "write_query(" in src
-    assert '"command": "review"' in src
-    assert '"action": "import"' in src
-    assert '"mode": "holistic"' in src
-    assert '"diff": diff' in src
-    assert '"next_command": next_command' in src
-    assert '"subjective_at_target": [' in src
-    assert '"assessment_import": {' in src
-    assert '"narrative": narrative' in src
