@@ -43,6 +43,11 @@ CONFIG_SCHEMA: dict[str, ConfigKey] = {
     ),
     "exclude": ConfigKey(list, [], "Path patterns to exclude from scanning"),
     "ignore": ConfigKey(list, [], "Issue patterns to suppress"),
+    "disabled": ConfigKey(
+        list,
+        [],
+        "Detectors or mechanical dimensions removed from scoring (their issues are hidden)",
+    ),
     "ignore_metadata": ConfigKey(dict, {}, "Ignore metadata {pattern: {note, added_at}}"),
     "zone_overrides": ConfigKey(
         dict, {}, "Manual zone overrides {rel_path or glob: zone_name}"

@@ -52,7 +52,7 @@ Each detector reports a **potential**, the number of checks it ran, along with i
 | Dimension | Weight in pool | Detectors that TypeScript scans emit |
 |---|---|---|
 | **File health** | 2.0 | structural |
-| **Code quality** | 1.0 | unused, logs, exports, deprecated, smells, react, nextjs, orphaned, flat_dirs, naming, single_use, coupling, cycles, facade, props, patterns, responsibility_cohesion, stale_exclude, tsconfig_health |
+| **Code quality** | 1.0 | unused, logs, exports, dependencies, deprecated, smells, react, nextjs, orphaned, flat_dirs, naming, single_use, coupling, cycles, facade, props, patterns, responsibility_cohesion, stale_exclude, tsconfig_health |
 | **Duplication** | 1.0 | dupes, boilerplate_duplication |
 | **Test health** | 1.0 | test_coverage |
 | **Security** | 1.0 | security |
@@ -70,6 +70,15 @@ A mechanical dimension with fewer than 200 checks (`MIN_SAMPLE`) has its weight 
 If a mechanical dimension is missing from a scan, its previous score is kept and marked `carried_forward` (`_materialize_dimension_scores`). This only happens when none of its detectors reported a potential, meaning none of them ran (for example, `dupes` under `--skip-slow`). If a detector ran and found nothing left to check, the old score is dropped.
 
 A carried score expires. `carried_forward_since_scan` records the first scan it was carried in, and after `CARRIED_FORWARD_MAX_SCANS` (3) scans without its detectors running, the dimension drops out of the score until they run again. The count is in scans, so the recomputes on saves between scans don't age it.
+
+### Disabled detectors and dimensions
+
+The `disabled` config key takes detector names (`smells`) and mechanical dimensions (`Test health`; case, `_` and `-` don't matter). Set it with `desloppify config set disabled <name>`, and remove one entry with `desloppify config unset disabled <name>`. A disabled detector is taken out of scoring altogether; this is different from `ignore`, which hides issues but leaves the detector's checks in the denominator:
+
+- Its potential is dropped and new issues from it are discarded, so its dimension is recomputed from the remaining detectors. A dimension with every detector disabled disappears and isn't carried forward.
+- Its existing issues are hidden from `status`, `show`, `next` and the score, like suppressed issues (pattern `disabled:<detector>`). Their status doesn't change, so a disabled detector isn't counted as a fix. Wontfix issues are left untouched.
+- `config set` and `config unset` rescore the saved state immediately. After re-enabling, the next scan rechecks the hidden issues: those still present are open again (not reopened), and the rest are auto-resolved.
+- `status` lists what is disabled and how many issues that hides. `show <detector>` says when the detector is disabled. `next` doesn't mention it, since nothing disabled is in the queue.
 
 ## Issue weights
 
@@ -97,6 +106,18 @@ For smells, security, test_coverage, type_error, lint and nextjs (plus some excl
 
 `test_coverage` works differently. Each scorable file contributes `min(sqrt(LOC), 50)` to the potential, and its issues fail by at most that same weight. That makes a large untested file cost more than a small one. Files shorter than 10 lines aren't scored at all, so a fix that shrinks every remaining file below that leaves Test health with nothing to check, and the dimension drops out of the score.
 
+Without a coverage report, a file's verdict comes from the import graph. A file a test imports is directly tested, and only the quality of those tests can fail it (`shallow_tests`, `snapshot_heavy` and so on). A file reached only through tested modules is `transitive_only`, unless a tested public entry (package.json `exports`, `main` and so on) reaches it. Any other file is `untested_module`, or `untested_critical` with 10 or more importers or high complexity.
+
+When the project has a coverage report, measured line coverage takes over from the graph, file by file. The scan reads `coverage/coverage-final.json` (Istanbul) or `coverage/lcov.info` in the project root and in each package directory, plus a `reportsDirectory` (vitest) or `coverageDirectory` (jest) that a config file names. Run the tests with coverage before scanning; the scan doesn't run them.
+
+- A file at or above 80% of lines covered passes, whatever the graph said.
+- A file below 80% gets `low_coverage` (ID `test_coverage::<file>::low_coverage`). It fails by its √LOC weight times the share of the target it misses, `1 − pct/80`, so 40% costs half the weight and 79% almost nothing. Branch coverage is shown but not scored.
+- A file whose lines all show zero hits never ran under the tests. It gets `untested_module` or `untested_critical`, the same IDs the graph gives.
+- Quality checks on a file's direct tests still apply.
+- A file that changed after the report was written (a newer modification time), or whose report lines run past the end of the file, isn't measured: it keeps the graph's verdict, and the scan log counts it.
+- A file missing from every report also keeps the graph's verdict. Coverage tools leave out both files that never loaded and files excluded on purpose, and the report can't tell the two apart.
+- Several reports are merged by covered line, so per-package reports in a monorepo and a root report from another run add up.
+
 ### Type checks
 
 `type_error` reports what tsc reports, read from the same tsc run as `unused` (`detectors/tsc.py` runs tsc once per scan with `--noUnusedLocals --noUnusedParameters --listFiles`; those flags only add the unused diagnostics, which `type_error` leaves out). Its potential is the number of files tsc checked in the scan path, from `--listFiles`. One issue covers one error code on one line, with ID `type_error::<file>::TS<code>::<line>`.
@@ -123,6 +144,23 @@ A type-aware config (`parserOptions.project` or `projectService`, read with `esl
 When ESLint doesn't run (not installed, dependencies not installed, a config or plugin it can't load, a crash, out of memory, the 300 s timeout, the size limit), the detector reports no potential: Lint is carried forward and its open issues aren't auto-resolved.
 
 `lint` replaces the Next.js `next_lint` tool phase, which ran `next lint` (removed in Next.js 16) and kept only a per-file count. A scan that runs ESLint reports `next_lint` as having run, so its open issues from older scans resolve.
+
+### Knip
+
+Knip runs once per scan (`detectors/knip_adapter.py`, cached like tsc), and only when the project installs it: desloppify never downloads it. In a monorepo it runs from the workspace root, with `--workspace` when the scan path is one package. Three detectors read the run, all under Code quality:
+
+- `exports` reports Knip's unused exports and types (`exports::<file>::<name>`), unused enum members (`exports::<file>::<Enum>.<Member>`) and duplicate exports, one name exported under several (`exports::<file>::<a>=<b>`, tier 3, medium confidence). A deprecated alias isn't a duplicate (it's kept on purpose, and `deprecated` reports it), nor is an alias already reported as an unused export.
+- `orphaned` uses Knip's unused files as corroboration and reports nothing new. An orphan Knip also reports goes from medium to high confidence, unless an import Knip can't resolve either may point at it. An orphan Knip doesn't report is a file it reaches from an entry point it knows (a plugin's config, a manifest field) or one its config ignores, so it drops to low confidence.
+- `dependencies` checks the manifests (`package.json`) nearest the scanned sources, inside the scan path. Its potential is the number of dependencies and devDependencies they declare, plus the number of unlisted packages. IDs are `dependencies::<package.json>::<kind>::<package>`:
+  - `unused`, a dependency nothing uses (tier 2, high confidence), and `unused_dev`, the same for a devDependency (tier 3, medium confidence, since tools Knip has no plugin for use them);
+  - `unlisted`, a package imported but not declared, one issue per manifest and package (tier 2; high confidence when a production or script file imports it, medium when only tests or config do);
+  - `unlisted_binary`, a binary a manifest script runs without declaring its package (tier 3, medium confidence). Binaries Knip finds in source code are left out; they're usually system commands.
+
+  A dependency that a scanned file still imports isn't reported unused: Knip calls it unused because every file importing it is unused, and those files are the finding. Nor is one whose name or binary a manifest script mentions, or that is configured under its own manifest key (`"lint-staged": {...}`): Knip doesn't see through task runners it doesn't know (`nub exec --node husky`). When a manifest's dependencies aren't all installed, its unused dependencies and binaries aren't checked, because Knip loads plugin configs and finds binaries through `node_modules`; the scan records reduced coverage naming the manifests.
+
+Knip's unresolved imports aren't reported. In TypeScript files tsc reports them (`type_error`, TS2307), and Knip reports a bare package it can't find as unlisted. They only keep an orphan at low confidence. Knip's namespace members, catalog entries, optional peer dependencies and cycles aren't read either: `cycles` has its own detector, and namespace members flag the members of published type namespaces.
+
+When Knip doesn't run (not installed, a crash, no JSON report), `exports` and `dependencies` record reduced coverage. `dependencies` reports no potential, so its open issues aren't auto-resolved, and orphans keep their own confidence.
 
 ## Subjective dimensions
 

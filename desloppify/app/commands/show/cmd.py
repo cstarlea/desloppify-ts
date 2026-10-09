@@ -15,6 +15,7 @@ from desloppify.app.skill_docs import check_skill_version
 from desloppify.base.config import target_strict_score_from_config
 from desloppify.base.exception_sets import PLAN_LOAD_EXCEPTIONS, CommandError
 from desloppify.base.output.terminal import colorize
+from desloppify.engine._state.disabled import canonical_disabled_entry, disabled_detectors
 from desloppify.base.tooling import check_config_staleness
 from desloppify.engine.plan_state import load_plan
 from desloppify.intelligence.narrative.core import NarrativeContext, compute_narrative
@@ -110,6 +111,31 @@ def _active_plan_or_none() -> dict | None:
     return None
 
 
+def _print_disabled_note(pattern: str, state: dict, config: dict) -> None:
+    """Say so when the detector or dimension asked for is disabled in config."""
+    entries = config.get("disabled") or []
+    if not entries:
+        return
+    try:
+        name = canonical_disabled_entry(pattern)
+    except ValueError:
+        return
+    covering = [
+        entry
+        for entry in entries
+        if entry == name or disabled_detectors([name]) <= disabled_detectors([entry])
+    ]
+    if not covering:
+        return
+    print(
+        colorize(
+            f"  {name} is disabled in config: out of scoring, its issues hidden. "
+            f"Re-enable: `desloppify config unset disabled '{covering[0]}'`",
+            "yellow",
+        )
+    )
+
+
 def cmd_show(args: argparse.Namespace) -> None:
     """Show all issues for a file, directory, detector, or pattern."""
     runtime = command_runtime(args)
@@ -133,6 +159,7 @@ def cmd_show(args: argparse.Namespace) -> None:
     ok, pattern, status_filter, scope = resolve_show_scope(args)
     if not ok or pattern is None:
         return
+    _print_disabled_note(pattern, state, config)
 
     lang = resolve_lang(args)
     lang_name = lang.name if lang else None

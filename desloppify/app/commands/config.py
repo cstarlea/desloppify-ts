@@ -11,8 +11,12 @@ from desloppify.base.config import (
     set_config_value,
     unset_config_value,
 )
+from desloppify.app.commands.helpers.state_persistence import save_state_or_exit
 from desloppify.base.exception_sets import CommandError
 from desloppify.base.output.terminal import colorize
+from desloppify.engine._state.disabled import apply_disabled, canonical_disabled_entry
+from desloppify.engine._state.schema import utc_now
+from desloppify.state_score_snapshot import score_snapshot
 
 
 def cmd_config(args: argparse.Namespace) -> None:
@@ -53,11 +57,14 @@ def _config_show(args: argparse.Namespace):
 
 def _config_set(args: argparse.Namespace):
     """Set a config key to a value."""
-    config = command_runtime(args).config
+    runtime = command_runtime(args)
+    config = runtime.config
     key = args.config_key
     value = args.config_value
 
     try:
+        if key == "disabled":
+            value = canonical_disabled_entry(value)
         set_config_value(config, key, value)
     except (KeyError, ValueError) as e:
         raise CommandError(str(e)) from e
@@ -70,21 +77,49 @@ def _config_set(args: argparse.Namespace):
     if isinstance(display, int) and key.endswith("_days") and display == 0:
         display = "never (0)"
     print(colorize(f"  Set {key} = {display}", "green"))
+    if key == "disabled":
+        _apply_disabled_to_state(runtime)
 
 
 def _config_unset(args: argparse.Namespace):
-    """Reset a config key to its default."""
-    config = command_runtime(args).config
+    """Reset a config key to its default, or remove one value from a list key."""
+    runtime = command_runtime(args)
+    config = runtime.config
     key = args.config_key
+    value = getattr(args, "config_value", None)
 
     try:
-        unset_config_value(config, key)
-    except KeyError as e:
+        unset_config_value(config, key, value)
+    except (KeyError, ValueError) as e:
         raise CommandError(str(e)) from e
 
     try:
         save_config(config)
     except OSError as e:
         raise CommandError(f"could not save config: {e}") from e
-    default = CONFIG_SCHEMA[key].default
-    print(colorize(f"  Reset {key} to default ({default})", "green"))
+    if value is not None:
+        print(colorize(f"  Removed {value} from {key}", "green"))
+    else:
+        default = CONFIG_SCHEMA[key].default
+        print(colorize(f"  Reset {key} to default ({default})", "green"))
+    if key == "disabled":
+        _apply_disabled_to_state(runtime, enabling=True)
+
+
+def _apply_disabled_to_state(runtime, *, enabling: bool = False) -> None:
+    """Rescore the saved state now, so status and next reflect the change."""
+    state = runtime.state
+    if not state.get("last_scan"):
+        return
+    before = score_snapshot(state)
+    hidden, restored = apply_disabled(state, runtime.config.get("disabled", []), utc_now())
+    save_state_or_exit(state, runtime.state_path)
+    after = score_snapshot(state)
+    if hidden:
+        print(f"  {hidden} issue(s) of disabled detectors hidden (status unchanged).")
+    if restored:
+        print(f"  {restored} issue(s) shown again; the next scan rechecks them.")
+    if enabling:
+        print(colorize("  Run `desloppify scan` to score the re-enabled detectors.", "dim"))
+    if before.strict is not None and after.strict is not None:
+        print(f"  Strict score: {before.strict:.1f} → {after.strict:.1f}")

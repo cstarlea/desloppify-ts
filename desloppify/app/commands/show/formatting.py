@@ -30,6 +30,7 @@ DETAIL_DISPLAY = [
     ("majority", "majority", None),
     ("minority", "minority", None),
     ("outliers", "outliers", lambda v: ", ".join(v[:5])),
+    ("coverage_report", "coverage report", None),
 ]
 
 

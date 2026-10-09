@@ -220,6 +220,7 @@
     "unused": 18
   },
   "reduced_coverage": [
+    "dependencies: knip_not_installed",
     "exports: knip_not_installed",
     "type_error: tsc_missing",
     "unused: tsc_missing"

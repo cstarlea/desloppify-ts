@@ -11,6 +11,7 @@ __all__ = [
 ]
 
 from desloppify.base.registry import DETECTORS
+from desloppify.engine._state.disabled import apply_disabled, disabled_detectors
 from desloppify.engine._state.issue_semantics import ensure_work_item_semantics
 from desloppify.engine._state.merge_history import (
     _append_scan_history,
@@ -149,6 +150,7 @@ class MergeScanOptions:
     subjective_integrity_target: float | None = None
     project_root: str | None = None
     zone_map: Any | None = None
+    disabled: list[str] | None = None
 
 
 def merge_scan(
@@ -162,6 +164,18 @@ def merge_scan(
         if isinstance(issue, dict):
             ensure_work_item_semantics(issue)
     resolved_options = options or MergeScanOptions()
+    disabled_entries = (
+        resolved_options.disabled
+        if resolved_options.disabled is not None
+        else state.get("config", {}).get("disabled", [])
+    )
+    disabled = disabled_detectors(disabled_entries)
+    potentials = resolved_options.potentials
+    if disabled:
+        # A disabled detector is out of scoring: no issues, no potential.
+        current_issues = [i for i in current_issues if i.get("detector") not in disabled]
+        if potentials is not None:
+            potentials = {k: v for k, v in potentials.items() if k not in disabled}
 
     previous_last_scan = str(state.get("last_scan", "") or "")
     now = utc_now()
@@ -175,12 +189,13 @@ def merge_scan(
     _merge_scan_inputs(
         state,
         lang=resolved_options.lang,
-        potentials=resolved_options.potentials,
+        potentials=potentials,
         merge_potentials=resolved_options.merge_potentials,
         codebase_metrics=resolved_options.codebase_metrics,
     )
 
     existing = state["work_items"]
+    apply_disabled(state, disabled_entries, now)
     ignore_patterns = (
         resolved_options.ignore
         if resolved_options.ignore is not None
@@ -205,11 +220,7 @@ def merge_scan(
     raw_issues = len(current_issues)
     suppressed_pct = _compute_suppression(raw_issues, ignored_count)
 
-    ran_detectors = (
-        set(resolved_options.potentials.keys())
-        if resolved_options.potentials is not None
-        else None
-    )
+    ran_detectors = set(potentials.keys()) if potentials is not None else None
     confirmed_detectors = set(current_by_detector)
     if ran_detectors is not None:
         confirmed_detectors.update(ran_detectors)
@@ -271,7 +282,7 @@ def merge_scan(
         auto_resolved=auto_resolved,
         reopened_count=reopened_count,
         current_ids=current_ids,
-        suspect_detectors=suspect_detectors,
+        suspect_detectors=suspect_detectors - disabled,
         chronic_reopeners=chronic_reopeners,
         skipped_other_lang=skipped_other_lang,
         ignored_count=ignored_count,

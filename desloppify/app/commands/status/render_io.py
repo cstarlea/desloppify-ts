@@ -6,6 +6,7 @@ from dataclasses import dataclass
 
 from desloppify.app.commands.helpers.query import write_query
 from desloppify.base.output.terminal import colorize, print_table
+from desloppify.engine._state.disabled import DISABLED_PATTERN_PREFIX
 from desloppify.engine._state.filtering import open_scope_breakdown
 from desloppify.engine._scoring.results.core import compute_health_breakdown
 from desloppify.state_scoring import headline_score
@@ -186,8 +187,27 @@ def show_ignore_summary(ignores: list[str], suppression: dict) -> None:
         print(colorize(recent_line, "dim"))
 
 
+def show_disabled_summary(state: dict, entries: list[str]) -> None:
+    """Show what config disables and how many issues that hides."""
+    hidden = sum(
+        1
+        for issue in (state.get("work_items") or {}).values()
+        if isinstance(issue, dict)
+        and str(issue.get("suppression_pattern") or "").startswith(DISABLED_PATTERN_PREFIX)
+    )
+    print(colorize(f"\n  Disabled in config, out of scoring: {', '.join(entries)}", "dim"))
+    print(
+        colorize(
+            f"    {hidden} issue(s) hidden. "
+            "Re-enable: `desloppify config unset disabled <name>`",
+            "dim",
+        )
+    )
+
+
 __all__ = [
     "StatusQueryRequest",
+    "show_disabled_summary",
     "show_ignore_summary",
     "show_tier_progress_table",
     "status_next_command",

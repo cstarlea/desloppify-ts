@@ -31,9 +31,9 @@
     {
       "id": "orphaned::src/legacy/old-report.js",
       "tier": 3,
-      "confidence": "medium",
+      "confidence": "high",
       "zone": "production",
-      "summary": "Orphaned file (17 LOC): zero importers, not an entry point"
+      "summary": "Orphaned file (17 LOC): zero importers, not an entry point; Knip agrees"
     },
     {
       "id": "test_coverage::src/cjs/loader.cjs::untested_module",
@@ -88,6 +88,7 @@
   "potentials": {
     "coupling": 0,
     "cycles": 9,
+    "dependencies": 0,
     "deprecated": 0,
     "dupes": 9,
     "exports": 12,
@@ -108,5 +109,7 @@
     "type_error": 9,
     "unused": 9
   },
-  "reduced_coverage": []
+  "reduced_coverage": [
+    "dependencies: dependencies_not_installed"
+  ]
 }

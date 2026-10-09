@@ -90,6 +90,7 @@ def _status_json_payload(
         "stats": stats,
         "open_scope": open_scope,
         "suppression": suppression,
+        "disabled_detectors": state.get("disabled_detectors", []),
         "scan_count": state.get("scan_count", 0),
         "last_scan": state.get("last_scan"),
         "scan_metadata": state.get("scan_metadata", {}),

@@ -178,6 +178,11 @@ def _is_excluded_dir(name: str, rel_path: str, extra: tuple[str, ...]) -> bool:
     return in_default_exclusions or is_virtualenv_dir or matches_extra_exclusion
 
 
+# The assets an Istanbul HTML coverage report (vitest, jest, c8, nyc) writes
+# next to its pages. They are generated, not source.
+_ISTANBUL_HTML_ASSETS = frozenset({"prettify.js", "sorter.js", "block-navigation.js"})
+
+
 def _find_source_files_cached(
     path: str,
     extensions: tuple[str, ...],
@@ -214,6 +219,9 @@ def _find_source_files_cached(
     ext_set = set(extensions)
     files: list[str] = []
     for dirpath, dirnames, filenames in os.walk(root):
+        if _ISTANBUL_HTML_ASSETS.issubset(filenames):
+            dirnames[:] = []
+            continue
         rel_dir = _normalize_path_separators(
             _safe_relpath(dirpath, resolved_project_root)
         )

@@ -37,6 +37,15 @@ DETECTORS: dict[str, DetectorMeta] = {
         tier=3,
         subjective_dimensions=("api_surface_coherence",),
     ),
+    "dependencies": DetectorMeta(
+        "dependencies",
+        "dependencies",
+        "Code quality",
+        "manual_fix",
+        "declare what is imported and remove what isn't used from package.json",
+        tier=2,
+        subjective_dimensions=("dependency_health",),
+    ),
     "smells": DetectorMeta(
         "smells",
         "smells",

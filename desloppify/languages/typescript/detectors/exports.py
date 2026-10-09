@@ -1,4 +1,5 @@
-"""Dead exports detection via Knip."""
+"""Dead exports detection via Knip: unused exports, types and enum members,
+and duplicate exports."""
 
 import argparse
 import json
@@ -6,6 +7,7 @@ import re
 import sys
 from collections import defaultdict
 from pathlib import Path
+from typing import Any
 
 from desloppify.base.discovery.file_paths import rel, resolve_path
 from desloppify.base.discovery.source import find_ts_and_js_files
@@ -33,10 +35,14 @@ def _count_exports(path: Path) -> int:
 
 
 def detect_dead_exports_result(
-    path: Path,
+    path: Path, *, cache: dict[str, Any] | None = None
 ) -> tuple[list[dict], int, DetectorCoverageStatus | None]:
-    """Return (dead_export_entries, total_exports, coverage) using Knip."""
-    entries, reason = detect_with_knip_result(path)
+    """Return (dead_export_entries, total_exports, coverage) using Knip.
+
+    ``cache`` (the scan's runtime cache) shares the Knip run with the other
+    Knip readers.
+    """
+    entries, reason = detect_with_knip_result(path, cache=cache)
     if entries is None:
         coverage = DetectorCoverageStatus(
             detector="exports",

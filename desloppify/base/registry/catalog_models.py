@@ -11,6 +11,7 @@ DISPLAY_ORDER = [
     "lint",
     "tsconfig_health",
     "exports",
+    "dependencies",
     "deprecated",
     "structural",
     "props",
