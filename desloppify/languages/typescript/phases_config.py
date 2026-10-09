@@ -69,6 +69,18 @@ TS_GOD_RULES = [
     GodRule("hook_total", "total hooks", lambda c: c.metrics.get("hook_total", 0), 10),
 ]
 
+# Two reasons flag a class. NestJS services and Angular components routinely
+# inject 3-6 collaborators and a controller stacks route and parameter
+# decorators, so neither alone makes a class a god class.
+TS_CLASS_GOD_RULES = [
+    GodRule("methods", "methods", lambda c: c.metrics.get("methods", 0), 20),
+    GodRule(
+        "constructor_deps", "constructor deps", lambda c: c.metrics.get("constructor_deps", 0), 7
+    ),
+    GodRule("decorators", "decorators", lambda c: c.metrics.get("decorators", 0), 40),
+    GodRule("loc", "LOC", lambda c: c.loc, 300),
+]
+
 TS_SKIP_NAMES = {
     f"{stem}{ext}"
     for stem in ("index", "types", "constants", "utils", "helpers", "settings", "main")
@@ -80,6 +92,7 @@ TS_SKIP_DIRS = {"src/shared/components/ui"}
 
 __all__ = [
     "TS_COMPLEXITY_SIGNALS",
+    "TS_CLASS_GOD_RULES",
     "TS_GOD_RULES",
     "TS_SKIP_DIRS",
     "TS_SKIP_NAMES",

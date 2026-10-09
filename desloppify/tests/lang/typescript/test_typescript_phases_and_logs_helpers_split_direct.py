@@ -181,7 +181,7 @@ def test_phase_structural_and_subdetectors_cover_threshold_and_passthrough_paths
         phases_structural_mod.gods_detector_mod,
         "detect_gods",
         lambda _components, _rules, min_reasons=2: (
-            [{"file": "src/view.tsx", "detail": {"hook_total": 12}, "reasons": ["hooks", "states"]}],
+            [{"file": "src/view.tsx", "name": "View", "line": 1, "detail": {"hook_total": 12}, "reasons": ["hooks", "states"]}],
             min_reasons,
         ),
     )
