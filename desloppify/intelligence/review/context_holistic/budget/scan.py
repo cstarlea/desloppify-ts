@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-import ast
 import dataclasses
 import re
 from collections import defaultdict
 from pathlib import Path
 
 from desloppify.base.discovery.file_paths import rel
+from desloppify.languages.typescript.syntax.queries import definitions
+from desloppify.languages.typescript.syntax.tree import ParsedSource, parse_text
 
 from .analysis import _count_signature_params, _extract_type_names
 from .axes import _assemble_context, _compute_sub_axes
@@ -21,8 +22,10 @@ from .patterns_types import _find_dict_any_annotations
 from .patterns_wrappers import (
     _find_delegation_heavy_classes,
     _find_facade_modules,
-    _find_python_passthrough_wrappers,
+    _find_passthrough_wrappers,
 )
+
+_TS_SUFFIXES = frozenset({".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".mjs", ".cjs"})
 
 _DEF_SIGNATURE_RE = re.compile(
     r"(?:^|\n)\s*(?:async\s+def|def|async\s+function|function)\s+\w+\s*\(([^)]*)\)",
@@ -76,7 +79,7 @@ class _AbstractionsCollector:
     wide_param_bags: list[dict[str, object]] = dataclasses.field(default_factory=list)
     delegation_classes: list[dict] = dataclasses.field(default_factory=list)
     facade_modules: list[dict] = dataclasses.field(default_factory=list)
-    parsed_trees: dict[str, ast.Module] = dataclasses.field(default_factory=dict)
+    parsed_files: dict[str, ParsedSource] = dataclasses.field(default_factory=dict)
     total_function_signatures: int = 0
     total_wrappers: int = 0
 
@@ -96,13 +99,6 @@ def _scan_file(
         )
 
     signatures = _DEF_SIGNATURE_RE.findall(content)
-    col.total_function_signatures += len(signatures)
-
-    ts_wrappers = [
-        (wrapper, target)
-        for wrapper, target in _TS_PASSTHROUGH_RE.findall(content)
-        if wrapper != target
-    ]
 
     for match in _INTERFACE_RE.finditer(content):
         iface = match.group(1) or match.group(2)
@@ -141,23 +137,24 @@ def _scan_file(
             }
         )
 
-    try:
-        tree = ast.parse(content)
-    except SyntaxError:
-        tree = None
-
-    if tree is not None:
-        col.parsed_trees[filepath] = tree
-        py_wrappers = _find_python_passthrough_wrappers(tree)
-        for entry in _find_delegation_heavy_classes(tree):
+    parsed = parse_text(content, filepath) if Path(filepath).suffix.lower() in _TS_SUFFIXES else None
+    if parsed is not None:
+        col.parsed_files[rpath] = parsed
+        col.total_function_signatures += len(definitions(parsed))
+        wrapper_pairs = _find_passthrough_wrappers(parsed)
+        for entry in _find_delegation_heavy_classes(parsed):
             col.delegation_classes.append({"file": rpath, **entry})
-        facade_result = _find_facade_modules(tree, loc=loc)
-        if facade_result is not None:
-            col.facade_modules.append({"file": rpath, **facade_result})
     else:
-        py_wrappers = []
+        col.total_function_signatures += len(signatures)
+        wrapper_pairs = [
+            (wrapper, target)
+            for wrapper, target in _TS_PASSTHROUGH_RE.findall(content)
+            if wrapper != target
+        ]
+    facade_result = _find_facade_modules(content, parsed, loc=loc)
+    if facade_result is not None:
+        col.facade_modules.append({"file": rpath, **facade_result})
 
-    wrapper_pairs = py_wrappers + ts_wrappers
     if wrapper_pairs:
         col.total_wrappers += len(wrapper_pairs)
         col.wrappers_by_file.append(
@@ -184,12 +181,12 @@ def _derive_post_scan_results(col: _AbstractionsCollector) -> dict:
             }
         )
 
-    dict_any_annotations = _find_dict_any_annotations(col.parsed_trees)[:30]
+    dict_any_annotations = _find_dict_any_annotations(col.parsed_files)
 
-    enum_defs = _collect_enum_defs(col.parsed_trees)
-    enum_bypass_patterns = _find_enum_bypass(col.parsed_trees, enum_defs)[:30]
+    enum_defs = _collect_enum_defs(col.parsed_files)
+    enum_bypass_patterns = _find_enum_bypass(col.parsed_files, enum_defs)
 
-    type_strategy_census = _census_type_strategies(col.parsed_trees)
+    type_strategy_census = _census_type_strategies(col.parsed_files)
 
     return {
         "one_impl_interfaces": one_impl_interfaces,
@@ -213,9 +210,7 @@ def _sort_and_trim(col: _AbstractionsCollector, derived: dict) -> None:
     )
     derived["one_impl_interfaces"].sort(key=lambda item: str(item["interface"]))
     col.delegation_classes.sort(key=lambda d: -d["delegation_ratio"])
-    col.delegation_classes = col.delegation_classes[:20]
-    col.facade_modules.sort(key=lambda d: -d["re_export_ratio"])
-    col.facade_modules = col.facade_modules[:20]
+    col.facade_modules.sort(key=lambda d: (-d["source_count"], d["file"]))
 
 
 def _abstractions_context(file_contents: dict[str, str]) -> dict:
@@ -229,16 +224,18 @@ def _abstractions_context(file_contents: dict[str, str]) -> dict:
     _sort_and_trim(col, derived)
 
     wrapper_rate = col.total_wrappers / max(col.total_function_signatures, 1)
+    # Delegation and type checks need syntax trees; without tree-sitter there is no data.
+    parsed = bool(col.parsed_files)
     sub_axes = _compute_sub_axes(
         wrapper_rate=wrapper_rate,
         util_files=col.util_files,
         indirection_hotspots=col.indirection_hotspots,
         wide_param_bags=col.wide_param_bags,
         one_impl_interfaces=derived["one_impl_interfaces"],
-        delegation_classes=col.delegation_classes,
+        delegation_classes=col.delegation_classes if parsed else None,
         facade_modules=col.facade_modules,
-        dict_any_count=len(derived["dict_any_annotations"]),
-        enum_bypass_count=len(derived["enum_bypass_patterns"]),
+        dict_any_count=len(derived["dict_any_annotations"]) if parsed else None,
+        enum_bypass_count=len(derived["enum_bypass_patterns"]) if parsed else None,
     )
 
     return _assemble_context(

@@ -24,8 +24,8 @@
         "`as` casts asserting a shape nothing checks, `as unknown as T` double casts, and `!` on values that can really be undefined",
         "External data (fetch responses, `JSON.parse`, `process.env`, request bodies) typed by annotation instead of validated at the boundary (zod, valibot, a type guard)",
         "`@ts-ignore` or `@ts-expect-error` with no reason, or hiding a real bug",
-        "Unions handled without an exhaustive `never` check, or string literals compared where a union or enum type already exists",
-        "Loose types where a precise one exists: `object`, `Function`, `{}`, `Record<string, any>`, or `string` for a known set of values",
+        "Unions handled without an exhaustive `never` check, or string literals compared where a union or enum type already exists — see enum_bypass_patterns evidence",
+        "Loose types where a precise one exists: `object`, `Function`, `{}`, `Record<string, any>` (see dict_any_annotations evidence), or `string` for a known set of values",
         "Exported functions whose return type is inferred from a complex body, so an internal change silently changes the public API"
       ],
       "skip": [

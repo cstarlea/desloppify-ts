@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import ast
 import re
 
 
@@ -34,20 +33,8 @@ def _score_clamped(raw: float) -> int:
     """Clamp score-like values to [0, 100]."""
     return int(max(0, min(100, round(raw))))
 
-def _strip_docstring(body: list[ast.stmt]) -> list[ast.stmt]:
-    """Strip a leading docstring from a function/method body."""
-    if (
-        body
-        and isinstance(body[0], ast.Expr)
-        and isinstance(body[0].value, ast.Constant)
-        and isinstance(body[0].value.value, str)
-    ):
-        return body[1:]
-    return body
-
 __all__ = [
     "_count_signature_params",
     "_extract_type_names",
     "_score_clamped",
-    "_strip_docstring",
 ]

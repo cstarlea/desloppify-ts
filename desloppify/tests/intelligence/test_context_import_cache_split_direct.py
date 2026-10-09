@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-import ast
+import pytest
 
 import desloppify.intelligence.review.context_holistic.budget.axes as axes_mod
 import desloppify.intelligence.review.context_holistic.budget.scan as scan_mod
 import desloppify.intelligence.review.context_holistic.budget.patterns_wrappers as wrappers_mod
 import desloppify.intelligence.review.importing.cache as cache_mod
+from desloppify.languages.typescript.syntax.tree import get_parser, parse_text
 
 
 def test_budget_abstractions_axes_compute_and_assemble_context() -> None:
@@ -18,7 +19,7 @@ def test_budget_abstractions_axes_compute_and_assemble_context() -> None:
         wide_param_bags=[{"wide_functions": 2, "config_bag_mentions": 12}],
         one_impl_interfaces=[{"interface": "IThing"}],
         delegation_classes=[{"delegation_ratio": 0.8}],
-        facade_modules=[{"re_export_ratio": 0.9}],
+        facade_modules=[{"source_count": 3}],
         dict_any_count=1,
         enum_bypass_count=1,
     )
@@ -41,57 +42,50 @@ def test_budget_abstractions_axes_compute_and_assemble_context() -> None:
         indirection_hotspots=[{"file": "src/a.py", "max_chain_depth": 4, "chain_count": 10}],
         wide_param_bags=[{"file": "src/a.py", "wide_functions": 2, "config_bag_mentions": 12}],
         delegation_classes=[{"class_name": "Facade", "delegation_ratio": 0.8}],
-        facade_modules=[{"file": "src/facade.py", "re_export_ratio": 0.9}],
+        facade_modules=[{"file": "src/index.ts", "source_count": 3}],
         sub_axes=sub_axes,
         dict_any_annotations=[{"file": "src/a.py"}],
         enum_bypass_patterns=[{"file": "src/a.py"}],
-        type_strategy_census={"typed_dict": [{"file": "src/a.py"}]},
+        type_strategy_census={"interface": [{"file": "src/a.ts"}]},
     )
     assert "summary" in context
     assert context["summary"]["total_wrappers"] == 5
     assert "sub_axes" in context
+    assert context["type_strategy_census"] == {"interface": 1}
 
 
+@pytest.mark.skipif(get_parser("typescript") is None, reason="needs tree-sitter with the typescript grammar")
 def test_budget_scan_and_wrappers_patterns_helpers() -> None:
     code = (
-        "def target(x):\n"
-        "    return x\n\n"
-        "def wrapper(x):\n"
-        "    return target(x)\n\n"
-        "class Service:\n"
-        "    def a(self):\n"
-        "        return self.repo.a()\n"
-        "    def b(self):\n"
-        "        return self.repo.b()\n"
-        "    def c(self):\n"
-        "        return self.repo.c()\n"
-        "    def d(self):\n"
-        "        return self.repo.d()\n"
+        "function target(x) { return x; }\n"
+        "export function wrapper(x) { return target(x); }\n"
+        "export class Service {\n"
+        "  a() { return this.repo.a(); }\n"
+        "  b() { return this.repo.b(); }\n"
+        "  c() { return this.repo.c(); }\n"
+        "  d() { return this.repo.d(); }\n"
+        "}\n"
     )
-    tree = ast.parse(code)
+    parsed = parse_text(code, "src/sample.ts")
 
-    passthrough = wrappers_mod._find_python_passthrough_wrappers(tree)
+    passthrough = wrappers_mod._find_passthrough_wrappers(parsed)
     assert ("wrapper", "target") in passthrough
 
-    delegation = wrappers_mod._find_delegation_heavy_classes(tree)
+    delegation = wrappers_mod._find_delegation_heavy_classes(parsed)
     assert delegation
     assert delegation[0]["delegate_target"] == "repo"
 
-    facade_tree = ast.parse(
-        "from pkg.mod import A, B, C\n"
-        "from pkg.more import D\n"
-        "X = 1\n"
-    )
-    facade = wrappers_mod._find_facade_modules(facade_tree, loc=20)
+    facade_code = "export { A, B } from './a';\nexport * from './b';\n"
+    facade = wrappers_mod._find_facade_modules(facade_code, parse_text(facade_code, "src/index.ts"), loc=2)
     assert facade is not None
 
     collector = scan_mod._AbstractionsCollector()
-    scan_mod._scan_file(collector, "src/sample.py", code)
+    scan_mod._scan_file(collector, "src/sample.ts", code)
     derived = scan_mod._derive_post_scan_results(collector)
     scan_mod._sort_and_trim(collector, derived)
     assert collector.total_function_signatures >= 2
 
-    full_context = scan_mod._abstractions_context({"src/sample.py": code})
+    full_context = scan_mod._abstractions_context({"src/sample.ts": code})
     assert "summary" in full_context
     assert "sub_axes" in full_context
 

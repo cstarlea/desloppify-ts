@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-import ast
+import pytest
 
 from desloppify.intelligence.review.context_holistic import budget as budget_mod
+from desloppify.languages.typescript.syntax.tree import get_parser
 
-
-def _parse(content: str) -> ast.Module:
-    """Convenience: parse Python source into an AST module."""
-    return ast.parse(content)
+needs_treesitter = pytest.mark.skipif(
+    get_parser("typescript") is None, reason="needs tree-sitter with the typescript grammar"
+)
 
 
 def test_count_signature_params_ignores_instance_receiver_tokens():
@@ -24,22 +24,25 @@ def test_extract_type_names_handles_generics_and_qualified_names():
 
 
 def test_abstractions_context_reports_wrapper_and_indirection_signals(tmp_path):
-    util_file = tmp_path / "pkg" / "utils.py"
+    util_file = tmp_path / "pkg" / "utils.ts"
     contracts_file = tmp_path / "pkg" / "contracts.ts"
-    service_file = tmp_path / "pkg" / "service.py"
+    service_file = tmp_path / "pkg" / "service.ts"
 
     util_content = (
-        "def wrap_user(value):\n"
-        "    return make_user(value)\n\n"
-        "def make_user(value):\n"
-        "    return value\n"
+        "export function wrapUser(value) {\n"
+        "  return makeUser(value);\n"
+        "}\n\n"
+        "function makeUser(value) {\n"
+        "  return value;\n"
+        "}\n"
     )
     contracts_content = "interface Repo {}\nclass SqlRepo implements Repo {}\n"
     service_content = (
-        "def build(a, b, c, d, e, f, g):\n"
-        "    return a\n\n"
-        "value = root.one.two.three.four\n"
-        "config config config config config config config config config config\n"
+        "function build(a, b, c, d, e, f, g) {\n"
+        "  return a;\n"
+        "}\n\n"
+        "const value = root.one.two.three.four;\n"
+        "// config config config config config config config config config config\n"
     )
 
     util_file.parent.mkdir(parents=True, exist_ok=True)
@@ -57,7 +60,7 @@ def test_abstractions_context_reports_wrapper_and_indirection_signals(tmp_path):
 
     assert context["summary"]["total_wrappers"] >= 1
     assert context["summary"]["one_impl_interface_count"] == 1
-    assert context["util_files"][0]["file"].endswith("utils.py")
+    assert context["util_files"][0]["file"].endswith("utils.ts")
     assert "pass_through_wrappers" in context
     assert "indirection_hotspots" in context
     assert "wide_param_bags" in context
@@ -156,6 +159,9 @@ def test_abstractions_context_empty_input():
     assert context["util_files"] == []
     assert "pass_through_wrappers" not in context
     assert "one_impl_interfaces" not in context
+    # No syntax trees, so no delegation or type data: those axes are left out.
+    assert "delegation_density" not in context["sub_axes"]
+    assert "type_discipline" not in context["sub_axes"]
 
 
 def test_abstractions_context_interface_with_multiple_impls_not_reported(tmp_path):
@@ -181,29 +187,21 @@ def test_abstractions_context_interface_with_multiple_impls_not_reported(tmp_pat
     assert "one_impl_interfaces" not in context
 
 
-def test_abstractions_context_python_protocol_detected(tmp_path):
-    """Python Protocol classes are detected as interface declarations."""
-    f = tmp_path / "pkg" / "types.py"
-    f.parent.mkdir(parents=True, exist_ok=True)
-    f.write_text("class HandlerProtocol:\n    pass\n")
-
-    context = budget_mod._abstractions_context({str(f): f.read_text()})
-    # Protocol declared but 0 implementations -> one_impl_interface_count stays 0
-    # (it needs exactly 1 impl to be counted)
-    assert context["summary"]["one_impl_interface_count"] == 0
-
-
+@needs_treesitter
 def test_abstractions_context_wrapper_rate_calculation(tmp_path):
     """Verify wrapper rate = total_wrappers / total_function_signatures."""
-    f = tmp_path / "pkg" / "mod.py"
+    f = tmp_path / "pkg" / "mod.ts"
     f.parent.mkdir(parents=True, exist_ok=True)
     content = (
-        "def alpha(x):\n"
-        "    return beta(x)\n\n"
-        "def beta(x):\n"
-        "    return x\n\n"
-        "def gamma(x):\n"
-        "    return x * 2\n"
+        "function alpha(x) {\n"
+        "  return beta(x);\n"
+        "}\n"
+        "const beta = (x) => x;\n"
+        "class Doubler {\n"
+        "  gamma(x) {\n"
+        "    return x * 2;\n"
+        "  }\n"
+        "}\n"
     )
     f.write_text(content)
 
@@ -212,160 +210,38 @@ def test_abstractions_context_wrapper_rate_calculation(tmp_path):
     assert summary["total_wrappers"] == 1  # alpha -> beta
     assert summary["total_function_signatures"] == 3
     assert summary["wrapper_rate"] == round(1 / 3, 3)
+    assert context["pass_through_wrappers"][0]["samples"] == ["alpha->beta"]
 
 
-def test_find_python_passthrough_wrappers_handles_docstring_only_wrapper():
-    content = (
-        "def wrap(x):\n"
-        '    \"\"\"Thin wrapper.\"\"\"\n'
-        "    return build(x)\n"
-    )
-    assert budget_mod._find_python_passthrough_wrappers(_parse(content)) == [
-        ("wrap", "build")
-    ]
+def test_abstractions_context_regex_wrappers_without_tree(tmp_path, monkeypatch):
+    """Without tree-sitter, ``function f() { return g(`` still counts as a wrapper."""
+    from desloppify.intelligence.review.context_holistic.budget import scan as scan_mod
 
-
-def test_find_python_passthrough_wrappers_handles_large_comment_runs_without_hanging():
-    comments = "\n".join("    # comment" for _ in range(1500))
-    content = (
-        "def wrap(x):\n"
-        f"{comments}\n"
-        "    value = build(x)\n"
-    )
-    assert budget_mod._find_python_passthrough_wrappers(_parse(content)) == []
-
-
-# ── Delegation-heavy classes ──────────────────────────────
-
-
-def test_delegation_heavy_class_detected():
-    """A class with 5/6 forwarding methods is flagged with full evidence."""
-    content = (
-        "class Proxy:\n"
-        "    def __init__(self, inner):\n"
-        "        self._inner = inner\n"
-        "    def alpha(self):\n"
-        "        return self._inner.alpha()\n"
-        "    def beta(self, x):\n"
-        "        return self._inner.beta(x)\n"
-        "    def gamma(self):\n"
-        "        return self._inner.gamma()\n"
-        "    def delta(self):\n"
-        "        return self._inner.delta()\n"
-        "    def epsilon(self):\n"
-        "        return self._inner.epsilon()\n"
-        "    def real_work(self):\n"
-        "        return 42\n"
-    )
-    results = budget_mod._find_delegation_heavy_classes(_parse(content))
-    assert len(results) == 1
-    r = results[0]
-    assert r["class_name"] == "Proxy"
-    assert r["delegation_ratio"] == round(5 / 6, 2)
-    assert r["method_count"] == 6
-    assert r["delegate_count"] == 5
-    assert r["delegate_target"] == "_inner"
-    assert set(r["sample_methods"]) == {"alpha", "beta", "gamma", "delta", "epsilon"}
-    assert r["line"] == 1
-
-
-def test_delegation_heavy_class_not_flagged_below_threshold():
-    """A class with 2/5 forwarding methods is NOT flagged (ratio 0.4 < 0.5)."""
-    content = (
-        "class Mixed:\n"
-        "    def __init__(self, dep):\n"
-        "        self._dep = dep\n"
-        "    def a(self):\n"
-        "        return self._dep.a()\n"
-        "    def b(self):\n"
-        "        return self._dep.b()\n"
-        "    def c(self):\n"
-        "        return 1\n"
-        "    def d(self):\n"
-        "        return 2\n"
-        "    def e(self):\n"
-        "        return 3\n"
-    )
-    results = budget_mod._find_delegation_heavy_classes(_parse(content))
-    assert len(results) == 0
-
-
-def test_delegation_heavy_class_skips_small_classes():
-    """Classes with <= 3 non-init methods are skipped."""
-    content = (
-        "class Small:\n"
-        "    def __init__(self, dep):\n"
-        "        self._dep = dep\n"
-        "    def a(self):\n"
-        "        return self._dep.a()\n"
-        "    def b(self):\n"
-        "        return self._dep.b()\n"
-    )
-    results = budget_mod._find_delegation_heavy_classes(_parse(content))
-    assert len(results) == 0
-
-
-# ── Facade modules ────────────────────────────────────────
-
-
-def test_facade_module_detected():
-    """A module with only imports and __all__ is detected as a facade with samples."""
-    content = (
-        "from ._internal import Alpha, Beta, Gamma, Delta\n"
-        "from ._other import Epsilon\n"
-        "\n"
-        "__all__ = ['Alpha', 'Beta', 'Gamma', 'Delta', 'Epsilon']\n"
-    )
-    result = budget_mod._find_facade_modules(_parse(content), loc=4)
-    assert result is not None
-    assert result["re_export_ratio"] >= 0.7
-    assert result["defined_symbols"] == 0
-    assert result["re_exported_symbols"] == 5
-    assert result["loc"] == 4
-    assert set(result["samples"]) == {"Alpha", "Beta", "Gamma", "Delta", "Epsilon"}
-
-
-def test_facade_module_not_flagged_with_definitions():
-    """A module that defines its own functions isn't a facade."""
-    content = (
-        "from ._internal import helper\n"
-        "\n"
-        "def alpha():\n"
-        "    return 1\n"
-        "\n"
-        "def beta():\n"
-        "    return 2\n"
-        "\n"
-        "def gamma():\n"
-        "    return 3\n"
-        "\n"
-        "def delta():\n"
-        "    return 4\n"
-    )
-    result = budget_mod._find_facade_modules(_parse(content), loc=13)
-    assert result is None
-
-
-def test_facade_module_not_flagged_with_few_names():
-    """A module with <3 total public names is not flagged."""
-    content = "from ._internal import Alpha\n"
-    result = budget_mod._find_facade_modules(_parse(content), loc=1)
-    assert result is None
+    monkeypatch.setattr(scan_mod, "parse_text", lambda _content, _path: None)
+    content = "function alpha(x) {\n  return beta(x);\n}\n"
+    context = budget_mod._abstractions_context({str(tmp_path / "mod.ts"): content})
+    assert context["summary"]["total_wrappers"] == 1
+    assert "type_discipline" not in context["sub_axes"]
 
 
 # ── Economy sub-axes in _abstractions_context ─────────────
 
 
-def test_abstractions_context_includes_economy_sub_axes():
-    """New sub-axes appear in the context output."""
-    context = budget_mod._abstractions_context({})
+@needs_treesitter
+def test_abstractions_context_includes_economy_sub_axes(tmp_path):
+    """With TypeScript files parsed, every sub-axis is scored from real data."""
+    content = (
+        "export function load(opts: Record<string, any>) {\n"
+        "  return opts;\n"
+        "}\n"
+    )
+    context = budget_mod._abstractions_context({str(tmp_path / "mod.ts"): content})
     sub = context["sub_axes"]
-    assert "delegation_density" in sub
-    assert "definition_directness" in sub
-    assert "type_discipline" in sub
     assert sub["delegation_density"] == 100
     assert sub["definition_directness"] == 100
-    assert sub["type_discipline"] == 100
+    assert sub["type_discipline"] == 99
+    assert context["summary"]["dict_any_annotation_count"] == 1
+    assert context["dict_any_annotations"][0]["slot"] == "opts"
 
 
 def test_abstractions_context_economy_summary_keys():
@@ -377,25 +253,30 @@ def test_abstractions_context_economy_summary_keys():
     assert "typed_dict_violation_count" not in summary
 
 
+@needs_treesitter
 def test_delegation_density_decreases_with_violations(tmp_path):
     """delegation_density sub-axis drops when delegation-heavy classes exist."""
     content = (
-        "class Proxy:\n"
-        "    def __init__(self, dep):\n"
-        "        self._dep = dep\n"
-        "    def a(self):\n"
-        "        return self._dep.a()\n"
-        "    def b(self):\n"
-        "        return self._dep.b()\n"
-        "    def c(self):\n"
-        "        return self._dep.c()\n"
-        "    def d(self):\n"
-        "        return self._dep.d()\n"
-        "    def e(self):\n"
-        "        return self._dep.e()\n"
+        "export class Proxy {\n"
+        "  constructor(private dep: Dep) {}\n"
+        "  a() { return this.dep.a(); }\n"
+        "  b() { return this.dep.b(); }\n"
+        "  c() { return this.dep.c(); }\n"
+        "  d() { return this.dep.d(); }\n"
+        "  e() { return this.dep.e(); }\n"
+        "}\n"
     )
-    f = tmp_path / "proxy.py"
+    f = tmp_path / "proxy.ts"
     f.write_text(content)
     context = budget_mod._abstractions_context({str(f): content})
     assert context["sub_axes"]["delegation_density"] < 100
     assert context["summary"]["delegation_heavy_class_count"] == 1
+
+
+@needs_treesitter
+def test_definition_directness_counts_facades(tmp_path):
+    content = "export * from './a';\nexport * from './b';\n"
+    context = budget_mod._abstractions_context({str(tmp_path / "index.ts"): content})
+    assert context["summary"]["facade_module_count"] == 1
+    assert context["sub_axes"]["definition_directness"] == 92
+    assert context["facade_modules"][0]["imports_from"] == ["./a", "./b"]
