@@ -52,7 +52,7 @@ Each detector reports a **potential**, the number of checks it ran, along with i
 | Dimension | Weight in pool | Detectors that TypeScript scans emit |
 |---|---|---|
 | **File health** | 2.0 | structural |
-| **Code quality** | 1.0 | unused, logs, exports, deprecated, smells, react, nextjs, next_lint, orphaned, flat_dirs, naming, single_use, coupling, cycles, facade, props, patterns, responsibility_cohesion, stale_exclude, tsconfig_health |
+| **Code quality** | 1.0 | unused, logs, exports, dependencies, deprecated, smells, react, nextjs, next_lint, orphaned, flat_dirs, naming, single_use, coupling, cycles, facade, props, patterns, responsibility_cohesion, stale_exclude, tsconfig_health |
 | **Duplication** | 1.0 | dupes, boilerplate_duplication |
 | **Test health** | 1.0 | test_coverage |
 | **Security** | 1.0 | security |
@@ -118,6 +118,23 @@ When the project has a coverage report, measured line coverage takes over from t
 - Errors that depend more on compiler options or ambient types than on the code (implicit `any`, index-signature access, module-format interop, unknown globals, an unused `@ts-expect-error`) have medium confidence; the rest have high confidence.
 
 When tsc doesn't run (not installed, no tsconfig, dependencies not installed, a Deno project), the detector reports no potential: Type checks is carried forward and its open issues aren't auto-resolved.
+
+### Knip
+
+Knip runs once per scan (`detectors/knip_adapter.py`, cached like tsc), and only when the project installs it: desloppify never downloads it. In a monorepo it runs from the workspace root, with `--workspace` when the scan path is one package. Three detectors read the run, all under Code quality:
+
+- `exports` reports Knip's unused exports and types (`exports::<file>::<name>`), unused enum members (`exports::<file>::<Enum>.<Member>`) and duplicate exports, one name exported under several (`exports::<file>::<a>=<b>`, tier 3, medium confidence). A deprecated alias isn't a duplicate (it's kept on purpose, and `deprecated` reports it), nor is an alias already reported as an unused export.
+- `orphaned` uses Knip's unused files as corroboration and reports nothing new. An orphan Knip also reports goes from medium to high confidence, unless an import Knip can't resolve either may point at it. An orphan Knip doesn't report is a file it reaches from an entry point it knows (a plugin's config, a manifest field) or one its config ignores, so it drops to low confidence.
+- `dependencies` checks the manifests (`package.json`) nearest the scanned sources, inside the scan path. Its potential is the number of dependencies and devDependencies they declare, plus the number of unlisted packages. IDs are `dependencies::<package.json>::<kind>::<package>`:
+  - `unused`, a dependency nothing uses (tier 2, high confidence), and `unused_dev`, the same for a devDependency (tier 3, medium confidence, since tools Knip has no plugin for use them);
+  - `unlisted`, a package imported but not declared, one issue per manifest and package (tier 2; high confidence when a production or script file imports it, medium when only tests or config do);
+  - `unlisted_binary`, a binary a manifest script runs without declaring its package (tier 3, medium confidence). Binaries Knip finds in source code are left out; they're usually system commands.
+
+  A dependency that a scanned file still imports isn't reported unused: Knip calls it unused because every file importing it is unused, and those files are the finding. Nor is one whose name or binary a manifest script mentions, or that is configured under its own manifest key (`"lint-staged": {...}`): Knip doesn't see through task runners it doesn't know (`nub exec --node husky`). When a manifest's dependencies aren't all installed, its unused dependencies and binaries aren't checked, because Knip loads plugin configs and finds binaries through `node_modules`; the scan records reduced coverage naming the manifests.
+
+Knip's unresolved imports aren't reported. In TypeScript files tsc reports them (`type_error`, TS2307), and Knip reports a bare package it can't find as unlisted. They only keep an orphan at low confidence. Knip's namespace members, catalog entries, optional peer dependencies and cycles aren't read either: `cycles` has its own detector, and namespace members flag the members of published type namespaces.
+
+When Knip doesn't run (not installed, a crash, no JSON report), `exports` and `dependencies` record reduced coverage. `dependencies` reports no potential, so its open issues aren't auto-resolved, and orphans keep their own confidence.
 
 ## Subjective dimensions
 

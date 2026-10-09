@@ -71,7 +71,7 @@ def test_phases_basic_cover_logs_unused_exports_and_deprecated(monkeypatch) -> N
     monkeypatch.setattr(
         phases_basic_mod.exports_detector_mod,
         "detect_dead_exports_result",
-        lambda _path: (
+        lambda _path, **_kwargs: (
             [{"file": "src/a.ts", "name": "deadExport", "line": 3, "kind": "function"}],
             4,
             None,
@@ -239,6 +239,7 @@ def test_phase_structural_and_subdetectors_cover_threshold_and_passthrough_paths
 def test_phases_coupling_helpers_and_orchestration(monkeypatch) -> None:
     lang = SimpleNamespace(
         zone_map=None,
+        runtime_cache={},
         dep_graph=None,
         barrel_names={"index.ts"},
         get_area=lambda path: "shared" if "shared" in str(path) else "tool",

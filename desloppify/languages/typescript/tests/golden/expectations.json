@@ -83,11 +83,17 @@
     },
     "node": {
       "must_find": [
-        "unused::src/retry.ts::startedAt"
+        "unused::src/retry.ts::startedAt",
+        "exports::src/url.ts::Method.Head",
+        "exports::src/url.ts::Method.Purge",
+        "exports::src/url.ts::buildUrl=joinUrl"
       ],
       "must_not_find": [
         "exports::src/errors.ts::isClientError",
-        "exports::src/index.ts"
+        "exports::src/index.ts",
+        "exports::src/url.ts::Method.Get",
+        "exports::src/url.ts::buildUrl=joinUrl=",
+        "dependencies::package.json::unlisted_binary::ava"
       ],
       "known_false_positives": {},
       "known_false_negatives": {}
@@ -110,9 +116,12 @@
     "known_false_positives": {},
     "known_false_negatives": {},
     "node": {
-      "must_find": [],
+      "must_find": [
+        "dependencies::packages/utils/package.json::unlisted::@acme/config"
+      ],
       "must_not_find": [
-        "exports::packages/ui/src/"
+        "exports::packages/ui/src/",
+        "dependencies::apps/docs/package.json::unused::next"
       ],
       "known_false_positives": {},
       "known_false_negatives": {}

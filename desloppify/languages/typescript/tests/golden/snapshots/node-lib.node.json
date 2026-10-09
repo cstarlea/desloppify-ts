@@ -8,6 +8,13 @@
       "summary": "Deprecated: isClientError (0 importers) → exported; may still be public API"
     },
     {
+      "id": "deprecated::src/url.ts::makeUrl",
+      "tier": 3,
+      "confidence": "high",
+      "zone": "production",
+      "summary": "Deprecated: makeUrl (0 importers) → exported; may still be public API"
+    },
+    {
       "id": "exports::src/links.mts::Link",
       "tier": 2,
       "confidence": "high",
@@ -15,11 +22,39 @@
       "summary": "Dead export: Link"
     },
     {
-      "id": "orphaned::src/old-client.ts",
+      "id": "exports::src/url.ts::Method.Head",
+      "tier": 2,
+      "confidence": "high",
+      "zone": "production",
+      "summary": "Unused enum member: Method.Head"
+    },
+    {
+      "id": "exports::src/url.ts::Method.Purge",
+      "tier": 2,
+      "confidence": "high",
+      "zone": "production",
+      "summary": "Unused enum member: Method.Purge"
+    },
+    {
+      "id": "exports::src/url.ts::buildUrl=joinUrl",
       "tier": 3,
       "confidence": "medium",
       "zone": "production",
-      "summary": "Orphaned file (17 LOC): zero importers, not an entry point"
+      "summary": "Duplicate export: buildUrl, joinUrl"
+    },
+    {
+      "id": "exports::src/url.ts::makeUrl",
+      "tier": 2,
+      "confidence": "high",
+      "zone": "production",
+      "summary": "Dead export: makeUrl"
+    },
+    {
+      "id": "orphaned::src/old-client.ts",
+      "tier": 3,
+      "confidence": "high",
+      "zone": "production",
+      "summary": "Orphaned file (17 LOC): zero importers, not an entry point; Knip agrees"
     },
     {
       "id": "smells::src/client.ts::async_no_await",
@@ -54,7 +89,7 @@
       "tier": 3,
       "confidence": "high",
       "zone": "production",
-      "summary": "Untested module (12 LOC, 1 importers)"
+      "summary": "Untested module (14 LOC, 1 importers)"
     },
     {
       "id": "test_coverage::src/errors.ts::untested_module",
@@ -76,6 +111,13 @@
       "confidence": "high",
       "zone": "production",
       "summary": "Untested module (17 LOC, 0 importers)"
+    },
+    {
+      "id": "test_coverage::src/url.ts::untested_module",
+      "tier": 3,
+      "confidence": "high",
+      "zone": "production",
+      "summary": "Untested module (14 LOC, 1 importers)"
     },
     {
       "id": "tsconfig_health::tsconfig.json::noImplicitOverride",
@@ -108,28 +150,30 @@
   ],
   "potentials": {
     "coupling": 0,
-    "cycles": 9,
-    "deprecated": 1,
-    "dupes": 7,
-    "exports": 15,
-    "facade": 9,
+    "cycles": 10,
+    "dependencies": 0,
+    "deprecated": 2,
+    "dupes": 8,
+    "exports": 19,
+    "facade": 10,
     "flat_dirs": 2,
-    "logs": 9,
+    "logs": 10,
     "naming": 2,
-    "orphaned": 9,
+    "orphaned": 10,
     "patterns": 0,
     "props": 0,
     "react": 0,
-    "security": 9,
-    "single_use": 2,
-    "smells": 9,
-    "structural": 9,
-    "test_coverage": 26,
+    "security": 10,
+    "single_use": 3,
+    "smells": 10,
+    "structural": 10,
+    "test_coverage": 30,
     "tsconfig_health": 4,
-    "type_error": 8,
-    "unused": 9
+    "type_error": 9,
+    "unused": 10
   },
   "reduced_coverage": [
+    "dependencies: dependencies_not_installed",
     "type_error: partial"
   ]
 }

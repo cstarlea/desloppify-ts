@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from desloppify.base.discovery.file_paths import rel
+from desloppify.base.discovery.file_paths import rel, resolve_path
 from desloppify.base.discovery.paths import get_project_root, get_src_path
 from desloppify.base.output.terminal import log
 from desloppify.engine.detectors import coupling as coupling_detector_mod
@@ -25,6 +25,7 @@ from desloppify.languages._framework.issue_factories import (
 import desloppify.languages.typescript.detectors.deps as deps_detector_mod
 import desloppify.languages.typescript.detectors.deps.packages as packages_mod
 import desloppify.languages.typescript.detectors.facade as facade_detector_mod
+import desloppify.languages.typescript.detectors.knip_adapter as knip_adapter_mod
 import desloppify.languages.typescript.detectors.patterns.analysis as patterns_detector_mod
 from desloppify.languages.typescript.phases_config import TS_SKIP_DIRS, TS_SKIP_NAMES
 from desloppify.languages.typescript.plugin_contract import TS_BARREL_NAMES
@@ -160,6 +161,35 @@ def flag_unresolved_orphans(entries: list[dict], graph: dict) -> None:
             entry["possible_importers"] = sorted(rel(s) for s in sources)
 
 
+def corroborate_orphans_with_knip(entries: list[dict], path: Path, lang: LangRuntimeContract) -> None:
+    """Check orphans against Knip's unused files, from the scan's shared Knip run.
+
+    Knip agreeing raises an orphan to high confidence, unless Knip also can't
+    resolve an import that may point at it. A file Knip doesn't report is one
+    it reaches from an entry point it knows (a plugin's config, a manifest
+    field) or ignores by config, so the orphan drops to low confidence.
+    """
+    run = knip_adapter_mod.run_knip(path, cache=lang.runtime_cache)
+    if not run.usable:
+        return
+    unused = knip_adapter_mod.unused_files(run)
+    unresolved = knip_adapter_mod.unresolved_imports(run)
+    for entry in entries:
+        if str(Path(resolve_path(entry["file"])).resolve()) not in unused:
+            entry["knip"] = "reachable"
+            entry["confidence"] = "low"
+            continue
+        entry["knip"] = "unused"
+        possible = entry.get("possible_importers") or ()
+        still_unresolved = any(
+            _specifier_could_name(specifier, entry["file"])
+            for importer in possible
+            for specifier in unresolved.get(str(Path(resolve_path(importer)).resolve()), ())
+        )
+        if not still_unresolved:
+            entry["confidence"] = "high"
+
+
 def find_orphans(
     path: Path,
     graph: dict,
@@ -188,6 +218,7 @@ def find_orphans(
     )
     orphan_entries = filter_entries(lang.zone_map, orphan_entries, "orphaned")
     flag_unresolved_orphans(orphan_entries, graph)
+    corroborate_orphans_with_knip(orphan_entries, path, lang)
     return orphan_entries, total_graph_files
 
 

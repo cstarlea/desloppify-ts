@@ -38,16 +38,16 @@
     {
       "id": "orphaned::src/components/LegacyBanner.tsx",
       "tier": 3,
-      "confidence": "medium",
+      "confidence": "high",
       "zone": "production",
-      "summary": "Orphaned file (12 LOC): zero importers, not an entry point"
+      "summary": "Orphaned file (12 LOC): zero importers, not an entry point; Knip agrees"
     },
     {
       "id": "orphaned::src/lib/constants.ts",
       "tier": 3,
-      "confidence": "medium",
+      "confidence": "high",
       "zone": "production",
-      "summary": "Orphaned file (11 LOC): zero importers, not an entry point"
+      "summary": "Orphaned file (11 LOC): zero importers, not an entry point; Knip agrees"
     },
     {
       "id": "security::src/lib/storage.ts::security::json_parse_unguarded::src/lib/storage.ts::5",
@@ -214,6 +214,7 @@
   "potentials": {
     "coupling": 0,
     "cycles": 18,
+    "dependencies": 0,
     "deprecated": 1,
     "dupes": 17,
     "exports": 24,
@@ -235,6 +236,7 @@
     "unused": 18
   },
   "reduced_coverage": [
+    "dependencies: dependencies_not_installed",
     "type_error: partial"
   ]
 }

@@ -182,6 +182,10 @@ def make_orphaned_issues(entries: list[dict], stderr_fn) -> list[Issue]:
         if possible:
             detail["possible_importers"] = possible
             summary += f" (an unresolved import in {possible[0]} may point here)"
+        knip = e.get("knip")
+        if knip:
+            detail["knip"] = knip
+            summary += "; Knip agrees" if knip == "unused" else "; Knip reaches it"
         results.append(
             make_issue(
                 "orphaned",

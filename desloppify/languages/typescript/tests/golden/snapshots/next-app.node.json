@@ -10,9 +10,9 @@
     {
       "id": "orphaned::components/old-hero.tsx",
       "tier": 3,
-      "confidence": "medium",
+      "confidence": "high",
       "zone": "production",
-      "summary": "Orphaned file (14 LOC): zero importers, not an entry point"
+      "summary": "Orphaned file (14 LOC): zero importers, not an entry point; Knip agrees"
     },
     {
       "id": "security::components/product-grid.tsx::security::dangerously_set_inner_html::components/product-grid.tsx::7",
@@ -109,6 +109,7 @@
   "potentials": {
     "coupling": 0,
     "cycles": 14,
+    "dependencies": 0,
     "deprecated": 0,
     "dupes": 15,
     "exports": 17,
@@ -131,6 +132,7 @@
     "unused": 14
   },
   "reduced_coverage": [
+    "dependencies: dependencies_not_installed",
     "next_lint: tool_not_found",
     "type_error: partial"
   ]

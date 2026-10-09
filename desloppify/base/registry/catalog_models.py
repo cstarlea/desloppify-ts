@@ -10,6 +10,7 @@ DISPLAY_ORDER = [
     "type_error",
     "tsconfig_health",
     "exports",
+    "dependencies",
     "deprecated",
     "structural",
     "props",
