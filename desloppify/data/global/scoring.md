@@ -52,7 +52,7 @@ Each detector reports a **potential**, the number of checks it ran, along with i
 | Dimension | Weight in pool | Detectors that TypeScript scans emit |
 |---|---|---|
 | **File health** | 2.0 | structural |
-| **Code quality** | 1.0 | unused, logs, exports, dependencies, deprecated, smells, react, nextjs, react_router, nestjs, express, hono, fastify, angular, orphaned, flat_dirs, naming, single_use, coupling, cycles, facade, props, patterns, responsibility_cohesion, stale_exclude, tsconfig_health |
+| **Code quality** | 1.0 | unused, logs, exports, dependencies, deprecated, smells, react, nextjs, react_router, nestjs, express, hono, fastify, angular, sveltekit, nuxt, astro, orphaned, flat_dirs, naming, single_use, coupling, cycles, facade, props, patterns, responsibility_cohesion, stale_exclude, tsconfig_health |
 | **Duplication** | 1.0 | dupes, boilerplate_duplication |
 | **Test health** | 1.0 | test_coverage |
 | **Security** | 1.0 | security, supabase |
