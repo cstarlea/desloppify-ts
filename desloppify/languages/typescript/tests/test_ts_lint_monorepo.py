@@ -126,7 +126,8 @@ def test_spent_budget_skips_the_remaining_packages(workspace):
         _write(root, f"packages/{name}/eslint.config.js")
         _write(root, f"packages/{name}/x.ts")
 
-    result = detect_lint_result(root, monorepo=Budget(1e-9, 1024))
+    ticks = iter([0.0, 15.0])  # the first package run takes 15 of the 10 seconds
+    result = detect_lint_result(root, monorepo=Budget(10, 1024, clock=lambda: next(ticks)))
 
     assert [(p.directory.name, p.skipped) for p in result.packages] == [("p", None), ("q", "time_budget")]
     assert "time budget spent: packages/q" in result.coverage.summary
