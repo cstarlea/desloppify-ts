@@ -16,6 +16,57 @@
         "Public API typing shells that isolate external SDK volatility",
         "Intentional barrel/facade exports that define stable package entry points"
       ]
+    },
+    "type_safety": {
+      "description": "TypeScript types that match runtime behavior, with escape hatches rare and justified",
+      "look_for": [
+        "`any` (explicit, or implicit from `JSON.parse`, untyped imports or `catch` variables) flowing into typed code without narrowing",
+        "`as` casts asserting a shape nothing checks, `as unknown as T` double casts, and `!` on values that can really be undefined",
+        "External data (fetch responses, `JSON.parse`, `process.env`, request bodies) typed by annotation instead of validated at the boundary (zod, valibot, a type guard)",
+        "`@ts-ignore` or `@ts-expect-error` with no reason, or hiding a real bug",
+        "Unions handled without an exhaustive `never` check, or string literals compared where a union or enum type already exists",
+        "Loose types where a precise one exists: `object`, `Function`, `{}`, `Record<string, any>`, or `string` for a known set of values",
+        "Exported functions whose return type is inferred from a complex body, so an internal change silently changes the public API"
+      ],
+      "skip": [
+        "`any` confined to one interop module wrapping an untyped library",
+        "Type-level tests (`*.test-d.ts`) and generated `.d.ts` files",
+        "Test code with loose typing",
+        "Casts right after a runtime check the compiler can't follow"
+      ]
+    },
+    "dependency_health": {
+      "description": "package.json dependencies that are used, declared where they are imported, and not duplicated",
+      "look_for": [
+        "Two libraries for one job (axios + a fetch wrapper, moment + dayjs/date-fns, lodash + native methods, jest + vitest)",
+        "Heavy runtime dependencies for light use (lodash for one helper, a date library for one format call)",
+        "Imports of packages the importing package's package.json doesn't declare, working only through hoisting",
+        "Runtime code importing `devDependencies`, or build and test tools listed in `dependencies`",
+        "In a monorepo, one dependency at different versions across packages, or workspace packages imported by relative path instead of by name",
+        "Deep imports into another package's internals (`pkg/dist/...`, `pkg/src/...`) instead of its public entry"
+      ],
+      "skip": [
+        "Peer dependencies a framework or plugin requires",
+        "Polyfills and `@types/*` packages kept for supported runtimes",
+        "Lockfile churn"
+      ]
+    },
+    "test_strategy": {
+      "description": "Tests that cover the critical paths and assert behavior, not implementation",
+      "look_for": [
+        "Critical modules (many importers, request handlers, data access) with no tests, or below target in the coverage report",
+        "`vi.mock`/`jest.mock` of the module's own internals, so tests assert call sequences instead of results",
+        "Snapshots (`toMatchSnapshot`, inline snapshots) as the main assertion for logic rather than rendered output",
+        "Async tests that neither await nor return the promise, and real timers where fake timers belong",
+        "Public generic or overloaded APIs with no type-level tests (`expectTypeOf`, `tsd`, `*.test-d.ts`)",
+        "React components tested through state or instance internals instead of Testing Library queries",
+        "Only unit tests: nothing runs a route, CLI or package entry point end to end"
+      ],
+      "skip": [
+        "Types-only, constants and barrel index files",
+        "Generated code",
+        "Thin framework glue (route files that only wire a handler, config files)"
+      ]
     }
   },
   "system_prompt_append": "TypeScript anchor checks: prop-drilling wrappers, single-implementation interfaces, generic surfaces used in only one concrete path, and recurring wrapper chains across feature boundaries."

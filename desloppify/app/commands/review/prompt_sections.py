@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import TypedDict
 
@@ -105,6 +106,24 @@ SCAN_EVIDENCE_FOCUS_BY_DIMENSION = {
         "`holistic_context.conventions.duplicate_clusters` for cross-file "
         "function duplication and `conventions.naming_drift` for directory-level naming "
         "inconsistency.\n"
+    ),
+    "type_safety": (
+        "9j. For type_safety, consult `holistic_context.abstractions.type_errors` (tsc "
+        "errors by code and file), `abstractions.type_strictness` (tsconfig strictness "
+        "options left off) and type-aware rules in `holistic_context.conventions.lint_rules`. "
+        "Judge whether they point to a habit (unchecked casts, unvalidated boundaries), "
+        "not how many there are.\n"
+    ),
+    "dependency_health": (
+        "9k. For dependency_health, consult `holistic_context.dependencies.manifest_issues` "
+        "(unused, unlisted and binary packages per package.json, from Knip) and "
+        "`dependencies.cycle_summaries`.\n"
+    ),
+    "test_strategy": (
+        "9l. For test_strategy, consult `holistic_context.testing.coverage`. "
+        "`lowest_line_coverage` is measured by the coverage reports in `measured_by`; "
+        "`by_kind` counts every verdict, from a report where one covers the file and "
+        "from the import graph elsewhere. Cross-check `testing.critical_untested`.\n"
     ),
 }
 
@@ -559,6 +578,9 @@ def render_scan_evidence_note() -> str:
     )
 
 
+_FOCUS_NUMBER = re.compile(r"^\s*(?:\d+[a-z]?\.\s*)?")
+
+
 def render_task_requirements(*, issues_cap: int, dim_set: set[str]) -> str:
     dim_focus = render_dimension_focus(dim_set)
     lines = [
@@ -580,7 +602,7 @@ def render_task_requirements(*, issues_cap: int, dim_set: set[str]) -> str:
     next_num = 12
     if dim_focus:
         for focus_line in dim_focus.rstrip("\n").split("\n"):
-            lines.append(f"{next_num}. {focus_line.lstrip('0123456789abcdefghij. ')}")
+            lines.append(f"{next_num}. {_FOCUS_NUMBER.sub('', focus_line)}")
             next_num += 1
     lines.append(
         f"{next_num}. Complete `dimension_judgment`: write dimension_character "

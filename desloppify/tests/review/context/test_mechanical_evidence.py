@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from desloppify.intelligence.review.context_holistic.mechanical import (
+    dependency_manifest_evidence,
     gather_mechanical_evidence,
     type_strictness_evidence,
 )
@@ -687,4 +688,62 @@ def test_type_strictness_evidence_lists_open_tsconfig_issues():
     state = {"issues": {issue["id"]: issue for issue in issues}}
     assert type_strictness_evidence(state) == [
         {"config": "tsconfig.json", "summary": "tsconfig_health issue in tsconfig.json"}
+    ]
+
+
+def test_toolchain_evidence_groups_type_errors_lint_rules_and_coverage():
+    issues = [
+        _issue(id="t1", detector="type_error", file="src/a.ts", detail={"code": "TS2322"}),
+        _issue(id="t2", detector="type_error", file="src/a.ts", detail={"code": "TS2345"}),
+        _issue(id="t3", detector="type_error", file="src/b.ts", detail={"code": "TS2322"}),
+        _issue(id="l1", detector="lint", file="src/a.ts", detail={"rule": "@typescript-eslint/no-floating-promises"}),
+        _issue(id="l2", detector="lint", file="src/b.ts", detail={"rule": "@typescript-eslint/no-floating-promises"}),
+        _issue(id="l3", detector="lint", file="src/b.ts", detail={"rule": "eqeqeq"}),
+        _issue(id="c1", detector="test_coverage", file="src/a.ts", detail={"kind": "untested_module"}),
+        _issue(
+            id="c2",
+            detector="test_coverage",
+            file="src/b.ts",
+            detail={
+                "kind": "low_coverage",
+                "source": "coverage_report",
+                "coverage_report": "coverage/lcov.info",
+                "line_pct": 41.5,
+            },
+        ),
+    ]
+    evidence = gather_mechanical_evidence({"issues": {issue["id"]: issue for issue in issues}})
+    assert evidence["type_errors"] == {
+        "total": 3,
+        "by_code": {"TS2322": 2, "TS2345": 1},
+        "files": [{"file": "src/a.ts", "errors": 2}, {"file": "src/b.ts", "errors": 1}],
+    }
+    assert evidence["lint_rules"] == [
+        {"rule": "@typescript-eslint/no-floating-promises", "count": 2, "files": ["src/a.ts", "src/b.ts"]},
+        {"rule": "eqeqeq", "count": 1, "files": ["src/b.ts"]},
+    ]
+    assert evidence["coverage_gaps"] == {
+        "by_kind": {"untested_module": 1, "low_coverage": 1},
+        "measured_by": ["coverage/lcov.info"],
+        "lowest_line_coverage": [{"file": "src/b.ts", "line_pct": 41.5}],
+    }
+
+
+def test_coverage_evidence_without_a_report_has_only_graph_verdicts():
+    issue = _issue(id="c1", detector="test_coverage", file="src/a.ts", detail={"kind": "transitive_only"})
+    assert gather_mechanical_evidence({"issues": {"c1": issue}})["coverage_gaps"] == {
+        "by_kind": {"transitive_only": 1}
+    }
+
+
+def test_dependency_manifest_evidence_lists_open_knip_issues():
+    issues = [
+        _issue(id="d1", detector="dependencies", file="packages/a/package.json", detail={"kind": "unused", "package": "lodash"}),
+        _issue(id="d2", detector="dependencies", file="package.json", detail={"kind": "unlisted", "package": "zod"}),
+        _issue(id="d3", detector="dependencies", file="package.json", detail={"kind": "unused", "package": "x"}, status="fixed"),
+    ]
+    state = {"issues": {issue["id"]: issue for issue in issues}}
+    assert dependency_manifest_evidence(state) == [
+        {"manifest": "package.json", "kind": "unlisted", "package": "zod"},
+        {"manifest": "packages/a/package.json", "kind": "unused", "package": "lodash"},
     ]

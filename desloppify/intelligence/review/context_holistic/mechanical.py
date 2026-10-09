@@ -29,6 +29,7 @@ from .clusters.security import (
     _build_signal_density,
     _build_systemic_patterns,
 )
+from .clusters.toolchain import _build_coverage_gaps, _build_lint_rules, _build_type_errors
 
 
 def _normalize_allowed_files(
@@ -145,6 +146,18 @@ def gather_mechanical_evidence(
     if systemic:
         evidence["systemic_patterns"] = systemic
 
+    type_errors = _build_type_errors(by_detector)
+    if type_errors:
+        evidence["type_errors"] = type_errors
+
+    lint_rules = _build_lint_rules(by_detector)
+    if lint_rules:
+        evidence["lint_rules"] = lint_rules
+
+    coverage_gaps = _build_coverage_gaps(by_detector)
+    if coverage_gaps:
+        evidence["coverage_gaps"] = coverage_gaps
+
     pkg_census = _build_package_size_census(by_file)
     if pkg_census:
         evidence["package_size_census"] = pkg_census
@@ -202,4 +215,25 @@ def type_strictness_evidence(state: StateModel) -> list[dict[str, str]]:
     ]
 
 
-__all__ = ["gather_mechanical_evidence", "type_strictness_evidence"]
+def dependency_manifest_evidence(state: StateModel) -> list[dict[str, str]]:
+    """The open ``dependencies`` issues (Knip): unused, unlisted and binary packages per manifest.
+
+    Not limited to reviewed files, since the issues are on package.json files.
+    """
+    issues = state.get("work_items") or state.get("issues", {})
+    found = []
+    for issue in issues.values():
+        if not isinstance(issue, dict) or issue.get("detector") != "dependencies" or issue.get("status") != "open":
+            continue
+        detail = issue.get("detail") if isinstance(issue.get("detail"), dict) else {}
+        found.append(
+            {
+                "manifest": str(issue.get("file", "")),
+                "kind": str(detail.get("kind", "")),
+                "package": str(detail.get("package", "")),
+            }
+        )
+    return sorted(found, key=lambda d: (d["manifest"], d["kind"], d["package"]))[:30]
+
+
+__all__ = ["dependency_manifest_evidence", "gather_mechanical_evidence", "type_strictness_evidence"]

@@ -26,7 +26,11 @@ from desloppify.intelligence.review.context_signals.migration import (
 )
 
 from .budget import _abstractions_context, _codebase_stats
-from .mechanical import gather_mechanical_evidence, type_strictness_evidence
+from .mechanical import (
+    dependency_manifest_evidence,
+    gather_mechanical_evidence,
+    type_strictness_evidence,
+)
 from .readers import _read_file_contents
 from .selection import (
     _api_surface_context,
@@ -125,6 +129,9 @@ def _build_holistic_context_inner(
     strictness = type_strictness_evidence(state)
     if strictness:
         context.abstractions["type_strictness"] = strictness
+    manifest_issues = dependency_manifest_evidence(state)
+    if manifest_issues:
+        context.dependencies["manifest_issues"] = manifest_issues
 
     context.normalize_sections(strict=True)
     return context
@@ -150,3 +157,9 @@ def _enrich_sections_from_evidence(
         context.conventions["naming_drift"] = evidence["naming_drift"]
     if "flat_dir_issues" in evidence:
         context.structure["flat_dir_issues"] = evidence["flat_dir_issues"]
+    if "type_errors" in evidence:
+        context.abstractions["type_errors"] = evidence["type_errors"]
+    if "lint_rules" in evidence:
+        context.conventions["lint_rules"] = evidence["lint_rules"]
+    if "coverage_gaps" in evidence:
+        context.testing["coverage"] = evidence["coverage_gaps"]
