@@ -6,6 +6,7 @@ import logging
 from pathlib import Path
 
 from desloppify.base.discovery.file_paths import resolve_scan_file
+from desloppify.base.discovery.sfc import read_code_text
 from desloppify.engine.hook_registry import get_lang_hook
 from desloppify.engine.policy.zones import FileZoneMap
 
@@ -40,7 +41,7 @@ def detect_security_issues(
 
         try:
             resolved_path = resolve_scan_file(filepath, scan_root=resolved_scan_root)
-            content = resolved_path.read_text(errors="replace")
+            content = read_code_text(resolved_path, errors="replace")
         except OSError as exc:
             logger.debug(
                 "Skipping unreadable file in security detector: %s (%s)", filepath, exc

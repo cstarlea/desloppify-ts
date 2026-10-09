@@ -1,0 +1,145 @@
+{
+  "issues": [
+    {
+      "id": "exports::src/types.ts::Filter",
+      "tier": 2,
+      "confidence": "high",
+      "zone": "production",
+      "summary": "Dead export: Filter"
+    },
+    {
+      "id": "logs::src/views/Home.vue::Home",
+      "tier": 1,
+      "confidence": "high",
+      "zone": "production",
+      "summary": "1 tagged logs [Home]"
+    },
+    {
+      "id": "orphaned::src/components/LegacyCard.vue",
+      "tier": 3,
+      "confidence": "high",
+      "zone": "production",
+      "summary": "Orphaned file (14 LOC): zero importers, not an entry point; Knip agrees"
+    },
+    {
+      "id": "single_use::src/views/Home.vue",
+      "tier": 3,
+      "confidence": "medium",
+      "zone": "production",
+      "summary": "Single-use (22 LOC): only imported by src/router.ts"
+    },
+    {
+      "id": "single_use::src/views/Settings.vue",
+      "tier": 3,
+      "confidence": "medium",
+      "zone": "production",
+      "summary": "Single-use (22 LOC): only imported by src/router.ts"
+    },
+    {
+      "id": "smells::src/components/TodoList.vue::as_any_cast",
+      "tier": 3,
+      "confidence": "medium",
+      "zone": "production",
+      "summary": "1x `as any` type casts, 125 per 1,000 lines"
+    },
+    {
+      "id": "smells::src/views/Settings.vue::empty_if_chain",
+      "tier": 2,
+      "confidence": "medium",
+      "zone": "production",
+      "summary": "1x Empty if/else chains"
+    },
+    {
+      "id": "test_coverage::src/components/counter.ts",
+      "tier": 3,
+      "confidence": "high",
+      "zone": "production",
+      "summary": "Untested module (11 LOC, 1 importers) — no test files found"
+    },
+    {
+      "id": "test_coverage::src/composables/useTodos.ts",
+      "tier": 3,
+      "confidence": "high",
+      "zone": "production",
+      "summary": "Untested module (14 LOC, 1 importers) — no test files found"
+    },
+    {
+      "id": "test_coverage::src/main.ts",
+      "tier": 3,
+      "confidence": "high",
+      "zone": "production",
+      "summary": "Untested module (10 LOC, 0 importers) — no test files found"
+    },
+    {
+      "id": "test_coverage::src/router.ts",
+      "tier": 3,
+      "confidence": "high",
+      "zone": "production",
+      "summary": "Untested module (11 LOC, 1 importers) — no test files found"
+    },
+    {
+      "id": "test_coverage::src/stores/session.ts",
+      "tier": 3,
+      "confidence": "high",
+      "zone": "production",
+      "summary": "Untested module (15 LOC, 0 importers) — no test files found"
+    },
+    {
+      "id": "test_coverage::src/views/Home.vue",
+      "tier": 3,
+      "confidence": "high",
+      "zone": "production",
+      "summary": "Untested module (11 LOC, 1 importers) — no test files found"
+    },
+    {
+      "id": "test_coverage::src/views/Settings.vue",
+      "tier": 3,
+      "confidence": "high",
+      "zone": "production",
+      "summary": "Untested module (13 LOC, 1 importers) — no test files found"
+    },
+    {
+      "id": "tsconfig_health::tsconfig.json::noUncheckedIndexedAccess",
+      "tier": 3,
+      "confidence": "medium",
+      "zone": "production",
+      "summary": "tsconfig never sets noUncheckedIndexedAccess: `arr[i]` and `record[key]` are typed as never undefined"
+    },
+    {
+      "id": "tsconfig_health::tsconfig.json::verbatimModuleSyntax",
+      "tier": 2,
+      "confidence": "medium",
+      "zone": "production",
+      "summary": "tsconfig never sets verbatimModuleSyntax: type-only imports can be emitted as runtime imports"
+    }
+  ],
+  "potentials": {
+    "coupling": 0,
+    "cycles": 15,
+    "dependencies": 0,
+    "deprecated": 0,
+    "dupes": 8,
+    "exports": 9,
+    "facade": 15,
+    "flat_dirs": 7,
+    "logs": 15,
+    "naming": 7,
+    "orphaned": 15,
+    "patterns": 0,
+    "props": 0,
+    "react": 0,
+    "security": 15,
+    "single_use": 10,
+    "smells": 15,
+    "structural": 15,
+    "test_coverage": 24,
+    "tsconfig_health": 3,
+    "type_error": 4,
+    "unused": 7
+  },
+  "reduced_coverage": [
+    "dependencies: dependencies_not_installed",
+    "type_error: partial",
+    "unused: components"
+  ]
+}

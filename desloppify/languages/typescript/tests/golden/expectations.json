@@ -156,5 +156,62 @@
       },
       "known_false_negatives": {}
     }
+  },
+  "vue-vite": {
+    "must_find": [
+      "orphaned::src/components/LegacyCard.vue",
+      "logs::src/views/Home.vue::Home",
+      "smells::src/components/TodoList.vue::as_any_cast",
+      "smells::src/views/Settings.vue::empty_if_chain"
+    ],
+    "must_not_find": [
+      "orphaned::src/components/TheHeader.vue",
+      "orphaned::src/components/TodoList.vue",
+      "orphaned::src/components/counter.ts",
+      "orphaned::src/composables/",
+      "orphaned::src/stores/",
+      "orphaned::src/types.ts",
+      "orphaned::src/views/",
+      "logs::src/views/Home.vue::Template",
+      "test_coverage::src/views/About.vue"
+    ],
+    "known_false_positives": {},
+    "known_false_negatives": {},
+    "node": {
+      "must_find": [
+        "orphaned::src/components/LegacyCard.vue"
+      ],
+      "must_not_find": [
+        "type_error::src/plugins/register.ts",
+        "type_error::src/main.ts"
+      ],
+      "known_false_positives": {},
+      "known_false_negatives": {}
+    }
+  },
+  "sveltekit-app": {
+    "must_find": [
+      "orphaned::src/lib/components/Unused.svelte",
+      "logs::src/routes/+page.svelte::Home"
+    ],
+    "must_not_find": [
+      "orphaned::src/routes/",
+      "orphaned::src/hooks.server.ts",
+      "orphaned::src/params/",
+      "orphaned::src/lib/api.ts",
+      "orphaned::src/lib/components/Nav.svelte"
+    ],
+    "known_false_positives": {},
+    "known_false_negatives": {},
+    "node": {
+      "must_find": [
+        "orphaned::src/lib/components/Unused.svelte"
+      ],
+      "must_not_find": [
+        "type_error::"
+      ],
+      "known_false_positives": {},
+      "known_false_negatives": {}
+    }
   }
 }

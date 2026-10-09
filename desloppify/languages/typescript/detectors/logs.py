@@ -18,7 +18,12 @@ from collections import defaultdict
 from pathlib import Path
 
 from desloppify.base.discovery.file_paths import rel
-from desloppify.base.discovery.source import find_ts_and_js_files, read_file_text
+from desloppify.base.discovery.sfc import code_text
+from desloppify.base.discovery.source import (
+    find_component_files,
+    find_ts_and_js_files,
+    read_file_text,
+)
 from desloppify.base.output.terminal import colorize, print_table
 from desloppify.languages.typescript.detectors.contracts import DetectorResult
 from desloppify.languages.typescript.syntax.queries import calls
@@ -54,7 +59,7 @@ def tagged_console_calls(parsed: ParsedSource) -> list:
 
 def detect_logs(path: Path) -> DetectorResult[dict]:
     """Detect tagged logs with explicit population semantics."""
-    ts_files = find_ts_and_js_files(path)
+    ts_files = [*find_ts_and_js_files(path), *find_component_files(path)]
     entries = []
     for filepath in ts_files:
         parsed = parsed_file(filepath)
@@ -63,7 +68,7 @@ def detect_logs(path: Path) -> DetectorResult[dict]:
             continue
         content = read_file_text(filepath)
         if content is not None:
-            entries.extend(_regex_logs(filepath, content))
+            entries.extend(_regex_logs(filepath, code_text(content, filepath)))
     return DetectorResult(entries=entries, population_kind="files", population_size=len(ts_files))
 
 

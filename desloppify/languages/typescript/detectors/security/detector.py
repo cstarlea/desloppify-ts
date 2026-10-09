@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Mapping
-from pathlib import Path
 
 from desloppify.base.discovery.file_paths import resolve_path
+from desloppify.base.discovery.sfc import read_code_text
 from desloppify.base.output.fallbacks import log_best_effort_failure
 from desloppify.base.signal_patterns import is_server_only_path
 from desloppify.engine.policy.zones import FileZoneMap, Zone
@@ -50,7 +50,7 @@ def detect_ts_security(
                 continue
 
         try:
-            content = Path(resolve_path(filepath)).read_text(errors="replace")
+            content = read_code_text(resolve_path(filepath), errors="replace")
         except OSError as exc:
             log_best_effort_failure(logger, f"read TypeScript security source {filepath}", exc)
             entries.append(
