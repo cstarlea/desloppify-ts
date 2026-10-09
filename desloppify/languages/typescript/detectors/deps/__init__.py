@@ -31,6 +31,7 @@ from desloppify.languages.typescript.detectors.deps.imports import (
 )
 from desloppify.languages.typescript.detectors.deps.resolver import (
     ModuleResolver,
+    docusaurus_site_root,
     is_bare,
 )
 from desloppify.languages.typescript.detectors.deps.resolve import (
@@ -47,6 +48,10 @@ from desloppify.languages.typescript.detectors.deps.runtime import (
 )
 
 _FRAMEWORK_EXTENSIONS = (".svelte", ".vue", ".astro")
+# Documents whose ESM imports are edges: MDX docs import components, and
+# Docusaurus compiles a site's Markdown as MDX too.
+_DOCUMENT_EXTENSIONS = (".mdx",)
+_DOCUSAURUS_MARKDOWN = (".md",)
 _DENO_EXTERNAL_PREFIXES = ("http://", "https://", "npm:", "jsr:")
 _DECLARATION_SUFFIXES = (".d.ts", ".d.mts", ".d.cts")
 
@@ -159,7 +164,12 @@ def build_dep_graph(
 
     runtime_edges: dict[str, set[str]] = defaultdict(set)
     pattern_refs: list[tuple[str, str, ImportRef]] = []
-    fw_files = find_source_files(path, list(_FRAMEWORK_EXTENSIONS))
+    fw_files = find_source_files(path, [*_FRAMEWORK_EXTENSIONS, *_DOCUMENT_EXTENSIONS])
+    fw_files += [
+        f
+        for f in find_source_files(path, list(_DOCUSAURUS_MARKDOWN))
+        if docusaurus_site_root(resolve_path(f)) is not None
+    ]
     for filepath in [*ts_files, *fw_files]:
         source_resolved = resolve_path(filepath)
         refs = extractor.extract(source_resolved)

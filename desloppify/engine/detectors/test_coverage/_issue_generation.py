@@ -13,7 +13,7 @@ from ._issue_gaps import (
     untested_module_issue,
 )
 from ._issue_quality import select_direct_test_quality_issue
-from .metrics import _file_loc, _loc_weight
+from .metrics import _file_loc, _importer_count, _loc_weight
 from .reports import FileCoverage
 
 
@@ -45,7 +45,7 @@ def generate_issues(
 
     for filepath in scorable:
         loc = _file_loc(filepath)
-        importer_count = graph.get(filepath, {}).get("importer_count", 0)
+        importer_count = _importer_count(graph, filepath)
         loc_weight = _loc_weight(loc)
 
         if filepath in directly_tested:
