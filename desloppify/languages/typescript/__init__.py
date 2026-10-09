@@ -157,6 +157,18 @@ class TypeScriptConfig(LangConfig):
                     "Competing approaches to report when one area mixes them: "
                     "{family: {patterns: {name: regex}, threshold?}}",
                 ),
+                "data_clients": LangValueSpec(
+                    list,
+                    [],
+                    "Client objects whose calls are data access in components, besides "
+                    "the detected frameworks' (supabase)",
+                ),
+                "public_env_prefixes": LangValueSpec(
+                    list,
+                    [],
+                    "Env-var prefixes the bundler exposes to client code, besides the "
+                    "detected frameworks' (NEXT_PUBLIC_, VITE_, PUBLIC_, EXPO_PUBLIC_)",
+                ),
                 "auth_functions": LangValueSpec(
                     list,
                     [],

@@ -33,6 +33,7 @@ DISPLAY_ORDER = [
     "hono",
     "fastify",
     "angular",
+    "supabase",
     "next_lint",
     "dupes",
     "stale_exclude",

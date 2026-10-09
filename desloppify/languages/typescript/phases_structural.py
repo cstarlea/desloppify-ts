@@ -78,7 +78,9 @@ def _detect_structural_signals(
 
     _add_god_class_signals(structural, path, lang)
 
-    concern_entries, _ = concerns_detector_mod.detect_mixed_concerns(path)
+    concern_entries, _ = concerns_detector_mod.detect_mixed_concerns(
+        path, concerns_detector_mod.configured_data_clients(path, lang)
+    )
     for entry in concern_entries:
         add_structural_signal(
             structural,

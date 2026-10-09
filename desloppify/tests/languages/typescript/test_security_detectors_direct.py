@@ -5,6 +5,7 @@ from __future__ import annotations
 import desloppify.languages.typescript.detectors.security.entries as entries_mod
 import desloppify.languages.typescript.detectors.security.file_checks as file_checks_mod
 import desloppify.languages.typescript.detectors.security.line_checks as line_checks_mod
+from desloppify.languages.typescript.detectors.security.patterns import public_secret_re
 from desloppify.languages.typescript.syntax.scanner import SourceText
 
 
@@ -20,6 +21,7 @@ def _line_issues(lines: list[str], line_num: int, filepath: str, normalized_path
         line_num=line_num,
         is_server_only=False,
         has_dev_guard=has_dev_guard,
+        public_secret=public_secret_re(("VITE_",)),
     )
 
 
@@ -77,34 +79,12 @@ def test_file_checks_cover_edge_auth_json_parse_and_rls_detection() -> None:
     assert _kinds(json_entries) == {"json_parse_unguarded"}
     assert json_entries[0]["detail"]["line"] == 7
 
-    sql_content = "CREATE VIEW v AS SELECT 1;\nSELECT 1;"
-    sql_lines = sql_content.splitlines()
-    rls_entries: list[dict[str, object]] = []
-    file_checks_mod._check_rls_bypass("db/schema.sql", sql_content, sql_lines, rls_entries)
-    assert _kinds(rls_entries) == {"rls_bypass_views"}
-
-    no_rls_entries: list[dict[str, object]] = []
-    file_checks_mod._check_rls_bypass(
-        "db/schema.sql",
-        "CREATE VIEW v WITH (security_invoker = true) AS SELECT 1;",
-        ["CREATE VIEW v WITH (security_invoker = true) AS SELECT 1;"],
-        no_rls_entries,
-    )
-    assert no_rls_entries == []
-
     combined = file_checks_mod._file_level_security_issues(
         filepath="/src/functions/handler.ts",
         normalized_path="/src/functions/handler.ts",
         source=edge_source,
     )
     assert {"edge_function_missing_auth", "json_parse_unguarded"} <= _kinds(combined)
-
-    sql_combined = file_checks_mod._file_level_security_issues(
-        filepath="db/schema.sql",
-        normalized_path="db/schema.sql",
-        source=SourceText(sql_content),
-    )
-    assert "rls_bypass_views" in _kinds(sql_combined)
 
 
 def test_line_checks_report_expected_security_kinds() -> None:

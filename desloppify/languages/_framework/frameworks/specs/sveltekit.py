@@ -33,6 +33,8 @@ SVELTEKIT_SPEC = FrameworkSpec(
         script_pattern=r"(?:^|\s)svelte-kit\s",
     ),
     entry_conventions=SVELTEKIT_ENTRY_CONVENTIONS,
+    # $env/static/public and $env/dynamic/public.
+    public_env_prefixes=("PUBLIC_",),
 )
 
 

@@ -599,7 +599,7 @@ class TestResolveEntity:
         entity = resolve_entity("security", {})
         assert entity.kind == "dimension"
         assert entity.is_subjective is False
-        assert tuple(entity.detectors) == ("security",)
+        assert tuple(entity.detectors) == ("security", "supabase")
 
     def test_cycles_belong_to_code_quality(self):
         entity = resolve_entity("code quality", {})

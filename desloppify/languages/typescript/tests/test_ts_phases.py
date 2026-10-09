@@ -63,7 +63,7 @@ def test_phase_structural_uses_lang_thresholds(monkeypatch, tmp_path: Path):
     )
     monkeypatch.setattr(
         "desloppify.languages.typescript.detectors.concerns.detect_mixed_concerns",
-        lambda _p: ([], 0),
+        lambda _p, _clients=(): ([], 0),
     )
     monkeypatch.setattr(
         "desloppify.languages.typescript.detectors.props.detect_prop_interface_bloat",
