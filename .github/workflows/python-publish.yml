@@ -82,6 +82,10 @@ jobs:
             echo "$NAME $VERSION not on PyPI — will publish."
           fi
 
+      - name: Install the package and pinned tools
+        if: steps.check.outputs.exists == 'false'
+        run: make install-dev
+
       - name: Run packaging smoke gate
         if: steps.check.outputs.exists == 'false'
         run: make package-smoke

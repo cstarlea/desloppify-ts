@@ -12,7 +12,7 @@ Replace `CURRENT` with the version being released (e.g., `1.1.0`) and `NEXT` wit
 2. runs the whole CI workflow (`ci.yml`) on the release tag and stops if any job fails;
 3. fails unless the tag is exactly `v` + `[project].version` from `pyproject.toml`;
 4. skips the upload if that version is already on PyPI;
-5. runs `make package-smoke`, which builds the sdist and wheel and installs the wheel in a fresh venv, then uploads `dist/` with PyPI trusted publishing from the `pypi` environment.
+5. runs `make install-dev` and `make package-smoke`, which builds the sdist and wheel and installs the wheel in a fresh venv, then uploads `dist/` with PyPI trusted publishing from the `pypi` environment.
 
 One-time setup (already done if a release has gone out):
 
@@ -35,7 +35,7 @@ Tag every issue and PR that lands during this cycle with `release:vCURRENT`.
 
 - [ ] `version = "CURRENT"` in `pyproject.toml` on `main` (bump it in an ordinary PR)
 - [ ] CI is green on `main`
-- [ ] `make ci` passes locally if you want full validation (includes `tests-full`, `tests-golden-node` and `package-smoke`)
+- [ ] For full local validation, `make install-full` once in a fresh venv, then `make ci` (runs `tests-full`, `tests-golden-node` and `package-smoke` too; `tests-golden-node` needs Node 22 and npm)
 - [ ] Local build check:
   ```bash
   rm -rf dist && uv build

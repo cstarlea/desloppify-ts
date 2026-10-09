@@ -44,7 +44,7 @@ logger = logging.getLogger(__name__)
 
 
 def _load_config_json(path: Path) -> dict[str, Any]:
-    payload = json.loads(path.read_text())
+    payload = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
         raise ValueError("config file root must be a JSON object")
     return payload

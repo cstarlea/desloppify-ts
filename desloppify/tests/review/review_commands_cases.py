@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -61,6 +62,13 @@ runner_helpers_mod = SimpleNamespace(
     sha256_file=runner_packets_mod.sha256_file,
     write_packet_snapshot=runner_packets_mod.write_packet_snapshot,
 )
+
+
+def _codex_output_path(cmd: list[str]) -> Path:
+    """The ``-o`` path of a codex command, also when Windows wraps it in ``cmd /c``."""
+    if cmd[:2] == ["cmd", "/c"]:
+        cmd = [token.strip('"') for token in shlex.split(cmd[2], posix=False)]
+    return Path(cmd[cmd.index("-o") + 1])
 
 
 class TestBatchDimensionCoverageNotices:
@@ -953,9 +961,10 @@ class TestCmdReviewPrepare:
             text=False,
             timeout=None,
             cwd=None,
+            **_kwargs,
         ):
             _ = timeout, cwd
-            out_path = Path(cmd[cmd.index("-o") + 1])
+            out_path = _codex_output_path(cmd)
             out_path.parent.mkdir(parents=True, exist_ok=True)
             payloads = {
                 "batch-1.raw.txt": {
@@ -1193,9 +1202,10 @@ class TestCmdReviewPrepare:
             text=False,
             timeout=None,
             cwd=None,
+            **_kwargs,
         ):
             _ = capture_output, text, timeout, cwd
-            out_path = Path(cmd[cmd.index("-o") + 1])
+            out_path = _codex_output_path(cmd)
             out_path.parent.mkdir(parents=True, exist_ok=True)
             payload = {
                 "assessments": {"mid_level_elegance": 77},
@@ -1312,9 +1322,10 @@ class TestCmdReviewPrepare:
             text=False,
             timeout=None,
             cwd=None,
+            **_kwargs,
         ):
             _ = capture_output, text, timeout, cwd
-            out_path = Path(cmd[cmd.index("-o") + 1])
+            out_path = _codex_output_path(cmd)
             out_path.parent.mkdir(parents=True, exist_ok=True)
             payload = {
                 "assessments": {"mid_level_elegance": 78.0},
@@ -1469,6 +1480,7 @@ class TestCmdReviewPrepare:
             text=False,
             timeout=None,
             cwd=None,
+            **_kwargs,
         ):
             _ = capture_output, text, timeout, cwd
             # Simulate Codex occasionally returning JSON on stdout while failing
@@ -1579,9 +1591,10 @@ class TestCmdReviewPrepare:
             text=False,
             timeout=None,
             cwd=None,
+            **_kwargs,
         ):
             _ = capture_output, text, timeout, cwd
-            out_path = Path(cmd[cmd.index("-o") + 1])
+            out_path = _codex_output_path(cmd)
             out_path.parent.mkdir(parents=True, exist_ok=True)
             if out_path.name == "batch-1.raw.txt":
                 out_path.write_text(
@@ -1710,6 +1723,7 @@ class TestCmdReviewPrepare:
             text=False,
             timeout=None,
             cwd=None,
+            **_kwargs,
         ):
             _ = capture_output, text, timeout, cwd
             return MagicMock(returncode=124, stdout="", stderr="timed out")
@@ -1778,9 +1792,10 @@ class TestCmdReviewPrepare:
             text=False,
             timeout=None,
             cwd=None,
+            **_kwargs,
         ):
             _ = capture_output, text, timeout, cwd
-            out_path = Path(cmd[cmd.index("-o") + 1])
+            out_path = _codex_output_path(cmd)
             out_path.parent.mkdir(parents=True, exist_ok=True)
             payload = {
                 "assessments": {"abstraction_fitness": 72},
@@ -1940,7 +1955,7 @@ class TestCmdReviewPrepare:
         output_file = tmp_path / "out.txt"
         live_snapshot = {"text": ""}
 
-        def fake_run(_cmd, *, capture_output, text, timeout):  # noqa: ARG001
+        def fake_run(_cmd, *, capture_output, text, timeout, **_kwargs):  # noqa: ARG001
             if log_file.exists():
                 live_snapshot["text"] = log_file.read_text()
             output_file.write_text('{"assessments": {}, "issues": []}')

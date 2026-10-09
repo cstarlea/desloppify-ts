@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+import sys
+
+import pytest
+
 import logging
 import re
 from types import SimpleNamespace
@@ -147,6 +151,7 @@ def test_get_test_files_for_prod_uses_graph_parsed_imports_and_fallbacks() -> No
     assert "/repo/tests/c.test.ts" in parse_calls
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX absolute paths")
 def test_build_test_import_index_passes_module_lookup_map() -> None:
     captures: list[dict[str, str]] = []
 
@@ -172,6 +177,7 @@ def test_build_test_import_index_passes_module_lookup_map() -> None:
     assert "util" in captures[0]
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX absolute paths")
 def test_build_test_import_index_drops_ambiguous_basename_aliases() -> None:
     captures: list[dict[str, str]] = []
 

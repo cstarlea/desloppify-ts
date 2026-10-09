@@ -50,7 +50,7 @@ class FileTextCache:
             path = root / path
         try:
             result = FileTextReadResult(
-                content=path.read_text(errors="replace"),
+                content=path.read_text(encoding="utf-8", errors="replace"),
                 error_kind=None,
             )
         except OSError as exc:

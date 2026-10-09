@@ -182,21 +182,21 @@ Every adversarial input in the original review broke one of the line-regex fixer
 
 ### 2E. Engineering foundation
 
-- **CI:** a Python 3.11–3.14 matrix (E7), a Windows core job (CE-16), and pytest `--timeout` (E12).
-- **Lint and types:** enforce the configured ruff `E,F,I,B,UP` and `ruff format --check`. CI checks only `E9,F63,F7,F82` today, and some F401/F841 debt remains. Extend mypy past its 16 files into `languages/typescript` and `_framework`, ratcheting with per-module ignores. Add import-linter contracts that already hold: `languages` ↛ `app`, `engine` ↛ `app` (E6).
-- **Dev tooling:** a `dev` extra with pinned pytest, ruff, mypy, import-linter and pytest-xdist, and make targets that don't `pip install`. Fix the release checklist (E11).
+- **CI, done.** `tests-core` runs on Python 3.11–3.14, every version pyproject declares (3.14 classifier added); `tests-full` runs on 3.11 and 3.14 (E7). A `tests-windows` job runs the core suite on `windows-latest` (CE-16). It found real bugs, now fixed: subprocess output and source files were decoded with the locale encoding (cp1252), which broke the Codex runner's readers and shifted lines and columns in non-ASCII files; coverage discovery left backslash-separated graph keys; tsc/lint coverage notes used native separators. Every pytest run has a per-test `--timeout` (pytest-timeout, `PYTEST_TIMEOUT`, default 120s) (E12).
+- **Lint and types:** enforce the configured ruff `E,F,I,B,UP` and `ruff format --check` (deferred: the whole-codebase fix and format sweep would conflict with every open PR, so it waits for a quiet moment). CI checks only `E9,F63,F7,F82` today, and some F401/F841 debt remains. Extend mypy past its 16 files into `languages/typescript` and `_framework`, ratcheting with per-module ignores. Add import-linter contracts that already hold: `languages` ↛ `app`, `engine` ↛ `app` (E6).
+- **Dev tooling, done.** A `dev` extra pins pytest, pytest-xdist, pytest-timeout, ruff, mypy, import-linter, PyYAML, build and twine. `make install-dev` and `make install-full` install once. The gate targets (`lint`, `typecheck`, `arch`, `ci-contracts`, `tests*`, `package-smoke`) no longer `pip install`; CI and the publish job run the install target as a separate step. `tests-full` stops early without the `[full]` extra, and `install-hooks` works in a worktree. The release checklist's local-validation step now says to install first, and its description of the publish workflow includes the install step (E11).
 - **Tests:**
   - done (#82): an autouse isolation fixture plus a guard that fails if the repo's `.desloppify/` is touched (E5);
   - done: the `inspect.getsource` and `callable(fn)` tripwire tests are gone (E9). Four of them checked import boundaries; those are now import-linter contracts (`engine` ↛ `app`, `languages` ↛ `app`, and `app`/`engine` reach `languages._framework` only through the `languages.framework` facade). The others either checked source text or only checked that a name exists. Since `callable()` never runs the function, none of them executed any code. Three things they were standing in for are now behaviour tests: the review session baseline and its drift reasons, the subjective-assessment store, and `cmd_deprecated --json`. Some functions were referenced only by tripwires and are run by no test at all, notably `render_plan_item`, `write_status_query`, `_show_concerns`, `cmd_plan_reorder` and `write_review_packet_snapshot`. `languages/typescript/detectors/deps/resolve.resolve_module` has no callers;
   - done: deleted the duplicate `tests/review/integration/*` wrappers, which ran 178 tests a second time (E10);
   - done: `tests/lang/typescript/` folded into `languages/typescript/tests/` (E13).
-- **Grammar preflight:** `desloppify setup --grammars`, and make `is_available()` actually load the tsx grammar (PK-2).
+- **Grammar preflight, done.** `desloppify setup --grammars` downloads the missing tsx and typescript grammars, loads each and fails naming any that will not load; the reduced-coverage warning now points at it. `is_available()` loads the tsx grammar once per process: when it cannot load, AST paths treat tree-sitter as absent and every call re-records the failure, so each scan still reports reduced coverage. Building the plugin checks only that the pack imports, so `--help` never fetches grammars (PK-2).
 - **Dead code:**
-  - `dev test-hermes` (AR-4);
-  - `base/optional_deps`;
-  - `intelligence/review/dimensions/metadata.py` and `metadata_legacy.py`;
-  - the unused `base.registry.register_detector` path, which only plugins used;
-  - review the cwd-relative file reads in engine code that the TS-path audit (#6) didn't cover.
+  - done: the `dev` command, whose only action was `test-hermes` (AR-4);
+  - done: `base/optional_deps`;
+  - done: `intelligence/review/dimensions/metadata.py` and `metadata_legacy.py`, compat layers nothing imported;
+  - done: `register_detector`/`unregister_detector`/`reset_registered_detectors` and the `on_detector_registered` callbacks. The registry is now the static catalog, so the CLI name cache and narrative tool map no longer refresh;
+  - done: the cwd-relative reads. The cross-language security detector fell back to the cwd when given no scan root, and holistic review scoping resolved finder paths against the cwd; both now use the project root. The rest of `engine/` already goes through `resolve_path`/`resolve_scan_file`. `context_holistic/selection/contexts.py` still calls `Path(filepath).resolve()`; it was left alone during the review-context work.
 - **Declarative detector spec (AR-1, L):** one dataclass covering DetectorMeta, zone policy, the phase and the detect command, registered by the plugin. That turns a new detector from a 6–8-file change into 2 files plus a test.
 - **Scope (CE-8):** the plan, triage and review machinery is about 50k lines, much more than the TS plugin's 10k. Freeze it, collapse the state facades, replace the `work_items`/`issues` fallbacks with one accessor, and spend effort on detection accuracy.
 
@@ -322,7 +322,7 @@ Status key: **done** (with PR), **partial** (what's left is in §2), **open**, *
 | CE-13 | medium | Exclusions applied after language and state resolution | dropped |
 | CE-14 | medium | Auto-detect walks to an ancestor package.json | dropped |
 | CE-15 | low | No detector or domain disable | done (#85) |
-| CE-16 | medium | Codex runner Popen is locale-dependent on Windows | open → §2E |
+| CE-16 | medium | Codex runner Popen is locale-dependent on Windows | done (§2E: UTF-8 subprocess decoding, `tests-windows` job) |
 | CE-17 | medium | JS ESLint on Windows | dropped |
 
 ### Tests, CI, packaging, architecture, upstream
@@ -335,21 +335,21 @@ Status key: **done** (with PR), **partial** (what's left is in §2), **open**, *
 | E4 | medium | Glob-order test fails on tmpfs | done (#1, upstream #617) |
 | E5 | medium | Tests write into the repo's `.desloppify` | done (#82) |
 | E6 | low | Lint 4 codes, mypy 16 files, 1 import contract | partial (§2E: 4 import contracts); ruff and mypy → §2E |
-| E7 | low | CI only on py3.11 | open → §2E |
+| E7 | low | CI only on py3.11 | done (§2E: core on 3.11–3.14, full on 3.11 and 3.14) |
 | E8 | medium | Ruby and R tests never collected | dropped |
 | E9 | medium | getsource and callable tripwire tests | done (§2E) |
 | E10 | low | Review tests run twice | done (§2E) |
-| E11 | low | Make targets reinstall; release checklist drift | open → §2E |
-| E12 | low | No test timeout | open → §2E |
+| E11 | low | Make targets reinstall; release checklist drift | done (§2E: pinned `dev` extra, install-free gates; #94 fixed the checklist paths) |
+| E12 | low | No test timeout | done (§2E: pytest-timeout, 120s per test) |
 | E13 | low | TS tests in two trees | done (§2E) |
 | PK-1 | medium | tree-sitter floor crashes; cap blocks working releases | done (#1) |
-| PK-2 | medium | Offline grammar download silently drops findings | partial (#1 reports reduced coverage) → §2E |
+| PK-2 | medium | Offline grammar download silently drops findings | done (#1 reduced coverage; `setup --grammars`, grammar-loading `is_available()`) |
 | PK-3 | medium | Wheel omits elixir/php/r review data | dropped |
 | PK-4 | medium | Fork inherits PyPI name and upstream URLs | done (#4 gated publish, #94 `desloppify-ts` + release-triggered publish); first release → §2F |
 | AR-1 | medium | New TS detector touches 6–8 files | open → §2E |
 | AR-2 | medium | Regex-based TS plugin | partial (#3 imports on tree-sitter, #40 shared helper, 2.33 one parse per file) |
 | AR-3 | medium | Plugin guide describes nonexistent files | done (#14) |
-| AR-4 | low | Dead compat shims, `dev test-hermes` | partial (#12 removed the shims) → §2E |
+| AR-4 | low | Dead compat shims, `dev test-hermes` | done (#12 shims; §2E `dev`, `optional_deps`, metadata layers, runtime detector registration) |
 | UP-1 | high | Upstream abandoned | — |
 | UP-2 | high | #744 + #617 + #760 + #629 merge clean | done (#1) |
 | UP-3 | medium | MercurialUroboros TS false-positive commits | open → §2F |

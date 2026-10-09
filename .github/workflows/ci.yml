@@ -24,6 +24,8 @@ jobs:
           python-version: "3.11"
           cache: pip
           cache-dependency-path: pyproject.toml
+      - name: Install the package and pinned tools
+        run: make install-dev
       - name: Run lint gate
         run: make lint
 
@@ -37,6 +39,8 @@ jobs:
           python-version: "3.11"
           cache: pip
           cache-dependency-path: pyproject.toml
+      - name: Install the package and pinned tools
+        run: make install-dev
       - name: Run typecheck gate
         run: make typecheck
 
@@ -50,6 +54,8 @@ jobs:
           python-version: "3.11"
           cache: pip
           cache-dependency-path: pyproject.toml
+      - name: Install the package and pinned tools
+        run: make install-dev
       - name: Run architecture contracts gate
         run: make arch
 
@@ -63,31 +69,42 @@ jobs:
           python-version: "3.11"
           cache: pip
           cache-dependency-path: pyproject.toml
+      - name: Install the package and pinned tools
+        run: make install-dev
       - name: Run CI contracts gate
         run: make ci-contracts
 
   tests-core:
-    name: tests-core
+    name: tests-core (${{ matrix.python-version }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: ${{ matrix.python-version }}
           cache: pip
           cache-dependency-path: pyproject.toml
+      - name: Install the package and pinned tools
+        run: make install-dev
       - name: Run core tests
         run: make tests PYTEST_XML=pytest-core.xml
       - name: Upload core test report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: pytest-core-report
+          name: pytest-core-report-${{ matrix.python-version }}
           path: pytest-core.xml
 
-  tests-full:
-    name: tests-full
-    runs-on: ubuntu-latest
+  tests-windows:
+    name: tests-windows
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -95,13 +112,40 @@ jobs:
           python-version: "3.11"
           cache: pip
           cache-dependency-path: pyproject.toml
+      - name: Install the package and pinned tools
+        run: make install-dev
+      - name: Run core tests
+        run: make tests PYTEST_XML=pytest-windows.xml
+      - name: Upload Windows test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-windows-report
+          path: pytest-windows.xml
+
+  tests-full:
+    name: tests-full (${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.14"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Install the package and pinned tools
+        run: make install-full
       - name: Run full tests (with optional deps)
         run: make tests-full PYTEST_XML=pytest-full.xml
       - name: Upload full test report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: pytest-full-report
+          name: pytest-full-report-${{ matrix.python-version }}
           path: pytest-full.xml
 
   tests-golden-node:
@@ -119,6 +163,8 @@ jobs:
           node-version: "22"
           cache: npm
           cache-dependency-path: desloppify/languages/typescript/tests/golden/node/package-lock.json
+      - name: Install the package and pinned tools
+        run: make install-full
       - name: Run TypeScript golden scans with real tsc/knip
         run: make tests-golden-node
 
@@ -132,6 +178,8 @@ jobs:
           python-version: "3.11"
           cache: pip
           cache-dependency-path: pyproject.toml
+      - name: Install the package and pinned tools
+        run: make install-dev
       - name: Run packaging smoke gate
         run: make package-smoke
       - name: Upload distribution artifacts

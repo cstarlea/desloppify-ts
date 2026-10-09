@@ -19,6 +19,13 @@ def _safe_write_text(path: Path, text: str) -> None:
     path.write_text(text)
 
 
+@pytest.fixture
+def posix_resolution(monkeypatch):
+    """Resolve executables as on POSIX; Windows folds an unresolved one into ``cmd /c``."""
+    monkeypatch.setattr(runner_rovodev_mod, "_resolve_executable", lambda name: [name])
+
+
+@pytest.mark.usefixtures("posix_resolution")
 def test_rovodev_batch_command_includes_acli_rovodev_run_invocation(monkeypatch) -> None:
     """The default command line invokes ``acli rovodev run`` with ``--yolo``."""
     monkeypatch.delenv("DESLOPPIFY_ROVODEV_NO_YOLO", raising=False)
@@ -44,6 +51,7 @@ def test_rovodev_batch_command_includes_acli_rovodev_run_invocation(monkeypatch)
     assert cmd.index("--yolo") > cmd.index("run")
 
 
+@pytest.mark.usefixtures("posix_resolution")
 def test_rovodev_batch_command_honours_env_overrides(monkeypatch) -> None:
     """Schema, extra args, and executable overrides are respected."""
     monkeypatch.delenv("DESLOPPIFY_ROVODEV_NO_YOLO", raising=False)
@@ -65,6 +73,7 @@ def test_rovodev_batch_command_honours_env_overrides(monkeypatch) -> None:
     assert cmd[-1] == "prompt"
 
 
+@pytest.mark.usefixtures("posix_resolution")
 def test_rovodev_batch_command_no_yolo_opt_out(monkeypatch) -> None:
     """Setting DESLOPPIFY_ROVODEV_NO_YOLO=1 omits the --yolo flag."""
     monkeypatch.setenv("DESLOPPIFY_ROVODEV_NO_YOLO", "1")

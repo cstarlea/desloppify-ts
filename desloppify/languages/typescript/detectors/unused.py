@@ -184,7 +184,7 @@ def detect_unused(path: Path, category: str = "all") -> tuple[list[dict], int]:
 def _read_source(filepath: str) -> str | None:
     try:
         p = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
-        return p.read_text()
+        return p.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError) as exc:
         logger.debug("Unable to read %s for unused categorization: %s", filepath, exc)
         return None

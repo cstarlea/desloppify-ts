@@ -28,6 +28,9 @@ def _run_query(query, root_node) -> list[tuple[int, dict]]:
 # reports them as reduced coverage instead (see record_grammar_load_failures).
 _GRAMMAR_FAILURES: dict[str, str] = {}
 
+# The grammars the TypeScript plugin parses with.
+REQUIRED_GRAMMARS: tuple[str, ...] = ("tsx", "typescript")
+
 
 def _get_parser(grammar: str):
     """Get a tree-sitter parser and language for the given grammar."""
@@ -40,6 +43,38 @@ def _get_parser(grammar: str):
         _GRAMMAR_FAILURES.setdefault(grammar, f"{type(exc).__name__}: {exc}")
         raise
     return parser, language
+
+
+def note_grammar_failure(grammar: str, error: str) -> None:
+    _GRAMMAR_FAILURES.setdefault(grammar, error)
+
+
+def prepare_grammars(grammars: tuple[str, ...] = REQUIRED_GRAMMARS) -> tuple[dict[str, str | None], list[str]]:
+    """Download missing grammars, then load each one.
+
+    Returns each grammar's load error (None when it loads) and the grammars
+    that were not in the language pack's cache beforehand. Raises ImportError
+    when tree-sitter-language-pack isn't installed.
+    """
+    import tree_sitter_language_pack as tslp
+
+    cached = set(tslp.downloaded_languages())
+    missing = [grammar for grammar in grammars if grammar not in cached]
+    download_error = None
+    if missing:
+        try:
+            tslp.download(missing)
+        except Exception as exc:
+            download_error = f"{type(exc).__name__}: {exc}"
+    errors: dict[str, str | None] = {}
+    for grammar in grammars:
+        try:
+            _get_parser(grammar)
+        except Exception as exc:
+            errors[grammar] = download_error or f"{type(exc).__name__}: {exc}"
+        else:
+            errors[grammar] = None
+    return errors, missing
 
 
 def grammar_load_failures() -> dict[str, str]:
@@ -68,6 +103,9 @@ def _node_text(node) -> str:
 
 __all__ = [
     "PARSE_INIT_ERRORS",
+    "REQUIRED_GRAMMARS",
     "grammar_load_failures",
+    "note_grammar_failure",
+    "prepare_grammars",
     "reset_grammar_load_failures",
 ]

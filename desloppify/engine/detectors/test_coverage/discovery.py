@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import math
-import os
 
 from desloppify.base.discovery.paths import get_project_root
 from desloppify.engine.policy.zones import FileZoneMap, Zone
@@ -15,14 +14,21 @@ from .metrics import _COMPLEXITY_TIER_UPGRADE, _MIN_LOC, _file_loc, _importer_co
 _MAX_NO_TESTS_ENTRIES = 50
 
 
-def _normalize_graph_paths(graph: dict) -> dict:
-    """Normalize graph paths to relative paths."""
-    root_prefix = str(get_project_root()) + os.sep
+def _root_relative_fn():
+    """A function making paths under the project root relative, with ``/`` separators."""
+    root_prefix = get_project_root().as_posix().rstrip("/") + "/"
 
     def _to_rel(path: str) -> str:
-        return path[len(root_prefix) :] if path.startswith(root_prefix) else path
+        posix = path.replace("\\", "/")
+        return posix[len(root_prefix) :] if posix.startswith(root_prefix) else path
 
-    needs_norm = any(k.startswith(root_prefix) for k in graph)
+    return _to_rel
+
+
+def _normalize_graph_paths(graph: dict) -> dict:
+    """Normalize graph paths to relative paths."""
+    _to_rel = _root_relative_fn()
+    needs_norm = any(_to_rel(k) != k for k in graph)
     if not needs_norm:
         return graph
 
@@ -44,11 +50,7 @@ def _discover_scorable_and_tests(
     extra_test_files: set[str] | None,
 ) -> tuple[set[str], set[str], set[str], int]:
     """Return (production_files, test_files, scorable_files, potential)."""
-    root_prefix = str(get_project_root()) + os.sep
-
-    def _to_rel(path: str) -> str:
-        return path[len(root_prefix) :] if path.startswith(root_prefix) else path
-
+    _to_rel = _root_relative_fn()
     all_files = zone_map.all_files()
     production_files = set(zone_map.include_only(all_files, Zone.PRODUCTION, Zone.SCRIPT))
     test_files = set(zone_map.include_only(all_files, Zone.TEST))

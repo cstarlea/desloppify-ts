@@ -27,7 +27,7 @@ def detect_state_sync(path: Path) -> tuple[list[dict], int]:
     for filepath in find_tsx_and_jsx_files(path):
         try:
             p = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
-            content = p.read_text()
+            content = p.read_text(encoding="utf-8")
             lines = split_lines(content)
         except (OSError, UnicodeDecodeError) as exc:
             logger.debug("Skipping unreadable TSX file %s in state-sync pass: %s", filepath, exc)

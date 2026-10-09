@@ -33,7 +33,7 @@ def _merge_config_value(config: dict, key: str, value: object) -> None:
 
 def _load_state_file_payload(path: Path) -> dict | None:
     try:
-        payload = json.loads(path.read_text())
+        payload = json.loads(path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, UnicodeDecodeError, OSError) as exc:
         logger.debug("Skipping unreadable state file %s: %s", path, exc)
         return None
