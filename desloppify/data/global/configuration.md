@@ -100,3 +100,13 @@ When the project root has a shadcn/ui `components.json`, the UI kit directory it
 | `public_env_prefixes` | `[]` | Extra env prefixes your bundler exposes to client code |
 | `data_clients` | `[]` | Extra client objects whose calls are data access |
 | `lint_type_aware_max_files` | `400` | Most files to lint when the ESLint or XO config is type-aware (0 = no limit) |
+| `monorepo_mode` | `"off"` | `"packages"` also type-checks each package of a monorepo with its own tsconfig (see below); `--lang-opt monorepo_mode=packages` turns it on for one scan |
+| `monorepo_budget_seconds` | `600` | Total time for the package runs of monorepo mode (0 = no limit) |
+| `monorepo_max_memory_mb` | `3072` | Memory limit for each package run of monorepo mode |
+
+## Monorepo mode
+
+A scan from a monorepo's root type-checks only the files its root tsconfig owns: a file whose nearest tsconfig is another one belongs to that package's project, and the root config isn't what the package is checked with. With `monorepo_mode` set to `"packages"`, each such tsconfig gets a tsc run of its own, one at a time, within `monorepo_budget_seconds` in total and `monorepo_max_memory_mb` for each run (each run is also capped at 300 seconds). A solution config (`"files": []` with `references`) runs its references. The root's own run, and the IDs of what it reports, are unchanged.
+
+A package is skipped, and named in the scan's reduced coverage with the reason, when the budget is spent, its run times out or goes over the memory limit, its dependencies aren't installed, its tsconfig extends a generated one that isn't there (`.nuxt/`, `.svelte-kit/`), it is a Deno project, or it imports a workspace package that isn't built: a package whose manifest points at `dist/` has no types until it is built, and everything that flows from it is `any`. Build the workspace packages first for full coverage.
+

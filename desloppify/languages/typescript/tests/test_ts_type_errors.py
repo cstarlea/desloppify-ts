@@ -20,6 +20,17 @@ def _write(root: Path, name: str, text: str = "") -> Path:
     return path
 
 
+def _lang(**settings) -> SimpleNamespace:
+    return SimpleNamespace(
+        zone_map=None,
+        runtime_cache={},
+        detector_coverage={},
+        coverage_warnings=[],
+        runtime_setting=lambda key, default=None: settings.get(key, default),
+        runtime_option=lambda key, default=None: default,
+    )
+
+
 @pytest.fixture
 def project(tmp_path, monkeypatch):
     """A project with installed deps; ``fake(stdout)`` sets what tsc prints."""
@@ -175,7 +186,7 @@ def test_phase_issue_ids_are_code_and_line(project):
         "  Types of property 'a' are incompatible.\n",
         files=("src/a.ts",),
     )
-    lang = SimpleNamespace(zone_map=None, runtime_cache={}, detector_coverage={}, coverage_warnings=[])
+    lang = _lang()
     issues, potentials = phases_basic_mod.phase_type_errors(root / "src", lang)
 
     assert [issue["id"] for issue in issues] == ["type_error::src/a.ts::TS2322::3"]
@@ -188,7 +199,7 @@ def test_phase_reports_no_potential_when_skipped(project, monkeypatch):
     root, _fake = project
     _write(root, "src/a.ts")
     monkeypatch.setattr(tsc_mod, "run_tsc_check", lambda *_a: (_ for _ in ()).throw(OSError("no tsc")))
-    lang = SimpleNamespace(zone_map=None, runtime_cache={}, detector_coverage={}, coverage_warnings=[])
+    lang = _lang()
     issues, potentials = phases_basic_mod.phase_type_errors(root / "src", lang)
 
     # No potential: the dimension is carried forward and old issues aren't auto-resolved.

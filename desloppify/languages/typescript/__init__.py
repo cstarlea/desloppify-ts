@@ -16,6 +16,10 @@ from desloppify.languages._framework.base.types import (
     LangValueSpec,
 )
 from desloppify.languages._framework.frameworks.phases import framework_phases
+from desloppify.languages.typescript.monorepo import (
+    DEFAULT_BUDGET_SECONDS,
+    DEFAULT_MAX_MEMORY_MB,
+)
 from desloppify.languages.typescript import test_coverage as ts_test_coverage_hooks
 from desloppify.languages.typescript.detectors.security import hooks as ts_security_hooks
 from desloppify.languages.typescript._fixers import get_ts_fixers
@@ -182,6 +186,27 @@ class TypeScriptConfig(LangConfig):
                     DEFAULT_TYPE_AWARE_MAX_FILES,
                     "Most files to lint when the project's ESLint or XO config uses type"
                     " information (0 = no limit)",
+                ),
+                "monorepo_mode": LangValueSpec(
+                    str,
+                    "off",
+                    "'packages' also type-checks each package with its own tsconfig"
+                    " (one tsc run per package, within the budget below)",
+                ),
+                "monorepo_budget_seconds": LangValueSpec(
+                    int,
+                    DEFAULT_BUDGET_SECONDS,
+                    "Total time for each detector's package runs in monorepo mode (0 = no limit)",
+                ),
+                "monorepo_max_memory_mb": LangValueSpec(
+                    int,
+                    DEFAULT_MAX_MEMORY_MB,
+                    "Memory limit for each package run in monorepo mode",
+                ),
+            },
+            runtime_option_specs={
+                "monorepo_mode": LangValueSpec(
+                    str, "", "Override languages.typescript.monorepo_mode for this scan"
                 ),
             },
         )

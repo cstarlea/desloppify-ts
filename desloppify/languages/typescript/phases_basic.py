@@ -20,6 +20,7 @@ import desloppify.languages.typescript.detectors.logs as logs_detector_mod
 import desloppify.languages.typescript.detectors.tsconfig_health as tsconfig_health_detector_mod
 import desloppify.languages.typescript.detectors.type_errors as type_errors_detector_mod
 import desloppify.languages.typescript.detectors.unused as unused_detector_mod
+from desloppify.languages.typescript.monorepo import monorepo_budget
 from desloppify.state_io import Issue
 
 
@@ -64,11 +65,19 @@ def phase_unused(path: Path, lang: LangRuntimeContract) -> tuple[list[Issue], di
 def phase_type_errors(
     path: Path, lang: LangRuntimeContract
 ) -> tuple[list[Issue], dict[str, int]]:
-    result = type_errors_detector_mod.detect_type_errors_result(path, cache=lang.runtime_cache)
+    result = type_errors_detector_mod.detect_type_errors_result(
+        path, cache=lang.runtime_cache, monorepo=monorepo_budget(lang)
+    )
     record_reduced_coverage(lang, result.coverage)
     if result.checked_files is None:
         log("         skipped (tsc did not check this scan)")
         return [], {}
+    if result.packages is not None:
+        checked = sum(package.skipped is None for package in result.packages)
+        log(
+            f"         monorepo mode: {checked} of {len(result.packages)} package tsconfigs"
+            " type-checked"
+        )
 
     def zone(filepath: str) -> Zone:
         return lang.zone_map.get(rel(filepath)) if lang.zone_map is not None else Zone.PRODUCTION
