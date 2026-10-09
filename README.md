@@ -78,6 +78,16 @@ Each `--path` target should be a single coherent project. A pnpm, npm or yarn wo
 desloppify scan --path .
 ```
 
+## Configuration
+
+Settings live in `.desloppify/config.json`; `desloppify config show` lists them and `desloppify config set|unset` changes them. The defaults assume no directory layout. Frameworks (Next.js, Nuxt, SvelteKit, NestJS, Supabase and others) are detected from `package.json`; they bring their entry points, checks, client-exposed env prefixes and data clients. Architecture rules apply when you choose a layout preset or describe your own layers:
+
+```bash
+desloppify config set presets feature-sliced     # or bulletproof-react
+```
+
+A dependency on the Feature-Sliced Design linter (`steiger`) turns its preset on without config. Your own layers and competing-pattern families go under `languages.typescript` (`layers`, `pattern_families`). [docs/configuration.md](docs/configuration.md) has the details.
+
 ## CI
 
 Desloppify works best in CI as a full-codebase health gate, not as a diff-only linter. Run the CI profile against the same coherent project path you scan locally:

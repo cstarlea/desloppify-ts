@@ -15,7 +15,7 @@ DETAIL_DISPLAY = [
     ("prop_count", "props", None),
     ("smell_id", "smell", None),
     ("target", "target", None),
-    ("sole_tool", "sole tool", None),
+    ("sole_slice", "only used by", None),
     ("direction", "direction", None),
     ("family", "family", None),
     ("patterns_used", "patterns", lambda v: ", ".join(v)),

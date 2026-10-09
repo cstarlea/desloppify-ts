@@ -131,6 +131,22 @@ def _node_framework_evidence(
     return present, evidence
 
 
+_EVIDENCE_KEYS = (
+    "dep_hits",
+    "dev_dep_hits",
+    "config_hits",
+    "marker_file_hits",
+    "marker_dir_hits",
+    "script_hits",
+)
+
+
+def _selected_frameworks(lang: LangRuntimeContract | None) -> list[str]:
+    getter = getattr(lang, "runtime_setting", None)
+    selected = getter("presets") if callable(getter) else None
+    return [str(name) for name in selected] if isinstance(selected, list) else []
+
+
 def detect_ecosystem_frameworks(
     scan_path: Path,
     lang: LangRuntimeContract | None,
@@ -193,6 +209,11 @@ def detect_ecosystem_frameworks(
         for excluded in spec.excludes:
             present.pop(str(excluded), None)
 
+    # The ``presets`` config can turn a framework on where detection misses it.
+    for framework_id in _selected_frameworks(lang):
+        if framework_id in specs and framework_id not in present:
+            present[framework_id] = {**{key: [] for key in _EVIDENCE_KEYS}, "selected": True}
+
     result = EcosystemFrameworkDetection(
         ecosystem=eco,
         package_root=package_root,
@@ -248,6 +269,20 @@ def workspace_framework_detections(
     return result
 
 
+def framework_values(
+    scan_path: Path, lang: LangRuntimeContract | None, field: str
+) -> tuple[str, ...]:
+    """A tuple field (``public_env_prefixes``, ``data_clients``) of every Node
+    framework present for *scan_path*, in registry order without repeats."""
+    detection = detect_ecosystem_frameworks(scan_path, lang, "node")
+    specs = list_framework_specs(ecosystem="node")
+    values: dict[str, None] = {}
+    for framework_id, spec in specs.items():
+        if framework_id in detection.present:
+            values.update(dict.fromkeys(getattr(spec, field)))
+    return tuple(values)
+
+
 def injected_class_decorators(scan_path: Path, lang: LangRuntimeContract | None) -> frozenset[str]:
     """DI class decorators of the Node frameworks present for *scan_path*."""
     detection = detect_ecosystem_frameworks(scan_path, lang, "node")
@@ -259,6 +294,7 @@ def injected_class_decorators(scan_path: Path, lang: LangRuntimeContract | None)
 
 __all__ = [
     "detect_ecosystem_frameworks",
+    "framework_values",
     "injected_class_decorators",
     "workspace_framework_detections",
 ]

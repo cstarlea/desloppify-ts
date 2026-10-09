@@ -195,7 +195,8 @@ def framework_phases(lang_name: str) -> list[DetectorPhase]:
 
     phases: list[DetectorPhase] = []
     for spec in list_framework_specs().values():
-        phases.append(_framework_smells_phase(spec))
+        if spec.scanners:
+            phases.append(_framework_smells_phase(spec))
         for tool in spec.tools:
             phases.append(_framework_tool_phase(spec, tool))
     return phases

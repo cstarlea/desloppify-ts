@@ -76,7 +76,8 @@ def test_runtime_entrypoint_uses_hook_when_available(tmp_path, monkeypatch):
     assert heuristics_mod._is_runtime_entrypoint(str(source), "typescript") is True
 
 
-def test_runtime_entrypoint_uses_typescript_fallback_for_supabase(tmp_path, monkeypatch):
+def test_runtime_entrypoint_without_hook_is_false(tmp_path, monkeypatch):
+    """The engine has no language knowledge of its own: without a hook, nothing is an entry."""
     source = tmp_path / "supabase" / "functions" / "create-user" / "index.ts"
     source.parent.mkdir(parents=True, exist_ok=True)
     source.write_text("export const handler = () => {};\n")
@@ -87,7 +88,19 @@ def test_runtime_entrypoint_uses_typescript_fallback_for_supabase(tmp_path, monk
         lambda _lang: object(),
     )
 
+    assert heuristics_mod._is_runtime_entrypoint(str(source), "typescript") is False
+
+
+def test_runtime_entrypoint_typescript_hook_knows_edge_functions(tmp_path):
+    source = tmp_path / "supabase" / "functions" / "create-user" / "index.ts"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text("export const handler = () => {};\n")
+    shared = tmp_path / "supabase" / "functions" / "_shared" / "index.ts"
+    shared.parent.mkdir(parents=True, exist_ok=True)
+    shared.write_text("export const cors = {};\n")
+
     assert heuristics_mod._is_runtime_entrypoint(str(source), "typescript") is True
+    assert heuristics_mod._is_runtime_entrypoint(str(shared), "typescript") is False
 
 
 def test_runtime_entrypoint_hook_failure_falls_back_without_throwing(

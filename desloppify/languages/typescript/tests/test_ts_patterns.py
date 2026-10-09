@@ -8,7 +8,30 @@ from desloppify.languages.typescript.detectors.patterns.analysis import (
     _build_census,
     detect_pattern_anomalies,
 )
-from desloppify.languages.typescript.detectors.patterns.catalog import PATTERN_FAMILIES
+from desloppify.languages.typescript.detectors.patterns.catalog import (
+    configured_pattern_families,
+    normalize_families,
+)
+
+# A project's own families, as languages.typescript.pattern_families sets them.
+FAMILIES = normalize_families(
+    {
+        "tool_settings": {
+            "patterns": {
+                "useAutoSaveSettings": r"\buseAutoSaveSettings\s*[<(]",
+                "usePersistentToolState": r"\busePersistentToolState\s*[<(]",
+                "useToolSettings": r"\buseToolSettings\s*[<(]",
+            },
+        },
+        "data_fetching": {
+            "type": "complementary",
+            "patterns": {
+                "useQuery": r"\buseQuery\s*[<({]",
+                "useMutation": r"\buseMutation\s*[<({]",
+            },
+        },
+    }
+)
 
 
 @pytest.fixture(autouse=True)
@@ -24,7 +47,7 @@ def _write(tmp_path: Path, name: str, content: str) -> Path:
 
 
 def _detect(path: Path) -> tuple[list[dict], int]:
-    result = detect_pattern_anomalies(path)
+    result = detect_pattern_anomalies(path, FAMILIES)
     return result.entries, result.population_size
 
 
@@ -40,7 +63,7 @@ class TestBuildCensus:
             "src/tools/editor/main.ts",
             ("const settings = useAutoSaveSettings<Config>();\n"),
         )
-        census, evidence = _build_census(tmp_path)
+        census, evidence = _build_census(tmp_path, FAMILIES)
         assert len(census) > 0
         assert isinstance(evidence, dict)
         # At least one area should have tool_settings family with useAutoSaveSettings
@@ -56,7 +79,7 @@ class TestBuildCensus:
     def test_empty_directory(self, tmp_path):
         """Empty directory returns empty census."""
 
-        census, evidence = _build_census(tmp_path)
+        census, evidence = _build_census(tmp_path, FAMILIES)
         assert census == {}
         assert evidence == {}
 
@@ -71,7 +94,7 @@ class TestBuildCensus:
                 "const mutation = useMutation({ mutationFn: save });\n"
             ),
         )
-        census, evidence = _build_census(tmp_path)
+        census, evidence = _build_census(tmp_path, FAMILIES)
         found_data_fetching = False
         for _area, families in census.items():
             if "data_fetching" in families:
@@ -191,26 +214,36 @@ class TestDetectPatternAnomalies:
                 )
 
 
-# ── PATTERN_FAMILIES structure ───────────────────────────────
+# ── configured families ──────────────────────────────────────
 
 
 class TestPatternFamilies:
-    def test_all_families_have_type(self):
-        """Every family must declare a type (competing or complementary)."""
-        for name, family in PATTERN_FAMILIES.items():
-            assert "type" in family, f"{name} missing type"
-            assert family["type"] in ("competing", "complementary"), (
-                f"{name} has invalid type"
-            )
+    def test_nothing_is_built_in(self, tmp_path):
+        """Without configured families nothing is matched or reported."""
+        _write(tmp_path, "editor/sub/main.ts", "const s = useAutoSaveSettings<Config>();\n")
+        result = detect_pattern_anomalies(tmp_path, {})
+        assert result.entries == [] and result.population_size == 0
+        assert configured_pattern_families(None) == {}
 
-    def test_competing_families_have_threshold(self):
-        """Competing families must have a fragmentation_threshold."""
-        for name, family in PATTERN_FAMILIES.items():
-            if family["type"] == "competing":
-                assert "fragmentation_threshold" in family, f"{name} missing threshold"
+    def test_normalize_defaults_and_drops_invalid(self):
+        families = normalize_families(
+            {
+                "ok": {"patterns": {"a": r"\ba\(", "bad": "("}},
+                "no_patterns": {"patterns": {}},
+                "odd": {"type": "weird", "threshold": 1, "patterns": {"b": "b"}},
+                "not_a_dict": ["x"],
+            }
+        )
+        assert set(families) == {"ok", "odd"}
+        assert families["ok"]["patterns"] == {"a": r"\ba\("}
+        assert families["ok"]["type"] == "competing"
+        assert families["ok"]["fragmentation_threshold"] == 2
+        assert families["odd"]["type"] == "competing"
+        assert families["odd"]["fragmentation_threshold"] == 2
 
-    def test_all_families_have_patterns(self):
-        """Every family must have at least one pattern."""
-        for name, family in PATTERN_FAMILIES.items():
-            assert "patterns" in family, f"{name} missing patterns"
-            assert len(family["patterns"]) >= 1, f"{name} has no patterns"
+    def test_reads_lang_setting(self):
+        class _Lang:
+            def runtime_setting(self, key):
+                return {"f": {"patterns": {"x": "x"}}} if key == "pattern_families" else None
+
+        assert set(configured_pattern_families(_Lang())) == {"f"}

@@ -7,15 +7,12 @@ import re
 from desloppify.languages.typescript.detectors.security.entries import _make_security_entry
 from desloppify.languages.typescript.detectors.security.patterns import (
     _AUTH_CHECK_RE,
-    _CREATE_VIEW_RE,
     _EDGE_ENTRYPOINT_RE,
     _JSON_DEEP_CLONE_RE,
     _JSON_PARSE_RE,
-    _SECURITY_INVOKER_RE,
     _SERVE_ASYNC_RE,
 )
 from desloppify.base.signal_patterns import AUTH_LOOKUP_TOKEN_RE
-from desloppify.languages.typescript.syntax.lines import line_number
 from desloppify.languages.typescript.syntax.scanner import SourceText
 
 _AUTH_DENIAL_RE = re.compile(
@@ -38,7 +35,6 @@ def _file_level_security_issues(
 ) -> list[dict[str, object]]:
     """Detect file-level security patterns and return issues."""
     file_issues: list[dict[str, object]] = []
-    content = source.text
     lines = source.lines
 
     if _looks_like_edge_handler(normalized_path, source.code):
@@ -57,8 +53,6 @@ def _file_level_security_issues(
             )
 
     _check_json_parse_unguarded(filepath, source, file_issues)
-    if filepath.endswith(".sql"):
-        _check_rls_bypass(filepath, content, lines, file_issues)
     return file_issues
 
 
@@ -157,35 +151,8 @@ def _check_json_parse_unguarded(
         )
 
 
-def _check_rls_bypass(
-    filepath: str,
-    content: str,
-    lines: list[str],
-    entries: list[dict[str, object]],
-) -> None:
-    """Check for CREATE VIEW without security_invoker in SQL files."""
-    for match in _CREATE_VIEW_RE.finditer(content):
-        line_num = line_number(content, match.start())
-        view_block = content[match.start() : match.start() + 500]
-        if _SECURITY_INVOKER_RE.search(view_block):
-            continue
-        entries.append(
-            _make_security_entry(
-                filepath,
-                line_num,
-                lines[line_num - 1] if 0 < line_num <= len(lines) else "",
-                check_id="rls_bypass_views",
-                summary="SQL VIEW without security_invoker=true may bypass RLS",
-                severity="high",
-                confidence="medium",
-                remediation="Add 'WITH (security_invoker = true)' to the view definition",
-            )
-        )
-
-
 __all__ = [
     "_check_json_parse_unguarded",
-    "_check_rls_bypass",
     "_extract_handler_body",
     "_file_level_security_issues",
     "_handler_has_auth_check",

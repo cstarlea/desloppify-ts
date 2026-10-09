@@ -56,6 +56,7 @@ _FILE_BASED_POLICY_DETECTORS = frozenset(
         "hono",
         "fastify",
         "angular",
+        "supabase",
         "next_lint",
         "type_error",
         "lint",

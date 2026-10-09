@@ -31,7 +31,6 @@ TS_ENTRY_PATTERNS = [
     "tailwind.config",
     "postcss.config",
     ".d.ts",
-    "/settings.ts",
     "/__tests__/",
     ".test.",
     ".spec.",

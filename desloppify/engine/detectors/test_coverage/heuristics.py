@@ -72,16 +72,4 @@ def _is_runtime_entrypoint(filepath: str, lang_name: str) -> bool:
             logger.debug(
                 "runtime_entrypoint hook failed for %s", filepath, exc_info=True
             )
-
-    lowered_path = filepath.replace("\\", "/").lower()
-    lowered = content.lower()
-    if lang_name == "typescript":
-        if "/supabase/functions/" in lowered_path and lowered_path.endswith("/index.ts"):
-            return True
-        if "serve((" in lowered or "serve (" in lowered:
-            if (
-                "deno.land/std/http/server" in lowered
-                or "jsr:@std/http/server" in lowered
-            ):
-                return True
     return False

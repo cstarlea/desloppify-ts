@@ -63,7 +63,7 @@ def test_phase_structural_uses_lang_thresholds(monkeypatch, tmp_path: Path):
     )
     monkeypatch.setattr(
         "desloppify.languages.typescript.detectors.concerns.detect_mixed_concerns",
-        lambda _p: ([], 0),
+        lambda _p, _clients=(): ([], 0),
     )
     monkeypatch.setattr(
         "desloppify.languages.typescript.detectors.props.detect_prop_interface_bloat",
@@ -105,22 +105,11 @@ def test_phase_coupling_passes_orphaned_options(monkeypatch, tmp_path: Path):
         lambda _path, _graph, barrel_names: ([], 0),
     )
     monkeypatch.setattr(
-        "desloppify.engine.detectors.coupling.detect_coupling_violations",
-        lambda _path, _graph, shared_prefix, tools_prefix: (
+        "desloppify.engine.detectors.coupling.detect_layer_violations",
+        lambda _path, _graph, _layers: (
             [],
             CouplingEdgeCounts(violating_edges=0, eligible_edges=0),
         ),
-    )
-    monkeypatch.setattr(
-        "desloppify.engine.detectors.coupling.detect_cross_tool_imports",
-        lambda _path, _graph, tools_prefix: (
-            [],
-            CouplingEdgeCounts(violating_edges=0, eligible_edges=0),
-        ),
-    )
-    monkeypatch.setattr(
-        "desloppify.languages.typescript.phases_coupling.make_boundary_issues",
-        lambda single_entries, path, graph, lang, shared_prefix, tools_prefix: ([], 0),
     )
     monkeypatch.setattr(
         "desloppify.engine.detectors.graph.detect_cycles",
@@ -142,7 +131,7 @@ def test_phase_coupling_passes_orphaned_options(monkeypatch, tmp_path: Path):
     )
     monkeypatch.setattr(
         "desloppify.languages.typescript.detectors.patterns.analysis.detect_pattern_anomalies",
-        lambda _path: SimpleNamespace(entries=[], population_size=0),
+        lambda _path, _families: SimpleNamespace(entries=[], population_size=0),
     )
     monkeypatch.setattr(
         "desloppify.engine.detectors.naming.detect_naming_inconsistencies",

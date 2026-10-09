@@ -104,10 +104,12 @@ def cmd_detect(args: argparse.Namespace) -> None:
         ),
     )
     args.lang_runtime_options = dict(lang_options)
+    args.lang_run = lang
     try:
         lang.detect_commands[detector](args)
     finally:
         args.lang_runtime_options = None
+        args.lang_run = None
     if not getattr(args, "json", False):
         scan_path = getattr(args, "path", ".") or "."
         print(

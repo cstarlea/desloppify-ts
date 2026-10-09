@@ -14,7 +14,6 @@ Keep this module minimal so ``languages._framework`` is not a catch-all entrypoi
 from __future__ import annotations
 
 from .base.types import (
-    BoundaryRule,
     DetectorPhase,
     FixerConfig,
     FixResult,
@@ -23,7 +22,6 @@ from .base.types import (
 )
 
 __all__ = [
-    "BoundaryRule",
     "DetectorPhase",
     "FixerConfig",
     "FixResult",

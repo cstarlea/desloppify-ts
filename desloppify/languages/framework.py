@@ -7,7 +7,6 @@ Use this module from app/engine layers instead of importing
 from __future__ import annotations
 
 from desloppify.languages._framework.base.types import (
-    BoundaryRule,
     DetectorCoverageRecord,
     DetectorCoverageStatus,
     DetectorPhase,
@@ -145,7 +144,6 @@ def clear_review_phase_prefetch(lang) -> None:
 
 
 __all__ = [
-    "BoundaryRule",
     "DEFAULT_LANG",
     "LangConfig",
     "LangRun",

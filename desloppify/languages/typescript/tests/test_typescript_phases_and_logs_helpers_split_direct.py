@@ -188,7 +188,7 @@ def test_phase_structural_and_subdetectors_cover_threshold_and_passthrough_paths
     monkeypatch.setattr(
         phases_structural_mod.concerns_detector_mod,
         "detect_mixed_concerns",
-        lambda _path: ([{"file": "src/service.ts", "concerns": ["io", "db", "auth"]}], 1),
+        lambda _path, _clients=(): ([{"file": "src/service.ts", "concerns": ["io", "db", "auth"]}], 1),
     )
     monkeypatch.setattr(
         phases_structural_mod,
@@ -246,7 +246,15 @@ def test_phases_coupling_helpers_and_orchestration(monkeypatch) -> None:
         extensions=[".ts", ".tsx"],
         entry_patterns=["src/main.ts"],
         file_finder=lambda _path: ["src/a.ts"],
+        runtime_setting=lambda key: {
+            "layers": [
+                {"name": "tools", "paths": ["src/tools"], "sliced": True},
+                {"name": "shared", "paths": ["src/shared"]},
+            ],
+            "pattern_families": {"factory": {"patterns": {"x": "x", "y": "y"}}},
+        }.get(key),
     )
+    layers = phases_coupling_mod.resolve_layers(Path("."), lang)
     graph = {
         "src/shared/a.ts": {
             "imports": {"src/tools/t.ts"},
@@ -275,18 +283,13 @@ def test_phases_coupling_helpers_and_orchestration(monkeypatch) -> None:
 
     monkeypatch.setattr(
         phases_coupling_mod.coupling_detector_mod,
-        "detect_coupling_violations",
+        "detect_layer_violations",
         lambda *_args, **_kwargs: (
-            [{"file": "src/shared/a.ts", "target": "src/tools/t.ts", "tool": "tool", "direction": "shared->tools"}],
-            SimpleNamespace(eligible_edges=5),
-        ),
-    )
-    monkeypatch.setattr(
-        phases_coupling_mod.coupling_detector_mod,
-        "detect_cross_tool_imports",
-        lambda *_args, **_kwargs: (
-            [{"file": "src/tools/a.ts", "target": "src/tools/b.ts", "source_tool": "a", "target_tool": "b", "direction": "a->b"}],
-            SimpleNamespace(eligible_edges=6),
+            [
+                {"file": "src/shared/a.ts", "target": "src/tools/t.ts", "kind": "upward", "layer": "shared", "target_layer": "tools", "slice": "t", "direction": "shared→tools"},
+                {"file": "src/tools/a/x.ts", "target": "src/tools/b/y.ts", "kind": "cross_slice", "layer": "tools", "source_slice": "a", "target_slice": "b", "direction": "a→b"},
+            ],
+            SimpleNamespace(eligible_edges=11),
         ),
     )
     monkeypatch.setattr(
@@ -296,13 +299,13 @@ def test_phases_coupling_helpers_and_orchestration(monkeypatch) -> None:
             [
                 {
                     "file": "src/shared/dedupe.ts",
-                    "sole_tool": "tool",
+                    "sole_slice": "src/tools/t",
                     "importer_count": 1,
                     "loc": 20,
                 },
                 {
                     "file": "src/shared/keep.ts",
-                    "sole_tool": "tool",
+                    "sole_slice": "src/tools/t",
                     "importer_count": 2,
                     "loc": 80,
                 },
@@ -325,7 +328,7 @@ def test_phases_coupling_helpers_and_orchestration(monkeypatch) -> None:
     monkeypatch.setattr(
         phases_coupling_mod.patterns_detector_mod,
         "detect_pattern_anomalies",
-        lambda _path: SimpleNamespace(
+        lambda _path, _families: SimpleNamespace(
             entries=[{"area": "shared", "family": "factory", "patterns_used": ["x", "y"], "pattern_count": 2, "review": "mixed patterns", "confidence": "low"}],
             population_size=3,
         ),
@@ -340,15 +343,13 @@ def test_phases_coupling_helpers_and_orchestration(monkeypatch) -> None:
     )
 
     monkeypatch.setattr(phases_coupling_mod.deps_detector_mod, "build_dep_graph", lambda _path: graph)
-    monkeypatch.setattr(phases_coupling_mod, "get_src_path", lambda: "src")
 
     boundary_issues, total_shared = phases_coupling_mod.make_boundary_issues(
         [{"file": "src/shared/dedupe.ts", "loc": 20, "sole_importer": "src/tools/t.ts"}],
         Path("."),
         graph,
         lang,
-        "src/shared/",
-        "src/tools/",
+        layers,
     )
     assert len(boundary_issues) == 1
     assert total_shared == 3

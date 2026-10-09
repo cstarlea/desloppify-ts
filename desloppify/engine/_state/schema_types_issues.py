@@ -26,8 +26,8 @@ class WorkItem(TypedDict):
     # smells:          {smell_id, severity, count, lines: list[int]}
     # dupes:           {fn_a: dict, fn_b: dict, similarity, kind, cluster_size,
     #                   cluster: list}
-    # coupling:        {target, tool?, direction, sole_tool?, importer_count?,
-    #                   loc?, source_tool?, target_tool?}
+    # coupling:        {target, direction, layer?, target_layer?, slice?,
+    #                   source_slice?, target_slice?, sole_slice?, importer_count?, loc?}
     # single_use:      {loc, sole_importer}
     # orphaned:        {loc}
     # facade:          {loc, importers, imports_from: list[str], kind}
