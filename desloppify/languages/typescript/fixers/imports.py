@@ -44,7 +44,7 @@ def fix_unused_imports(entries: list[dict], *, dry_run: bool = False) -> FixResu
         print(
             colorize(
                 "  Skip: the unused-imports fixer needs tree-sitter "
-                "(install desloppify[full]).",
+                "(install desloppify-ts[full]).",
                 "yellow",
             ),
             file=sys.stderr,

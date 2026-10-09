@@ -50,13 +50,14 @@ class TestModuleImport:
 
 
 class TestInstalledPackageCheckoutWarning:
+    @pytest.mark.parametrize("dist_name", ["desloppify", "desloppify-ts"])
     def test_detects_installed_package_running_from_checkout(
-        self, tmp_path: Path
+        self, tmp_path: Path, dist_name: str
     ) -> None:
         (tmp_path / "desloppify").mkdir()
         (tmp_path / "desloppify" / "__init__.py").write_text("__all__ = []\n")
         (tmp_path / "pyproject.toml").write_text(
-            '[project]\nname = "desloppify"\nversion = "0.0.0"\n'
+            f'[project]\nname = "{dist_name}"\nversion = "0.0.0"\n'
         )
 
         assert _running_installed_package_from_checkout(
@@ -167,6 +168,7 @@ class TestCreateParser:
         assert exc.value.code == 0
         out = capsys.readouterr().out.strip()
         assert out.startswith("desloppify")
+        assert "version unknown" not in out
         assert "\nPython " in out
         assert " at " in out
 

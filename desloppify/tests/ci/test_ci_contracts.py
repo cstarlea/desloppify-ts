@@ -73,20 +73,34 @@ def test_ci_workflow_has_expected_triggers() -> None:
     on_block = _on_block(ci)
     assert "pull_request" in on_block
     assert on_block.get("push", {}).get("branches") == ["main"]
+    assert "workflow_call" in on_block, "publish reuses CI as its gate."
 
 
 def test_publish_workflow_keeps_release_safety_gates() -> None:
     wf = _load_yaml(PUBLISH_WORKFLOW)
     on_block = _on_block(wf)
-    assert on_block.get("push", {}).get("branches") == ["main"]
-    assert "workflow_dispatch" in on_block
+    assert set(on_block) == {"release"}, "only a published release may publish."
+    assert on_block["release"].get("types") == ["published"]
 
-    publish_job = wf["jobs"]["publish"]
+    jobs = wf["jobs"]
+    assert jobs["ci"].get("uses") == "./.github/workflows/ci.yml"
+    publish_job = jobs["publish"]
+    assert publish_job.get("needs") == "ci"
+    for job in (jobs["ci"], publish_job):
+        assert job.get("if") == "vars.PYPI_PUBLISH == 'true'"
+
     names = _step_names(publish_job)
+    assert "Check the release tag matches the version" in names
     assert "Check if version exists on PyPI" in names
     assert "Run packaging smoke gate" in names
     assert "Publish to PyPI" in names
     assert any("make package-smoke" in run for run in _run_commands(publish_job))
+
+
+def test_publish_workflow_targets_the_distribution_name() -> None:
+    name = tomllib.loads(PYPROJECT.read_text())["project"]["name"]
+    wf = _load_yaml(PUBLISH_WORKFLOW)
+    assert wf["jobs"]["publish"]["environment"]["url"] == f"https://pypi.org/p/{name}"
 
 
 def test_makefile_contains_ci_gate_targets() -> None:
@@ -117,7 +131,7 @@ def test_ci_contracts_target_includes_phase_order_invariant() -> None:
 
 def test_readme_optional_extras_exist_in_pyproject() -> None:
     readme = README.read_text()
-    referenced = set(re.findall(r"desloppify\[([a-zA-Z0-9_-]+)\]", readme))
+    referenced = set(re.findall(r"desloppify(?:-ts)?\[([a-zA-Z0-9_-]+)\]", readme))
     optional = _optional_dependencies()
     missing = sorted(extra for extra in referenced if extra not in optional)
     assert not missing, (

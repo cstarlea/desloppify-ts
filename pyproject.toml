@@ -3,14 +3,17 @@ requires = ["setuptools>=68.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "desloppify"
-version = "1.0"
+name = "desloppify-ts"
+version = "1.1.0"
 description = "TypeScript codebase health scanner and technical debt tracker"
 readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "OSNL-0.2"}
 authors = [
     {name = "Peter O'Malley", email = "pom@banodoco.ai"},
+]
+maintainers = [
+    {name = "Chris Starleaf"},
 ]
 keywords = ["code-quality", "technical-debt", "linter", "static-analysis", "refactoring"]
 classifiers = [
@@ -29,9 +32,10 @@ classifiers = [
 dependencies = []
 
 [project.urls]
-Homepage = "https://github.com/peteromallet/desloppify"
-Repository = "https://github.com/peteromallet/desloppify"
-Issues = "https://github.com/peteromallet/desloppify/issues"
+Homepage = "https://github.com/cstarlea/desloppify"
+Repository = "https://github.com/cstarlea/desloppify"
+Issues = "https://github.com/cstarlea/desloppify/issues"
+Upstream = "https://github.com/peteromallet/desloppify"
 
 [project.optional-dependencies]
 treesitter = [
@@ -49,6 +53,7 @@ full = [
 
 [project.scripts]
 desloppify = "desloppify.cli:main"
+desloppify-ts = "desloppify.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["desloppify*"]

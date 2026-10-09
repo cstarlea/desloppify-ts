@@ -76,11 +76,13 @@ package-smoke: install-ci-tools
 	python -m venv .pkg-smoke
 	. .pkg-smoke/bin/activate && \
 		python -m pip install --upgrade pip && \
-		WHEEL=$$(ls -t dist/desloppify-*.whl | head -n 1) && \
+		WHEEL=$$(ls -t dist/desloppify_ts-*.whl | head -n 1) && \
 		python -m pip install "$$WHEEL[full]" && \
 		python -c "from importlib.resources import files; from pathlib import Path; docs=Path('docs'); bundled=files('desloppify.data.global'); names=sorted(p.name for p in docs.glob('*.md')); assert names; missing=[name for name in names if not bundled.joinpath(name).is_file()]; assert not missing, f'missing bundled docs: {missing}'; mismatched=[name for name in names if bundled.joinpath(name).read_text(encoding='utf-8') != (docs / name).read_text(encoding='utf-8')]; assert not mismatched, f'mismatched bundled docs: {mismatched}'" && \
-		python -c "import importlib.metadata as m,sys; extras=set(m.metadata('desloppify').get_all('Provides-Extra') or []); required={'full','treesitter','scorecard'}; missing=required-extras; print('missing extras metadata:', sorted(missing)) if missing else None; sys.exit(1 if missing else 0)" && \
-		desloppify --help > /dev/null
+		python -c "import importlib.metadata as m,sys; extras=set(m.metadata('desloppify-ts').get_all('Provides-Extra') or []); required={'full','treesitter','scorecard'}; missing=required-extras; print('missing extras metadata:', sorted(missing)) if missing else None; sys.exit(1 if missing else 0)" && \
+		desloppify --help > /dev/null && \
+		desloppify --version | head -n 1 | grep -q '^desloppify [0-9]' && \
+		desloppify-ts --version > /dev/null
 	rm -rf .pkg-smoke
 
 ci-fast: lint typecheck arch ci-contracts tests

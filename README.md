@@ -1,28 +1,45 @@
-# Desloppify - an agent harness to make your codebase 🤌
+# desloppify-ts - an agent harness to make your TypeScript codebase 🤌
 
-[![PyPI version](https://img.shields.io/pypi/v/desloppify)](https://pypi.org/project/desloppify/) ![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)
+[![PyPI version](https://img.shields.io/pypi/v/desloppify-ts)](https://pypi.org/project/desloppify-ts/) [![CI](https://github.com/cstarlea/desloppify/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/cstarlea/desloppify/actions/workflows/ci.yml) ![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)
 
-Desloppify gives your AI coding agent the tools to identify, understand, and systematically improve codebase quality. It combines mechanical detection (dead code, duplication, complexity) with subjective LLM review (naming, abstractions, module boundaries), then works through a prioritized fix loop. State persists across scans so it chips away over multiple sessions, and the scoring is designed to resist gaming.
+desloppify-ts gives your AI coding agent the tools to identify, understand, and systematically improve the quality of a TypeScript or JavaScript codebase. It combines mechanical detection (dead code, duplication, complexity, unused exports, import cycles) with subjective LLM review (naming, abstractions, module boundaries), then works through a prioritized fix loop. State persists across scans so it chips away over multiple sessions, and the scoring is designed to resist gaming.
 
-<img src="assets/explained.png" width="100%">
+It scans `.ts`/`.tsx`/`.mts`/`.cts` and `.js`/`.jsx`/`.mjs`/`.cjs` files together, whether the project is plain JavaScript, mid-migration (`allowJs`) or TypeScript with a few JS files. When Node is available it runs the project's own `tsc` and `knip` for unused-code detection.
+
+desloppify-ts is a TypeScript-only fork of [desloppify](https://github.com/peteromallet/desloppify) by Peter O'Malley, which is no longer maintained. The other languages were removed to keep the tool focused; the last multi-language version is tagged `pre-ts-only`. See [NOTICE](https://github.com/cstarlea/desloppify/blob/main/NOTICE) for credits.
+
+## Install
+
+Requires Python 3.11+. The PyPI package is `desloppify-ts`; the command it installs is still `desloppify`.
+
+```bash
+uvx desloppify-ts scan --path .           # try it without installing
+uv tool install "desloppify-ts[full]"     # or install it as a tool
+pip install --upgrade "desloppify-ts[full]"
+```
+
+The `[full]` extra adds tree-sitter (accurate import parsing and the syntax-tree fixers), scorecard images and YAML plan export. A `desloppify-ts` command is installed as an alias of `desloppify`, which is what makes the bare `uvx desloppify-ts` work.
+
+Coming from upstream `desloppify`? Uninstall it first (`pip uninstall desloppify`), because both packages install the same `desloppify` module and command. Existing `.desloppify/` state, config and skill files keep working.
+
+<img src="https://raw.githubusercontent.com/cstarlea/desloppify/main/assets/explained.png" width="100%">
 
 The score gives your agent a north-star, and the tooling helps it plan, execute, and resolve issues until it hits your target — with a lot of tricks to keep it on track. A score above 98 should correlate with a codebase a seasoned engineer would call beautiful.
 
 That score generates a scorecard badge for your GitHub profile or README:
 
-<img src="assets/scorecard.png" width="100%">
-
-This fork supports TypeScript and JavaScript: `.js`/`.jsx`/`.mjs`/`.cjs` files are scanned together with TypeScript, whether the project is plain JavaScript, mid-migration (`allowJs`) or TypeScript with a few JS files. Other languages were removed to keep the tool focused; the last multi-language version is tagged `pre-ts-only`.
+<img src="https://raw.githubusercontent.com/cstarlea/desloppify/main/assets/scorecard.png" width="100%">
 
 ## For your agent's consideration...
 
 Paste this prompt into your agent:
 
 ```
-I want you to improve the quality of this codebase. To do this, install and run desloppify.
+I want you to improve the quality of this codebase. To do this, install and run desloppify
+(PyPI package desloppify-ts; the command is desloppify).
 Run ALL of the following (requires Python 3.11+):
 
-pip install --upgrade "desloppify[full]"
+pip install --upgrade "desloppify-ts[full]"
 desloppify update-skill claude    # installs the full workflow guide — pick yours: claude, cursor, codex, copilot, droid, windsurf, gemini, rovodev
 
 Add .desloppify/ to your .gitignore — it contains local state that shouldn't be committed.
@@ -71,8 +88,6 @@ desloppify scan --path . --profile ci --no-badge --fail-under 80
 
 `--profile ci` skips slow and subjective phases and bypasses the mid-cycle scan queue gate so a CI job can collect a fresh mechanical snapshot. It prints a plain report (scores, mechanical dimensions, issue counts, coverage warnings) with no colour, agent instructions or workflow nudges. `--fail-under SCORE` exits with status 1 when the objective score is below `SCORE`; `--fail-score verified|strict|overall` checks another score instead. Without a subjective review, overall and strict count every subjective dimension as 0, so in CI the objective or verified score is usually the one to gate on. `status --json` still gives a script the full score breakdown.
 
-On constrained Java CI runners, the PMD detector defaults to `--threads 0` to avoid worker-thread fanout. Set `DESLOPPIFY_PMD_THREADS` to a PMD thread value such as `2` or `0.5C` if you want more throughput.
-
 Minimal GitHub Actions example:
 
 ```yaml
@@ -91,7 +106,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: pip install --upgrade "desloppify[full]"
+      - run: pip install --upgrade "desloppify-ts[full]"
       - run: desloppify scan --path . --profile ci --no-badge --fail-under 80
 ```
 
@@ -136,10 +151,10 @@ The hope is that anyone can use this to build something a seasoned engineer woul
 
 If you'd like to join a community of vibe engineers who want to build beautiful things, [come hang out](https://discord.gg/aZdzbZrHaY).
 
-<img src="assets/engineering.png" width="100%">
+<img src="https://raw.githubusercontent.com/cstarlea/desloppify/main/assets/engineering.png" width="100%">
 
 ---
 
-Issues, improvements, and PRs are hugely appreciated — [github.com/peteromallet/desloppify](https://github.com/peteromallet/desloppify).
+Issues, improvements, and PRs are hugely appreciated — [github.com/cstarlea/desloppify](https://github.com/cstarlea/desloppify).
 
-Desloppify is free for any individual — whether working independently or at a company — to use for their own work. It is also free for open source companies to use in any capacity, including commercial. Non-open source companies who wish to commercialize it should refer to the [LICENSE](LICENSE) for transparent pricing details.
+desloppify-ts is distributed under upstream's license, the Open Source Native License 0.2. It is free for any individual — whether working independently or at a company — to use for their own work. It is also free for open source companies to use in any capacity, including commercial. Non-open source companies who wish to commercialize it should refer to the [LICENSE](https://github.com/cstarlea/desloppify/blob/main/LICENSE) for transparent pricing details.

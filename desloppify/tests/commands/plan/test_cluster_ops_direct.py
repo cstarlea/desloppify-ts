@@ -242,7 +242,7 @@ def test_cluster_manage_yaml_dependency_hint(monkeypatch, tmp_path, capsys) -> N
         "_import_yaml_module",
         lambda: (
             print(
-                '  YAML import/export requires PyYAML. Install with: pip install "desloppify[plan-yaml]"'
+                '  YAML import/export requires PyYAML. Install with: pip install "desloppify-ts[plan-yaml]"'
             )
             or None
         ),
@@ -253,7 +253,7 @@ def test_cluster_manage_yaml_dependency_hint(monkeypatch, tmp_path, capsys) -> N
     )
     out_export = capsys.readouterr().out
     assert "requires PyYAML" in out_export
-    assert "desloppify[plan-yaml]" in out_export
+    assert "desloppify-ts[plan-yaml]" in out_export
 
     import_file = tmp_path / "clusters.yaml"
     import_file.write_text("clusters: []\n", encoding="utf-8")
@@ -262,7 +262,7 @@ def test_cluster_manage_yaml_dependency_hint(monkeypatch, tmp_path, capsys) -> N
     )
     out_import = capsys.readouterr().out
     assert "requires PyYAML" in out_import
-    assert "desloppify[plan-yaml]" in out_import
+    assert "desloppify-ts[plan-yaml]" in out_import
 
 
 def test_cluster_reorder_item_position_and_whole_cluster_paths(monkeypatch, capsys) -> None:

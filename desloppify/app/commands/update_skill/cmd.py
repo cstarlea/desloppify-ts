@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 import argparse
-import ssl
-import urllib.error
-import urllib.request
+from importlib.resources import files
 
 from desloppify.app.skill_docs import (
     SKILL_BEGIN,
@@ -21,37 +19,19 @@ from desloppify.base.discovery.file_paths import safe_write_text
 from desloppify.base.discovery.paths import get_project_root
 from desloppify.base.output.terminal import colorize
 
-_RAW_BASE = "https://raw.githubusercontent.com/peteromallet/desloppify/main/docs"
+_RESOURCE_PACKAGE = "desloppify.data.global"
 
 
-def _ssl_context() -> ssl.SSLContext:
-    """Build SSL context, preferring certifi CA bundle for macOS compatibility."""
+def _read_bundled(filename: str) -> str:
+    """Read a skill document shipped in the installed package."""
     try:
-        import certifi  # noqa: F811
-        return ssl.create_default_context(cafile=certifi.where())
-    except ImportError:
-        return ssl.create_default_context()
-
-
-def _download(filename: str) -> str:
-    """Download a file from the desloppify docs directory on GitHub."""
-    url = f"{_RAW_BASE}/{filename}"
-    try:
-        ctx = _ssl_context()
-        with urllib.request.urlopen(url, timeout=15, context=ctx) as resp:  # nosec B310
-            return resp.read().decode("utf-8")
-    except urllib.error.URLError as exc:
-        if "CERTIFICATE_VERIFY_FAILED" in str(exc):
-            raise CommandError(
-                f"SSL certificate verification failed downloading {filename}.\n"
-                "On macOS with Homebrew Python, try: pip install certifi\n"
-                "Or run: /Applications/Python\\ 3.*/Install\\ Certificates.command"
-            ) from exc
-        raise
+        return files(_RESOURCE_PACKAGE).joinpath(filename).read_text(encoding="utf-8")
+    except ModuleNotFoundError as exc:
+        raise OSError(f"bundled skill data is missing: {exc}") from exc
 
 
 def _build_section(skill_content: str, overlay_content: str | None) -> str:
-    """Assemble the complete skill section from downloaded parts."""
+    """Assemble the complete skill section from its parts."""
     parts = [skill_content.rstrip()]
     if overlay_content:
         parts.append(overlay_content.rstrip())
@@ -163,25 +143,24 @@ def resolve_interface(
 def _update_installed_skill_with_deps(
     interface: str,
     *,
-    download_fn,
+    read_fn,
     get_project_root_fn,
     safe_write_text_fn,
     colorize_fn,
 ) -> bool:
-    """Download and install the skill document for the given interface."""
+    """Install the bundled skill document for the given interface."""
     target_rel, overlay_name, dedicated = SKILL_TARGETS[interface]
     target_path = get_project_root_fn() / target_rel
 
-    print(colorize_fn(f"Downloading skill document ({interface})...", "dim"))
     try:
-        skill_content = download_fn("SKILL.md")
-        overlay_content = download_fn(f"{overlay_name}.md") if overlay_name else None
-    except (urllib.error.URLError, OSError) as exc:
-        print(colorize_fn(f"Download failed: {exc}", "red"))
+        skill_content = read_fn("SKILL.md")
+        overlay_content = read_fn(f"{overlay_name}.md") if overlay_name else None
+    except OSError as exc:
+        print(colorize_fn(f"Could not read bundled skill document: {exc}", "red"))
         return False
 
     if "desloppify-skill-version" not in skill_content:
-        print(colorize_fn("Downloaded content doesn't look like a skill document.", "red"))
+        print(colorize_fn("Bundled content doesn't look like a skill document.", "red"))
         return False
 
     new_section = _build_section(skill_content, overlay_content)
@@ -211,13 +190,13 @@ def _update_installed_skill_with_deps(
 
 
 def update_installed_skill(interface: str) -> bool:
-    """Download and install the skill document for the given interface.
+    """Install the bundled skill document for the given interface.
 
     Returns True on success, False on failure. Prints status messages.
     """
     return _update_installed_skill_with_deps(
         interface,
-        download_fn=_download,
+        read_fn=_read_bundled,
         get_project_root_fn=get_project_root,
         safe_write_text_fn=safe_write_text,
         colorize_fn=colorize,
