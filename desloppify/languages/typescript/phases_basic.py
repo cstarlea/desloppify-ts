@@ -15,6 +15,7 @@ from desloppify.languages._framework.issue_factories import make_unused_issues
 import desloppify.languages.typescript.detectors.dependencies as dependencies_detector_mod
 import desloppify.languages.typescript.detectors.deprecated as deprecated_detector_mod
 import desloppify.languages.typescript.detectors.exports as exports_detector_mod
+import desloppify.languages.typescript.detectors.lint as lint_detector_mod
 import desloppify.languages.typescript.detectors.logs as logs_detector_mod
 import desloppify.languages.typescript.detectors.tsconfig_health as tsconfig_health_detector_mod
 import desloppify.languages.typescript.detectors.type_errors as type_errors_detector_mod
@@ -97,6 +98,55 @@ def phase_type_errors(
     potential = sum(zone(filepath) not in EXCLUDED_ZONES for filepath in result.checked_files)
     log(f"         {len(result.entries)} errors → {len(results)} issues ({potential} files scored)")
     return results, {"type_error": potential}
+
+
+def phase_lint(path: Path, lang: LangRuntimeContract) -> tuple[list[Issue], dict[str, int]]:
+    result = lint_detector_mod.detect_lint_result(
+        path,
+        type_aware_max_files=lang.runtime_setting(
+            "lint_type_aware_max_files", lint_detector_mod.DEFAULT_TYPE_AWARE_MAX_FILES
+        ),
+    )
+    record_reduced_coverage(lang, result.coverage)
+    if result.checked_files is None:
+        if result.coverage is not None:
+            log("         skipped (the project's linter did not run)")
+        return [], {}
+
+    def zone(filepath: str) -> Zone:
+        return lang.zone_map.get(rel(filepath)) if lang.zone_map is not None else Zone.PRODUCTION
+
+    results = []
+    for entry in result.entries:
+        if zone(entry["file"]) in (Zone.GENERATED, Zone.VENDOR):
+            continue
+        first_line = entry["message"].splitlines()[0] if entry["message"] else entry["rule"]
+        results.append(
+            make_issue(
+                "lint",
+                entry["file"],
+                f"{entry['rule']}::{entry['line']}",
+                tier=2 if entry["confidence"] == "high" else 3,
+                confidence=entry["confidence"],
+                summary=f"{entry['rule']}: {first_line[:200]}",
+                detail={
+                    "line": entry["line"],
+                    "cols": entry["cols"],
+                    "rule": entry["rule"],
+                    "severity": entry["severity"],
+                    "message": entry["message"],
+                    "count": entry["count"],
+                    "fixable": entry["fixable"],
+                },
+            )
+        )
+    potential = sum(zone(filepath) not in EXCLUDED_ZONES for filepath in result.checked_files)
+    log(f"         {len(result.entries)} findings → {len(results)} issues ({potential} files scored)")
+    potentials = {"lint": potential}
+    if "eslint" in result.linters:
+        # The retired next_lint detector ran ESLint too; this resolves its open issues.
+        potentials["next_lint"] = 0
+    return results, potentials
 
 
 def phase_tsconfig_health(
@@ -241,6 +291,7 @@ __all__ = [
     "phase_dependencies",
     "phase_deprecated",
     "phase_exports",
+    "phase_lint",
     "phase_logs",
     "phase_type_errors",
     "phase_unused",

@@ -52,11 +52,12 @@ Each detector reports a **potential**, the number of checks it ran, along with i
 | Dimension | Weight in pool | Detectors that TypeScript scans emit |
 |---|---|---|
 | **File health** | 2.0 | structural |
-| **Code quality** | 1.0 | unused, logs, exports, dependencies, deprecated, smells, react, nextjs, next_lint, orphaned, flat_dirs, naming, single_use, coupling, cycles, facade, props, patterns, responsibility_cohesion, stale_exclude, tsconfig_health |
+| **Code quality** | 1.0 | unused, logs, exports, dependencies, deprecated, smells, react, nextjs, orphaned, flat_dirs, naming, single_use, coupling, cycles, facade, props, patterns, responsibility_cohesion, stale_exclude, tsconfig_health |
 | **Duplication** | 1.0 | dupes, boilerplate_duplication |
 | **Test health** | 1.0 | test_coverage |
 | **Security** | 1.0 | security |
 | **Type checks** | 1.0 | type_error |
+| **Lint** | 1.0 | lint |
 
 The detector-to-dimension mapping comes from the registry (`base/registry/catalog_entries.py`), and the weights come from `MECHANICAL_DIMENSION_WEIGHTS`. The registry also maps some detectors that no TypeScript phase emits, such as the Rust detectors. They never report a potential, so they never count. Review, concerns, `signature`, `stale_wontfix` and a few others create work items but are kept out of scoring (`SCORING_EXCLUDED_DETECTORS`).
 
@@ -97,7 +98,7 @@ Some issues don't count at all:
 
 ### File-based detectors
 
-For smells, security, test_coverage, type_error, nextjs and next_lint (plus some excluded or unused ones, see `_FILE_BASED_POLICY_DETECTORS`), the potential is a number of files. A file's failures are capped so that one bad file can't dominate:
+For smells, security, test_coverage, type_error, lint and nextjs (plus some excluded or unused ones, see `_FILE_BASED_POLICY_DETECTORS`), the potential is a number of files. A file's failures are capped so that one bad file can't dominate:
 
 - 1–2 issues: up to 1.0;
 - 3–5 issues: up to 1.5;
@@ -127,6 +128,22 @@ When the project has a coverage report, measured line coverage takes over from t
 - Errors that depend more on compiler options or ambient types than on the code (implicit `any`, index-signature access, module-format interop, unknown globals, an unused `@ts-expect-error`) have medium confidence; the rest have high confidence.
 
 When tsc doesn't run (not installed, no tsconfig, dependencies not installed, a Deno project), the detector reports no potential: Type checks is carried forward and its open issues aren't auto-resolved.
+
+### Lint
+
+`lint` runs the project's own ESLint with the project's own config (`detectors/lint/`) and reports what it finds. Its potential is the number of files ESLint linted in the scan path. One issue covers one rule on one line, with ID `lint::<file>::<rule>::<line>`; the detail keeps the columns, count, severity, message and whether ESLint can fix it.
+
+- The config is the nearest `eslint.config.*` at or above the scan path, and ESLint runs from that directory. `.eslintrc*` and a package.json `eslintConfig` count only when no flat config is above the scan path, since ESLint ignores them once a flat config is in effect. A directory under the scan path with its own `eslint.config.*` belongs to another project, such as a package in a monorepo, and is neither linted nor counted; the scan records reduced coverage naming it, and scanning that directory lints it.
+- ESLint is the project's `node_modules/.bin/eslint`, never a global install or `npx`. With no project linter configured, the detector does nothing.
+- Formatting rules (`meta.type: "layout"`, `@stylistic/*`, `prettier/*`) aren't issues. Neither are rules that check what a desloppify detector already reports, so the same problem isn't counted twice: unused variables and imports (`unused`), `no-explicit-any`, `ban-ts-comment`, `no-non-null-assertion`, `no-empty`, `require-await`, `no-magic-numbers`, `default-case`, `no-warning-comments`, `complexity`, `max-lines-per-function` (smells), `max-lines` (structural), `no-eval`, `no-new-func`, `react/no-danger` (security). The list is `DUPLICATED_BY` in `detectors/lint/rules.py`.
+- Confidence comes from the rule. ESLint's `problem` rules are high and `suggestion` rules medium. Naming, ordering and file-name conventions, and typescript-eslint's stylistic rules, are low. The type-aware typescript-eslint rules have their own table: async and comparison bugs (`no-floating-promises`, `no-misused-promises`, `await-thenable`, `switch-exhaustiveness-check`, ...) are high, the `no-unsafe-*` family and `restrict-template-expressions` are medium (an untyped dependency or compiler options let `any` in), and cleanups (`no-unnecessary-type-assertion`, `prefer-nullish-coalescing`, ...) are low. A rule set to `warn` is one step lower. Severity `error` alone doesn't make a finding high.
+- A file ESLint can't parse isn't counted; reduced coverage says how many.
+
+A type-aware config (`parserOptions.project` or `projectService`, read with `eslint --print-config`) builds a TypeScript program per tsconfig, which is slow and memory-hungry: trpc's `packages/` (637 files) ran out of Node's 2 GB heap after 50 s. Such a run is skipped when the scan has more than `languages.typescript.lint_type_aware_max_files` files to lint (400 by default; 0 means no limit).
+
+When ESLint doesn't run (not installed, dependencies not installed, a config or plugin it can't load, a crash, out of memory, the 300 s timeout, the size limit), the detector reports no potential: Lint is carried forward and its open issues aren't auto-resolved.
+
+`lint` replaces the Next.js `next_lint` tool phase, which ran `next lint` (removed in Next.js 16) and kept only a per-file count. A scan that runs ESLint reports `next_lint` as having run, so its open issues from older scans resolve.
 
 ### Knip
 

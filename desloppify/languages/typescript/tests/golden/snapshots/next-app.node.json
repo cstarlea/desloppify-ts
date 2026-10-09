@@ -133,7 +133,6 @@
   },
   "reduced_coverage": [
     "dependencies: dependencies_not_installed",
-    "next_lint: tool_not_found",
     "type_error: partial"
   ]
 }

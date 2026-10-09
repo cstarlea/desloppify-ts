@@ -14,6 +14,7 @@ from desloppify.languages._framework.base.types import (
     DetectorPhase,
     LangConfig,
     LangSecurityResult,
+    LangValueSpec,
 )
 from desloppify.languages._framework.frameworks.phases import framework_phases
 from desloppify.languages.typescript import test_coverage as ts_test_coverage_hooks
@@ -22,11 +23,13 @@ from desloppify.languages.typescript._fixers import get_ts_fixers
 import desloppify.languages.typescript.commands as ts_commands_mod
 import desloppify.languages.typescript.detectors.deps as deps_detector_mod
 from desloppify.languages.typescript.detectors.security.detector import detect_ts_security
+from desloppify.languages.typescript.detectors.lint import DEFAULT_TYPE_AWARE_MAX_FILES
 from desloppify.languages.typescript.extractors_functions import extract_ts_functions
 from desloppify.languages.typescript.phases_basic import (
     phase_dependencies,
     phase_deprecated,
     phase_exports,
+    phase_lint,
     phase_logs,
     phase_tsconfig_health,
     phase_type_errors,
@@ -107,6 +110,7 @@ class TypeScriptConfig(LangConfig):
                 DetectorPhase("Logs", phase_logs),
                 DetectorPhase("Unused (tsc)", phase_unused),
                 DetectorPhase("Type errors (tsc)", phase_type_errors),
+                DetectorPhase("Lint (project linter)", phase_lint),
                 DetectorPhase("tsconfig health", phase_tsconfig_health),
                 DetectorPhase("Dead exports", phase_exports),
                 DetectorPhase("Dependencies (knip)", phase_dependencies),
@@ -146,6 +150,14 @@ class TypeScriptConfig(LangConfig):
             migration_mixed_extensions=TS_MIGRATION_MIXED_EXTENSIONS,
             extract_functions=_ts_extract_functions,
             zone_rules=TS_ZONE_RULES,
+            setting_specs={
+                "lint_type_aware_max_files": LangValueSpec(
+                    int,
+                    DEFAULT_TYPE_AWARE_MAX_FILES,
+                    "Most files to lint when the project's ESLint config uses type"
+                    " information (0 = no limit)",
+                ),
+            },
         )
 
 

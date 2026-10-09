@@ -490,6 +490,16 @@ DETECTORS: dict[str, DetectorMeta] = {
         tier=2,
         subjective_dimensions=("type_safety",),
     ),
+    "lint": DetectorMeta(
+        "lint",
+        "lint",
+        "Lint",
+        "manual_fix",
+        "fix what the project's own linter reports (`detail.fixable` ones with `eslint --fix`)",
+        tier=2,
+        marks_dims_stale=True,
+        subjective_dimensions=("convention_outlier",),
+    ),
     "tsconfig_health": DetectorMeta(
         "tsconfig_health",
         "tsconfig health",
