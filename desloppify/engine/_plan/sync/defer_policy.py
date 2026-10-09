@@ -82,13 +82,7 @@ def _deferred_ids(
     raw = defer_state.get(deferred_ids_field)
     if not isinstance(raw, list):
         return []
-    return sorted(
-        {
-            str(issue_id).strip()
-            for issue_id in raw
-            if str(issue_id).strip()
-        }
-    )
+    return sorted({str(issue_id).strip() for issue_id in raw if str(issue_id).strip()})
 
 
 def update_defer_state(
@@ -117,14 +111,16 @@ def update_defer_state(
     same_ids = bool(current_ids) and current_ids == previous_ids
     if same_ids:
         defer_count = _coerce_non_negative_int(previous.get("defer_count"), default=1)
-        prior_scan = _coerce_non_negative_int(previous.get("last_deferred_scan"), default=-1)
+        prior_scan = _coerce_non_negative_int(
+            previous.get("last_deferred_scan"), default=-1
+        )
         if prior_scan != scan_count:
             defer_count += 1
         branch_updates = {
             "defer_count": max(1, defer_count),
             "first_deferred_scan": _coerce_non_negative_int(
-            previous.get("first_deferred_scan"),
-            default=scan_count,
+                previous.get("first_deferred_scan"),
+                default=scan_count,
             ),
             "first_deferred_at": str(previous.get("first_deferred_at") or timestamp),
         }

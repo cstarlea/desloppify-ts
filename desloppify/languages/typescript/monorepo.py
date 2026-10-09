@@ -17,10 +17,14 @@ DEFAULT_MAX_MEMORY_MB = 3072
 
 def monorepo_mode(lang: LangRuntimeContract) -> str:
     """The scan's mode: the ``--lang-opt`` value, else the config setting."""
-    raw = lang.runtime_option("monorepo_mode", "") or lang.runtime_setting("monorepo_mode", "off")
+    raw = lang.runtime_option("monorepo_mode", "") or lang.runtime_setting(
+        "monorepo_mode", "off"
+    )
     mode = str(raw or "off").strip().lower()
     if mode not in MODES:
-        log(f"         unknown monorepo_mode {mode!r} (expected {' or '.join(MODES)}); using off")
+        log(
+            f"         unknown monorepo_mode {mode!r} (expected {' or '.join(MODES)}); using off"
+        )
         return "off"
     return mode
 

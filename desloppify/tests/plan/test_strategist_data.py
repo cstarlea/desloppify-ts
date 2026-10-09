@@ -62,9 +62,24 @@ def test_score_trajectory_detects_improving_stable_and_declining() -> None:
 
 def test_dimension_trajectories_marks_stagnant_and_counts_investment() -> None:
     history = [
-        {"dimension_scores": {"naming": {"strict": 60.0}, "architecture": {"strict": 72.0}}},
-        {"dimension_scores": {"naming": {"strict": 60.2}, "architecture": {"strict": 76.0}}},
-        {"dimension_scores": {"naming": {"strict": 60.1}, "architecture": {"strict": 79.0}}},
+        {
+            "dimension_scores": {
+                "naming": {"strict": 60.0},
+                "architecture": {"strict": 72.0},
+            }
+        },
+        {
+            "dimension_scores": {
+                "naming": {"strict": 60.2},
+                "architecture": {"strict": 76.0},
+            }
+        },
+        {
+            "dimension_scores": {
+                "naming": {"strict": 60.1},
+                "architecture": {"strict": 79.0},
+            }
+        },
     ]
     work_items = dict(
         [
@@ -143,7 +158,9 @@ def test_churn_and_rework_helpers_surface_expected_entries() -> None:
     assert loops[0].reopen_count == 2
 
 
-def test_completed_cluster_summary_extracts_from_progression_and_plan_fallback() -> None:
+def test_completed_cluster_summary_extracts_from_progression_and_plan_fallback() -> (
+    None
+):
     summaries = completed_cluster_summary_from_progression(
         [
             {
@@ -151,7 +168,11 @@ def test_completed_cluster_summary_extracts_from_progression_and_plan_fallback()
                 "timestamp": "2026-03-20T10:00:00+00:00",
                 "payload": {
                     "cluster_summaries": [
-                        {"name": "rename-pass", "thesis": "batch renames", "issue_count": 3}
+                        {
+                            "name": "rename-pass",
+                            "thesis": "batch renames",
+                            "issue_count": 3,
+                        }
                     ]
                 },
             }
@@ -181,14 +202,31 @@ def test_execution_inventory_commit_history_and_collect_strategist_input() -> No
     state = {
         "scan_count": 3,
         "scan_history": [
-            {"strict_score": 61.0, "overall_score": 64.0, "dimension_scores": {"naming": {"strict": 61.0}}},
-            {"strict_score": 63.0, "overall_score": 66.5, "dimension_scores": {"naming": {"strict": 63.0}}},
-            {"strict_score": 62.5, "overall_score": 66.0, "dimension_scores": {"naming": {"strict": 62.5}}},
+            {
+                "strict_score": 61.0,
+                "overall_score": 64.0,
+                "dimension_scores": {"naming": {"strict": 61.0}},
+            },
+            {
+                "strict_score": 63.0,
+                "overall_score": 66.5,
+                "dimension_scores": {"naming": {"strict": 63.0}},
+            },
+            {
+                "strict_score": 62.5,
+                "overall_score": 66.0,
+                "dimension_scores": {"naming": {"strict": 62.5}},
+            },
         ],
         "dimension_scores": {"naming": {"strict": 62.5, "score": 66.0}},
         "work_items": dict(
             [
-                _review_issue("review::src/a.py::1", dimension="naming", status="open", file="src/a.py"),
+                _review_issue(
+                    "review::src/a.py::1",
+                    dimension="naming",
+                    status="open",
+                    file="src/a.py",
+                ),
                 _review_issue(
                     "review::src/b.py::2",
                     dimension="naming",
@@ -206,9 +244,21 @@ def test_execution_inventory_commit_history_and_collect_strategist_input() -> No
         "clusters": {"cluster-a": {"issue_ids": ["review::src/a.py::1"]}},
         "promoted_ids": ["review::src/a.py::1"],
         "execution_log": [
-            {"timestamp": "3026-03-01T00:00:00+00:00", "action": "resolve", "issue_ids": ["a", "b"]},
-            {"timestamp": "3026-03-02T00:00:00+00:00", "action": "skip", "issue_ids": ["c"]},
-            {"timestamp": "3026-03-03T00:00:00+00:00", "action": "done", "issue_ids": ["d"]},
+            {
+                "timestamp": "3026-03-01T00:00:00+00:00",
+                "action": "resolve",
+                "issue_ids": ["a", "b"],
+            },
+            {
+                "timestamp": "3026-03-02T00:00:00+00:00",
+                "action": "skip",
+                "issue_ids": ["c"],
+            },
+            {
+                "timestamp": "3026-03-03T00:00:00+00:00",
+                "action": "done",
+                "issue_ids": ["d"],
+            },
         ],
         "commit_log": [
             {
@@ -244,11 +294,20 @@ def test_execution_inventory_commit_history_and_collect_strategist_input() -> No
             {
                 "event_type": "triage_complete",
                 "timestamp": "2026-03-20T00:00:00+00:00",
-                "payload": {"cluster_summaries": [{"name": "cluster-a", "thesis": "cleanup", "issue_count": 1}]},
+                "payload": {
+                    "cluster_summaries": [
+                        {"name": "cluster-a", "thesis": "cleanup", "issue_count": 1}
+                    ]
+                },
             }
         ],
     )
-    assert strategist_input.score_trajectory.trend in {"stable", "improving", "declining", "recovering"}
+    assert strategist_input.score_trajectory.trend in {
+        "stable",
+        "improving",
+        "declining",
+        "recovering",
+    }
     assert strategist_input.completed_clusters[0].name == "cluster-a"
     assert strategist_input.commit_history.total_commits == 1
     assert strategist_input.prioritized_ids == ["review::src/a.py::1"]

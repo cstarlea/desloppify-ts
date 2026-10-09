@@ -26,7 +26,9 @@ def _review_state(*issue_ids: str) -> dict:
 
 
 def test_build_triage_snapshot_empty_plan_is_inactive() -> None:
-    snapshot = build_triage_snapshot({"queue_order": [], "epic_triage_meta": {}}, {"issues": {}})
+    snapshot = build_triage_snapshot(
+        {"queue_order": [], "epic_triage_meta": {}}, {"issues": {}}
+    )
 
     assert snapshot.cycle_active is False
     assert snapshot.is_triage_stale is False
@@ -34,7 +36,9 @@ def test_build_triage_snapshot_empty_plan_is_inactive() -> None:
     assert snapshot.undispositioned_ids == frozenset()
 
 
-def test_build_triage_snapshot_excludes_frozen_active_ids_from_new_since_triage() -> None:
+def test_build_triage_snapshot_excludes_frozen_active_ids_from_new_since_triage() -> (
+    None
+):
     plan = {
         "queue_order": ["triage::observe"],
         "epic_triage_meta": {
@@ -51,7 +55,9 @@ def test_build_triage_snapshot_excludes_frozen_active_ids_from_new_since_triage(
     assert snapshot.is_triage_stale is True
 
 
-def test_build_triage_snapshot_tracks_undispositioned_and_coverage_consistently() -> None:
+def test_build_triage_snapshot_tracks_undispositioned_and_coverage_consistently() -> (
+    None
+):
     plan = {
         "queue_order": ["triage::organize"],
         "clusters": {
@@ -72,13 +78,17 @@ def test_build_triage_snapshot_tracks_undispositioned_and_coverage_consistently(
     state = _review_state("review::r1", "review::r2", "review::r3")
 
     snapshot = build_triage_snapshot(plan, state)
-    organized, total, _clusters = triage_coverage(plan, open_review_ids=set(snapshot.frozen_issue_ids))
+    organized, total, _clusters = triage_coverage(
+        plan, open_review_ids=set(snapshot.frozen_issue_ids)
+    )
 
     assert snapshot.undispositioned_ids == frozenset({"review::r3"})
     assert snapshot.organized_count == organized
     assert snapshot.total_in_scope == total
     assert snapshot.frozen_issue_ids == frozenset(active_triage_issue_ids(plan, state))
-    assert snapshot.undispositioned_ids == frozenset(undispositioned_triage_issue_ids(plan, state))
+    assert snapshot.undispositioned_ids == frozenset(
+        undispositioned_triage_issue_ids(plan, state)
+    )
 
 
 def test_compute_triage_progress_blocks_enrich_until_organize_confirmed() -> None:
@@ -92,6 +102,7 @@ def test_compute_triage_progress_blocks_enrich_until_organize_confirmed() -> Non
 
     assert progress.current_stage is None
     assert progress.next_command == "desloppify plan triage --confirm organize"
-    assert "blocked until Defer contradictions, cluster, & prioritize is confirmed" in str(
-        progress.blocked_reason
+    assert (
+        "blocked until Defer contradictions, cluster, & prioritize is confirmed"
+        in str(progress.blocked_reason)
     )

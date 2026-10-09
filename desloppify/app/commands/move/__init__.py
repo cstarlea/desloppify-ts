@@ -11,4 +11,5 @@ def cmd_move(args: argparse.Namespace) -> None:
 
     _cmd_move(args)
 
+
 __all__ = ["cmd_move"]

@@ -110,17 +110,27 @@ class TestScaleHelper:
 # _scorecard_ignore_warning
 # ===========================================================================
 
+
 class TestIgnoreWarning:
     def test_none_when_no_ignored_issues(self):
-        assert _scorecard_ignore_warning({"ignore_integrity": {"ignored": 0, "suppressed_pct": 80.0}}) is None
+        assert (
+            _scorecard_ignore_warning(
+                {"ignore_integrity": {"ignored": 0, "suppressed_pct": 80.0}}
+            )
+            is None
+        )
 
     def test_warning_when_suppression_medium(self):
-        msg = _scorecard_ignore_warning({"ignore_integrity": {"ignored": 10, "suppressed_pct": 35.0}})
+        msg = _scorecard_ignore_warning(
+            {"ignore_integrity": {"ignored": 10, "suppressed_pct": 35.0}}
+        )
         assert msg is not None
         assert "35%" in msg
 
     def test_warning_when_suppression_high(self):
-        msg = _scorecard_ignore_warning({"ignore_integrity": {"ignored": 10, "suppressed_pct": 60.0}})
+        msg = _scorecard_ignore_warning(
+            {"ignore_integrity": {"ignored": 10, "suppressed_pct": 60.0}}
+        )
         assert msg is not None
         assert "high" in msg.lower()
 
@@ -251,9 +261,11 @@ class TestGetProjectName:
         monkeypatch.setattr(
             meta.subprocess,
             "check_output",
-            lambda cmd, **kw: "owner/repo\n"
-            if str(cmd[0]).endswith("gh")
-            else (_ for _ in ()).throw(FileNotFoundError),
+            lambda cmd, **kw: (
+                "owner/repo\n"
+                if str(cmd[0]).endswith("gh")
+                else (_ for _ in ()).throw(FileNotFoundError)
+            ),
         )
         assert resolve_project_name(get_project_root()) == "owner/repo"
 
@@ -261,6 +273,7 @@ class TestGetProjectName:
         import desloppify.app.output.scorecard_parts.meta as meta
 
         monkeypatch.setattr(meta.shutil, "which", lambda name: f"/usr/bin/{name}")
+
         def mock_check_output(cmd, **kw):
             if str(cmd[0]).endswith("gh"):
                 raise FileNotFoundError
@@ -273,6 +286,7 @@ class TestGetProjectName:
         import desloppify.app.output.scorecard_parts.meta as meta
 
         monkeypatch.setattr(meta.shutil, "which", lambda name: f"/usr/bin/{name}")
+
         def mock_check_output(cmd, **kw):
             if str(cmd[0]).endswith("gh"):
                 raise FileNotFoundError
@@ -286,7 +300,9 @@ class TestGetProjectName:
 
         monkeypatch.setattr(meta.shutil, "which", lambda _name: None)
         monkeypatch.setattr(
-            meta.subprocess, "check_output", lambda cmd, **kw: (_ for _ in ()).throw(FileNotFoundError)
+            meta.subprocess,
+            "check_output",
+            lambda cmd, **kw: (_ for _ in ()).throw(FileNotFoundError),
         )
         result = resolve_project_name(get_project_root())
         assert isinstance(result, str)
@@ -296,6 +312,7 @@ class TestGetProjectName:
         import desloppify.app.output.scorecard_parts.meta as meta
 
         monkeypatch.setattr(meta.shutil, "which", lambda name: f"/usr/bin/{name}")
+
         def mock_check_output(cmd, **kw):
             if str(cmd[0]).endswith("gh"):
                 raise FileNotFoundError

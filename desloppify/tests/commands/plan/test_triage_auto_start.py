@@ -16,6 +16,7 @@ from desloppify.engine._plan.schema import empty_plan
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _state_with_issues(*ids: str, dimension: str = "naming") -> dict:
     issues = {}
     for fid in ids:
@@ -66,13 +67,17 @@ def _fake_services(plan, state, save_plan_fn=None):
         command_runtime=lambda args: _fake_runtime(state),
         load_plan=lambda *a, **kw: plan,
         save_plan=save_plan_fn or (lambda p, *a, **kw: None),
-        collect_triage_input=lambda p, s: type("TI", (), {
-            "open_issues": s.get("issues", {}),
-            "resolved_issues": {},
-            "new_since_last": [],
-            "resolved_since_last": [],
-            "existing_clusters": {},
-        })(),
+        collect_triage_input=lambda p, s: type(
+            "TI",
+            (),
+            {
+                "open_issues": s.get("issues", {}),
+                "resolved_issues": {},
+                "new_since_last": [],
+                "resolved_since_last": [],
+                "existing_clusters": {},
+            },
+        )(),
         detect_recurring_patterns=lambda _a, _b: {},
         append_log_entry=lambda *a, **kw: None,
         extract_issue_citations=lambda text, ids: set(),
@@ -83,7 +88,8 @@ def _fake_services(plan, state, save_plan_fn=None):
 def _patch_triage(monkeypatch, plan, state, save_plan_fn=None):
     """Apply standard triage monkeypatches."""
     monkeypatch.setattr(
-        triage_mod, "default_triage_services",
+        triage_mod,
+        "default_triage_services",
         lambda: _fake_services(plan, state, save_plan_fn),
     )
     monkeypatch.setattr(triage_mod, "require_issue_inventory", lambda s: True)
@@ -92,6 +98,7 @@ def _patch_triage(monkeypatch, plan, state, save_plan_fn=None):
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
+
 
 class TestAutoStartTriage:
     def test_observe_auto_starts_triage(self, monkeypatch, capsys):
@@ -241,7 +248,9 @@ class TestAutoStartTriage:
             (run_dir / "run_summary.json").write_text("{}", encoding="utf-8")
             print(f"runner wrote: {run_dir}")
 
-        monkeypatch.setattr(triage_workflow_mod, "run_codex_pipeline", fake_run_codex_pipeline)
+        monkeypatch.setattr(
+            triage_workflow_mod, "run_codex_pipeline", fake_run_codex_pipeline
+        )
 
         args = _fake_args(
             run_stages=True,

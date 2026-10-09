@@ -25,7 +25,9 @@ from desloppify.engine.planning import CONFIDENCE_ORDER
 from .formatting import format_detail
 
 
-def write_show_output_file(output_file: str, payload: dict, surfaced_count: int) -> bool:
+def write_show_output_file(
+    output_file: str, payload: dict, surfaced_count: int
+) -> bool:
     """Write serialized show payload to file."""
     try:
         safe_write_text(output_file, json.dumps(payload, indent=2) + "\n")
@@ -69,9 +71,7 @@ def _print_single_issue(issue: dict, *, show_code: bool) -> None:
     if show_code:
         detail_raw = issue.get("detail", {})
         detail = detail_raw if isinstance(detail_raw, dict) else {}
-        target_line = (
-            detail.get("line") or (detail.get("lines", [None]) or [None])[0]
-        )
+        target_line = detail.get("line") or (detail.get("lines", [None]) or [None])[0]
         if target_line and issue["file"] not in (".", ""):
             snippet = read_code_snippet(issue["file"], target_line)
             if snippet:
@@ -258,7 +258,10 @@ def show_agent_plan(
 
 
 def show_subjective_followup(
-    state: dict, target_strict_score: float, *, objective_backlog: int = 0,
+    state: dict,
+    target_strict_score: float,
+    *,
+    objective_backlog: int = 0,
 ) -> None:
     """Show subjective follow-up guidance for the current state."""
     dim_scores = state.get("dimension_scores", {}) or {}

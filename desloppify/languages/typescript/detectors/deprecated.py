@@ -71,7 +71,9 @@ _NAMED_DECLARATIONS = frozenset(
     }
 )
 _VARIABLE_DECLARATIONS = frozenset({"lexical_declaration", "variable_declaration"})
-_FUNCTIONS = frozenset({"function_declaration", "generator_function_declaration", "function_signature"})
+_FUNCTIONS = frozenset(
+    {"function_declaration", "generator_function_declaration", "function_signature"}
+)
 _MEMBERS = {
     "property_signature": "name",
     "method_signature": "name",
@@ -82,16 +84,27 @@ _MEMBERS = {
     "enum_assignment": "name",
 }
 _REFERENCES = frozenset(
-    {"identifier", "type_identifier", "shorthand_property_identifier", "shorthand_property_identifier_pattern"}
+    {
+        "identifier",
+        "type_identifier",
+        "shorthand_property_identifier",
+        "shorthand_property_identifier_pattern",
+    }
 )
 _DECLARED_NAME_PARENTS = _NAMED_DECLARATIONS | {"variable_declarator"}
-_CHAIN_NODES = frozenset({"member_expression", "nested_type_identifier", "nested_identifier"})
+_CHAIN_NODES = frozenset(
+    {"member_expression", "nested_type_identifier", "nested_identifier"}
+)
 _CHAIN_RE = re.compile(r"[\w$]+(?:\.[\w$]+)+")
 
 
 def detect_deprecated_result(path: Path) -> DetectorResult[dict[str, Any]]:
     """Find deprecated symbols with explicit population semantics."""
-    ts_files = [f for f in find_ts_and_js_files(path) if not f.endswith(_DECLARATION_FILE_SUFFIXES)]
+    ts_files = [
+        f
+        for f in find_ts_and_js_files(path)
+        if not f.endswith(_DECLARATION_FILE_SUFFIXES)
+    ]
     if get_parser("typescript") is not None and get_parser("tsx") is not None:
         # Outside a scan (``detect deprecated``), parse each file once here too.
         owns_cache = not is_parse_cache_enabled()
@@ -117,7 +130,9 @@ def _tree_entries(ts_files: list[str]) -> list[dict[str, Any]]:
     export_names: dict[int, set[str]] = {}
     for filepath in ts_files:
         parsed = parsed_file(filepath)
-        if parsed is None or not _JSDOC_DEPRECATED_RE.search(parsed.source.decode("utf-8", "replace")):
+        if parsed is None or not _JSDOC_DEPRECATED_RE.search(
+            parsed.source.decode("utf-8", "replace")
+        ):
             continue
         for entry, names in _file_entries(filepath, parsed):
             export_names[len(entries)] = names
@@ -132,9 +147,13 @@ def _tree_entries(ts_files: list[str]) -> list[dict[str, Any]]:
     return entries
 
 
-def _file_entries(filepath: str, parsed: ParsedSource) -> Iterator[tuple[dict[str, Any], set[str]]]:
+def _file_entries(
+    filepath: str, parsed: ParsedSource
+) -> Iterator[tuple[dict[str, Any], set[str]]]:
     """(entry, names the file exports it under) for each deprecated symbol in one file."""
-    documented: dict[tuple[int, int], tuple[Any, int]] = {}  # node span -> (node, line of the tag)
+    documented: dict[
+        tuple[int, int], tuple[Any, int]
+    ] = {}  # node span -> (node, line of the tag)
     for comment in descendants(parsed.root, ("comment",)):
         text = parsed.text(comment)
         match = _JSDOC_DEPRECATED_RE.search(text) if text.startswith("/**") else None
@@ -146,7 +165,11 @@ def _file_entries(filepath: str, parsed: ParsedSource) -> Iterator[tuple[dict[st
         return
     exported_as = _exported_names(parsed)
     commonjs = parsed.source.decode("utf-8", "replace")
-    references = Counter(parsed.text(n) for n in descendants(parsed.root, _REFERENCES) if not _is_declared_name(n))
+    references = Counter(
+        parsed.text(n)
+        for n in descendants(parsed.root, _REFERENCES)
+        if not _is_declared_name(n)
+    )
     seen: set[tuple[str, bool]] = set()  # a member may share a top-level symbol's name
     for node, line in documented.values():
         for symbol, kind, names in _targets(parsed, node, documented, exported_as):
@@ -188,7 +211,10 @@ def _documented_node(comment):
 
 
 def _targets(
-    parsed: ParsedSource, node, documented: dict[tuple[int, int], tuple[Any, int]], exported_as: dict[str, set[str]]
+    parsed: ParsedSource,
+    node,
+    documented: dict[tuple[int, int], tuple[Any, int]],
+    exported_as: dict[str, set[str]],
 ) -> list[tuple[str, str, set[str]]]:
     """(symbol, kind, exported names) for each name the documented node declares."""
     if node.type == "export_statement":
@@ -210,7 +236,12 @@ def _targets(
         if name_node is None:
             return []
         name = parsed.text(name_node)
-        kind = "overload" if node.type in _FUNCTIONS and _partly_deprecated(parsed, node, name, documented) else "top-level"
+        kind = (
+            "overload"
+            if node.type in _FUNCTIONS
+            and _partly_deprecated(parsed, node, name, documented)
+            else "top-level"
+        )
         return [(name, kind, exported_as.get(name, set()))]
     if node.type in _VARIABLE_DECLARATIONS:
         targets = []
@@ -224,8 +255,15 @@ def _targets(
         return targets
     if node.type in _MEMBERS:
         name_node = node.child_by_field_name(_MEMBERS[node.type])
-        return [(_name_text(parsed, name_node), "property", set())] if name_node is not None else []
-    if node.type in ("property_identifier", "shorthand_property_identifier"):  # enum member, ``{ a }``
+        return (
+            [(_name_text(parsed, name_node), "property", set())]
+            if name_node is not None
+            else []
+        )
+    if node.type in (
+        "property_identifier",
+        "shorthand_property_identifier",
+    ):  # enum member, ``{ a }``
         return [(parsed.text(node), "property", set())]
     return []
 
@@ -237,10 +275,20 @@ def _name_text(parsed: ParsedSource, node) -> str:
 
 def _statement(node):
     parent = node.parent
-    return parent if parent is not None and parent.type in ("export_statement", "ambient_declaration") else node
+    return (
+        parent
+        if parent is not None
+        and parent.type in ("export_statement", "ambient_declaration")
+        else node
+    )
 
 
-def _partly_deprecated(parsed: ParsedSource, node, name: str, documented: dict[tuple[int, int], tuple[Any, int]]) -> bool:
+def _partly_deprecated(
+    parsed: ParsedSource,
+    node,
+    name: str,
+    documented: dict[tuple[int, int], tuple[Any, int]],
+) -> bool:
     """A function overload whose sibling signatures aren't all deprecated.
 
     With overload signatures, callers see only those, so the symbol is
@@ -252,7 +300,11 @@ def _partly_deprecated(parsed: ParsedSource, node, name: str, documented: dict[t
         return False
     overloads = []
     for sibling in container.named_children:
-        inner = sibling.child_by_field_name("declaration") if sibling.type == "export_statement" else sibling
+        inner = (
+            sibling.child_by_field_name("declaration")
+            if sibling.type == "export_statement"
+            else sibling
+        )
         if inner is not None and inner.type == "ambient_declaration":
             inner = inner.named_children[0] if inner.named_children else None
         if inner is None or inner.type not in _FUNCTIONS:
@@ -261,7 +313,9 @@ def _partly_deprecated(parsed: ParsedSource, node, name: str, documented: dict[t
         if inner_name is not None and parsed.text(inner_name) == name:
             overloads.append(inner)
     signatures = [o for o in overloads if o.type == "function_signature"] or overloads
-    return not all(_key(o) in documented or _key(_statement(o)) in documented for o in signatures)
+    return not all(
+        _key(o) in documented or _key(_statement(o)) in documented for o in signatures
+    )
 
 
 def _is_declared_name(node) -> bool:
@@ -305,7 +359,9 @@ class _ImportGraph:
         self._resolver = project_resolver(get_project_root())
         self._walks: dict[tuple[str, tuple[str, ...]], frozenset[tuple[str, str]]] = {}
 
-    def importers(self, targets: dict[int, tuple[str, set[str]]]) -> dict[int, set[str]]:
+    def importers(
+        self, targets: dict[int, tuple[str, set[str]]]
+    ) -> dict[int, set[str]]:
         """For each target (declaring file, exported names), the other files importing it."""
         by_export: dict[tuple[str, str], list[int]] = {}
         for key, (path, names) in targets.items():
@@ -322,7 +378,9 @@ class _ImportGraph:
                             found.setdefault(key, set()).add(importer)
         return found
 
-    def _imported_paths(self, path: str, member_names: set[str]) -> Iterator[tuple[str, tuple[str, ...]]]:
+    def _imported_paths(
+        self, path: str, member_names: set[str]
+    ) -> Iterator[tuple[str, tuple[str, ...]]]:
         """(module, member path) for each name the file imports, and members used on it."""
         parsed = parsed_file(path)
         if parsed is None:
@@ -337,7 +395,9 @@ class _ImportGraph:
             if module is None:
                 continue
             for binding in info.bindings:
-                names = () if binding.imported in (NAMESPACE, "=") else (binding.imported,)
+                names = (
+                    () if binding.imported in (NAMESPACE, "=") else (binding.imported,)
+                )
                 bound[binding.local] = [((), module, names)]
                 if names:
                     yield module, names
@@ -346,14 +406,18 @@ class _ImportGraph:
         _bind_object_aliases(parsed, bound)
         for chain in _member_chains(parsed, set(bound), member_names):
             for prefix, module, names in bound[chain[0]]:
-                if chain[1 : 1 + len(prefix)] == prefix and len(chain) > 1 + len(prefix):
+                if chain[1 : 1 + len(prefix)] == prefix and len(chain) > 1 + len(
+                    prefix
+                ):
                     yield module, names + chain[1 + len(prefix) :]
 
     def _resolve(self, specifier: str, from_file: str) -> str | None:
         try:
             return self._resolver.resolve(specifier, from_file)
         except OSError as exc:
-            log_best_effort_failure(logger, f"resolve {specifier} from {from_file}", exc)
+            log_best_effort_failure(
+                logger, f"resolve {specifier} from {from_file}", exc
+            )
             return None
 
     def _walk(self, path: str, names: tuple[str, ...]) -> frozenset[tuple[str, str]]:
@@ -363,7 +427,9 @@ class _ImportGraph:
             self._walks[key] = frozenset(self._steps(path, names, set(), 0) or ())
         return self._walks[key]
 
-    def _steps(self, path: str, names: tuple[str, ...], seen: set, hops: int) -> set[tuple[str, str]] | None:
+    def _steps(
+        self, path: str, names: tuple[str, ...], seen: set, hops: int
+    ) -> set[tuple[str, str]] | None:
         if not names or (path, names) in seen or hops > _MAX_HOPS:
             return None
         seen.add((path, names))
@@ -379,13 +445,21 @@ class _ImportGraph:
             spec, original = forward
             target = self._resolve(spec, path)
             inner = rest if original == NAMESPACE else (original, *rest)
-            further = self._steps(target, inner, seen, hops + 1) if target is not None else None
+            further = (
+                self._steps(target, inner, seen, hops + 1)
+                if target is not None
+                else None
+            )
             return here | (further or set())
         if name == "default":
             return None  # ``export *`` never forwards the default export
         for spec in summary.stars:
             target = self._resolve(spec, path)
-            further = self._steps(target, names, seen, hops + 1) if target is not None else None
+            further = (
+                self._steps(target, names, seen, hops + 1)
+                if target is not None
+                else None
+            )
             if further:
                 return here | further
         return None
@@ -394,30 +468,53 @@ class _ImportGraph:
 def _bind_object_aliases(parsed: ParsedSource, bound: dict) -> None:
     """``const z = { ...ns, iso: _iso }``: members of ``z`` reach the imports it spreads or holds."""
     for declarator in descendants(parsed.root, ("variable_declarator",)):
-        name, value = declarator.child_by_field_name("name"), declarator.child_by_field_name("value")
-        if name is None or value is None or name.type != "identifier" or value.type != "object":
+        name, value = (
+            declarator.child_by_field_name("name"),
+            declarator.child_by_field_name("value"),
+        )
+        if (
+            name is None
+            or value is None
+            or name.type != "identifier"
+            or value.type != "object"
+        ):
             continue
         aliases = []
         for member in value.named_children:
             if member.type == "spread_element" and member.named_children:
                 source, key = member.named_children[0], ()
-            elif member.type == "pair" and member.child_by_field_name("key").type == "property_identifier":  # type: ignore[union-attr]
-                source, key = member.child_by_field_name("value"), (parsed.text(member.child_by_field_name("key")),)
+            elif (
+                member.type == "pair"
+                and member.child_by_field_name("key").type == "property_identifier"
+            ):  # type: ignore[union-attr]
+                source, key = (
+                    member.child_by_field_name("value"),
+                    (parsed.text(member.child_by_field_name("key")),),
+                )
             else:
                 continue
             if source is not None and source.type == "identifier":
-                aliases.extend((key + prefix, module, names) for prefix, module, names in bound.get(parsed.text(source), ()))
+                aliases.extend(
+                    (key + prefix, module, names)
+                    for prefix, module, names in bound.get(parsed.text(source), ())
+                )
         if aliases:
             bound.setdefault(parsed.text(name), []).extend(aliases)
 
 
-def _member_chains(parsed: ParsedSource, locals_: set[str], member_names: set[str]) -> set[tuple[str, ...]]:
+def _member_chains(
+    parsed: ParsedSource, locals_: set[str], member_names: set[str]
+) -> set[tuple[str, ...]]:
     """``("z", "cuid")`` for each ``z.cuid`` (value or type) on an imported binding,
     kept when a member is one of ``member_names``."""
     chains: set[tuple[str, ...]] = set()
     for node in descendants(parsed.root, _CHAIN_NODES):
         parent = node.parent
-        if parent is not None and parent.type in _CHAIN_NODES and node.start_byte == parent.start_byte:
+        if (
+            parent is not None
+            and parent.type in _CHAIN_NODES
+            and node.start_byte == parent.start_byte
+        ):
             continue  # only the outermost of ``a.b.c``
         text = parsed.text(node)
         if not _CHAIN_RE.fullmatch(text):
@@ -450,7 +547,9 @@ def _regex_entries(ts_files: list[str], *, scan_root: Path) -> list[dict[str, An
             continue
         texts[filepath] = text
         lines = text.splitlines()
-        seen: set[str] = set()  # same symbol in the same file, e.g. several tags on one interface
+        seen: set[str] = (
+            set()
+        )  # same symbol in the same file, e.g. several tags on one interface
         for lineno, content in enumerate(lines, 1):
             if not _JSDOC_DEPRECATED_RE.search(content):
                 continue
@@ -459,7 +558,9 @@ def _regex_entries(ts_files: list[str], *, scan_root: Path) -> list[dict[str, An
                 continue
             seen.add(symbol)
             exported, same_file_uses = (
-                _export_and_local_uses(symbol, text) if kind == "top-level" else (False, 0)
+                _export_and_local_uses(symbol, text)
+                if kind == "top-level"
+                else (False, 0)
             )
             entries.append(
                 {
@@ -476,7 +577,9 @@ def _regex_entries(ts_files: list[str], *, scan_root: Path) -> list[dict[str, An
     mentioned = grep_files_containing(names, ts_files) if names else {}
     for entry in entries:
         if entry["kind"] == "top-level":
-            entry["importers"] = len(mentioned.get(entry["symbol"], set()) - {entry["file"]})
+            entry["importers"] = len(
+                mentioned.get(entry["symbol"], set()) - {entry["file"]}
+            )
     return entries
 
 
@@ -487,11 +590,15 @@ def _read_source(filepath: str, *, scan_root: Path) -> str | None:
         path = candidate if candidate.exists() else Path(resolve_path(filepath))
     text = read_file_text(str(path))
     if text is None:
-        log_best_effort_failure(logger, f"read deprecated source context {filepath}", OSError(filepath))
+        log_best_effort_failure(
+            logger, f"read deprecated source context {filepath}", OSError(filepath)
+        )
     return text
 
 
-def _extract_deprecated_symbol(lines: list[str], lineno: int, content: str) -> tuple[str | None, str]:
+def _extract_deprecated_symbol(
+    lines: list[str], lineno: int, content: str
+) -> tuple[str | None, str]:
     """The deprecated symbol name for a tag on line ``lineno``, and its kind."""
     content_stripped = content.strip()
     if "/**" in content_stripped and "*/" in content_stripped:
@@ -519,7 +626,9 @@ def _match_inline_deprecated_target(line: str) -> tuple[str, str] | None:
     return None
 
 
-def _scan_following_declaration_line(lines: list[str], lineno: int) -> tuple[str, str] | None:
+def _scan_following_declaration_line(
+    lines: list[str], lineno: int
+) -> tuple[str, str] | None:
     for offset in range(1, 8):
         idx = lineno - 1 + offset
         if idx >= len(lines):

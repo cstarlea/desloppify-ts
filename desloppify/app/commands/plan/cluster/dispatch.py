@@ -45,7 +45,9 @@ _VALID_PATTERN_HINTS = (
 
 
 def _all_known_issue_ids(state: dict, plan: dict | None) -> list[str]:
-    all_ids: list[str] = list((state.get("work_items") or state.get("issues", {})).keys())
+    all_ids: list[str] = list(
+        (state.get("work_items") or state.get("issues", {})).keys()
+    )
     if plan is None:
         return all_ids
     seen_ids: set[str] = set(all_ids)
@@ -61,14 +63,18 @@ def _all_known_issue_ids(state: dict, plan: dict | None) -> list[str]:
     return all_ids
 
 
-def _pattern_suggestions(all_ids: list[str], pattern: str) -> tuple[list[str], str | None]:
+def _pattern_suggestions(
+    all_ids: list[str], pattern: str
+) -> tuple[list[str], str | None]:
     segments = pattern.split("::")
     last_seg = segments[-1]
     tip: str | None = None
 
     if _HEX8_RE.match(last_seg):
         suffix = last_seg
-        suggestions = [fid for fid in all_ids if fid.endswith(f"::{suffix}") or fid == suffix]
+        suggestions = [
+            fid for fid in all_ids if fid.endswith(f"::{suffix}") or fid == suffix
+        ]
         return suggestions, f"match by hash suffix alone: {suffix}"
 
     slug = segments[-2] if len(segments) >= 2 else ""
@@ -182,7 +188,13 @@ def _cmd_cluster_add(args: argparse.Namespace) -> None:
 
     _warn_cluster_overlap(plan, cluster_name=cluster_name, issue_ids=issue_ids)
 
-    append_log_entry(plan, "cluster_add", issue_ids=issue_ids, cluster_name=cluster_name, actor="user")
+    append_log_entry(
+        plan,
+        "cluster_add",
+        issue_ids=issue_ids,
+        cluster_name=cluster_name,
+        actor="user",
+    )
     save_plan(plan)
     print(colorize(f"  Added {count} item(s) to cluster {cluster_name}.", "green"))
 
@@ -216,7 +228,13 @@ def _cmd_cluster_remove(args: argparse.Namespace) -> None:
         print(colorize(f"  {ex}", "red"))
         return
 
-    append_log_entry(plan, "cluster_remove", issue_ids=issue_ids, cluster_name=cluster_name, actor="user")
+    append_log_entry(
+        plan,
+        "cluster_remove",
+        issue_ids=issue_ids,
+        cluster_name=cluster_name,
+        actor="user",
+    )
     save_plan(plan)
     print(colorize(f"  Removed {count} item(s) from cluster {cluster_name}.", "green"))
 

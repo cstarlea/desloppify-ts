@@ -39,10 +39,16 @@ class TestCmdPlanOutput:
         monkeypatch.setattr(
             plan_cmd,
             "command_runtime",
-            lambda args: type("Ctx", (), {"state": {
-                "issues": {},
-                "last_scan": None,
-            }})(),
+            lambda args: type(
+                "Ctx",
+                (),
+                {
+                    "state": {
+                        "issues": {},
+                        "last_scan": None,
+                    }
+                },
+            )(),
         )
 
         class FakeArgs:
@@ -62,10 +68,17 @@ class TestCmdPlanOutput:
         monkeypatch.setattr(
             plan_cmd,
             "command_runtime",
-            lambda args: type("Ctx", (), {"state": {
-                "issues": {},
-                "last_scan": "2025-01-01",
-            }, "config": {}})(),
+            lambda args: type(
+                "Ctx",
+                (),
+                {
+                    "state": {
+                        "issues": {},
+                        "last_scan": "2025-01-01",
+                    },
+                    "config": {},
+                },
+            )(),
         )
         monkeypatch.setattr(
             plan_mod, "generate_plan_md", lambda state: "# Plan\n\nNothing to do."
@@ -90,10 +103,17 @@ class TestCmdPlanOutput:
         monkeypatch.setattr(
             plan_cmd,
             "command_runtime",
-            lambda args: type("Ctx", (), {"state": {
-                "issues": {},
-                "last_scan": "2025-01-01",
-            }, "config": {}})(),
+            lambda args: type(
+                "Ctx",
+                (),
+                {
+                    "state": {
+                        "issues": {},
+                        "last_scan": "2025-01-01",
+                    },
+                    "config": {},
+                },
+            )(),
         )
         monkeypatch.setattr(
             plan_mod, "generate_plan_md", lambda state: "# Plan\n\n## Tier 1"

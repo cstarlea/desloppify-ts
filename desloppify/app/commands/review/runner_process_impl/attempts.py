@@ -225,8 +225,7 @@ def _check_runner_stall(
         return False, False, output_signature, output_stable_since
     with state.lock:
         state.runner_note = (
-            f"stall recovery triggered after {stall_seconds}s "
-            "with stable output state"
+            f"stall recovery triggered after {stall_seconds}s with stable output state"
         )
     recovered_from_stall = _output_file_has_json_payload(ctx.output_file)
     _terminate_process(process)
@@ -304,7 +303,9 @@ def _run_via_subprocess(
                 run_kwargs["input"] = stdin_text
             result = deps.subprocess_run(cmd, **run_kwargs)
         except deps.timeout_error:
-            return _ExecutionResult(code=124, stdout_text="", stderr_text="", timed_out=True)
+            return _ExecutionResult(
+                code=124, stdout_text="", stderr_text="", timed_out=True
+            )
         except OSError as exc:
             return _runner_error_result(
                 ctx=ctx,
@@ -312,7 +313,11 @@ def _run_via_subprocess(
                 exc=exc,
                 exit_code=127,
             )
-        except (RuntimeError, ValueError, TypeError) as exc:  # pragma: no cover - defensive boundary
+        except (
+            RuntimeError,
+            ValueError,
+            TypeError,
+        ) as exc:  # pragma: no cover - defensive boundary
             return _runner_error_result(
                 ctx=ctx,
                 heading="UNEXPECTED RUNNER ERROR",
@@ -441,11 +446,9 @@ def handle_timeout_or_stall(
         )
     if _output_file_has_json_payload(output_file):
         recovery_message = (
-            "Recovered timed-out batch from JSON output file; "
-            "continuing as success."
+            "Recovered timed-out batch from JSON output file; continuing as success."
             if result.timed_out
-            else "Recovered stalled batch from JSON output file; "
-            "continuing as success."
+            else "Recovered stalled batch from JSON output file; continuing as success."
         )
         log_sections.append(recovery_message)
         deps.safe_write_text_fn(log_file, "\n\n".join(log_sections))

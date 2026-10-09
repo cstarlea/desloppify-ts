@@ -41,7 +41,9 @@ def normalize_families(raw: object) -> dict[str, dict[str, Any]]:
             try:
                 re.compile(str(regex))
             except re.error as exc:
-                logger.warning("pattern_families.%s.%s: bad regex (%s)", name, label, exc)
+                logger.warning(
+                    "pattern_families.%s.%s: bad regex (%s)", name, label, exc
+                )
                 continue
             valid[str(label)] = str(regex)
         if not valid:
@@ -51,7 +53,9 @@ def normalize_families(raw: object) -> dict[str, dict[str, Any]]:
         families[str(name)] = {
             "type": kind if kind in _TYPES else "competing",
             "description": str(spec.get("description") or name),
-            "fragmentation_threshold": threshold if isinstance(threshold, int) and threshold > 1 else 2,
+            "fragmentation_threshold": threshold
+            if isinstance(threshold, int) and threshold > 1
+            else 2,
             "patterns": valid,
         }
     return families

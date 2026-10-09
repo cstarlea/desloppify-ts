@@ -54,9 +54,15 @@ def test_global_install_writes_supported_targets(
     assert gemini_target.is_file()
     assert qwen_target.is_file()
     assert "desloppify-skill-version" in claude_target.read_text(encoding="utf-8")
-    assert "<!-- desloppify-overlay: claude -->" in claude_target.read_text(encoding="utf-8")
-    assert "<!-- desloppify-overlay: codex -->" in codex_target.read_text(encoding="utf-8")
-    assert "<!-- desloppify-overlay: gemini -->" in gemini_target.read_text(encoding="utf-8")
+    assert "<!-- desloppify-overlay: claude -->" in claude_target.read_text(
+        encoding="utf-8"
+    )
+    assert "<!-- desloppify-overlay: codex -->" in codex_target.read_text(
+        encoding="utf-8"
+    )
+    assert "<!-- desloppify-overlay: gemini -->" in gemini_target.read_text(
+        encoding="utf-8"
+    )
     qwen_content = qwen_target.read_text(encoding="utf-8")
     assert qwen_content.startswith("---\n")
     assert "<!-- desloppify-overlay: qwen -->" in qwen_content
@@ -120,7 +126,9 @@ def test_codex_global_setup_uses_section_replace(
     codex_dir = tmp_path / ".codex"
     codex_dir.mkdir()
     agents_md = codex_dir / "AGENTS.md"
-    agents_md.write_text("# My custom instructions\n\nKeep this content.\n", encoding="utf-8")
+    agents_md.write_text(
+        "# My custom instructions\n\nKeep this content.\n", encoding="utf-8"
+    )
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
 
     setup_cmd_mod.cmd_setup(_setup_args(interface="codex"))
@@ -249,11 +257,16 @@ def test_setup_grammars_fails_when_a_grammar_cannot_load(monkeypatch, capsys) ->
     monkeypatch.setattr(
         setup_cmd_mod,
         "prepare_grammars",
-        lambda: ({"tsx": "DownloadError: Network is unreachable", "typescript": None}, ["tsx"]),
+        lambda: (
+            {"tsx": "DownloadError: Network is unreachable", "typescript": None},
+            ["tsx"],
+        ),
     )
     with pytest.raises(CommandError, match="failed to load: tsx"):
         setup_cmd_mod.cmd_setup(argparse.Namespace(interface=None, grammars=True))
-    assert "tsx: failed — DownloadError: Network is unreachable" in capsys.readouterr().out
+    assert (
+        "tsx: failed — DownloadError: Network is unreachable" in capsys.readouterr().out
+    )
 
 
 def test_setup_grammars_without_language_pack(monkeypatch) -> None:

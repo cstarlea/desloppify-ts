@@ -40,7 +40,9 @@ def merge_structural_signals(
         if "loc" not in data["detail"]:
             try:
                 p = (
-                    Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
+                    Path(filepath)
+                    if Path(filepath).is_absolute()
+                    else get_project_root() / filepath
                 )
                 data["detail"]["loc"] = count_lines(p)
             except (OSError, UnicodeDecodeError):

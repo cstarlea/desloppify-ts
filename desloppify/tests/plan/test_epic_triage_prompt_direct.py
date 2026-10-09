@@ -14,7 +14,9 @@ def _issue(issue_id: str, *, summary: str, dimension: str) -> tuple[str, dict]:
     }
 
 
-def test_build_triage_prompt_includes_completed_clusters_and_resolved_issue_context() -> None:
+def test_build_triage_prompt_includes_completed_clusters_and_resolved_issue_context() -> (
+    None
+):
     open_id, open_issue = _issue(
         "review::open::aaaabbbb",
         summary="Open abstraction mismatch",
@@ -87,7 +89,10 @@ def test_build_triage_prompt_renders_recurring_dimension_summary() -> None:
 
     prompt = build_triage_prompt(triage_input)
 
-    assert "## Potential recurring dimensions (resolved issues still have open peers)" in prompt
+    assert (
+        "## Potential recurring dimensions (resolved issues still have open peers)"
+        in prompt
+    )
     assert "- api_surface_coherence: 1 open / 1 recently resolved" in prompt
     assert "naming_quality: 1 open" not in prompt
 
@@ -134,10 +139,22 @@ def test_build_triage_prompt_includes_mechanical_backlog_context() -> None:
 
     prompt = build_triage_prompt(triage_input)
 
-    assert "## Auto-cluster candidates (2 items: 1 in 1 auto-clusters, 1 unclustered)" in prompt
+    assert (
+        "## Auto-cluster candidates (2 items: 1 in 1 auto-clusters, 1 unclustered)"
+        in prompt
+    )
     assert "### Auto-clusters (decision required for each)" in prompt
-    assert "- auto/unused-imports (1 items) [autofix: desloppify autofix import-cleanup --dry-run]" in prompt
+    assert (
+        "- auto/unused-imports (1 items) [autofix: desloppify autofix import-cleanup --dry-run]"
+        in prompt
+    )
     assert "Remove 1 unused import issue" in prompt
-    assert "### Unclustered items (1 items — needs human judgment or isolated findings)" in prompt
-    assert "- [medium] test_coverage::src/b.py::miss — Missing behavioral coverage" in prompt
+    assert (
+        "### Unclustered items (1 items — needs human judgment or isolated findings)"
+        in prompt
+    )
+    assert (
+        "- [medium] test_coverage::src/b.py::miss — Missing behavioral coverage"
+        in prompt
+    )
     assert "Inspect a cluster: `desloppify plan cluster show auto/<name>`" in prompt

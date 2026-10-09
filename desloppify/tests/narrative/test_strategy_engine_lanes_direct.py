@@ -9,7 +9,12 @@ def test_compute_lanes_builds_cleanup_refactor_and_test_coverage_lanes() -> None
     actions = [
         {"priority": 1, "type": "auto_fix", "detector": "logs", "impact": 0.9},
         {"priority": 2, "type": "refactor", "detector": "smells", "impact": 0.8},
-        {"priority": 3, "type": "manual_fix", "detector": "test_coverage", "impact": 0.6},
+        {
+            "priority": 3,
+            "type": "manual_fix",
+            "detector": "test_coverage",
+            "impact": 0.6,
+        },
         {"priority": 4, "type": "reorganize", "detector": "large", "impact": 0.4},
         {"priority": 5, "type": "debt_review", "detector": None, "impact": 0.0},
     ]
@@ -22,7 +27,13 @@ def test_compute_lanes_builds_cleanup_refactor_and_test_coverage_lanes() -> None
 
     lanes = lanes_mod.compute_lanes(actions, files_by_detector)
 
-    assert set(lanes) >= {"cleanup", "restructure", "refactor", "test_coverage", "debt_review"}
+    assert set(lanes) >= {
+        "cleanup",
+        "restructure",
+        "refactor",
+        "test_coverage",
+        "debt_review",
+    }
     assert lanes["cleanup"]["run_first"] is True
     assert lanes["test_coverage"]["actions"] == [3]
     assert lanes["restructure"]["file_count"] == 1
@@ -45,9 +56,33 @@ def test_refactor_lanes_split_by_file_overlap() -> None:
 
 
 def test_significant_lane_filters_debt_and_run_first() -> None:
-    assert lanes_mod.significant_lane("debt_review", {"file_count": 10, "total_impact": 5.0}) is False
-    assert lanes_mod.significant_lane("cleanup", {"run_first": True, "file_count": 99, "total_impact": 10}) is False
-    assert lanes_mod.significant_lane("refactor", {"run_first": False, "file_count": 5, "total_impact": 0.1}) is True
-    assert lanes_mod.significant_lane("refactor", {"run_first": False, "file_count": 1, "total_impact": 1.0}) is True
-    assert lanes_mod.significant_lane("refactor", {"run_first": False, "file_count": 1, "total_impact": 0.2}) is False
-
+    assert (
+        lanes_mod.significant_lane(
+            "debt_review", {"file_count": 10, "total_impact": 5.0}
+        )
+        is False
+    )
+    assert (
+        lanes_mod.significant_lane(
+            "cleanup", {"run_first": True, "file_count": 99, "total_impact": 10}
+        )
+        is False
+    )
+    assert (
+        lanes_mod.significant_lane(
+            "refactor", {"run_first": False, "file_count": 5, "total_impact": 0.1}
+        )
+        is True
+    )
+    assert (
+        lanes_mod.significant_lane(
+            "refactor", {"run_first": False, "file_count": 1, "total_impact": 1.0}
+        )
+        is True
+    )
+    assert (
+        lanes_mod.significant_lane(
+            "refactor", {"run_first": False, "file_count": 1, "total_impact": 0.2}
+        )
+        is False
+    )

@@ -13,6 +13,7 @@ from desloppify.engine._plan.schema import empty_plan
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _state_with_review_issues(*ids: str) -> dict:
     """Build minimal state with open review issues."""
     issues = {}
@@ -50,7 +51,9 @@ def _plan_with_stages(*stage_names: str, confirmed: bool = False) -> dict:
             stages[name]["confirmed_text"] = "auto-confirmed"
         if confirmed:
             stages[name]["confirmed_at"] = "2025-06-01T00:01:00Z"
-            stages[name]["confirmed_text"] = "I have thoroughly reviewed all the issues in this stage"
+            stages[name]["confirmed_text"] = (
+                "I have thoroughly reviewed all the issues in this stage"
+            )
     return plan
 
 
@@ -65,13 +68,17 @@ def _fake_services(plan, state, save_plan_fn=None):
         command_runtime=lambda args: _fake_runtime(state),
         load_plan=lambda *a, **kw: plan,
         save_plan=save_plan_fn or (lambda p, *a, **kw: None),
-        collect_triage_input=lambda p, s: type("TI", (), {
-            "open_issues": s.get("issues", {}),
-            "resolved_issues": {},
-            "new_since_last": [],
-            "resolved_since_last": [],
-            "existing_clusters": {},
-        })(),
+        collect_triage_input=lambda p, s: type(
+            "TI",
+            (),
+            {
+                "open_issues": s.get("issues", {}),
+                "resolved_issues": {},
+                "new_since_last": [],
+                "resolved_since_last": [],
+                "existing_clusters": {},
+            },
+        )(),
         detect_recurring_patterns=lambda _a, _b: {},
         append_log_entry=lambda *a, **kw: None,
         extract_issue_citations=lambda text, ids: set(),
@@ -103,7 +110,8 @@ def _fake_args(**overrides) -> argparse.Namespace:
 def _patch_triage(monkeypatch, plan, state, save_plan_fn=None):
     """Apply standard triage monkeypatches."""
     monkeypatch.setattr(
-        triage_mod, "default_triage_services",
+        triage_mod,
+        "default_triage_services",
         lambda: _fake_services(plan, state, save_plan_fn),
     )
     monkeypatch.setattr(triage_mod, "require_issue_inventory", lambda s: True)
@@ -113,8 +121,11 @@ def _patch_triage(monkeypatch, plan, state, save_plan_fn=None):
 # Confirm observe
 # ---------------------------------------------------------------------------
 
+
 class TestConfirmObserve:
-    def test_confirm_observe_shows_summary_without_attestation(self, monkeypatch, capsys):
+    def test_confirm_observe_shows_summary_without_attestation(
+        self, monkeypatch, capsys
+    ):
         """Without --attestation, confirm observe shows summary and guidance."""
         plan = _plan_with_stages("observe")
         state = _state_with_review_issues("r1", "r2", "r3")
@@ -127,7 +138,9 @@ class TestConfirmObserve:
         assert "OBSERVE" in out
         assert "attestation" in out.lower() or "confirm" in out.lower()
         # Should NOT have confirmed
-        assert "confirmed_at" not in plan["epic_triage_meta"]["triage_stages"]["observe"]
+        assert (
+            "confirmed_at" not in plan["epic_triage_meta"]["triage_stages"]["observe"]
+        )
 
     def test_confirm_observe_attestation_too_short(self, monkeypatch, capsys):
         """Attestation shorter than 30 chars is rejected."""
@@ -140,7 +153,9 @@ class TestConfirmObserve:
         triage_mod.cmd_plan_triage(args)
         out = capsys.readouterr().out
         assert "too short" in out.lower()
-        assert "confirmed_at" not in plan["epic_triage_meta"]["triage_stages"]["observe"]
+        assert (
+            "confirmed_at" not in plan["epic_triage_meta"]["triage_stages"]["observe"]
+        )
 
     def test_confirm_observe_records_confirmation(self, monkeypatch, capsys):
         """Valid attestation records confirmed_at and confirmed_text."""
@@ -148,7 +163,12 @@ class TestConfirmObserve:
         state = _state_with_review_issues("r1", "r2")
         saved_plans = []
 
-        _patch_triage(monkeypatch, plan, state, save_plan_fn=lambda p, *a, **kw: saved_plans.append(True))
+        _patch_triage(
+            monkeypatch,
+            plan,
+            state,
+            save_plan_fn=lambda p, *a, **kw: saved_plans.append(True),
+        )
 
         attestation = "I have thoroughly reviewed all 2 issues across abstraction_fitness dimension and identified root causes in modules"
         args = _fake_args(confirm="observe", attestation=attestation)
@@ -167,7 +187,10 @@ class TestConfirmObserve:
 
         _patch_triage(monkeypatch, plan, state)
 
-        args = _fake_args(confirm="observe", attestation="I have reviewed everything thoroughly and completely")
+        args = _fake_args(
+            confirm="observe",
+            attestation="I have reviewed everything thoroughly and completely",
+        )
         triage_mod.cmd_plan_triage(args)
         out = capsys.readouterr().out
         assert "not recorded" in out.lower()
@@ -176,6 +199,7 @@ class TestConfirmObserve:
 # ---------------------------------------------------------------------------
 # Reflect blocked without confirmed observe
 # ---------------------------------------------------------------------------
+
 
 class TestReflectGate:
     def test_reflect_blocked_without_confirmed_observe(self, monkeypatch, capsys):
@@ -209,6 +233,7 @@ class TestReflectGate:
 # Confirm reflect
 # ---------------------------------------------------------------------------
 
+
 class TestConfirmReflect:
     def test_confirm_reflect_shows_strategy(self, monkeypatch, capsys):
         """Confirm reflect shows strategy briefing excerpt."""
@@ -234,7 +259,12 @@ class TestConfirmReflect:
         state = _state_with_review_issues("r1", "r2")
         saved_plans = []
 
-        _patch_triage(monkeypatch, plan, state, save_plan_fn=lambda p, *a, **kw: saved_plans.append(True))
+        _patch_triage(
+            monkeypatch,
+            plan,
+            state,
+            save_plan_fn=lambda p, *a, **kw: saved_plans.append(True),
+        )
 
         attestation = (
             "I have thoroughly reviewed the abstraction fitness dimension strategy "
@@ -250,12 +280,15 @@ class TestConfirmReflect:
 # Organize gate
 # ---------------------------------------------------------------------------
 
+
 class TestOrganizeGate:
     def test_organize_blocked_without_confirmed_reflect(self, monkeypatch, capsys):
         """Organize is blocked if reflect exists but is not confirmed."""
         plan = _plan_with_stages("observe", "reflect")
         # Confirm observe but not reflect
-        plan["epic_triage_meta"]["triage_stages"]["observe"]["confirmed_at"] = "2025-06-01T00:01:00Z"
+        plan["epic_triage_meta"]["triage_stages"]["observe"]["confirmed_at"] = (
+            "2025-06-01T00:01:00Z"
+        )
         state = _state_with_review_issues("r1", "r2")
 
         _patch_triage(monkeypatch, plan, state)
@@ -271,12 +304,15 @@ class TestOrganizeGate:
 # Confirm organize shows plan
 # ---------------------------------------------------------------------------
 
+
 class TestConfirmOrganize:
     def test_confirm_organize_shows_plan(self, monkeypatch, capsys):
         """Confirm organize shows the full plan summary."""
         plan = _plan_with_stages("observe", "reflect", "organize", confirmed=True)
         plan["epic_triage_meta"]["triage_stages"]["organize"].pop("confirmed_at", None)
-        plan["epic_triage_meta"]["triage_stages"]["organize"].pop("confirmed_text", None)
+        plan["epic_triage_meta"]["triage_stages"]["organize"].pop(
+            "confirmed_text", None
+        )
         plan["clusters"]["fix-naming"] = {
             "name": "fix-naming",
             "description": "Fix naming conventions",
@@ -298,12 +334,15 @@ class TestConfirmOrganize:
 # Complete blocked without confirmed organize
 # ---------------------------------------------------------------------------
 
+
 class TestCompleteGate:
     def test_complete_blocked_without_confirmed_organize(self, monkeypatch, capsys):
         """Complete is blocked if organize exists but is not confirmed."""
         plan = _plan_with_stages("observe", "reflect", "organize", confirmed=True)
         plan["epic_triage_meta"]["triage_stages"]["organize"].pop("confirmed_at", None)
-        plan["epic_triage_meta"]["triage_stages"]["organize"].pop("confirmed_text", None)
+        plan["epic_triage_meta"]["triage_stages"]["organize"].pop(
+            "confirmed_text", None
+        )
         plan["clusters"]["fix-names"] = {
             "name": "fix-names",
             "description": "Fix naming",
@@ -324,6 +363,7 @@ class TestCompleteGate:
 # ---------------------------------------------------------------------------
 # Confirm-existing requires --confirmed
 # ---------------------------------------------------------------------------
+
 
 class TestConfirmExistingRequiresConfirmed:
     def test_confirm_existing_requires_confirmed(self, monkeypatch, capsys):
@@ -351,6 +391,7 @@ class TestConfirmExistingRequiresConfirmed:
 # ---------------------------------------------------------------------------
 # --start manual trigger
 # ---------------------------------------------------------------------------
+
 
 class TestTriageStart:
     def test_start_injects_triage_stages(self, monkeypatch, capsys):
@@ -380,7 +421,9 @@ class TestTriageStart:
         stages = plan["epic_triage_meta"]["triage_stages"]
         assert stages == {}
 
-    def test_start_repairs_partial_triage_queue_and_skipped_overlap(self, monkeypatch, capsys):
+    def test_start_repairs_partial_triage_queue_and_skipped_overlap(
+        self, monkeypatch, capsys
+    ):
         """--start restores missing triage stages and clears triage skips."""
         plan = empty_plan()
         plan["queue_order"] = list(TRIAGE_STAGE_IDS[:3])

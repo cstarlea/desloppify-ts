@@ -57,7 +57,11 @@ DETECTORS: dict[str, DetectorMeta] = {
         standalone_threshold="medium",
         tier=3,
         marks_dims_stale=True,
-        subjective_dimensions=("design_coherence", "error_consistency", "logic_clarity"),
+        subjective_dimensions=(
+            "design_coherence",
+            "error_consistency",
+            "logic_clarity",
+        ),
     ),
     # ── Reorganize (move tool) ────────────────────────────
     "orphaned": DetectorMeta(
@@ -176,7 +180,11 @@ DETECTORS: dict[str, DetectorMeta] = {
         standalone_threshold="high",
         tier=3,
         marks_dims_stale=True,
-        subjective_dimensions=("design_coherence", "abstraction_fitness", "logic_clarity"),
+        subjective_dimensions=(
+            "design_coherence",
+            "abstraction_fitness",
+            "logic_clarity",
+        ),
     ),
     "props": DetectorMeta(
         "props",

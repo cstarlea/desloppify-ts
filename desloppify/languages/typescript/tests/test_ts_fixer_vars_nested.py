@@ -110,10 +110,16 @@ def test_removes_emptied_nested_patterns(source, targets, expected):
     ("source", "target", "reason"),
     [
         pytest.param(
-            "const { a: { b } } = f();\n", ("b", 1, 12), "would_empty_pattern", id="call-initializer"
+            "const { a: { b } } = f();\n",
+            ("b", 1, 12),
+            "would_empty_pattern",
+            id="call-initializer",
         ),
         pytest.param(
-            "const { a: { b }, ...r } = o;\nuse(r);\n", ("b", 1, 12), "rest_element", id="rest-sibling"
+            "const { a: { b }, ...r } = o;\nuse(r);\n",
+            ("b", 1, 12),
+            "rest_element",
+            id="rest-sibling",
         ),
         pytest.param(
             "const { a: { b, c }, ...r } = o;\nuse(r);\n",
@@ -134,7 +140,10 @@ def test_removes_emptied_nested_patterns(source, targets, expected):
             id="computed-key",
         ),
         pytest.param(
-            "const [{ b }, c] = arr;\nuse(c);\n", ("b", 1, 8), "array_destructuring", id="array-sibling"
+            "const [{ b }, c] = arr;\nuse(c);\n",
+            ("b", 1, 8),
+            "array_destructuring",
+            id="array-sibling",
         ),
         pytest.param(
             "const { x, d: [p, q] } = o;\nuse(x, q);\n",
@@ -143,7 +152,10 @@ def test_removes_emptied_nested_patterns(source, targets, expected):
             id="array-partly-used",
         ),
         pytest.param(
-            "let { a: { b } } = o;\nb = 1;\n", ("b", 1, 10), "written_elsewhere", id="written-later"
+            "let { a: { b } } = o;\nb = 1;\n",
+            ("b", 1, 10),
+            "written_elsewhere",
+            id="written-later",
         ),
         pytest.param(
             "function g({ a: { b } }) {}\n", ("b", 1, 17), "function_param", id="param"

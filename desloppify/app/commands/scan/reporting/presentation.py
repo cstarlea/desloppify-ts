@@ -114,7 +114,9 @@ def _sorted_weighted_drags(entries: list[dict[str, Any]]) -> list[dict[str, Any]
     )
 
 
-def _detector_progress_bar(*, pct: int, open_count: int, bar_len: int, colorize_fn) -> str:
+def _detector_progress_bar(
+    *, pct: int, open_count: int, bar_len: int, colorize_fn
+) -> str:
     filled = round(pct / 100 * bar_len)
     if pct == 100:
         return colorize_fn("█" * bar_len, "green")
@@ -295,15 +297,17 @@ def show_low_dimension_hints(
         strict = data.get("strict", data.get("score", 100))
         if strict >= 50:
             continue
-        low.append((
-            name,
-            strict,
-            _dimension_hint(
+        low.append(
+            (
                 name,
-                static_names=static_names,
-                mechanical_hints=mechanical_hints,
-            ),
-        ))
+                strict,
+                _dimension_hint(
+                    name,
+                    static_names=static_names,
+                    mechanical_hints=mechanical_hints,
+                ),
+            )
+        )
 
     if not low:
         return
@@ -320,7 +324,9 @@ def show_low_dimension_hints(
 # ---------------------------------------------------------------------------
 
 
-def _collect_detector_progress(issues: dict[str, dict[str, Any]], *, narrative_mod) -> dict[str, dict[str, int]]:
+def _collect_detector_progress(
+    issues: dict[str, dict[str, Any]], *, narrative_mod
+) -> dict[str, dict[str, int]]:
     by_detector: dict[str, dict[str, int]] = {}
     for issue in issues.values():
         detector = issue.get("detector", "unknown")
@@ -374,8 +380,7 @@ def _render_detector_progress_row(
         else colorize_fn("  ✓", "green")
     )
     return (
-        f"  {det_label} {bar} {pct:3d}%  {open_str}  "
-        f"{colorize_fn(f'/ {total}', 'dim')}"
+        f"  {det_label} {bar} {pct:3d}%  {open_str}  {colorize_fn(f'/ {total}', 'dim')}"
     )
 
 
@@ -400,12 +405,13 @@ def show_detector_progress(
     print(colorize_fn("  " + "─" * 50, "dim"))
     bar_len = 15
     for detector, data in sorted_dets:
-        print(_render_detector_progress_row(
-            detector,
-            data,
-            bar_len=bar_len,
-            colorize_fn=colorize_fn,
-        )
+        print(
+            _render_detector_progress_row(
+                detector,
+                data,
+                bar_len=bar_len,
+                colorize_fn=colorize_fn,
+            )
         )
 
     print()

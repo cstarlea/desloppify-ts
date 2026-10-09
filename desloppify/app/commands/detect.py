@@ -57,8 +57,7 @@ def _unknown_detector_message(
             f"  Available direct detectors: {available}"
         )
     return (
-        f"Unknown detector for {lang_name}: {detector_input}\n"
-        f"  Available: {available}"
+        f"Unknown detector for {lang_name}: {detector_input}\n  Available: {available}"
     )
 
 

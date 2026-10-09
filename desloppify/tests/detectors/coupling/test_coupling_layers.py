@@ -46,7 +46,9 @@ def _write(root: Path, name: str, lines: int = 10) -> None:
 
 class TestLayerViolations:
     def test_upward_import_is_a_violation(self, tmp_path):
-        graph = _graph(tmp_path, {"src/shared/format.ts": ["src/features/cart/price.ts"]})
+        graph = _graph(
+            tmp_path, {"src/shared/format.ts": ["src/features/cart/price.ts"]}
+        )
         entries, counts = detect_layer_violations(tmp_path, graph, LAYERS)
         assert [e["kind"] for e in entries] == ["upward"]
         entry = entries[0]
@@ -61,7 +63,10 @@ class TestLayerViolations:
             tmp_path,
             {
                 "src/app/main.ts": ["src/features/cart/index.ts", "src/lib/http.ts"],
-                "src/features/cart/index.ts": ["src/features/cart/model.ts", "src/shared/ui.ts"],
+                "src/features/cart/index.ts": [
+                    "src/features/cart/model.ts",
+                    "src/shared/ui.ts",
+                ],
                 "src/shared/ui.ts": ["src/lib/http.ts"],
             },
         )
@@ -70,11 +75,16 @@ class TestLayerViolations:
         assert counts.eligible_edges == 5
 
     def test_cross_slice_import(self, tmp_path):
-        graph = _graph(tmp_path, {"src/features/cart/add.ts": ["src/features/auth/session.ts"]})
+        graph = _graph(
+            tmp_path, {"src/features/cart/add.ts": ["src/features/auth/session.ts"]}
+        )
         entries, _ = detect_layer_violations(tmp_path, graph, LAYERS)
         assert len(entries) == 1
         assert entries[0]["kind"] == "cross_slice"
-        assert (entries[0]["source_slice"], entries[0]["target_slice"]) == ("cart", "auth")
+        assert (entries[0]["source_slice"], entries[0]["target_slice"]) == (
+            "cart",
+            "auth",
+        )
 
     def test_cross_import_dir_is_allowed(self, tmp_path):
         graph = _graph(
@@ -143,7 +153,12 @@ class TestBoundaryCandidates:
         _write(tmp_path, "src/shared/ui/button.tsx")
         graph = _graph(
             tmp_path,
-            {"src/features/cart/x.ts": ["src/shared/index.ts", "src/shared/ui/button.tsx"]},
+            {
+                "src/features/cart/x.ts": [
+                    "src/shared/index.ts",
+                    "src/shared/ui/button.tsx",
+                ]
+            },
         )
         entries, _ = detect_boundary_candidates(
             tmp_path,
@@ -156,6 +171,8 @@ class TestBoundaryCandidates:
 
     def test_sliced_layer_files_are_not_candidates(self, tmp_path):
         _write(tmp_path, "src/entities/user/model.ts")
-        graph = _graph(tmp_path, {"src/features/cart/x.ts": ["src/entities/user/model.ts"]})
+        graph = _graph(
+            tmp_path, {"src/features/cart/x.ts": ["src/entities/user/model.ts"]}
+        )
         entries, total = detect_boundary_candidates(tmp_path, graph, LAYERS)
         assert entries == [] and total == 0

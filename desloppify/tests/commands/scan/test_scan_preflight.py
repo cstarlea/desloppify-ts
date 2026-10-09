@@ -112,7 +112,10 @@ def test_queue_remaining_blocks_scan():
     from desloppify.app.commands.helpers.queue_progress import QueueBreakdown
 
     args = SimpleNamespace(profile=None, force_rescan=False, state=None, lang="python")
-    plan = {"plan_start_scores": {"strict": 80.0}, "queue_order": ["issue-1", "issue-2"]}
+    plan = {
+        "plan_start_scores": {"strict": 80.0},
+        "queue_order": ["issue-1", "issue-2"],
+    }
     with (
         patch(
             "desloppify.app.commands.scan.preflight.resolve_plan_load_status",
@@ -143,7 +146,10 @@ def test_queue_with_only_subjective_items_allows_scan():
     from desloppify.app.commands.helpers.queue_progress import QueueBreakdown
 
     args = SimpleNamespace(profile=None, force_rescan=False, state=None, lang="python")
-    plan = {"plan_start_scores": {"strict": 80.0}, "queue_order": ["subjective::dim1", "subjective::dim2"]}
+    plan = {
+        "plan_start_scores": {"strict": 80.0},
+        "queue_order": ["subjective::dim1", "subjective::dim2"],
+    }
     breakdown = QueueBreakdown(queue_total=20, subjective=20, workflow=0)
     assert breakdown.objective_actionable == 0  # precondition
     with (
@@ -174,7 +180,10 @@ def test_queue_with_only_workflow_items_allows_scan():
     from desloppify.app.commands.helpers.queue_progress import QueueBreakdown
 
     args = SimpleNamespace(profile=None, force_rescan=False, state=None, lang="python")
-    plan = {"plan_start_scores": {"strict": 80.0}, "queue_order": ["workflow::communicate-score"]}
+    plan = {
+        "plan_start_scores": {"strict": 80.0},
+        "queue_order": ["workflow::communicate-score"],
+    }
     breakdown = QueueBreakdown(queue_total=1, workflow=1)
     assert breakdown.objective_actionable == 0  # precondition
     with (

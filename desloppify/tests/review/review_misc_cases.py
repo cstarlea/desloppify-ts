@@ -14,9 +14,7 @@ from desloppify.intelligence.review.selection import (
 
 class TestStaleness:
     def test_stale_after_max_age(self):
-        old = (datetime.now(UTC) - timedelta(days=60)).isoformat(
-            timespec="seconds"
-        )
+        old = (datetime.now(UTC) - timedelta(days=60)).isoformat(timespec="seconds")
         state = {
             "review_cache": {
                 "files": {
@@ -49,9 +47,7 @@ class TestStaleness:
 
     def test_mixed_fresh_and_stale(self):
         now = datetime.now(UTC).isoformat(timespec="seconds")
-        old = (datetime.now(UTC) - timedelta(days=60)).isoformat(
-            timespec="seconds"
-        )
+        old = (datetime.now(UTC) - timedelta(days=60)).isoformat(timespec="seconds")
         state = {
             "review_cache": {
                 "files": {
@@ -77,9 +73,7 @@ class TestStaleness:
 
 class TestNarrativeIntegration:
     def test_review_staleness_reminder(self):
-        old = (datetime.now(UTC) - timedelta(days=60)).isoformat(
-            timespec="seconds"
-        )
+        old = (datetime.now(UTC) - timedelta(days=60)).isoformat(timespec="seconds")
         state = {
             "review_cache": {
                 "files": {

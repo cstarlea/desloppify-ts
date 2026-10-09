@@ -10,9 +10,17 @@ from desloppify.base.exception_sets import CommandError
 from desloppify.base.output.terminal import colorize
 
 # Display phase names accepted as directive hooks.
-_DISPLAY_PHASES = frozenset({
-    "review_initial", "review", "assessment", "workflow", "triage", "execute", "scan",
-})
+_DISPLAY_PHASES = frozenset(
+    {
+        "review_initial",
+        "review",
+        "assessment",
+        "workflow",
+        "triage",
+        "execute",
+        "scan",
+    }
+)
 
 # The four phases that actually matter as agent directive hooks.
 # Each has: short description, when it fires, example use case.
@@ -109,7 +117,11 @@ def _directives_show(args: argparse.Namespace) -> None:
 
     count = len(active)
     if count:
-        print(colorize(f"  {count} directive{'s' if count != 1 else ''} configured.\n", "green"))
+        print(
+            colorize(
+                f"  {count} directive{'s' if count != 1 else ''} configured.\n", "green"
+            )
+        )
     else:
         print(colorize("  No directives configured.\n", "dim"))
 
@@ -129,7 +141,11 @@ def _directives_set(args: argparse.Namespace) -> None:
     text = args.message
 
     # Accept the display-level phase names plus the directive hook names.
-    if phase != "postflight" and phase not in _DISPLAY_PHASES and phase not in _PHASE_NAMES:
+    if (
+        phase != "postflight"
+        and phase not in _DISPLAY_PHASES
+        and phase not in _PHASE_NAMES
+    ):
         valid = ", ".join(sorted(_PHASE_NAMES))
         raise CommandError(f"unknown phase {phase!r}; valid phases: {valid}")
 

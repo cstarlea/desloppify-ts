@@ -11,6 +11,7 @@ from desloppify.engine._plan.schema import empty_plan, ensure_plan_defaults
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _plan_with_clusters():
     """Build a plan with two clusters."""
     plan = empty_plan()
@@ -45,6 +46,7 @@ def _plan_with_clusters():
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
+
 
 class TestMergeClusters:
     def test_merge_moves_issues(self):

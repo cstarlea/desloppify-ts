@@ -75,16 +75,22 @@ def detect_smells(path: Path) -> tuple[list[dict], int]:
             p = resolve_typescript_source(filepath)
             content = read_code_text(p)
         except (OSError, UnicodeDecodeError) as exc:
-            log_best_effort_failure(logger, f"read TypeScript smell candidate {filepath}", exc)
+            log_best_effort_failure(
+                logger, f"read TypeScript smell candidate {filepath}", exc
+            )
             continue
 
         ctx = _file_context(filepath, content)
         component = read_sfc(p) if is_sfc(p) else None
-        loc[filepath] = component.line_count if component is not None else len(ctx.lines)
+        loc[filepath] = (
+            component.line_count if component is not None else len(ctx.lines)
+        )
         for check in checks:
             if check["pattern"] is None:
                 continue
-            for i, line in _regex_line_matches(ctx, check["pattern"], check.get("anchor", "code")):
+            for i, line in _regex_line_matches(
+                ctx, check["pattern"], check.get("anchor", "code")
+            ):
                 if check["id"] == "hardcoded_url" and re.match(
                     r"^(?:export\s+)?(?:const|let|var)\s+[A-Z_][A-Z0-9_]*\s*=",
                     line.strip(),
@@ -116,7 +122,9 @@ def detect_smells(path: Path) -> tuple[list[dict], int]:
                 "matches": matches,
             }
             if check["id"] in TYPE_SAFETY_SMELLS:
-                entry["loc"] = {m["file"]: loc[m["file"]] for m in matches if m["file"] in loc}
+                entry["loc"] = {
+                    m["file"]: loc[m["file"]] for m in matches if m["file"] in loc
+                }
             entries.append(entry)
     entries.sort(key=lambda e: (SEVERITY_ORDER.get(e["severity"], 9), -e["count"]))
     return entries, len(files) + non_ts_files

@@ -32,7 +32,9 @@ def test_manifest_change_changes_the_key(tmp_path: Path):
     files = ["src/env.ts"]
 
     def key() -> str:
-        return _file_fingerprint(scan_root=tmp_path, files=[*files, *_package_manifests(tmp_path, files)])
+        return _file_fingerprint(
+            scan_root=tmp_path, files=[*files, *_package_manifests(tmp_path, files)]
+        )
 
     before = key()
     manifest.write_text('{"dependencies": {"next": "15"}}')

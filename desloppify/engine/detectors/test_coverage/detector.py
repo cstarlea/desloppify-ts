@@ -45,7 +45,11 @@ def detect_test_coverage(
     complexity_map: dict[str, float] | None = None,
 ) -> tuple[list[dict], int]:
     result = run_test_coverage(
-        graph, zone_map, lang_name, extra_test_files=extra_test_files, complexity_map=complexity_map
+        graph,
+        zone_map,
+        lang_name,
+        extra_test_files=extra_test_files,
+        complexity_map=complexity_map,
     )
     return result.entries, result.potential
 
@@ -104,7 +108,9 @@ def run_test_coverage(
     # A tested public entry exercises what it imports: tests through the
     # package's API count as covering the modules behind it.
     tested_entries = directly_tested & _public_entry_files(production_files, lang_name)
-    covered_via_entry = transitively_tested & transitive_coverage(tested_entries, graph, production_files)
+    covered_via_entry = transitively_tested & transitive_coverage(
+        tested_entries, graph, production_files
+    )
     transitively_tested -= covered_via_entry
     test_quality = analyze_test_quality(test_files, lang_name)
 

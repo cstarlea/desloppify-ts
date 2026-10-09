@@ -177,8 +177,7 @@ def _set_triage_meta(
     open_review_ids = sorted(
         fid
         for fid, issue in (state.get("work_items") or state.get("issues", {})).items()
-        if issue.get("status") == "open"
-        and is_triage_finding(issue)
+        if issue.get("status") == "open" and is_triage_finding(issue)
     )
 
     plan["epic_triage_meta"] = {
@@ -221,7 +220,8 @@ def _apply_auto_cluster_decisions(
             issue_ids = cluster.get("issue_ids", [])
             existing_in_order = set(order)
             new_ids = [
-                fid for fid in issue_ids
+                fid
+                for fid in issue_ids
                 if isinstance(fid, str) and fid not in existing_in_order
             ]
             # Determine insertion position based on priority hint
@@ -230,7 +230,7 @@ def _apply_auto_cluster_decisions(
                 for i, fid in enumerate(new_ids):
                     order.insert(i, fid)
             elif priority.startswith("after "):
-                target = priority[len("after "):]
+                target = priority[len("after ") :]
                 insert_idx = len(order)
                 for idx, item in enumerate(order):
                     if target in item:
@@ -239,7 +239,7 @@ def _apply_auto_cluster_decisions(
                 for i, fid in enumerate(new_ids):
                     order.insert(insert_idx + i, fid)
             elif priority.startswith("before "):
-                target = priority[len("before "):]
+                target = priority[len("before ") :]
                 insert_idx = len(order)
                 for idx, item in enumerate(order):
                     if target in item:
@@ -333,7 +333,7 @@ def apply_triage_to_plan(
     result.issues_dismissed += dismiss_count
 
     # Sync state status for dismissed issues so state is authoritative.
-    issues = (state.get("work_items") or state.get("issues", {}))
+    issues = state.get("work_items") or state.get("issues", {})
     triaged_out_status = skip_kind_state_status("triaged_out")
     for fid in dismissed_ids:
         issue = issues.get(fid)
@@ -370,5 +370,6 @@ def apply_triage_to_plan(
     plan["updated"] = now
 
     return result
+
 
 __all__ = ["TriageMutationResult", "apply_triage_to_plan"]

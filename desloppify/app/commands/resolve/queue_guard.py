@@ -95,14 +95,38 @@ def _prune_front_covered_clusters(
 
 
 def _print_queue_order_violation(front_id: str, out_of_order: set[str]) -> None:
-    print(colorize("\n  Queue order violation: these items are not next in the plan queue:\n", "yellow"))
+    print(
+        colorize(
+            "\n  Queue order violation: these items are not next in the plan queue:\n",
+            "yellow",
+        )
+    )
     for issue_id in sorted(out_of_order):
         print(f"    {issue_id}")
     print(colorize(f"\n  The current next item is: {front_id}", "dim"))
-    print(colorize("  Items must be resolved in plan order. If you need to reprioritize:", "dim"))
-    print(colorize("    desloppify plan reorder <pattern> top            # move to front", "dim"))
-    print(colorize("    desloppify plan skip <pattern> --reason '...'    # skip for now", "dim"))
-    print(colorize("    desloppify next                                  # see what's next\n", "dim"))
+    print(
+        colorize(
+            "  Items must be resolved in plan order. If you need to reprioritize:",
+            "dim",
+        )
+    )
+    print(
+        colorize(
+            "    desloppify plan reorder <pattern> top            # move to front",
+            "dim",
+        )
+    )
+    print(
+        colorize(
+            "    desloppify plan skip <pattern> --reason '...'    # skip for now", "dim"
+        )
+    )
+    print(
+        colorize(
+            "    desloppify next                                  # see what's next\n",
+            "dim",
+        )
+    )
 
 
 def _check_queue_order_guard(
@@ -144,7 +168,7 @@ def _check_queue_order_guard(
         return False
 
     clusters = plan.get("clusters", {})
-    issues = (state.get("work_items") or state.get("issues", {}))
+    issues = state.get("work_items") or state.get("issues", {})
     resolved_ids = _resolve_target_ids(patterns, clusters)
     resolved_ids = _filter_open_or_cluster_targets(
         resolved_ids,

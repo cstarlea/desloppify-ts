@@ -18,12 +18,16 @@ from desloppify.intelligence.review.context_holistic.budget.patterns_types impor
 from desloppify.languages.typescript.syntax.tree import get_parser, parse_text
 
 needs_treesitter = pytest.mark.skipif(
-    get_parser("typescript") is None, reason="needs tree-sitter with the typescript grammar"
+    get_parser("typescript") is None,
+    reason="needs tree-sitter with the typescript grammar",
 )
 
 
 def _files(**sources: str) -> dict:
-    return {f"src/{name}.ts": parse_text(text, f"src/{name}.ts") for name, text in sources.items()}
+    return {
+        f"src/{name}.ts": parse_text(text, f"src/{name}.ts")
+        for name, text in sources.items()
+    }
 
 
 def _parsed(text: str):
@@ -54,7 +58,9 @@ def test_dict_any_params_returns_and_members() -> None:
             "class Store { cache: { [k: string]: any } = {}; }\n"
         )
     )
-    found = [(r["symbol"], r["slot"], r["line"]) for r in _find_dict_any_annotations(files)]
+    found = [
+        (r["symbol"], r["slot"], r["line"]) for r in _find_dict_any_annotations(files)
+    ]
     assert found == [
         ("load", "a", 1),
         ("load", "b", 1),
@@ -93,9 +99,19 @@ def test_enum_values_compared_as_raw_literals_elsewhere() -> None:
         ),
     )
     defs = _collect_enum_defs(files)
-    assert defs[("src/enums.ts", "Mode")]["members"] == {"Fast": "fast", "Slow": "slow", "Zero": 0}
-    hits = [(r["file"], r["line"], r["member"], r["compared"]) for r in _find_enum_bypass(files, defs)]
-    assert hits == [("src/usage.ts", 2, "Fast", "x.mode"), ("src/usage.ts", 4, "Slow", "x.mode")]
+    assert defs[("src/enums.ts", "Mode")]["members"] == {
+        "Fast": "fast",
+        "Slow": "slow",
+        "Zero": 0,
+    }
+    hits = [
+        (r["file"], r["line"], r["member"], r["compared"])
+        for r in _find_enum_bypass(files, defs)
+    ]
+    assert hits == [
+        ("src/usage.ts", 2, "Fast", "x.mode"),
+        ("src/usage.ts", 4, "Slow", "x.mode"),
+    ]
 
 
 @needs_treesitter
@@ -114,8 +130,15 @@ def test_union_literals_flagged_only_against_plain_strings() -> None:
     )
     defs = _collect_enum_defs(files)
     assert defs[("src/mod.ts", "Method")]["kind"] == "union"
-    hits = [(r["line"], r["raw_value"], r["compared"], r["kind"]) for r in _find_enum_bypass(files, defs)]
-    assert hits == [(3, "'get'", "method", "union"), (5, "'post'", "maybe", "union"), (7, "'get'", "local", "union")]
+    hits = [
+        (r["line"], r["raw_value"], r["compared"], r["kind"])
+        for r in _find_enum_bypass(files, defs)
+    ]
+    assert hits == [
+        (3, "'get'", "method", "union"),
+        (5, "'post'", "maybe", "union"),
+        (7, "'get'", "local", "union"),
+    ]
 
 
 @needs_treesitter
@@ -143,7 +166,10 @@ def test_census_counts_each_strategy() -> None:
             "class Service { run() {} }\n"
         )
     )
-    census = {name: [e["name"] for e in items] for name, items in _census_type_strategies(files).items()}
+    census = {
+        name: [e["name"] for e in items]
+        for name, items in _census_type_strategies(files).items()
+    }
     assert census == {
         "interface": ["User"],
         "object_type_alias": ["Account"],
@@ -223,7 +249,9 @@ def test_delegation_below_threshold_or_small_class_not_flagged() -> None:
         "  e() { return 3; }\n"
         "}\n"
     )
-    small = _parsed("class Small { a() { return this.dep.a(); } b() { return this.dep.b(); } }\n")
+    small = _parsed(
+        "class Small { a() { return this.dep.a(); } b() { return this.dep.b(); } }\n"
+    )
     assert wrappers_mod._find_delegation_heavy_classes(mixed) == []
     assert wrappers_mod._find_delegation_heavy_classes(small) == []
 

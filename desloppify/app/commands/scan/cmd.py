@@ -151,7 +151,9 @@ def _finish_ci_scan(args: argparse.Namespace, runtime, orchestrator, merge) -> N
     )
     gate = score_gate_from_args(args)
     print("\n".join(ci_report_lines(runtime.state, merge.diff, warnings, gate)))
-    badge_path, _badge_result = emit_scorecard_badge(args, runtime.config, runtime.state, quiet=True)
+    badge_path, _badge_result = emit_scorecard_badge(
+        args, runtime.config, runtime.state, quiet=True
+    )
     if badge_path is not None:
         print(f"scorecard: {badge_path}")
     _enforce_score_gate(gate, runtime.state)
@@ -215,7 +217,11 @@ def cmd_scan(args: argparse.Namespace) -> None:
     _show_scan_visibility(noise, runtime.effective_include_slow)
     disabled = runtime.config.get("disabled") or []
     if disabled:
-        print(colorize(f"  * Disabled in config, out of scoring: {', '.join(disabled)}", "dim"))
+        print(
+            colorize(
+                f"  * Disabled in config, out of scoring: {', '.join(disabled)}", "dim"
+            )
+        )
     show_scorecard_subjective_measures(runtime.state)
     show_score_model_breakdown(runtime.state)
 
@@ -245,7 +251,9 @@ def cmd_scan(args: argparse.Namespace) -> None:
         query_file=query_file_path(),
     )
 
-    badge_path, _badge_result = emit_scorecard_badge(args, runtime.config, runtime.state)
+    badge_path, _badge_result = emit_scorecard_badge(
+        args, runtime.config, runtime.state
+    )
     print_llm_summary(runtime.state, badge_path, narrative, merge.diff)
     auto_update_skill()
     _enforce_score_gate(score_gate_from_args(args), runtime.state)

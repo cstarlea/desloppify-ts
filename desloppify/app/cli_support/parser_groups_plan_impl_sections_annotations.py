@@ -9,7 +9,9 @@ def _add_annotation_subparsers(plan_sub) -> None:
     # plan describe <patterns> "<text>"
     p_describe = plan_sub.add_parser("describe", help="Set augmented description")
     p_describe.add_argument(
-        "patterns", nargs="+", metavar="PATTERN",
+        "patterns",
+        nargs="+",
+        metavar="PATTERN",
         help="Issue ID(s), detector, file path, glob, or cluster name",
     )
     p_describe.add_argument("text", type=str, help="Description text")
@@ -17,7 +19,9 @@ def _add_annotation_subparsers(plan_sub) -> None:
     # plan note <patterns> "<text>"
     p_note = plan_sub.add_parser("note", help="Set note on issues")
     p_note.add_argument(
-        "patterns", nargs="+", metavar="PATTERN",
+        "patterns",
+        nargs="+",
+        metavar="PATTERN",
         help="Issue ID(s), detector, file path, glob, or cluster name",
     )
     p_note.add_argument("text", type=str, help="Note text")
@@ -30,46 +34,68 @@ def _add_skip_subparsers(plan_sub) -> None:
         help="Skip issues: temporary (default), --permanent (wontfix), or --false-positive",
     )
     p_skip.add_argument(
-        "patterns", nargs="+", metavar="PATTERN",
+        "patterns",
+        nargs="+",
+        metavar="PATTERN",
         help="Issue ID(s), detector, file path, glob, or cluster name",
     )
-    p_skip.add_argument("--reason", type=str, default=None, help="Why this is being skipped")
     p_skip.add_argument(
-        "--review-after", type=int, default=None, metavar="N",
+        "--reason", type=str, default=None, help="Why this is being skipped"
+    )
+    p_skip.add_argument(
+        "--review-after",
+        type=int,
+        default=None,
+        metavar="N",
         help="Re-surface after N scans (temporary only)",
     )
     p_skip.add_argument(
-        "--permanent", action="store_true",
+        "--permanent",
+        action="store_true",
         help="Mark as wontfix (score-affecting, requires --note and --attest)",
     )
     p_skip.add_argument(
-        "--false-positive", action="store_true",
+        "--false-positive",
+        action="store_true",
         help="Mark as false positive (requires --attest)",
     )
-    p_skip.add_argument("--note", type=str, default=None, help="Explanation (required for --permanent)")
     p_skip.add_argument(
-        "--attest", type=str, default=None,
+        "--note", type=str, default=None, help="Explanation (required for --permanent)"
+    )
+    p_skip.add_argument(
+        "--attest",
+        type=str,
+        default=None,
         help="Attestation (required for --permanent and --false-positive)",
     )
     p_skip.add_argument(
-        "--confirm", action="store_true", default=False,
+        "--confirm",
+        action="store_true",
+        default=False,
         help="Required when skipping more than 5 items at once",
     )
     p_skip.add_argument(
-        "--deferred-only", action="store_true", default=False,
+        "--deferred-only",
+        action="store_true",
+        default=False,
         help="Only act on issues that are already temporarily skipped",
     )
 
     # plan unskip <patterns>
     p_unskip = plan_sub.add_parser(
-        "unskip", help="Bring skipped issues back to queue (reopens permanent/fp in state)"
+        "unskip",
+        help="Bring skipped issues back to queue (reopens permanent/fp in state)",
     )
     p_unskip.add_argument(
-        "patterns", nargs="+", metavar="PATTERN",
+        "patterns",
+        nargs="+",
+        metavar="PATTERN",
         help="Issue ID(s), detector, file path, glob, or cluster name",
     )
     p_unskip.add_argument(
-        "--force", action="store_true", default=False,
+        "--force",
+        action="store_true",
+        default=False,
         help="Also unskip protected items (permanent/false_positive with notes)",
     )
 
@@ -79,7 +105,9 @@ def _add_skip_subparsers(plan_sub) -> None:
         help="Move deferred items to backlog (remove from plan tracking entirely)",
     )
     p_backlog.add_argument(
-        "patterns", nargs="+", metavar="PATTERN",
+        "patterns",
+        nargs="+",
+        metavar="PATTERN",
         help="Issue ID(s), detector, file path, glob, or cluster name",
     )
 
@@ -90,7 +118,9 @@ def _add_resolve_subparser(plan_sub) -> None:
         "reopen", help="Reopen resolved issues and move back to queue"
     )
     p_reopen.add_argument(
-        "patterns", nargs="+", metavar="PATTERN",
+        "patterns",
+        nargs="+",
+        metavar="PATTERN",
         help="Issue ID(s), detector, file path, glob, or cluster name",
     )
 
@@ -107,7 +137,9 @@ examples:
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     p_resolve.add_argument(
-        "patterns", nargs="+", metavar="PATTERN",
+        "patterns",
+        nargs="+",
+        metavar="PATTERN",
         help="Issue ID(s), detector, file path, glob, or cluster name",
     )
     p_resolve.add_argument(

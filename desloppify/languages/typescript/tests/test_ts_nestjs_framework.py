@@ -107,7 +107,11 @@ def test_nest_cli_entry_files(tmp_path: Path):
         ' "projects": {"worker": {"sourceRoot": "apps/worker/src"},'
         ' "lib": {"type": "library", "sourceRoot": "libs/lib/src", "entryFile": "index"}}}',
     )
-    for name in ("apps/api/src/server.ts", "apps/worker/src/main.ts", "libs/lib/src/index.ts"):
+    for name in (
+        "apps/api/src/server.ts",
+        "apps/worker/src/main.ts",
+        "libs/lib/src/index.ts",
+    ):
         _write(tmp_path, name, "export {}\n")
     assert NESTJS_ENTRY_CONVENTIONS.applies_to(tmp_path)
     assert NESTJS_ENTRY_CONVENTIONS.declared_entries is not None
@@ -123,8 +127,12 @@ def test_nest_cli_entry_files(tmp_path: Path):
 
 def test_injected_classes_are_exempt_from_single_use(tmp_path: Path):
     _write(tmp_path, "package.json", _NEST)
-    guard = _write(tmp_path, "src/roles.guard.ts", "@Injectable()\nexport class RolesGuard {}\n")
-    helper = _write(tmp_path, "src/helper.ts", "export function helper() { return 1 }\n")
+    guard = _write(
+        tmp_path, "src/roles.guard.ts", "@Injectable()\nexport class RolesGuard {}\n"
+    )
+    helper = _write(
+        tmp_path, "src/helper.ts", "export function helper() { return 1 }\n"
+    )
     decorators = injected_class_decorators(tmp_path, None)
     assert {"Module", "Injectable", "Controller"} <= decorators
     assert _declares_injected_class(str(guard), decorators)
@@ -156,7 +164,10 @@ def _app(tmp_path: Path, module: str) -> None:
 
 
 def test_unregistered_controller(tmp_path: Path):
-    _app(tmp_path, "@Module({ controllers: [CatsController], providers: [] })\nexport class AppModule {}\n")
+    _app(
+        tmp_path,
+        "@Module({ controllers: [CatsController], providers: [] })\nexport class AppModule {}\n",
+    )
     entries, _ = scan_unregistered_controllers(tmp_path)
     assert [(e["file"], e["name"], e["line"]) for e in entries] == [
         ("src/dogs.controller.ts", "DogsController", 2)
@@ -173,8 +184,15 @@ def test_controllers_hidden_behind_a_spread_are_not_judged(tmp_path: Path):
 
 
 def test_controller_in_a_test_file_is_ignored(tmp_path: Path):
-    _app(tmp_path, "@Module({ controllers: [CatsController, DogsController] })\nexport class AppModule {}\n")
-    _write(tmp_path, "src/cats.controller.spec.ts", "@Controller()\nclass FakeController {}\n")
+    _app(
+        tmp_path,
+        "@Module({ controllers: [CatsController, DogsController] })\nexport class AppModule {}\n",
+    )
+    _write(
+        tmp_path,
+        "src/cats.controller.spec.ts",
+        "@Controller()\nclass FakeController {}\n",
+    )
     assert scan_unregistered_controllers(tmp_path)[0] == []
 
 
@@ -194,22 +212,51 @@ def test_provider_missing_injectable(tmp_path: Path):
         "  ],\n"
         "})\nexport class AppModule {}\n",
     )
-    _write(tmp_path, "src/cats.service.ts", "export class CatsService {\n  constructor(private readonly repo: Repo) {}\n}\n")
+    _write(
+        tmp_path,
+        "src/cats.service.ts",
+        "export class CatsService {\n  constructor(private readonly repo: Repo) {}\n}\n",
+    )
     _write(tmp_path, "src/plain.ts", "export class Plain {\n  run() { return 1 }\n}\n")
-    _write(tmp_path, "src/tokens.ts", "export class Tokens {\n  constructor(@Inject(TOKEN) private t: string) {}\n}\n")
-    _write(tmp_path, "src/roles.guard.ts", "export class RolesGuard {\n  constructor(private reflector: Reflector) {}\n}\n")
-    _write(tmp_path, "src/manual.ts", "export class Manual {\n  constructor(private n: number) {}\n}\n")
-    _write(tmp_path, "src/decorated.ts", "@Injectable()\nexport class Decorated {\n  constructor(private a: A) {}\n}\n")
+    _write(
+        tmp_path,
+        "src/tokens.ts",
+        "export class Tokens {\n  constructor(@Inject(TOKEN) private t: string) {}\n}\n",
+    )
+    _write(
+        tmp_path,
+        "src/roles.guard.ts",
+        "export class RolesGuard {\n  constructor(private reflector: Reflector) {}\n}\n",
+    )
+    _write(
+        tmp_path,
+        "src/manual.ts",
+        "export class Manual {\n  constructor(private n: number) {}\n}\n",
+    )
+    _write(
+        tmp_path,
+        "src/decorated.ts",
+        "@Injectable()\nexport class Decorated {\n  constructor(private a: A) {}\n}\n",
+    )
 
     entries, _ = scan_providers_missing_injectable(tmp_path)
     assert sorted(e["name"] for e in entries) == ["CatsService", "RolesGuard"]
 
 
 def test_nestjs_smells_phase(tmp_path: Path):
-    _app(tmp_path, "@Module({ controllers: [CatsController], providers: [CatsService] })\nexport class AppModule {}\n")
-    _write(tmp_path, "src/cats.service.ts", "export class CatsService {\n  constructor(private readonly repo: Repo) {}\n}\n")
+    _app(
+        tmp_path,
+        "@Module({ controllers: [CatsController], providers: [CatsService] })\nexport class AppModule {}\n",
+    )
+    _write(
+        tmp_path,
+        "src/cats.service.ts",
+        "export class CatsService {\n  constructor(private readonly repo: Repo) {}\n}\n",
+    )
 
-    phase = next(p for p in TypeScriptConfig().phases if p.label == "NestJS framework smells")
+    phase = next(
+        p for p in TypeScriptConfig().phases if p.label == "NestJS framework smells"
+    )
     issues, _ = phase.run(tmp_path, _FakeLang())
     ids = {issue["id"] for issue in issues}
     assert ids == {

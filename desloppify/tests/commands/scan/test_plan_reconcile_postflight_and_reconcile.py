@@ -17,24 +17,30 @@ from desloppify.tests.commands.scan.test_plan_reconcile import (
 # Tests: _clear_plan_start_scores_if_queue_empty
 # ---------------------------------------------------------------------------
 
-class TestClearPlanStartScoresIfQueueEmpty:
 
+class TestClearPlanStartScoresIfQueueEmpty:
     def test_returns_false_when_no_start_scores(self):
         plan = empty_plan()
         state = _make_state()
-        assert reconcile_mod._clear_plan_start_scores_if_queue_empty(state, plan) is False
+        assert (
+            reconcile_mod._clear_plan_start_scores_if_queue_empty(state, plan) is False
+        )
 
     def test_clears_and_copies_to_state(self, monkeypatch):
         plan = empty_plan()
         plan["plan_start_scores"] = {
-            "strict": 80.0, "overall": 85.0,
-            "objective": 82.0, "verified": 78.0,
+            "strict": 80.0,
+            "overall": 85.0,
+            "objective": 82.0,
+            "verified": 78.0,
         }
         state = _make_state()
 
         monkeypatch.setattr(
             "desloppify.app.commands.helpers.queue_progress.plan_aware_queue_breakdown",
-            lambda s, p: SimpleNamespace(objective_actionable=0, queue_total=0, lifecycle_phase="execution"),
+            lambda s, p: SimpleNamespace(
+                objective_actionable=0, queue_total=0, lifecycle_phase="execution"
+            ),
         )
         result = reconcile_mod._clear_plan_start_scores_if_queue_empty(state, plan)
         assert result is True
@@ -72,14 +78,18 @@ class TestClearPlanStartScoresIfQueueEmpty:
     def test_does_not_clear_when_queue_has_items(self, monkeypatch):
         plan = empty_plan()
         plan["plan_start_scores"] = {
-            "strict": 80.0, "overall": 85.0,
-            "objective": 82.0, "verified": 78.0,
+            "strict": 80.0,
+            "overall": 85.0,
+            "objective": 82.0,
+            "verified": 78.0,
         }
         state = _make_state()
 
         monkeypatch.setattr(
             "desloppify.app.commands.helpers.queue_progress.plan_aware_queue_breakdown",
-            lambda s, p: SimpleNamespace(objective_actionable=3, queue_total=5, lifecycle_phase="execution"),
+            lambda s, p: SimpleNamespace(
+                objective_actionable=3, queue_total=5, lifecycle_phase="execution"
+            ),
         )
         result = reconcile_mod._clear_plan_start_scores_if_queue_empty(state, plan)
         assert result is False
@@ -93,14 +103,18 @@ class TestClearPlanStartScoresIfQueueEmpty:
         """
         plan = empty_plan()
         plan["plan_start_scores"] = {
-            "strict": 80.0, "overall": 85.0,
-            "objective": 82.0, "verified": 78.0,
+            "strict": 80.0,
+            "overall": 85.0,
+            "objective": 82.0,
+            "verified": 78.0,
         }
         state = _make_state()
 
         monkeypatch.setattr(
             "desloppify.app.commands.helpers.queue_progress.plan_aware_queue_breakdown",
-            lambda s, p: SimpleNamespace(objective_actionable=0, queue_total=3, lifecycle_phase="execution"),
+            lambda s, p: SimpleNamespace(
+                objective_actionable=0, queue_total=3, lifecycle_phase="execution"
+            ),
         )
         result = reconcile_mod._clear_plan_start_scores_if_queue_empty(state, plan)
         assert result is True
@@ -129,8 +143,8 @@ class TestClearPlanStartScoresIfQueueEmpty:
 # Tests: _sync_postflight_scan_completion_and_log
 # ---------------------------------------------------------------------------
 
-class TestSyncPostflightScanCompletionAndLog:
 
+class TestSyncPostflightScanCompletionAndLog:
     def test_marks_scan_complete_when_objective_queue_is_drained(self, monkeypatch):
         plan = empty_plan()
         state = _make_state(scan_count=7)
@@ -165,8 +179,8 @@ class TestSyncPostflightScanCompletionAndLog:
 # Tests: _refresh_plan_start_baseline
 # ---------------------------------------------------------------------------
 
-class TestRefreshPlanStartBaseline:
 
+class TestRefreshPlanStartBaseline:
     def test_refreshes_scores_and_scan_gate_without_clearing_sentinels(self):
         plan = empty_plan()
         plan["plan_start_scores"] = {
@@ -202,19 +216,23 @@ class TestRefreshPlanStartBaseline:
 # Tests: reconcile_plan_post_scan (full orchestration)
 # ---------------------------------------------------------------------------
 
-class TestReconcilePlanPostScan:
 
+class TestReconcilePlanPostScan:
     def test_saves_when_superseded_issues_detected(self, monkeypatch):
         plan = empty_plan()
         plan["queue_order"] = ["issue-1", "issue-2"]
         plan["overrides"] = {"issue-1": {"issue_id": "issue-1"}}
-        state = _make_state(issues={
-            "issue-2": _make_issue(status="open"),
-        })
+        state = _make_state(
+            issues={
+                "issue-2": _make_issue(status="open"),
+            }
+        )
 
         saved: list[dict] = []
         monkeypatch.setattr(reconcile_mod, "load_plan", lambda _path=None: plan)
-        monkeypatch.setattr(reconcile_mod, "save_plan", lambda p, _path=None: saved.append(p))
+        monkeypatch.setattr(
+            reconcile_mod, "save_plan", lambda p, _path=None: saved.append(p)
+        )
 
         reconcile_mod.reconcile_plan_post_scan(_runtime(state=state))
 
@@ -231,7 +249,9 @@ class TestReconcilePlanPostScan:
 
         saved: list[dict] = []
         monkeypatch.setattr(reconcile_mod, "load_plan", lambda _path=None: plan)
-        monkeypatch.setattr(reconcile_mod, "save_plan", lambda p, _path=None: saved.append(p))
+        monkeypatch.setattr(
+            reconcile_mod, "save_plan", lambda p, _path=None: saved.append(p)
+        )
 
         reconcile_mod.reconcile_plan_post_scan(_runtime(state=state))
         assert len(saved) == 1
@@ -239,7 +259,8 @@ class TestReconcilePlanPostScan:
 
     def test_swallows_load_plan_exception(self, monkeypatch):
         monkeypatch.setattr(
-            reconcile_mod, "load_plan",
+            reconcile_mod,
+            "load_plan",
             lambda _path=None: (_ for _ in ()).throw(OSError("boom")),
         )
         # Should not raise
@@ -249,13 +270,18 @@ class TestReconcilePlanPostScan:
         plan = empty_plan()
         plan["queue_order"] = ["issue-1"]
         plan["overrides"] = {"issue-1": {"issue_id": "issue-1"}}
-        state = _make_state(issues={
-            "issue-1": _make_issue(status="resolved"),
-        })
+        state = _make_state(
+            issues={
+                "issue-1": _make_issue(status="resolved"),
+            }
+        )
 
         monkeypatch.setattr(reconcile_mod, "load_plan", lambda _path=None: plan)
-        monkeypatch.setattr(reconcile_mod, "save_plan",
-                            lambda p, _path=None: (_ for _ in ()).throw(OSError("disk full")))
+        monkeypatch.setattr(
+            reconcile_mod,
+            "save_plan",
+            lambda p, _path=None: (_ for _ in ()).throw(OSError("disk full")),
+        )
 
         # Should not raise
         reconcile_mod.reconcile_plan_post_scan(_runtime(state=state))
@@ -263,13 +289,17 @@ class TestReconcilePlanPostScan:
     def test_marks_postflight_scan_on_empty_plan(self, monkeypatch):
         plan = empty_plan()
         state = _make_state(
-            strict_score=85.0, overall_score=90.0,
-            objective_score=88.0, verified_strict_score=80.0,
+            strict_score=85.0,
+            overall_score=90.0,
+            objective_score=88.0,
+            verified_strict_score=80.0,
         )
 
         saved: list[dict] = []
         monkeypatch.setattr(reconcile_mod, "load_plan", lambda _path=None: plan)
-        monkeypatch.setattr(reconcile_mod, "save_plan", lambda p, _path=None: saved.append(p))
+        monkeypatch.setattr(
+            reconcile_mod, "save_plan", lambda p, _path=None: saved.append(p)
+        )
 
         reconcile_mod.reconcile_plan_post_scan(_runtime(state=state))
 
@@ -298,7 +328,9 @@ class TestReconcilePlanPostScan:
 
         saved: list[dict] = []
         monkeypatch.setattr(reconcile_mod, "load_plan", lambda _path=None: plan)
-        monkeypatch.setattr(reconcile_mod, "save_plan", lambda p, _path=None: saved.append(p))
+        monkeypatch.setattr(
+            reconcile_mod, "save_plan", lambda p, _path=None: saved.append(p)
+        )
 
         reconcile_mod.reconcile_plan_post_scan(_runtime(state=state, force_rescan=True))
 
@@ -336,12 +368,16 @@ class TestReconcilePlanPostScan:
 
         saved: list[dict] = []
         monkeypatch.setattr(reconcile_mod, "load_plan", lambda _path=None: plan)
-        monkeypatch.setattr(reconcile_mod, "save_plan", lambda p, _path=None: saved.append(p))
+        monkeypatch.setattr(
+            reconcile_mod, "save_plan", lambda p, _path=None: saved.append(p)
+        )
 
         reconcile_mod.reconcile_plan_post_scan(_runtime(state=state, force_rescan=True))
 
         assert len(saved) == 1
-        assert saved[0]["refresh_state"]["subjective_review_completed_at_scan_count"] == 6
+        assert (
+            saved[0]["refresh_state"]["subjective_review_completed_at_scan_count"] == 6
+        )
         assert saved[0]["refresh_state"]["postflight_scan_completed_at_scan_count"] == 6
 
     def test_force_rescan_outside_plan_mode_does_not_carry_forward_review_marker(
@@ -370,15 +406,21 @@ class TestReconcilePlanPostScan:
 
         saved: list[dict] = []
         monkeypatch.setattr(reconcile_mod, "load_plan", lambda _path=None: plan)
-        monkeypatch.setattr(reconcile_mod, "save_plan", lambda p, _path=None: saved.append(p))
+        monkeypatch.setattr(
+            reconcile_mod, "save_plan", lambda p, _path=None: saved.append(p)
+        )
 
         reconcile_mod.reconcile_plan_post_scan(_runtime(state=state, force_rescan=True))
 
         assert len(saved) == 1
-        assert saved[0]["refresh_state"]["subjective_review_completed_at_scan_count"] == 5
+        assert (
+            saved[0]["refresh_state"]["subjective_review_completed_at_scan_count"] == 5
+        )
         assert saved[0]["refresh_state"]["postflight_scan_completed_at_scan_count"] == 6
 
-    def test_force_rescan_with_objective_backlog_injects_stale_reviews(self, monkeypatch):
+    def test_force_rescan_with_objective_backlog_injects_stale_reviews(
+        self, monkeypatch
+    ):
         plan = empty_plan()
         plan["queue_order"] = ["workflow::run-scan"]
         plan["plan_start_scores"] = {
@@ -430,7 +472,9 @@ class TestReconcilePlanPostScan:
 
         saved: list[dict] = []
         monkeypatch.setattr(reconcile_mod, "load_plan", lambda _path=None: plan)
-        monkeypatch.setattr(reconcile_mod, "save_plan", lambda p, _path=None: saved.append(p))
+        monkeypatch.setattr(
+            reconcile_mod, "save_plan", lambda p, _path=None: saved.append(p)
+        )
 
         reconcile_mod.reconcile_plan_post_scan(_runtime(state=state, force_rescan=True))
 
@@ -447,13 +491,17 @@ class TestReconcilePlanPostScan:
                 "issue_ids": ["issue-1", "issue-2"],
             }
         }
-        state = _make_state(issues={
-            "issue-2": _make_issue(status="open"),
-        })
+        state = _make_state(
+            issues={
+                "issue-2": _make_issue(status="open"),
+            }
+        )
 
         saved: list[dict] = []
         monkeypatch.setattr(reconcile_mod, "load_plan", lambda _path=None: plan)
-        monkeypatch.setattr(reconcile_mod, "save_plan", lambda p, _path=None: saved.append(p))
+        monkeypatch.setattr(
+            reconcile_mod, "save_plan", lambda p, _path=None: saved.append(p)
+        )
 
         reconcile_mod.reconcile_plan_post_scan(_runtime(state=state))
 
@@ -467,15 +515,19 @@ class TestReconcilePlanPostScan:
         plan["queue_order"] = []
         plan["skipped"] = {
             "issue-1": {
-                "issue_id": "issue-1", "kind": "temporary",
-                "skipped_at_scan": 1, "review_after": 5,
+                "issue_id": "issue-1",
+                "kind": "temporary",
+                "skipped_at_scan": 1,
+                "review_after": 5,
             },
         }
         state = _make_state(issues={})
 
         saved: list[dict] = []
         monkeypatch.setattr(reconcile_mod, "load_plan", lambda _path=None: plan)
-        monkeypatch.setattr(reconcile_mod, "save_plan", lambda p, _path=None: saved.append(p))
+        monkeypatch.setattr(
+            reconcile_mod, "save_plan", lambda p, _path=None: saved.append(p)
+        )
 
         reconcile_mod.reconcile_plan_post_scan(_runtime(state=state))
 
@@ -490,13 +542,17 @@ class TestReconcilePlanPostScan:
         plan["overrides"] = {"issue-1": {"issue_id": "issue-1"}}
         state = _make_state(
             issues={},
-            strict_score=85.0, overall_score=90.0,
-            objective_score=88.0, verified_strict_score=80.0,
+            strict_score=85.0,
+            overall_score=90.0,
+            objective_score=88.0,
+            verified_strict_score=80.0,
         )
 
         saved: list[dict] = []
         monkeypatch.setattr(reconcile_mod, "load_plan", lambda _path=None: plan)
-        monkeypatch.setattr(reconcile_mod, "save_plan", lambda p, _path=None: saved.append(p))
+        monkeypatch.setattr(
+            reconcile_mod, "save_plan", lambda p, _path=None: saved.append(p)
+        )
 
         reconcile_mod.reconcile_plan_post_scan(_runtime(state=state))
 
@@ -555,7 +611,9 @@ class TestReconcilePlanPostScan:
 
         saved: list[dict] = []
         monkeypatch.setattr(reconcile_mod, "load_plan", lambda _path=None: plan)
-        monkeypatch.setattr(reconcile_mod, "save_plan", lambda p, _path=None: saved.append(p))
+        monkeypatch.setattr(
+            reconcile_mod, "save_plan", lambda p, _path=None: saved.append(p)
+        )
 
         reconcile_mod.reconcile_plan_post_scan(_runtime(state=state))
 
@@ -572,13 +630,17 @@ class TestReconcilePlanPostScan:
             "b": {"issue_id": "b"},
             "c": {"issue_id": "c"},
         }
-        state = _make_state(issues={
-            "c": _make_issue(status="open"),
-        })
+        state = _make_state(
+            issues={
+                "c": _make_issue(status="open"),
+            }
+        )
 
         saved: list[dict] = []
         monkeypatch.setattr(reconcile_mod, "load_plan", lambda _path=None: plan)
-        monkeypatch.setattr(reconcile_mod, "save_plan", lambda p, _path=None: saved.append(p))
+        monkeypatch.setattr(
+            reconcile_mod, "save_plan", lambda p, _path=None: saved.append(p)
+        )
 
         reconcile_mod.reconcile_plan_post_scan(_runtime(state=state))
 

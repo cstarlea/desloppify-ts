@@ -25,7 +25,9 @@ def test_build_review_context_inner_populates_sections() -> None:
         "src/empty.py": "",
     }
 
-    lang = SimpleNamespace(dep_graph={"src/a.py": {"importers": 4}}, zone_map=_ZoneMap())
+    lang = SimpleNamespace(
+        dep_graph={"src/a.py": {"importers": 4}}, zone_map=_ZoneMap()
+    )
     state = {
         "issues": {
             "1": {
@@ -59,10 +61,18 @@ def test_build_review_context_inner_populates_sections() -> None:
             abs_path=lambda path: path,
             rel_path=lambda path: path,
             importer_count=lambda entry: entry.get("importers", 0),
-            default_review_module_patterns=lambda content: ["service"] if "def" in content else [],
-            gather_ai_debt_signals=lambda file_contents, rel_fn: {"files": sorted(file_contents)},
-            gather_auth_context=lambda file_contents, rel_fn: {"auth_files": len(file_contents)},
-            classify_error_strategy=lambda content: "raises" if "raise" in content else "returns",
+            default_review_module_patterns=lambda content: (
+                ["service"] if "def" in content else []
+            ),
+            gather_ai_debt_signals=lambda file_contents, rel_fn: {
+                "files": sorted(file_contents)
+            },
+            gather_auth_context=lambda file_contents, rel_fn: {
+                "auth_files": len(file_contents)
+            },
+            classify_error_strategy=lambda content: (
+                "raises" if "raise" in content else "returns"
+            ),
             func_name_re=re.compile(r"def\s+([A-Za-z_]\w*)"),
             class_name_re=re.compile(r"class\s+([A-Za-z_]\w*)"),
             name_prefix_re=re.compile(r"([a-z]+)"),

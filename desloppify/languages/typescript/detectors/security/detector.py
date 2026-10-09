@@ -41,13 +41,18 @@ class _PublicEnvContext:
     def __init__(self, settings: Mapping[str, object] | None) -> None:
         settings = dict(settings or {})
         configured = settings.get("public_env_prefixes")
-        self._configured = tuple(str(p) for p in configured) if isinstance(configured, list) else ()
+        self._configured = (
+            tuple(str(p) for p in configured) if isinstance(configured, list) else ()
+        )
         self._lang = SimpleNamespace(runtime_setting=settings.get)
         self._by_package: dict[Path, re.Pattern[str] | None] = {}
 
     def pattern_for(self, filepath: str) -> re.Pattern[str] | None:
         start = Path(resolve_path(filepath)).parent
-        package = next((d for d in (start, *start.parents) if (d / "package.json").is_file()), start)
+        package = next(
+            (d for d in (start, *start.parents) if (d / "package.json").is_file()),
+            start,
+        )
         if package not in self._by_package:
             detected = framework_values(package, self._lang, "public_env_prefixes")
             self._by_package[package] = public_secret_re((*detected, *self._configured))
@@ -80,7 +85,9 @@ def detect_ts_security(
         try:
             content = read_code_text(resolve_path(filepath), errors="replace")
         except OSError as exc:
-            log_best_effort_failure(logger, f"read TypeScript security source {filepath}", exc)
+            log_best_effort_failure(
+                logger, f"read TypeScript security source {filepath}", exc
+            )
             entries.append(
                 _make_security_entry(
                     filepath,
@@ -133,7 +140,9 @@ def detect_ts_security(
             )
         )
 
-    return DetectorResult(entries=entries, population_kind="files", population_size=scanned)
+    return DetectorResult(
+        entries=entries, population_kind="files", population_size=scanned
+    )
 
 
 __all__ = [

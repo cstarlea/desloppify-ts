@@ -18,4 +18,5 @@ def cmd_plan(args: argparse.Namespace) -> None:
 
     _cmd_plan(args)
 
+
 __all__ = ["cmd_plan"]

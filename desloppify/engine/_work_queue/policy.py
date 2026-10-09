@@ -90,41 +90,31 @@ def explain_queue(snapshot: QueueSnapshot, plan: dict | None) -> str:
             lines.append("    Plan clusters (all scopes):")
             if auto_count:
                 names_str = ", ".join(auto_names)
-                lines.append(
-                    f"      Auto-queued: {auto_count} ({names_str})"
-                )
+                lines.append(f"      Auto-queued: {auto_count} ({names_str})")
             if triage_count:
                 lines.append(f"      Triage-promoted: {triage_count}")
         if objective_backlog_count:
-            lines.append(f"    Backlog: {objective_backlog_count} objective items (not in queue_order)")
+            lines.append(
+                f"    Backlog: {objective_backlog_count} objective items (not in queue_order)"
+            )
     elif phase == LIFECYCLE_PHASE_WORKFLOW_POSTFLIGHT:
-        lines.append(
-            "    Why: Processing a planning step before execution resumes."
-        )
-        lines.append(
-            f"    Blocked: {blocked_count} work items available after."
-        )
+        lines.append("    Why: Processing a planning step before execution resumes.")
+        lines.append(f"    Blocked: {blocked_count} work items available after.")
     elif phase == LIFECYCLE_PHASE_TRIAGE_POSTFLIGHT:
         lines.append(
             "    Why: Analyzing and prioritizing issues before execution resumes."
         )
-        lines.append(
-            f"    Blocked: {blocked_count} work items available after."
-        )
+        lines.append(f"    Blocked: {blocked_count} work items available after.")
     elif phase == LIFECYCLE_PHASE_ASSESSMENT_POSTFLIGHT:
         lines.append(
             "    Why: Scoring dimensions from review results before execution resumes."
         )
-        lines.append(
-            f"    Blocked: {blocked_count} work items available after."
-        )
+        lines.append(f"    Blocked: {blocked_count} work items available after.")
     elif phase == LIFECYCLE_PHASE_REVIEW_POSTFLIGHT:
         lines.append(
             "    Why: Reviewing findings from the latest scan before execution resumes."
         )
-        lines.append(
-            f"    Blocked: {blocked_count} work items available after."
-        )
+        lines.append(f"    Blocked: {blocked_count} work items available after.")
     elif phase == LIFECYCLE_PHASE_SCAN:
         lines.append(
             "    Why: Cycle complete. Run `desloppify scan` to start the next one."

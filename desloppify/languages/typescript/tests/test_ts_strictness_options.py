@@ -27,12 +27,22 @@ def _write(root: Path, files: dict[str, object]) -> None:
 
 def _found(root: Path) -> set[tuple[str, str]]:
     result = detect_tsconfig_health(root)
-    return {(Path(e["file"]).relative_to(root).as_posix(), e["check"]) for e in result.entries}
-
-
-def _app(options: dict, *, typescript: str = "^5.8.0", source: str = "export const a = 1;\n") -> dict[str, object]:
     return {
-        "package.json": {"name": "app", "private": True, "type": "module", "devDependencies": {"typescript": typescript}},
+        (Path(e["file"]).relative_to(root).as_posix(), e["check"])
+        for e in result.entries
+    }
+
+
+def _app(
+    options: dict, *, typescript: str = "^5.8.0", source: str = "export const a = 1;\n"
+) -> dict[str, object]:
+    return {
+        "package.json": {
+            "name": "app",
+            "private": True,
+            "type": "module",
+            "devDependencies": {"typescript": typescript},
+        },
         "tsconfig.json": {"compilerOptions": {"module": "esnext", **options}},
         "src/a.ts": source,
     }
@@ -44,7 +54,9 @@ _ALL_SET = {"noUncheckedIndexedAccess": True, "verbatimModuleSyntax": True}
 def test_strict_never_turned_on(tmp_path):
     _write(tmp_path, _app({}))
     result = detect_tsconfig_health(tmp_path)
-    assert [(e["check"], e["confidence"], e["tier"]) for e in result.entries] == [("strict", "high", 3)]
+    assert [(e["check"], e["confidence"], e["tier"]) for e in result.entries] == [
+        ("strict", "high", 3)
+    ]
     # With strict off, the finer options aren't checked yet.
     assert result.population_size == 1
 
@@ -74,7 +86,16 @@ def test_unset_options_are_reported_and_set_ones_are_decisions(tmp_path):
         ("tsconfig.json", "noUncheckedIndexedAccess"),
         ("tsconfig.json", "verbatimModuleSyntax"),
     }
-    _write(tmp_path, _app({"strict": True, "noUncheckedIndexedAccess": False, "verbatimModuleSyntax": False}))
+    _write(
+        tmp_path,
+        _app(
+            {
+                "strict": True,
+                "noUncheckedIndexedAccess": False,
+                "verbatimModuleSyntax": False,
+            }
+        ),
+    )
     assert _found(tmp_path) == set()
 
 
@@ -102,7 +123,15 @@ def test_verbatim_module_syntax_only_for_es_modules(tmp_path, module, package_ty
 
 def test_well_known_bases_count_and_unknown_ones_are_never_reported(tmp_path):
     _write(tmp_path, _app({}))
-    _write(tmp_path, {"tsconfig.json": {"extends": "@tsconfig/strictest/tsconfig.json", "compilerOptions": {"module": "esnext"}}})
+    _write(
+        tmp_path,
+        {
+            "tsconfig.json": {
+                "extends": "@tsconfig/strictest/tsconfig.json",
+                "compilerOptions": {"module": "esnext"},
+            }
+        },
+    )
     # strictest sets everything but verbatimModuleSyntax (not installed: from the table).
     assert _found(tmp_path) == {("tsconfig.json", "verbatimModuleSyntax")}
     _write(tmp_path, {"tsconfig.json": {"extends": "@acme/tsconfig"}})
@@ -114,8 +143,13 @@ def test_installed_base_is_read(tmp_path):
     _write(
         tmp_path,
         {
-            "tsconfig.json": {"extends": "@acme/tsconfig", "compilerOptions": {"module": "esnext"}},
-            "node_modules/@acme/tsconfig/tsconfig.json": {"compilerOptions": {"strict": False}},
+            "tsconfig.json": {
+                "extends": "@acme/tsconfig",
+                "compilerOptions": {"module": "esnext"},
+            },
+            "node_modules/@acme/tsconfig/tsconfig.json": {
+                "compilerOptions": {"strict": False}
+            },
         },
     )
     assert _found(tmp_path) == {("tsconfig.json", "strict")}
@@ -123,19 +157,29 @@ def test_installed_base_is_read(tmp_path):
 
 def _monorepo(packages: dict[str, dict], base: dict) -> dict[str, object]:
     files: dict[str, object] = {
-        "package.json": {"name": "root", "private": True, "devDependencies": {"typescript": "catalog:"}},
+        "package.json": {
+            "name": "root",
+            "private": True,
+            "devDependencies": {"typescript": "catalog:"},
+        },
         "pnpm-workspace.yaml": "packages:\n  - 'packages/*'\ncatalog:\n  typescript: ^5.9.0\n",
         "tsconfig.base.json": {"compilerOptions": {"module": "esnext", **base}},
     }
     for name, options in packages.items():
         files[f"packages/{name}/package.json"] = {"name": name, "type": "module"}
-        files[f"packages/{name}/tsconfig.json"] = {"extends": "../../tsconfig.base.json", "compilerOptions": options}
+        files[f"packages/{name}/tsconfig.json"] = {
+            "extends": "../../tsconfig.base.json",
+            "compilerOptions": options,
+        }
         files[f"packages/{name}/src/index.ts"] = "export const x = 1;\n"
     return files
 
 
 def test_monorepo_reports_unset_options_once_on_the_shared_base(tmp_path):
-    _write(tmp_path, _monorepo({"a": {}, "b": {}, "c": {"strict": False}}, {"strict": True}))
+    _write(
+        tmp_path,
+        _monorepo({"a": {}, "b": {}, "c": {"strict": False}}, {"strict": True}),
+    )
     assert _found(tmp_path) == {
         ("tsconfig.base.json", "noUncheckedIndexedAccess"),
         ("tsconfig.base.json", "verbatimModuleSyntax"),
@@ -150,16 +194,22 @@ def test_drift_between_packages(tmp_path):
         _monorepo({"a": {}, "b": {}, "c": {"noImplicitReturns": False}}, strictest),
     )
     entries = detect_tsconfig_health(tmp_path).entries
-    assert [(Path(e["file"]).relative_to(tmp_path).as_posix(), e["check"]) for e in entries] == [
-        ("packages/c/tsconfig.json", "drift")
-    ]
+    assert [
+        (Path(e["file"]).relative_to(tmp_path).as_posix(), e["check"]) for e in entries
+    ] == [("packages/c/tsconfig.json", "drift")]
     assert entries[0]["detail"]["options"] == ["noImplicitReturns (2/3)"]
 
 
 def test_private_projects_in_a_monorepo_get_only_the_strict_check(tmp_path):
     files = _monorepo({"a": {}}, {"strict": True, **_ALL_SET})
-    files["examples/demo/package.json"] = {"name": "demo", "private": True, "type": "module"}
-    files["examples/demo/tsconfig.json"] = {"compilerOptions": {"module": "esnext", "strict": True}}
+    files["examples/demo/package.json"] = {
+        "name": "demo",
+        "private": True,
+        "type": "module",
+    }
+    files["examples/demo/tsconfig.json"] = {
+        "compilerOptions": {"module": "esnext", "strict": True}
+    }
     files["examples/demo/index.ts"] = "export {};\n"
     _write(tmp_path, files)
     assert _found(tmp_path) == set()

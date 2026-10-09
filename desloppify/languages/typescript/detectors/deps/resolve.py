@@ -106,7 +106,9 @@ def read_tsconfig(config_path: Path) -> dict[str, Any] | None:
         text = config_path.read_text(encoding="utf-8-sig", errors="replace")
         data = json.loads(strip_jsonc(text))
     except (json.JSONDecodeError, OSError) as exc:
-        log_best_effort_failure(logger, f"parse TypeScript config file {config_path}", exc)
+        log_best_effort_failure(
+            logger, f"parse TypeScript config file {config_path}", exc
+        )
         return None
     return data if isinstance(data, dict) else None
 
@@ -115,7 +117,11 @@ def _resolve_extends(spec: str, config_dir: Path) -> Path | None:
     """Resolve one ``extends`` entry: a relative path or a package specifier."""
     if spec.startswith((".", "/")):
         candidate = (config_dir / spec).resolve()
-        for option in (candidate, Path(f"{candidate}.json"), candidate / "tsconfig.json"):
+        for option in (
+            candidate,
+            Path(f"{candidate}.json"),
+            candidate / "tsconfig.json",
+        ):
             if option.is_file():
                 return option
         return None
@@ -158,9 +164,19 @@ def compiler_option(config_path: Path, name: str, depth: int = 0) -> Any:
     if isinstance(options, dict) and name in options:
         return options[name]
     extends = data.get("extends")
-    specs = [extends] if isinstance(extends, str) else extends if isinstance(extends, list) else []
+    specs = (
+        [extends]
+        if isinstance(extends, str)
+        else extends
+        if isinstance(extends, list)
+        else []
+    )
     for spec in reversed(specs):  # later entries override earlier ones
-        parent = _resolve_extends(spec, config_path.parent) if isinstance(spec, str) else None
+        parent = (
+            _resolve_extends(spec, config_path.parent)
+            if isinstance(spec, str)
+            else None
+        )
         value = compiler_option(parent, name, depth + 1) if parent is not None else None
         if value is not None:
             return value
@@ -174,8 +190,18 @@ def extends_chain(config_path: Path) -> list[Path]:
     while len(chain) <= _MAX_EXTENDS_DEPTH:
         data = read_tsconfig(chain[-1])
         extends = data.get("extends") if data is not None else None
-        specs = [extends] if isinstance(extends, str) else extends if isinstance(extends, list) else []
-        parents = [_resolve_extends(spec, chain[-1].parent) for spec in specs if isinstance(spec, str)]
+        specs = (
+            [extends]
+            if isinstance(extends, str)
+            else extends
+            if isinstance(extends, list)
+            else []
+        )
+        parents = [
+            _resolve_extends(spec, chain[-1].parent)
+            for spec in specs
+            if isinstance(spec, str)
+        ]
         parent = next((found for found in reversed(parents) if found is not None), None)
         if parent is None or parent in chain:
             break
@@ -204,13 +230,21 @@ def traced_compiler_option(
     if isinstance(options, dict) and name in options:
         return options[name], True
     extends = data.get("extends")
-    specs = [extends] if isinstance(extends, str) else extends if isinstance(extends, list) else []
+    specs = (
+        [extends]
+        if isinstance(extends, str)
+        else extends
+        if isinstance(extends, list)
+        else []
+    )
     for spec in reversed(specs):  # later entries override earlier ones
         if not isinstance(spec, str):
             continue
         parent = _resolve_extends(spec, config_path.parent)
         if parent is not None:
-            value, known = traced_compiler_option(parent, name, fallback_bases, depth + 1)
+            value, known = traced_compiler_option(
+                parent, name, fallback_bases, depth + 1
+            )
         else:
             base = fallback_bases(spec) if fallback_bases is not None else None
             value, known = (None, False) if base is None else (base.get(name), True)
@@ -235,7 +269,13 @@ def _effective_paths(
 
     inherited = None
     extends = data.get("extends")
-    specs = [extends] if isinstance(extends, str) else extends if isinstance(extends, list) else []
+    specs = (
+        [extends]
+        if isinstance(extends, str)
+        else extends
+        if isinstance(extends, list)
+        else []
+    )
     for spec in specs:  # later entries override earlier ones
         if not isinstance(spec, str):
             continue
@@ -244,14 +284,25 @@ def _effective_paths(
             continue
         parent_result = _effective_paths(parent, depth + 1)
         if parent_result is not None:
-            inherited = parent_result if inherited is None else _overlay(inherited, parent_result)
+            inherited = (
+                parent_result
+                if inherited is None
+                else _overlay(inherited, parent_result)
+            )
 
     options = data.get("compilerOptions")
     options = options if isinstance(options, dict) else {}
     own_paths = options.get("paths") if isinstance(options.get("paths"), dict) else None
-    own_base = options.get("baseUrl") if isinstance(options.get("baseUrl"), str) else None
+    own_base = (
+        options.get("baseUrl") if isinstance(options.get("baseUrl"), str) else None
+    )
 
-    paths, paths_dir, base_url, base_dir = inherited or ({}, config_path.parent, None, None)
+    paths, paths_dir, base_url, base_dir = inherited or (
+        {},
+        config_path.parent,
+        None,
+        None,
+    )
     if own_paths is not None:
         paths, paths_dir = own_paths, config_path.parent
     if own_base is not None:
@@ -277,7 +328,11 @@ def _paths_to_mapping(
     project_root: Path,
 ) -> dict[str, str]:
     """Convert tsconfig ``paths`` to alias-prefix → directory (relative to root)."""
-    anchor = (base_dir / base_url).resolve() if base_url is not None and base_dir else paths_dir
+    anchor = (
+        (base_dir / base_url).resolve()
+        if base_url is not None and base_dir
+        else paths_dir
+    )
     result: dict[str, str] = {}
     for alias, targets in paths.items():
         if not isinstance(targets, list):
@@ -350,7 +405,9 @@ def parse_tsconfig_paths(project_root: Path) -> dict[str, str]:
             if base_url is not None and base_dir is not None:
                 # Bare specifiers also resolve against baseUrl ("components/x").
                 # The empty prefix sorts last, so explicit aliases win.
-                mapping.setdefault("", _relative_dir((base_dir / base_url).resolve(), root))
+                mapping.setdefault(
+                    "", _relative_dir((base_dir / base_url).resolve(), root)
+                )
         if mapping:
             return mapping
 
@@ -368,7 +425,9 @@ def extract_paths(data: dict[str, Any], base_dir: Path) -> dict[str, str] | None
     base_url = compiler_options.get("baseUrl")
     base_url = base_url if isinstance(base_url, str) else None
     resolved_dir = base_dir.resolve()
-    result = _paths_to_mapping(paths, resolved_dir, base_url, resolved_dir, resolved_dir)
+    result = _paths_to_mapping(
+        paths, resolved_dir, base_url, resolved_dir, resolved_dir
+    )
     return result or None
 
 
@@ -384,7 +443,14 @@ _TS_SOURCE_SUFFIXES = (".ts", ".tsx", ".mts", ".cts")
 # Extensionless specifiers try TypeScript sources first, then JavaScript ones
 # (``allowJs``); TypeScript never infers ``.mjs``/``.cjs``.
 _EXTENSIONLESS_SUFFIXES = (".ts", ".tsx", ".mts", ".cts", ".js", ".jsx")
-_INDEX_NAMES = ("index.ts", "index.tsx", "index.mts", "index.cts", "index.js", "index.jsx")
+_INDEX_NAMES = (
+    "index.ts",
+    "index.tsx",
+    "index.mts",
+    "index.cts",
+    "index.js",
+    "index.jsx",
+)
 _PACKAGE_ENTRY_FIELDS = ("types", "typings", "source", "module", "main")
 
 

@@ -40,13 +40,17 @@ def cmd_plan_repair_state(args: argparse.Namespace) -> None:
 
     state = runtime.state
     rebuilt_from_plan = False
-    if scan_source(state) != "scan" and has_saved_plan_without_scan(empty_state(), plan):
+    if scan_source(state) != "scan" and has_saved_plan_without_scan(
+        empty_state(), plan
+    ):
         state = reconstruct_state_from_saved_plan(empty_state(), plan)
         rebuilt_from_plan = True
 
     repaired, restored_skips = reconcile_saved_plan_skips(state, plan)
     if not rebuilt_from_plan and not restored_skips:
-        print(colorize("  No saved plan metadata available to rebuild state.", "yellow"))
+        print(
+            colorize("  No saved plan metadata available to rebuild state.", "yellow")
+        )
         return
 
     save_state(cast(StateModel, repaired), state_file)

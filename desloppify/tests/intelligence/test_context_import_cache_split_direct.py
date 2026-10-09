@@ -39,8 +39,12 @@ def test_budget_abstractions_axes_compute_and_assemble_context() -> None:
         total_function_signatures=20,
         wrappers_by_file=[{"file": "src/a.py", "count": 2}],
         one_impl_interfaces=[{"interface": "IThing"}],
-        indirection_hotspots=[{"file": "src/a.py", "max_chain_depth": 4, "chain_count": 10}],
-        wide_param_bags=[{"file": "src/a.py", "wide_functions": 2, "config_bag_mentions": 12}],
+        indirection_hotspots=[
+            {"file": "src/a.py", "max_chain_depth": 4, "chain_count": 10}
+        ],
+        wide_param_bags=[
+            {"file": "src/a.py", "wide_functions": 2, "config_bag_mentions": 12}
+        ],
         delegation_classes=[{"class_name": "Facade", "delegation_ratio": 0.8}],
         facade_modules=[{"file": "src/index.ts", "source_count": 3}],
         sub_axes=sub_axes,
@@ -54,7 +58,10 @@ def test_budget_abstractions_axes_compute_and_assemble_context() -> None:
     assert context["type_strategy_census"] == {"interface": 1}
 
 
-@pytest.mark.skipif(get_parser("typescript") is None, reason="needs tree-sitter with the typescript grammar")
+@pytest.mark.skipif(
+    get_parser("typescript") is None,
+    reason="needs tree-sitter with the typescript grammar",
+)
 def test_budget_scan_and_wrappers_patterns_helpers() -> None:
     code = (
         "function target(x) { return x; }\n"
@@ -76,7 +83,9 @@ def test_budget_scan_and_wrappers_patterns_helpers() -> None:
     assert delegation[0]["delegate_target"] == "repo"
 
     facade_code = "export { A, B } from './a';\nexport * from './b';\n"
-    facade = wrappers_mod._find_facade_modules(facade_code, parse_text(facade_code, "src/index.ts"), loc=2)
+    facade = wrappers_mod._find_facade_modules(
+        facade_code, parse_text(facade_code, "src/index.ts"), loc=2
+    )
     assert facade is not None
 
     collector = scan_mod._AbstractionsCollector()

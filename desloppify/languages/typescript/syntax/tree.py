@@ -75,7 +75,9 @@ class ParsedSource:
         return self.tree.root_node
 
     def text(self, node) -> str:
-        return self.source[node.start_byte : node.end_byte].decode("utf-8", errors="replace")
+        return self.source[node.start_byte : node.end_byte].decode(
+            "utf-8", errors="replace"
+        )
 
     @cached_property
     def _line_starts(self) -> list[int] | None:

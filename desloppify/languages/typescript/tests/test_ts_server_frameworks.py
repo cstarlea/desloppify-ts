@@ -61,8 +61,18 @@ class _FakeLang(SimpleNamespace):
 @pytest.mark.parametrize(
     ("source", "is_async", "params", "block"),
     [
-        ("async (req: Request, res: Response): Promise<void> => { x }", True, ("req", "res"), True),
-        ("function handler(err, req, res, next) { x }", False, ("err", "req", "res", "next"), True),
+        (
+            "async (req: Request, res: Response): Promise<void> => { x }",
+            True,
+            ("req", "res"),
+            True,
+        ),
+        (
+            "function handler(err, req, res, next) { x }",
+            False,
+            ("err", "req", "res", "next"),
+            True,
+        ),
         ("c => c.text('hi')", False, ("c",), False),
         ("async ({ params }, reply) => { x }", True, ("", "reply"), True),
     ],
@@ -70,7 +80,11 @@ class _FakeLang(SimpleNamespace):
 def test_function_reader(source, is_async, params, block):
     function = function_at(code_text(source), 0)
     assert function is not None
-    assert (function.is_async, function.params, function.body is not None) == (is_async, params, block)
+    assert (function.is_async, function.params, function.body is not None) == (
+        is_async,
+        params,
+        block,
+    )
 
 
 def test_function_reader_rejects_a_call():
@@ -80,7 +94,10 @@ def test_function_reader_rejects_a_call():
 # ── detection ────────────────────────────────────────────────
 
 
-@pytest.mark.parametrize(("dep", "framework"), [("express", "express"), ("hono", "hono"), ("fastify", "fastify")])
+@pytest.mark.parametrize(
+    ("dep", "framework"),
+    [("express", "express"), ("hono", "hono"), ("fastify", "fastify")],
+)
 def test_detection(tmp_path: Path, dep: str, framework: str):
     _write(tmp_path, "package.json", f'{{"dependencies": {{"{dep}": "^4.0.0"}}}}')
     assert framework in detect_ecosystem_frameworks(tmp_path, None, "node").present
@@ -175,7 +192,11 @@ def test_hono_unawaited_next(tmp_path: Path):
 
 
 def test_hono_rules_ignore_other_files(tmp_path: Path):
-    _write(tmp_path, "package.json", '{"dependencies": {"hono": "^4.0.0", "express": "^4.0.0"}}')
+    _write(
+        tmp_path,
+        "package.json",
+        '{"dependencies": {"hono": "^4.0.0", "express": "^4.0.0"}}',
+    )
     _write(
         tmp_path,
         "src/express.ts",
@@ -186,7 +207,11 @@ def test_hono_rules_ignore_other_files(tmp_path: Path):
 
 
 def test_wrangler_main(tmp_path: Path):
-    _write(tmp_path, "wrangler.jsonc", '{\n  // worker\n  "name": "x",\n  "main": "./workers/app.ts",\n}\n')
+    _write(
+        tmp_path,
+        "wrangler.jsonc",
+        '{\n  // worker\n  "name": "x",\n  "main": "./workers/app.ts",\n}\n',
+    )
     _write(tmp_path, "workers/app.ts", "export default {}\n")
     assert WRANGLER_ENTRY_CONVENTIONS.applies_to(tmp_path)
     assert wrangler_main(tmp_path) == {"workers/app.ts"}
@@ -199,7 +224,11 @@ def test_wrangler_toml_main(tmp_path: Path):
 
 
 def test_honox_entries(tmp_path: Path):
-    _write(tmp_path, "vite.config.ts", "import honox from 'honox/vite'\nexport default { plugins: [honox()] }\n")
+    _write(
+        tmp_path,
+        "vite.config.ts",
+        "import honox from 'honox/vite'\nexport default { plugins: [honox()] }\n",
+    )
     _write(tmp_path, "app/client.ts", "export {}\n")
     assert HONOX_ENTRY_CONVENTIONS.applies_to(tmp_path)
     assert honox_entries(tmp_path) == {"app/routes/", "app/islands/", "app/client.ts"}
@@ -228,7 +257,11 @@ def test_fastify_async_with_done(tmp_path: Path):
 
 
 def test_fastify_autoload_dirs_are_entries(tmp_path: Path):
-    _write(tmp_path, "package.json", '{"dependencies": {"fastify": "^5.0.0", "@fastify/autoload": "^6.0.0"}}')
+    _write(
+        tmp_path,
+        "package.json",
+        '{"dependencies": {"fastify": "^5.0.0", "@fastify/autoload": "^6.0.0"}}',
+    )
     _write(
         tmp_path,
         "src/app.ts",
@@ -245,12 +278,17 @@ def test_fastify_autoload_dirs_are_entries(tmp_path: Path):
     plugin = _write(tmp_path, "src/plugins/external/cors.ts", body)
     route = _write(tmp_path, "src/routes/api/users.ts", body)
     orphan = _write(tmp_path, "src/lib/unused.ts", body)
-    graph = {str(p): {"importer_count": 0, "import_count": 0} for p in (plugin, route, orphan)}
+    graph = {
+        str(p): {"importer_count": 0, "import_count": 0}
+        for p in (plugin, route, orphan)
+    }
     entries, _ = detect_orphaned_files(
         tmp_path,
         graph,
         [".ts"],
-        options=OrphanedDetectionOptions(entry_conventions=(FASTIFY_ENTRY_CONVENTIONS,)),
+        options=OrphanedDetectionOptions(
+            entry_conventions=(FASTIFY_ENTRY_CONVENTIONS,)
+        ),
     )
     assert [e["file"] for e in entries] == [str(orphan)]
 

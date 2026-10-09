@@ -29,13 +29,27 @@ def _services(plan: dict, state: dict):
     )
 
 
-def test_cmd_stage_strategize_persists_briefing_and_auto_confirms(monkeypatch, capsys) -> None:
-    plan = {"queue_order": list(TRIAGE_STAGE_IDS), "epic_triage_meta": {"triage_stages": {}}, "execution_log": [], "commit_log": []}
-    state = {"scan_count": 1, "scan_history": [], "dimension_scores": {}, "work_items": {}}
+def test_cmd_stage_strategize_persists_briefing_and_auto_confirms(
+    monkeypatch, capsys
+) -> None:
+    plan = {
+        "queue_order": list(TRIAGE_STAGE_IDS),
+        "epic_triage_meta": {"triage_stages": {}},
+        "execution_log": [],
+        "commit_log": [],
+    }
+    state = {
+        "scan_count": 1,
+        "scan_history": [],
+        "dimension_scores": {},
+        "work_items": {},
+    }
     events: list[dict] = []
 
     monkeypatch.setattr(strategize_mod, "load_progression", lambda: [])
-    monkeypatch.setattr(strategize_mod, "append_progression_event", lambda event: events.append(event))
+    monkeypatch.setattr(
+        strategize_mod, "append_progression_event", lambda event: events.append(event)
+    )
     monkeypatch.setattr(
         strategize_mod,
         "collect_strategist_input",
@@ -77,7 +91,12 @@ def test_cmd_stage_strategize_persists_briefing_and_auto_confirms(monkeypatch, c
 
 
 def test_observe_is_blocked_until_strategize_is_recorded(capsys) -> None:
-    plan = {"queue_order": list(TRIAGE_STAGE_IDS), "epic_triage_meta": {"triage_stages": {}}, "execution_log": [], "commit_log": []}
+    plan = {
+        "queue_order": list(TRIAGE_STAGE_IDS),
+        "epic_triage_meta": {"triage_stages": {}},
+        "execution_log": [],
+        "commit_log": [],
+    }
     state = {"work_items": {}}
 
     progress = compute_triage_progress(plan["epic_triage_meta"]["triage_stages"])
@@ -96,7 +115,11 @@ def test_observe_is_blocked_until_strategize_is_recorded(capsys) -> None:
 def test_legacy_tolerance_backfills_strategize_for_progress_and_sync() -> None:
     legacy_meta = {
         "triage_stages": {
-            "observe": {"stage": "observe", "report": "ok", "confirmed_at": "2026-03-01T00:00:00+00:00"},
+            "observe": {
+                "stage": "observe",
+                "report": "ok",
+                "confirmed_at": "2026-03-01T00:00:00+00:00",
+            },
             "reflect": {"stage": "reflect", "report": "ok"},
         }
     }
@@ -124,7 +147,9 @@ def test_cli_accepts_stage_and_stage_prompt_and_confirm() -> None:
     parsed_prompt = parser.parse_args(["triage", "--stage-prompt", "strategize"])
     assert parsed_prompt.stage_prompt == "strategize"
 
-    parsed_reqs = parser.parse_args(["triage", "--stage", "reflect", "--show-requirements"])
+    parsed_reqs = parser.parse_args(
+        ["triage", "--stage", "reflect", "--show-requirements"]
+    )
     assert parsed_reqs.stage == "reflect"
     assert parsed_reqs.show_requirements is True
 
@@ -136,7 +161,9 @@ def test_show_requirements_prints_stage_without_loading_state(capsys) -> None:
     calls = {"runtime": 0}
 
     services = SimpleNamespace(
-        command_runtime=lambda _args: calls.__setitem__("runtime", calls["runtime"] + 1),
+        command_runtime=lambda _args: calls.__setitem__(
+            "runtime", calls["runtime"] + 1
+        ),
     )
 
     run_triage_workflow(

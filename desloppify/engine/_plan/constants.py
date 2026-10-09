@@ -27,7 +27,8 @@ TRIAGE_STAGE_SPECS = tuple(
     (stage_id.removeprefix("triage::"), stage_id) for stage_id in TRIAGE_STAGE_IDS
 )
 TRIAGE_STAGE_ORDER = {
-    stage_name: index for index, (stage_name, _stage_id) in enumerate(TRIAGE_STAGE_SPECS)
+    stage_name: index
+    for index, (stage_name, _stage_id) in enumerate(TRIAGE_STAGE_SPECS)
 }
 TRIAGE_IDS = set(TRIAGE_STAGE_IDS)
 _TRIAGE_STAGE_NAMES = {
@@ -145,7 +146,9 @@ def confirmed_triage_stage_names(meta_or_stages: dict[str, Any] | None) -> set[s
     }
 
 
-def recorded_unconfirmed_triage_stage_names(meta_or_stages: dict[str, Any] | None) -> set[str]:
+def recorded_unconfirmed_triage_stage_names(
+    meta_or_stages: dict[str, Any] | None,
+) -> set[str]:
     """Return recorded triage stage names that still need confirmation."""
     return {
         str(name)

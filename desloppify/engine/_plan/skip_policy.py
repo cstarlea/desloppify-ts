@@ -56,7 +56,13 @@ def skip_kind_state_status(kind: str) -> str | None:
 
 def skip_kind_needs_state_reopen(kind: str) -> bool:
     """Return True when unskip should reopen state-layer status."""
-    return kind in {"permanent", "false_positive", "temporary", "triaged_out", "triage_observe_auto"}
+    return kind in {
+        "permanent",
+        "false_positive",
+        "temporary",
+        "triaged_out",
+        "triage_observe_auto",
+    }
 
 
 __all__ = [

@@ -22,7 +22,9 @@ needs_treesitter = pytest.mark.skipif(
 
 def _fix(source: str, *lines: int, path: str = "a.tsx"):
     parsed = parse_text(source, path)
-    out, fixed, skipped = remove_dead_effects(parsed, [{"line": line} for line in lines])
+    out, fixed, skipped = remove_dead_effects(
+        parsed, [{"line": line} for line in lines]
+    )
     text = out.decode("utf-8")
     assert count_syntax_errors(text, path) == 0, text
     return text, [entry["line"] for entry in fixed], skipped
@@ -38,10 +40,15 @@ def _fix(source: str, *lines: int, path: str = "a.tsx"):
             "foo();\nbar();\n",
             id="multiline",
         ),
-        pytest.param("useEffect(() => {}, []);\nfoo();\n", 1, "foo();\n", id="one-line"),
+        pytest.param(
+            "useEffect(() => {}, []);\nfoo();\n", 1, "foo();\n", id="one-line"
+        ),
         pytest.param("useEffect(() => {});\nfoo();\n", 1, "foo();\n", id="no-deps"),
         pytest.param(
-            "React.useEffect(() => {}, [a, b.c]);\nfoo();\n", 1, "foo();\n", id="react-member"
+            "React.useEffect(() => {}, [a, b.c]);\nfoo();\n",
+            1,
+            "foo();\n",
+            id="react-member",
         ),
         pytest.param(
             "useEffect(function () {\n  return;\n}, [id]);\nfoo();\n",
@@ -77,27 +84,63 @@ def test_remove_dead_effects(source, line, expected):
 @pytest.mark.parametrize(
     ("source", "line", "reason"),
     [
-        pytest.param("useEffect(() => {\n  load();\n}, []);\n", 1, "not_empty", id="statements"),
-        pytest.param("useEffect(() => {\n  // TODO\n}, []);\n", 1, "not_empty", id="comment-only"),
-        pytest.param("useEffect(() => {}, /* deps */ []);\n", 1, "not_empty", id="comment-in-args"),
-        pytest.param("useEffect(() => { return cleanup; });\n", 1, "not_empty", id="returns-value"),
-        pytest.param("useEffect(() => undefined, []);\n", 1, "not_empty", id="expression-body"),
+        pytest.param(
+            "useEffect(() => {\n  load();\n}, []);\n", 1, "not_empty", id="statements"
+        ),
+        pytest.param(
+            "useEffect(() => {\n  // TODO\n}, []);\n", 1, "not_empty", id="comment-only"
+        ),
+        pytest.param(
+            "useEffect(() => {}, /* deps */ []);\n",
+            1,
+            "not_empty",
+            id="comment-in-args",
+        ),
+        pytest.param(
+            "useEffect(() => { return cleanup; });\n",
+            1,
+            "not_empty",
+            id="returns-value",
+        ),
+        pytest.param(
+            "useEffect(() => undefined, []);\n", 1, "not_empty", id="expression-body"
+        ),
         pytest.param("useEffect(effect, []);\n", 1, "not_empty", id="named-callback"),
-        pytest.param("useEffect(() => {}, [load()]);\n", 1, "side_effects", id="call-in-deps"),
-        pytest.param("useEffect(() => {}, [...deps]);\n", 1, "side_effects", id="spread-deps"),
-        pytest.param("useEffect(() => {}, (n = 1, []));\n", 1, "side_effects", id="sequence-deps"),
-        pytest.param("const x = useEffect(() => {}, []);\n", 1, "not_standalone", id="assigned"),
         pytest.param(
-            "if (a) useEffect(() => {}, []);\n", 1, "not_standalone", id="unbraced-if-body"
+            "useEffect(() => {}, [load()]);\n", 1, "side_effects", id="call-in-deps"
         ),
         pytest.param(
-            "const f = () => useEffect(() => {}, []);\n", 1, "not_standalone", id="arrow-body"
+            "useEffect(() => {}, [...deps]);\n", 1, "side_effects", id="spread-deps"
         ),
         pytest.param(
-            "let a = 1\nuseEffect(() => {}, []);\n(foo)()\n", 2, "asi_hazard", id="no-semicolons"
+            "useEffect(() => {}, (n = 1, []));\n", 1, "side_effects", id="sequence-deps"
         ),
         pytest.param(
-            "const s = `\nuseEffect(() => {\n}, []);\n`;\n", 2, "not_found", id="template-string"
+            "const x = useEffect(() => {}, []);\n", 1, "not_standalone", id="assigned"
+        ),
+        pytest.param(
+            "if (a) useEffect(() => {}, []);\n",
+            1,
+            "not_standalone",
+            id="unbraced-if-body",
+        ),
+        pytest.param(
+            "const f = () => useEffect(() => {}, []);\n",
+            1,
+            "not_standalone",
+            id="arrow-body",
+        ),
+        pytest.param(
+            "let a = 1\nuseEffect(() => {}, []);\n(foo)()\n",
+            2,
+            "asi_hazard",
+            id="no-semicolons",
+        ),
+        pytest.param(
+            "const s = `\nuseEffect(() => {\n}, []);\n`;\n",
+            2,
+            "not_found",
+            id="template-string",
         ),
         pytest.param("foo();\n", 1, "not_found", id="stale"),
     ],
@@ -112,12 +155,24 @@ def test_skips(source, line, reason):
 @needs_treesitter
 def test_fix_dead_useeffect_writes_and_reports(tmp_path):
     tsx_file = tmp_path / "a.tsx"
-    tsx_file.write_text("useEffect(() => {}, []);\nuseEffect(() => {}, [load()]);\nfoo();\n")
+    tsx_file.write_text(
+        "useEffect(() => {}, []);\nuseEffect(() => {}, [load()]);\nfoo();\n"
+    )
 
     result = fix_dead_useeffect(
         [
-            {"file": str(tsx_file), "line": 1, "smell_id": "dead_useeffect", "issue_id": "s::a"},
-            {"file": str(tsx_file), "line": 2, "smell_id": "dead_useeffect", "issue_id": "s::a"},
+            {
+                "file": str(tsx_file),
+                "line": 1,
+                "smell_id": "dead_useeffect",
+                "issue_id": "s::a",
+            },
+            {
+                "file": str(tsx_file),
+                "line": 2,
+                "smell_id": "dead_useeffect",
+                "issue_id": "s::a",
+            },
         ]
     )
 

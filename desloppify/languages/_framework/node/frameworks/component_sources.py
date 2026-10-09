@@ -69,7 +69,9 @@ class ImportRef:
     clause: str
 
 
-def package_sources(path: Path, *, scripts: bool = True, components: bool = True) -> Iterator[SourceFile]:
+def package_sources(
+    path: Path, *, scripts: bool = True, components: bool = True
+) -> Iterator[SourceFile]:
     """Non-test sources of the package at *path*."""
     files: list[str] = []
     if scripts:
@@ -80,17 +82,25 @@ def package_sources(path: Path, *, scripts: bool = True, components: bool = True
         normalized = "/" + filepath.replace("\\", "/")
         if any(marker in normalized for marker in _NON_MODULE_MARKERS):
             continue
-        full = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
+        full = (
+            Path(filepath)
+            if Path(filepath).is_absolute()
+            else get_project_root() / filepath
+        )
         try:
             text = full.read_text(encoding="utf-8", errors="replace")
         except OSError as exc:
-            logger.debug("Skipping unreadable framework candidate %s: %s", filepath, exc)
+            logger.debug(
+                "Skipping unreadable framework candidate %s: %s", filepath, exc
+            )
             continue
         view = sfc_code(text, filepath).view if is_sfc(filepath) else text
         yield SourceFile(filepath, full, text, code_text(view))
 
 
-def imports(source: SourceFile, start: int = 0, end: int | None = None) -> Iterator[ImportRef]:
+def imports(
+    source: SourceFile, start: int = 0, end: int | None = None
+) -> Iterator[ImportRef]:
     """Static and dynamic imports (and re-exports) in ``source`` between the offsets."""
     end = len(source.text) if end is None else end
     for match in _IMPORT_RE.finditer(source.text, start, end):
@@ -100,7 +110,9 @@ def imports(source: SourceFile, start: int = 0, end: int | None = None) -> Itera
             continue
         module = match.group("module") or match.group("bare") or match.group("dynamic")
         clause = match.group("clause") or ""
-        if match.group("kw") == "export" and not re.match(r"\s*(?:type\s+)?(?:\*|\{)", clause):
+        if match.group("kw") == "export" and not re.match(
+            r"\s*(?:type\s+)?(?:\*|\{)", clause
+        ):
             continue
         yield ImportRef(at, module, _type_only(clause), clause)
 
@@ -139,7 +151,9 @@ def body_span(code: str, function: FunctionLiteral) -> tuple[int, int]:
 def dependency_major(package_root: Path, name: str) -> int | None:
     """The major version a package's manifest asks for *name* (None when not a number)."""
     try:
-        payload = json.loads((package_root / "package.json").read_text(encoding="utf-8"))
+        payload = json.loads(
+            (package_root / "package.json").read_text(encoding="utf-8")
+        )
     except (OSError, UnicodeDecodeError, ValueError):
         return None
     for key in ("dependencies", "devDependencies", "peerDependencies"):
@@ -151,4 +165,11 @@ def dependency_major(package_root: Path, name: str) -> int | None:
     return None
 
 
-__all__ = ["ImportRef", "SourceFile", "body_span", "dependency_major", "imports", "package_sources"]
+__all__ = [
+    "ImportRef",
+    "SourceFile",
+    "body_span",
+    "dependency_major",
+    "imports",
+    "package_sources",
+]

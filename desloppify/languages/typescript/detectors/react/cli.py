@@ -47,7 +47,10 @@ def cmd_react(args: argparse.Namespace) -> None:
         )
     )
 
-    rows = [[rel(e["file"]), str(e["line"]), ", ".join(e["setters"])] for e in entries[: args.top]]
+    rows = [
+        [rel(e["file"]), str(e["line"]), ", ".join(e["setters"])]
+        for e in entries[: args.top]
+    ]
     print_table(["File", "Line", "Setters"], rows, [60, 6, 40])
     print()
 

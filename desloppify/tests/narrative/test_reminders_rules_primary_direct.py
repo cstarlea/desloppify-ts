@@ -11,7 +11,11 @@ import desloppify.intelligence.narrative.reminders_rules_primary as primary_mod
 def test_compute_fp_rates_merges_structural_and_applies_threshold() -> None:
     issues = {
         "a": {"detector": "large", "zone": "production", "status": "false_positive"},
-        "b": {"detector": "complexity", "zone": "production", "status": "false_positive"},
+        "b": {
+            "detector": "complexity",
+            "zone": "production",
+            "status": "false_positive",
+        },
         "c": {"detector": "gods", "zone": "production", "status": "open"},
         "d": {"detector": "concerns", "zone": "production", "status": "open"},
         "e": {"detector": "concerns", "zone": "production", "status": "open"},
@@ -27,7 +31,11 @@ def test_autofix_rescan_badge_and_dry_run_reminders() -> None:
     auto = primary_mod._auto_fixer_reminder(
         [
             {"type": "manual_fix", "count": 1},
-            {"type": "auto_fix", "count": 3, "command": "desloppify autofix unused-imports --dry-run"},
+            {
+                "type": "auto_fix",
+                "count": 3,
+                "command": "desloppify autofix unused-imports --dry-run",
+            },
             {"type": "auto_fix", "count": 2, "command": "x"},
         ]
     )
@@ -77,7 +85,10 @@ def test_wontfix_debt_and_ignore_suppression_reminders(monkeypatch) -> None:
         {"ignore_integrity": {"ignored": 12, "suppressed_pct": 31.5}}
     )
     assert ignore and ignore[0]["type"] == "ignore_suppression_high"
-    assert primary_mod._ignore_suppression_reminder({"ignore_integrity": {"ignored": 1}}) == []
+    assert (
+        primary_mod._ignore_suppression_reminder({"ignore_integrity": {"ignored": 1}})
+        == []
+    )
 
 
 def test_stagnation_zone_and_fp_calibration_reminders() -> None:
@@ -108,4 +119,3 @@ def test_stagnation_zone_and_fp_calibration_reminders() -> None:
 
 def test_feedback_base_url_passthrough() -> None:
     assert primary_mod._feedback_base_url() == primary_mod._FEEDBACK_URL
-

@@ -58,7 +58,12 @@ def cmd_stage_observe(
 
     if "strategize" not in stages:
         print(colorize("  Cannot observe: strategize stage not complete.", "red"))
-        print(colorize('  Run: desloppify plan triage --stage strategize --report "{...}"', "dim"))
+        print(
+            colorize(
+                '  Run: desloppify plan triage --stage strategize --report "{...}"',
+                "dim",
+            )
+        )
         return
 
     report, is_reuse = resolve_reusable_report(report, existing_stage)
@@ -115,10 +120,16 @@ def cmd_stage_observe(
     blocking = [failure for failure in evidence_failures if failure.blocking]
     advisory = [failure for failure in evidence_failures if not failure.blocking]
     if blocking:
-        print(colorize(format_evidence_failures(blocking, stage_label="observe"), "red"))
+        print(
+            colorize(format_evidence_failures(blocking, stage_label="observe"), "red")
+        )
         return
     if advisory:
-        print(colorize(format_evidence_failures(advisory, stage_label="observe"), "yellow"))
+        print(
+            colorize(
+                format_evidence_failures(advisory, stage_label="observe"), "yellow"
+            )
+        )
 
     assessments = [
         {
@@ -180,11 +191,17 @@ def cmd_stage_observe(
         plan,
         "triage_observe",
         actor="user",
-        detail={"issue_count": issue_count, "cited_ids": sorted(cited), "reuse": is_reuse},
+        detail={
+            "issue_count": issue_count,
+            "cited_ids": sorted(cited),
+            "reuse": is_reuse,
+        },
     )
     resolved_services.save_plan(plan)
 
-    print(colorize(f"  Observe stage recorded: {issue_count} issues analysed.", "green"))
+    print(
+        colorize(f"  Observe stage recorded: {issue_count} issues analysed.", "green")
+    )
     if is_reuse:
         print(colorize("  Observe data preserved (no changes).", "dim"))
         if cleared:
@@ -201,6 +218,7 @@ def cmd_stage_observe(
         " genuine / false positive / exaggerated / not-worth-it. Don't confirm"
         " until the analysis is backed by actual code evidence."
     )
+
 
 _cmd_stage_observe = cmd_stage_observe
 

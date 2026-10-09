@@ -21,7 +21,9 @@ _PROMISE_AWARE = ("express-async-errors", "express-promise-router", "@awaitjs/ex
 def express_major(package_root: Path) -> int | None:
     """Major version of the express dependency the package declares."""
     try:
-        payload = json.loads((package_root / "package.json").read_text(encoding="utf-8"))
+        payload = json.loads(
+            (package_root / "package.json").read_text(encoding="utf-8")
+        )
     except (OSError, UnicodeDecodeError, ValueError):
         return None
     if not isinstance(payload, dict):
@@ -52,7 +54,11 @@ def scan_express_unhandled_async_handlers(path: Path) -> tuple[list[dict], int]:
     for source in source_files(path, _MODULES):
         scanned += 1
         for call_at, function in route_handlers(source):
-            if not function.is_async or function.body is None or len(function.params) < 2:
+            if (
+                not function.is_async
+                or function.body is None
+                or len(function.params) < 2
+            ):
                 continue
             start, end = function.body
             if not _AWAIT_RE.search(source.code, start, end):
@@ -76,7 +82,11 @@ def scan_express_misshapen_error_handlers(path: Path) -> tuple[list[dict], int]:
                 continue
             if len(function.params) == 3 and function.params[0] in _ERROR_PARAM_NAMES:
                 entries.append(
-                    {"file": source.path, "line": source.line(call_at), "param": function.params[0]}
+                    {
+                        "file": source.path,
+                        "line": source.line(call_at),
+                        "param": function.params[0],
+                    }
                 )
     return entries, scanned
 

@@ -55,7 +55,9 @@ class TestDeltaSuffix:
 
 
 class TestPrintResolveSummary:
-    @patch("desloppify.app.commands.resolve.render.colorize", side_effect=lambda t, _c: t)
+    @patch(
+        "desloppify.app.commands.resolve.render.colorize", side_effect=lambda t, _c: t
+    )
     def test_basic_summary(self, _mock_colorize, capsys):
         _print_resolve_summary(status="fixed", all_resolved=["f1", "f2"])
         out = capsys.readouterr().out
@@ -63,7 +65,9 @@ class TestPrintResolveSummary:
         assert "f1" in out
         assert "f2" in out
 
-    @patch("desloppify.app.commands.resolve.render.colorize", side_effect=lambda t, _c: t)
+    @patch(
+        "desloppify.app.commands.resolve.render.colorize", side_effect=lambda t, _c: t
+    )
     def test_truncation_over_20(self, _mock_colorize, capsys):
         ids = [f"issue-{i}" for i in range(25)]
         _print_resolve_summary(status="wontfix", all_resolved=ids)
@@ -74,25 +78,25 @@ class TestPrintResolveSummary:
 
 
 class TestPrintWontfixBatchWarning:
-    @patch("desloppify.app.commands.resolve.render.colorize", side_effect=lambda t, _c: t)
+    @patch(
+        "desloppify.app.commands.resolve.render.colorize", side_effect=lambda t, _c: t
+    )
     def test_no_warning_for_non_wontfix(self, _mock_colorize, capsys):
-        _print_wontfix_batch_warning(
-            {"issues": {}}, status="fixed", resolved_count=20
-        )
+        _print_wontfix_batch_warning({"issues": {}}, status="fixed", resolved_count=20)
         assert capsys.readouterr().out == ""
 
-    @patch("desloppify.app.commands.resolve.render.colorize", side_effect=lambda t, _c: t)
+    @patch(
+        "desloppify.app.commands.resolve.render.colorize", side_effect=lambda t, _c: t
+    )
     def test_no_warning_when_count_low(self, _mock_colorize, capsys):
-        _print_wontfix_batch_warning(
-            {"issues": {}}, status="wontfix", resolved_count=5
-        )
+        _print_wontfix_batch_warning({"issues": {}}, status="wontfix", resolved_count=5)
         assert capsys.readouterr().out == ""
 
-    @patch("desloppify.app.commands.resolve.render.colorize", side_effect=lambda t, _c: t)
+    @patch(
+        "desloppify.app.commands.resolve.render.colorize", side_effect=lambda t, _c: t
+    )
     def test_warning_shown_for_large_wontfix_batch(self, _mock_colorize, capsys):
-        issues = {
-            f"f{i}": {"status": "wontfix"} for i in range(15)
-        }
+        issues = {f"f{i}": {"status": "wontfix"} for i in range(15)}
         issues["open1"] = {"status": "open"}
         state = {"issues": issues}
         _print_wontfix_batch_warning(state, status="wontfix", resolved_count=15)
@@ -103,10 +107,18 @@ class TestPrintWontfixBatchWarning:
 
 class TestPrintScoreMovement:
     @patch("desloppify.app.commands.resolve.render_support.score_snapshot")
-    @patch("desloppify.app.commands.resolve.render_support.colorize", side_effect=lambda t, _c: t)
-    @patch("desloppify.app.commands.resolve.render.colorize", side_effect=lambda t, _c: t)
-    def test_scores_unavailable(self, _mock_colorize, _mock_colorize2, mock_score_snapshot, capsys):
+    @patch(
+        "desloppify.app.commands.resolve.render_support.colorize",
+        side_effect=lambda t, _c: t,
+    )
+    @patch(
+        "desloppify.app.commands.resolve.render.colorize", side_effect=lambda t, _c: t
+    )
+    def test_scores_unavailable(
+        self, _mock_colorize, _mock_colorize2, mock_score_snapshot, capsys
+    ):
         from desloppify.state import ScoreSnapshot
+
         mock_score_snapshot.return_value = ScoreSnapshot(
             overall=None, objective=None, strict=None, verified=None
         )
@@ -122,10 +134,18 @@ class TestPrintScoreMovement:
         assert "Scores unavailable" in out
 
     @patch("desloppify.app.commands.resolve.render_support.score_snapshot")
-    @patch("desloppify.app.commands.resolve.render_support.colorize", side_effect=lambda t, _c: t)
-    @patch("desloppify.app.commands.resolve.render.colorize", side_effect=lambda t, _c: t)
-    def test_scores_with_deltas(self, _mock_colorize, _mock_colorize2, mock_score_snapshot, capsys):
+    @patch(
+        "desloppify.app.commands.resolve.render_support.colorize",
+        side_effect=lambda t, _c: t,
+    )
+    @patch(
+        "desloppify.app.commands.resolve.render.colorize", side_effect=lambda t, _c: t
+    )
+    def test_scores_with_deltas(
+        self, _mock_colorize, _mock_colorize2, mock_score_snapshot, capsys
+    ):
         from desloppify.state import ScoreSnapshot
+
         mock_score_snapshot.return_value = ScoreSnapshot(
             overall=55.0, objective=65.0, strict=45.0, verified=35.0
         )
@@ -142,10 +162,18 @@ class TestPrintScoreMovement:
         assert "(+5.0)" in out
 
     @patch("desloppify.app.commands.resolve.render_support.score_snapshot")
-    @patch("desloppify.app.commands.resolve.render_support.colorize", side_effect=lambda t, _c: t)
-    @patch("desloppify.app.commands.resolve.render.colorize", side_effect=lambda t, _c: t)
-    def test_review_issues_unchanged_hint(self, _mock_colorize, _mock_colorize2, mock_score_snapshot, capsys):
+    @patch(
+        "desloppify.app.commands.resolve.render_support.colorize",
+        side_effect=lambda t, _c: t,
+    )
+    @patch(
+        "desloppify.app.commands.resolve.render.colorize", side_effect=lambda t, _c: t
+    )
+    def test_review_issues_unchanged_hint(
+        self, _mock_colorize, _mock_colorize2, mock_score_snapshot, capsys
+    ):
         from desloppify.state import ScoreSnapshot
+
         mock_score_snapshot.return_value = ScoreSnapshot(
             overall=50.0, objective=60.0, strict=40.0, verified=30.0
         )
@@ -163,10 +191,18 @@ class TestPrintScoreMovement:
         assert "review issues" in out
 
     @patch("desloppify.app.commands.resolve.render_support.score_snapshot")
-    @patch("desloppify.app.commands.resolve.render_support.colorize", side_effect=lambda t, _c: t)
-    @patch("desloppify.app.commands.resolve.render.colorize", side_effect=lambda t, _c: t)
-    def test_fixed_status_verified_hint(self, _mock_colorize, _mock_colorize2, mock_score_snapshot, capsys):
+    @patch(
+        "desloppify.app.commands.resolve.render_support.colorize",
+        side_effect=lambda t, _c: t,
+    )
+    @patch(
+        "desloppify.app.commands.resolve.render.colorize", side_effect=lambda t, _c: t
+    )
+    def test_fixed_status_verified_hint(
+        self, _mock_colorize, _mock_colorize2, mock_score_snapshot, capsys
+    ):
         from desloppify.state import ScoreSnapshot
+
         mock_score_snapshot.return_value = ScoreSnapshot(
             overall=55.0, objective=65.0, strict=45.0, verified=35.0
         )
@@ -183,7 +219,9 @@ class TestPrintScoreMovement:
 
 
 class TestPrintNextCommand:
-    @patch("desloppify.app.commands.resolve.render.colorize", side_effect=lambda t, _c: t)
+    @patch(
+        "desloppify.app.commands.resolve.render.colorize", side_effect=lambda t, _c: t
+    )
     def test_no_open_remaining(self, _mock_colorize, capsys):
         state = {"issues": {"f1": {"status": "fixed", "detector": "smells"}}}
         result = _print_next_command(state)
@@ -191,7 +229,9 @@ class TestPrintNextCommand:
         assert "desloppify scan" in out
         assert result == "desloppify scan"
 
-    @patch("desloppify.app.commands.resolve.render.colorize", side_effect=lambda t, _c: t)
+    @patch(
+        "desloppify.app.commands.resolve.render.colorize", side_effect=lambda t, _c: t
+    )
     def test_review_remaining(self, _mock_colorize, capsys):
         state = {
             "issues": {
@@ -204,18 +244,20 @@ class TestPrintNextCommand:
         assert "2 issues remaining" in out
         assert result == "desloppify next"
 
-    @patch("desloppify.app.commands.resolve.render.colorize", side_effect=lambda t, _c: t)
+    @patch(
+        "desloppify.app.commands.resolve.render.colorize", side_effect=lambda t, _c: t
+    )
     def test_single_review_remaining_no_plural(self, _mock_colorize, capsys):
-        state = {
-            "issues": {"f1": {"status": "open", "detector": "review"}}
-        }
+        state = {"issues": {"f1": {"status": "open", "detector": "review"}}}
         _print_next_command(state)
         out = capsys.readouterr().out
         assert "1 issue remaining" in out
 
 
 class TestPrintSubjectiveResetHint:
-    @patch("desloppify.app.commands.resolve.render.colorize", side_effect=lambda t, _c: t)
+    @patch(
+        "desloppify.app.commands.resolve.render.colorize", side_effect=lambda t, _c: t
+    )
     def test_no_hint_when_no_review_issues(self, _mock_colorize, capsys):
         state = {
             "issues": {"f1": {"detector": "smells", "status": "open"}},
@@ -227,7 +269,9 @@ class TestPrintSubjectiveResetHint:
         )
         assert capsys.readouterr().out == ""
 
-    @patch("desloppify.app.commands.resolve.render.colorize", side_effect=lambda t, _c: t)
+    @patch(
+        "desloppify.app.commands.resolve.render.colorize", side_effect=lambda t, _c: t
+    )
     def test_hint_shown_for_resolved_review_issues(self, _mock_colorize, capsys):
         state = {
             "issues": {
@@ -278,9 +322,7 @@ class TestFormatStrictTargetProgress:
         assert target is None
 
     def test_target_without_current(self):
-        lines, target, gap = format_strict_target_progress(
-            {"target": 80.0}
-        )
+        lines, target, gap = format_strict_target_progress({"target": 80.0})
         assert target == 80.0
         assert gap is None
         assert any("unavailable" in line for line, _ in lines)
@@ -319,7 +361,13 @@ class TestFormatStrictTargetProgress:
 
     def test_warning_plus_below(self):
         lines, target, gap = format_strict_target_progress(
-            {"target": 80.0, "current": 70.0, "gap": 10.0, "state": "below", "warning": "Low confidence"}
+            {
+                "target": 80.0,
+                "current": 70.0,
+                "gap": 10.0,
+                "state": "below",
+                "warning": "Low confidence",
+            }
         )
         assert len(lines) == 2
         assert "Low confidence" in lines[0][0]
@@ -342,30 +390,34 @@ from desloppify.app.commands.autofix.preview import (  # noqa: E402
 
 
 class TestShowFixDryRunSamples:
-    @patch("desloppify.app.commands.autofix.preview.colorize", side_effect=lambda t, _c: t)
+    @patch(
+        "desloppify.app.commands.autofix.preview.colorize", side_effect=lambda t, _c: t
+    )
     @patch("desloppify.app.commands.autofix.preview._print_fix_file_sample")
-    def test_calls_print_for_each_sampled_result(self, mock_print_sample, _mock_colorize, capsys):
-        results = [
-            {"file": f"f{i}.py", "removed": [f"name{i}"]}
-            for i in range(3)
-        ]
+    def test_calls_print_for_each_sampled_result(
+        self, mock_print_sample, _mock_colorize, capsys
+    ):
+        results = [{"file": f"f{i}.py", "removed": [f"name{i}"]} for i in range(3)]
         entries = []
         show_fix_dry_run_samples(entries, results)
         assert mock_print_sample.call_count == 3
 
-    @patch("desloppify.app.commands.autofix.preview.colorize", side_effect=lambda t, _c: t)
+    @patch(
+        "desloppify.app.commands.autofix.preview.colorize", side_effect=lambda t, _c: t
+    )
     @patch("desloppify.app.commands.autofix.preview._print_fix_file_sample")
     def test_caps_at_5_samples(self, mock_print_sample, _mock_colorize, capsys):
-        results = [
-            {"file": f"f{i}.py", "removed": [f"name{i}"]}
-            for i in range(10)
-        ]
+        results = [{"file": f"f{i}.py", "removed": [f"name{i}"]} for i in range(10)]
         show_fix_dry_run_samples([], results)
         assert mock_print_sample.call_count == 5
 
-    @patch("desloppify.app.commands.autofix.preview.colorize", side_effect=lambda t, _c: t)
+    @patch(
+        "desloppify.app.commands.autofix.preview.colorize", side_effect=lambda t, _c: t
+    )
     @patch("desloppify.app.commands.autofix.preview._print_fix_file_sample")
-    def test_skip_note_when_entries_exceed_removed(self, mock_print_sample, _mock_colorize, capsys):
+    def test_skip_note_when_entries_exceed_removed(
+        self, mock_print_sample, _mock_colorize, capsys
+    ):
         entries = [{"file": "a.py", "name": "x"}, {"file": "b.py", "name": "y"}]
         results = [{"file": "a.py", "removed": ["x"]}]  # 1 removed, 2 entries
         show_fix_dry_run_samples(entries, results)
@@ -374,7 +426,9 @@ class TestShowFixDryRunSamples:
 
 
 class TestPrintFixFileSample:
-    @patch("desloppify.app.commands.autofix.preview.colorize", side_effect=lambda t, _c: t)
+    @patch(
+        "desloppify.app.commands.autofix.preview.colorize", side_effect=lambda t, _c: t
+    )
     @patch("desloppify.app.commands.autofix.preview.rel", side_effect=lambda p: p)
     def test_shows_context_lines(self, _mock_rel, _mock_colorize, capsys, tmp_path):
         test_file = tmp_path / "test.py"
@@ -387,7 +441,9 @@ class TestPrintFixFileSample:
         assert "var_a" in out
         assert "line 3" in out
 
-    @patch("desloppify.app.commands.autofix.preview.colorize", side_effect=lambda t, _c: t)
+    @patch(
+        "desloppify.app.commands.autofix.preview.colorize", side_effect=lambda t, _c: t
+    )
     @patch("desloppify.app.commands.autofix.preview.rel", side_effect=lambda p: p)
     def test_handles_missing_file(self, _mock_rel, _mock_colorize, capsys):
         result = {"file": "/nonexistent/path.py", "removed": ["x"]}
@@ -396,9 +452,13 @@ class TestPrintFixFileSample:
         # Should not crash, just return silently
         assert capsys.readouterr().out == ""
 
-    @patch("desloppify.app.commands.autofix.preview.colorize", side_effect=lambda t, _c: t)
+    @patch(
+        "desloppify.app.commands.autofix.preview.colorize", side_effect=lambda t, _c: t
+    )
     @patch("desloppify.app.commands.autofix.preview.rel", side_effect=lambda p: p)
-    def test_caps_at_2_entries_per_file(self, _mock_rel, _mock_colorize, capsys, tmp_path):
+    def test_caps_at_2_entries_per_file(
+        self, _mock_rel, _mock_colorize, capsys, tmp_path
+    ):
         test_file = tmp_path / "test.py"
         test_file.write_text("a\nb\nc\nd\ne\nf\ng\nh\ni\nj\n")
         filepath = str(test_file)
@@ -522,7 +582,9 @@ class TestCmdReviewEntrypoint:
     @patch("desloppify.app.commands.review.cmd.do_run_batches")
     @patch("desloppify.app.commands.review.cmd.resolve_lang")
     @patch("desloppify.app.commands.review.cmd.command_runtime")
-    def test_run_batches_path(self, mock_runtime, mock_resolve_lang, mock_do_run_batches):
+    def test_run_batches_path(
+        self, mock_runtime, mock_resolve_lang, mock_do_run_batches
+    ):
         """When run_batches is set, calls do_run_batches."""
         rt = MagicMock()
         rt.state = {"issues": {}, "last_scan": "2024-01-01T00:00:00"}
@@ -594,7 +656,9 @@ class TestCmdReviewEntrypoint:
     @patch("desloppify.app.commands.review.cmd.do_external_start")
     @patch("desloppify.app.commands.review.cmd.resolve_lang")
     @patch("desloppify.app.commands.review.cmd.command_runtime")
-    def test_external_start_path(self, mock_runtime, mock_resolve_lang, mock_external_start):
+    def test_external_start_path(
+        self, mock_runtime, mock_resolve_lang, mock_external_start
+    ):
         rt = MagicMock()
         rt.state = {"issues": {}}
         rt.state_path = "/tmp/state.json"
@@ -617,7 +681,9 @@ class TestCmdReviewEntrypoint:
     @patch("desloppify.app.commands.review.cmd.do_external_submit")
     @patch("desloppify.app.commands.review.cmd.resolve_lang")
     @patch("desloppify.app.commands.review.cmd.command_runtime")
-    def test_external_submit_path(self, mock_runtime, mock_resolve_lang, mock_external_submit):
+    def test_external_submit_path(
+        self, mock_runtime, mock_resolve_lang, mock_external_submit
+    ):
         rt = MagicMock()
         rt.state = {"issues": {}}
         rt.state_path = "/tmp/state.json"
@@ -699,6 +765,7 @@ class TestReplaceSection:
 
     def test_replaces_between_markers(self):
         from desloppify.app.skill_docs import SKILL_BEGIN, SKILL_END
+
         content = f"before\n{SKILL_BEGIN}\nold content\n{SKILL_END}\nafter"
         result = _replace_section(content, "new section")
         assert "old content" not in result
@@ -708,6 +775,7 @@ class TestReplaceSection:
 
     def test_handles_empty_before(self):
         from desloppify.app.skill_docs import SKILL_BEGIN, SKILL_END
+
         content = f"{SKILL_BEGIN}\nold\n{SKILL_END}\nafter"
         result = _replace_section(content, "new")
         assert "new" in result
@@ -715,6 +783,7 @@ class TestReplaceSection:
 
     def test_handles_empty_after(self):
         from desloppify.app.skill_docs import SKILL_BEGIN, SKILL_END
+
         content = f"before\n{SKILL_BEGIN}\nold\n{SKILL_END}"
         result = _replace_section(content, "new")
         assert "new" in result
@@ -735,6 +804,7 @@ class TestResolveInterface:
 
     def test_from_install_overlay(self):
         from desloppify.app.skill_docs import SkillInstall
+
         install = SkillInstall(
             rel_path=".claude/skills/desloppify/SKILL.md",
             version=1,
@@ -746,6 +816,7 @@ class TestResolveInterface:
 
     def test_from_install_path_match(self):
         from desloppify.app.skill_docs import SkillInstall
+
         install = SkillInstall(
             rel_path=".claude/skills/desloppify/SKILL.md",
             version=1,
@@ -769,6 +840,7 @@ class TestResolveInterface:
 
     def test_from_install_no_match(self):
         from desloppify.app.skill_docs import SkillInstall
+
         install = SkillInstall(
             rel_path="unknown/path.md",
             version=1,
@@ -781,7 +853,9 @@ class TestResolveInterface:
 
 class TestCmdUpdateSkill:
     @patch("desloppify.app.commands.update_skill.update_installed_skill")
-    @patch("desloppify.app.commands.update_skill.resolve_interface", return_value="claude")
+    @patch(
+        "desloppify.app.commands.update_skill.resolve_interface", return_value="claude"
+    )
     def test_valid_interface(self, _mock_resolve, mock_update):
         args = argparse.Namespace(interface="claude")
         cmd_update_skill(args)
@@ -796,7 +870,10 @@ class TestCmdUpdateSkill:
         assert "No installed skill document found" in out
 
     @patch("desloppify.app.commands.update_skill.colorize", side_effect=lambda t, _c: t)
-    @patch("desloppify.app.commands.update_skill.resolve_interface", return_value="unknown_thing")
+    @patch(
+        "desloppify.app.commands.update_skill.resolve_interface",
+        return_value="unknown_thing",
+    )
     def test_unknown_interface(self, _mock_resolve, _mock_colorize, capsys):
         args = argparse.Namespace(interface="unknown_thing")
         cmd_update_skill(args)
@@ -825,7 +902,9 @@ class TestUpdateInstalledSkill:
 
     @patch("desloppify.app.commands.update_skill.colorize", side_effect=lambda t, _c: t)
     @patch("desloppify.app.commands.update_skill._read_bundled")
-    def test_successful_dedicated_install(self, mock_read, _mock_colorize, capsys, tmp_path):
+    def test_successful_dedicated_install(
+        self, mock_read, _mock_colorize, capsys, tmp_path
+    ):
         skill_content = (
             "---\n"
             "name: desloppify\n"
@@ -849,7 +928,9 @@ class TestUpdateInstalledSkill:
             result = update_installed_skill("claude")
 
         assert result is True
-        written = (tmp_path / ".claude" / "skills" / "desloppify" / "SKILL.md").read_text()
+        written = (
+            tmp_path / ".claude" / "skills" / "desloppify" / "SKILL.md"
+        ).read_text()
         assert written.startswith("---\n")
         assert "desloppify-skill-version" in written
         out = capsys.readouterr().out
@@ -857,7 +938,9 @@ class TestUpdateInstalledSkill:
 
     @patch("desloppify.app.commands.update_skill.colorize", side_effect=lambda t, _c: t)
     @patch("desloppify.app.commands.update_skill._read_bundled")
-    def test_successful_shared_install(self, mock_read, _mock_colorize, capsys, tmp_path):
+    def test_successful_shared_install(
+        self, mock_read, _mock_colorize, capsys, tmp_path
+    ):
         """Non-dedicated install (e.g. windsurf) replaces section in existing file."""
         skill_content = (
             "---\n"

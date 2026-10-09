@@ -234,7 +234,9 @@ class TestReviewCoverageFreshCache:
                 "issue_count": 0,
             }
         }
-        with patch("desloppify.engine.detectors.review_coverage.rel", return_value=rpath):
+        with patch(
+            "desloppify.engine.detectors.review_coverage.rel", return_value=rpath
+        ):
             entries, potential = detect_review_coverage(
                 [f], zone_map=None, review_cache=cache, lang_name="typescript"
             )
@@ -256,7 +258,9 @@ class TestReviewCoverageStaleCache:
                 "issue_count": 0,
             }
         }
-        with patch("desloppify.engine.detectors.review_coverage.rel", return_value=rpath):
+        with patch(
+            "desloppify.engine.detectors.review_coverage.rel", return_value=rpath
+        ):
             entries, potential = detect_review_coverage(
                 [f], zone_map=None, review_cache=cache, lang_name="typescript"
             )
@@ -279,7 +283,9 @@ class TestReviewCoverageStaleCache:
                 "issue_count": 0,
             }
         }
-        with patch("desloppify.engine.detectors.review_coverage.rel", return_value=rpath):
+        with patch(
+            "desloppify.engine.detectors.review_coverage.rel", return_value=rpath
+        ):
             entries, potential = detect_review_coverage(
                 [f], zone_map=None, review_cache=cache, lang_name="typescript"
             )
@@ -299,7 +305,9 @@ class TestReviewCoverageStaleCache:
                 "issue_count": 0,
             }
         }
-        with patch("desloppify.engine.detectors.review_coverage.rel", return_value=rpath):
+        with patch(
+            "desloppify.engine.detectors.review_coverage.rel", return_value=rpath
+        ):
             entries, potential = detect_review_coverage(
                 [f], zone_map=None, review_cache=cache, lang_name="typescript"
             )
@@ -513,7 +521,6 @@ class TestRegistryIntegration:
 
 
 class TestPhaseIntegration:
-
     def test_phase_registered_in_typescript(self):
         cfg = TypeScriptConfig()
         labels = [p.label for p in cfg.phases]
@@ -557,9 +564,7 @@ class TestHolisticStalenessInCoverage:
         assert len(entries) == 0
 
     def test_stale_holistic_emits_stale(self):
-        old = (datetime.now(UTC) - timedelta(days=60)).isoformat(
-            timespec="seconds"
-        )
+        old = (datetime.now(UTC) - timedelta(days=60)).isoformat(timespec="seconds")
         cache = {
             "holistic": {
                 "reviewed_at": old,
@@ -617,9 +622,7 @@ class TestReviewNeverExpires:
             assert len(stale) == 0
 
     def test_holistic_never_expires_with_zero(self):
-        old = (datetime.now(UTC) - timedelta(days=365)).isoformat(
-            timespec="seconds"
-        )
+        old = (datetime.now(UTC) - timedelta(days=365)).isoformat(timespec="seconds")
         cache = {
             "holistic": {
                 "reviewed_at": old,

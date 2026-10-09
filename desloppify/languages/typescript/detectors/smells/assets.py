@@ -22,7 +22,10 @@ def _script_is_documented(readme_text: str, script_name: str) -> bool:
         rf"\byarn\s+{escaped}\b",
         rf"\bbun\s+run\s+{escaped}\b",
     ]
-    if any(re.search(pattern, readme_text, flags=re.IGNORECASE) for pattern in command_patterns):
+    if any(
+        re.search(pattern, readme_text, flags=re.IGNORECASE)
+        for pattern in command_patterns
+    ):
         return True
     return bool(re.search(rf"`{escaped}`", readme_text))
 
@@ -35,11 +38,17 @@ def detect_non_ts_asset_smells(path: Path, smell_counts: dict[str, list[dict]]) 
 
     for filepath in css_files:
         try:
-            full = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
+            full = (
+                Path(filepath)
+                if Path(filepath).is_absolute()
+                else get_project_root() / filepath
+            )
             content = full.read_text(encoding="utf-8")
             lines = content.splitlines()
         except (OSError, UnicodeDecodeError) as exc:
-            log_best_effort_failure(logger, f"read stylesheet smell candidate {filepath}", exc)
+            log_best_effort_failure(
+                logger, f"read stylesheet smell candidate {filepath}", exc
+            )
             continue
 
         if len(lines) >= 300:
@@ -83,12 +92,18 @@ def detect_non_ts_asset_smells(path: Path, smell_counts: dict[str, list[dict]]) 
         return scanned_files
 
     key_scripts = [
-        script for script in ("dev", "build", "test", "lint", "typecheck") if script in scripts
+        script
+        for script in ("dev", "build", "test", "lint", "typecheck")
+        if script in scripts
     ]
     if len(key_scripts) < 2:
         return scanned_files
 
-    missing = [script for script in key_scripts if not _script_is_documented(readme_text, script)]
+    missing = [
+        script
+        for script in key_scripts
+        if not _script_is_documented(readme_text, script)
+    ]
     if len(missing) >= 2:
         smell_counts["docs_scripts_drift"].append(
             {

@@ -91,7 +91,9 @@ class TestResponsibilityCohesion:
             code += f"function fn{i}() {{\n  {next_fn}();\n  const x = {i};\n  return x;\n}}\n\n"
         path = _write(tmp_path, "cohesive.ts", code)
 
-        entries, checked = detect_responsibility_cohesion([path], TYPESCRIPT_SPEC, min_loc=5)
+        entries, checked = detect_responsibility_cohesion(
+            [path], TYPESCRIPT_SPEC, min_loc=5
+        )
 
         assert entries == []
         assert checked == 1
@@ -102,25 +104,33 @@ class TestResponsibilityCohesion:
             code += f"function isolated{i}() {{\n  const x = {i};\n  const y = {i * 2};\n  return x + y;\n}}\n\n"
         path = _write(tmp_path, "toolkit.ts", code)
 
-        entries, checked = detect_responsibility_cohesion([path], TYPESCRIPT_SPEC, min_loc=5)
+        entries, checked = detect_responsibility_cohesion(
+            [path], TYPESCRIPT_SPEC, min_loc=5
+        )
 
         assert entries == []
         assert checked == 1
 
     def test_mixed_responsibilities_flagged(self, tmp_path):
-        groups = [("auth", ["Login", "Validate", "Hash"]),
-                  ("db", ["Connect", "Query", "Parse"]),
-                  ("http", ["Serve", "Route", "Respond"])]
+        groups = [
+            ("auth", ["Login", "Validate", "Hash"]),
+            ("db", ["Connect", "Query", "Parse"]),
+            ("http", ["Serve", "Route", "Respond"]),
+        ]
         code = ""
         for prefix, names in groups:
             for name, nxt in zip(names, [*names[1:], None], strict=True):
                 call = f"{prefix}{nxt}();" if nxt else "return 1;"
                 code += f"function {prefix}{name}() {{ {call} }}\n"
             code += "\n"
-        code += "const utilA = () => { return 1; };\nconst utilB = () => { return 2; };\n"
+        code += (
+            "const utilA = () => { return 1; };\nconst utilB = () => { return 2; };\n"
+        )
         path = _write(tmp_path, "mixed.ts", code)
 
-        entries, checked = detect_responsibility_cohesion([path], TYPESCRIPT_SPEC, min_loc=5)
+        entries, checked = detect_responsibility_cohesion(
+            [path], TYPESCRIPT_SPEC, min_loc=5
+        )
 
         assert len(entries) == 1
         assert entries[0]["component_count"] >= 5

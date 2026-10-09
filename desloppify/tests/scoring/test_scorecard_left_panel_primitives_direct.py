@@ -73,7 +73,9 @@ def test_draw_left_panel_title_centers_text() -> None:
 def test_draw_left_panel_score_uses_score_color(monkeypatch) -> None:
     draw = _FakeDraw()
     font = object()
-    monkeypatch.setattr(panel_mod, "score_color", lambda value, muted=False: f"{value}:{muted}")
+    monkeypatch.setattr(
+        panel_mod, "score_color", lambda value, muted=False: f"{value}:{muted}"
+    )
 
     panel_mod.draw_left_panel_score(
         draw,
@@ -94,7 +96,9 @@ def test_draw_left_panel_score_uses_score_color(monkeypatch) -> None:
 def test_draw_left_panel_strict_draws_label_and_value(monkeypatch) -> None:
     draw = _FakeDraw()
     monkeypatch.setattr(panel_mod, "scale", lambda x: x)
-    monkeypatch.setattr(panel_mod, "score_color", lambda value, muted=False: f"strict:{value}:{muted}")
+    monkeypatch.setattr(
+        panel_mod, "score_color", lambda value, muted=False: f"strict:{value}:{muted}"
+    )
 
     panel_mod.draw_left_panel_strict(
         draw,

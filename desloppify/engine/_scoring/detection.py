@@ -19,11 +19,11 @@ from desloppify.engine._state.schema import Issue
 
 # Tiered file-count cap thresholds for non-LOC file-based detectors.
 # Controls how many issues per file contribute to the weighted failure sum.
-_FILE_CAP_HIGH_THRESHOLD = 6     # issues in file for high cap
-_FILE_CAP_MID_THRESHOLD = 3      # issues in file for mid cap
-_FILE_CAP_HIGH = 2.0             # cap value at high concentration
-_FILE_CAP_MID = 1.5              # cap value at mid concentration
-_FILE_CAP_LOW = 1.0              # cap value at low concentration (1-2 issues)
+_FILE_CAP_HIGH_THRESHOLD = 6  # issues in file for high cap
+_FILE_CAP_MID_THRESHOLD = 3  # issues in file for mid cap
+_FILE_CAP_HIGH = 2.0  # cap value at high concentration
+_FILE_CAP_MID = 1.5  # cap value at mid concentration
+_FILE_CAP_LOW = 1.0  # cap value at low concentration (1-2 issues)
 
 
 def merge_potentials(potentials_by_lang: dict[str, dict[str, int]]) -> dict[str, int]:
@@ -91,9 +91,7 @@ def _file_based_failures_by_mode(
     accum: dict[ScoreMode, _ModeAccum] = {mode: _ModeAccum() for mode in SCORING_MODES}
 
     for issue in _iter_scoring_candidates(detector, issues, policy.excluded_zones):
-        holistic = issue.get("file") == "." and issue.get("detail", {}).get(
-            "holistic"
-        )
+        holistic = issue.get("file") == "." and issue.get("detail", {}).get("holistic")
 
         for mode in SCORING_MODES:
             if not issue_counts_as_failure(issue, mode):
@@ -156,9 +154,7 @@ def detector_stats_by_mode(
             mode: 0.0 for mode in SCORING_MODES
         }
 
-        for issue in _iter_scoring_candidates(
-            detector, issues, policy.excluded_zones
-        ):
+        for issue in _iter_scoring_candidates(detector, issues, policy.excluded_zones):
             weight = _issue_weight(issue, use_loc_weight=False)
             for mode in SCORING_MODES:
                 if not issue_counts_as_failure(issue, mode):

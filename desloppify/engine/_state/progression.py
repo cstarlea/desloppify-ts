@@ -34,6 +34,7 @@ PROGRESSION_LOCK_RANK = 30
 # Persistence
 # ---------------------------------------------------------------------------
 
+
 def progression_path() -> Path:
     """Return the canonical progression log path."""
     return get_state_dir() / "progression.jsonl"
@@ -139,6 +140,7 @@ def _trim_if_needed(path: Path, max_lines: int = _MAX_LINES) -> None:
 # Snapshot helpers (pure)
 # ---------------------------------------------------------------------------
 
+
 def _scores_snapshot(state: dict[str, Any]) -> dict[str, Any]:
     """Extract ProgressionScores from state."""
     from desloppify.state_score_snapshot import score_snapshot
@@ -191,8 +193,6 @@ def _execution_log_ids_since(
     return resolved, skipped
 
 
-
-
 def _extract_review_payload_detail(
     import_payload: dict[str, Any] | None,
 ) -> tuple[dict[str, str], list[dict[str, str]], dict[str, str]]:
@@ -219,11 +219,13 @@ def _extract_review_payload_detail(
     if isinstance(raw_issues, list):
         for issue in raw_issues[:50]:
             if isinstance(issue, dict):
-                issue_summaries.append({
-                    "dimension": str(issue.get("dimension", "")),
-                    "summary": str(issue.get("summary", ""))[:200],
-                    "confidence": str(issue.get("confidence", "")),
-                })
+                issue_summaries.append(
+                    {
+                        "dimension": str(issue.get("dimension", "")),
+                        "summary": str(issue.get("summary", ""))[:200],
+                        "confidence": str(issue.get("confidence", "")),
+                    }
+                )
 
     raw_prov = import_payload.get("provenance")
     if isinstance(raw_prov, dict):
@@ -240,7 +242,8 @@ def _open_issue_count(state: dict[str, Any]) -> int:
     if not isinstance(issues, dict):
         return 0
     return sum(
-        1 for issue in issues.values()
+        1
+        for issue in issues.values()
         if isinstance(issue, dict) and issue.get("status") == "open"
     )
 
@@ -267,6 +270,7 @@ def _queue_summary(plan: dict[str, Any] | None) -> dict[str, int]:
 # ---------------------------------------------------------------------------
 # Envelope builder
 # ---------------------------------------------------------------------------
+
 
 def _make_envelope(
     event_type: str,
@@ -301,6 +305,7 @@ def _make_envelope(
 # ---------------------------------------------------------------------------
 # Event builders (one per event type)
 # ---------------------------------------------------------------------------
+
 
 def build_scan_preflight_event(
     plan: dict[str, Any] | None,
@@ -448,9 +453,7 @@ def build_triage_complete_event(
     phase_before: str | None,
 ) -> dict[str, Any]:
     # Extract verdict counts from dispositions
-    dispositions = (
-        plan.get("epic_triage_meta", {}).get("issue_dispositions", {})
-    )
+    dispositions = plan.get("epic_triage_meta", {}).get("issue_dispositions", {})
     verdict_counts: dict[str, int] = {}
     if isinstance(dispositions, dict):
         for disp in dispositions.values():
@@ -468,11 +471,15 @@ def build_triage_complete_event(
         issue_ids = cluster.get("issue_ids", [])
         if not issue_ids:
             continue
-        cluster_summaries.append({
-            "name": name,
-            "thesis": str(cluster.get("thesis") or cluster.get("description") or "")[:200],
-            "issue_count": len(issue_ids),
-        })
+        cluster_summaries.append(
+            {
+                "name": name,
+                "thesis": str(
+                    cluster.get("thesis") or cluster.get("description") or ""
+                )[:200],
+                "issue_count": len(issue_ids),
+            }
+        )
 
     return _make_envelope(
         "triage_complete",
@@ -596,9 +603,11 @@ def build_plan_checkpoint_event(
 # Conditional helpers for hook sites
 # ---------------------------------------------------------------------------
 
-_PLANNING_PHASES = frozenset({
-    "plan",
-})
+_PLANNING_PHASES = frozenset(
+    {
+        "plan",
+    }
+)
 
 
 def maybe_append_entered_planning(
@@ -629,7 +638,9 @@ def maybe_append_entered_planning(
                 )
             )
         except Exception:
-            logger.warning("Failed to append entered_planning_mode event", exc_info=True)
+            logger.warning(
+                "Failed to append entered_planning_mode event", exc_info=True
+            )
 
 
 def maybe_append_execution_drain(

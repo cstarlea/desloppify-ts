@@ -69,7 +69,7 @@ def _status_json_payload(
     suppression: dict,
 ) -> dict:
     scores = score_snapshot(state)
-    issues = (state.get("work_items") or state.get("issues", {}))
+    issues = state.get("work_items") or state.get("issues", {})
     open_scope = (
         open_scope_breakdown(issues, state.get("scan_path"))
         if isinstance(issues, dict)
@@ -95,5 +95,6 @@ def _status_json_payload(
         "last_scan": state.get("last_scan"),
         "scan_metadata": state.get("scan_metadata", {}),
     }
+
 
 __all__ = ["cmd_status"]

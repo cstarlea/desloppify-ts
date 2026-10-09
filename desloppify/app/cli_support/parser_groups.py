@@ -57,7 +57,12 @@ examples:
   desloppify scan --force-resolve""",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    p_scan.add_argument("--path", type=str, default=None, help="Directory to scan (default: the last scan's path, else src/)")
+    p_scan.add_argument(
+        "--path",
+        type=str,
+        default=None,
+        help="Directory to scan (default: the last scan's path, else src/)",
+    )
     p_scan.add_argument("--state", type=str, default=None, help="Path to state file")
     p_scan.add_argument(
         "--reset-subjective",
@@ -125,14 +130,21 @@ examples:
 
 
 def _add_status_parser(sub) -> None:
-    p_status = sub.add_parser("status", help="Full project dashboard: score, dimensions, progress, coaching")
+    p_status = sub.add_parser(
+        "status", help="Full project dashboard: score, dimensions, progress, coaching"
+    )
     p_status.add_argument("--state", type=str, default=None, help="Path to state file")
     p_status.add_argument("--json", action="store_true", help="Output as JSON")
 
 
 def _add_tree_parser(sub) -> None:
     p_tree = sub.add_parser("tree", help="Annotated codebase tree (text)")
-    p_tree.add_argument("--path", type=str, default=None, help="Directory to scan (default: the last scan's path, else src/)")
+    p_tree.add_argument(
+        "--path",
+        type=str,
+        default=None,
+        help="Directory to scan (default: the last scan's path, else src/)",
+    )
     p_tree.add_argument("--state", type=str, default=None, help="Path to state file")
     p_tree.add_argument("--depth", type=int, default=2, help="Max depth (default: 2)")
     p_tree.add_argument(
@@ -145,7 +157,9 @@ def _add_tree_parser(sub) -> None:
         "--min-loc", type=int, default=0, help="Hide items below this LOC"
     )
     p_tree.add_argument(
-        "--sort", choices=["loc", "issues", "coupling"], default="loc",
+        "--sort",
+        choices=["loc", "issues", "coupling"],
+        default="loc",
         help="Sort order (default: loc)",
     )
     p_tree.add_argument(
@@ -330,7 +344,8 @@ examples:
 
 def _add_suppress_parser(sub) -> None:
     p_suppress = sub.add_parser(
-        "suppress", help="Permanently silence issues matching a pattern (false positives / accepted debt)"
+        "suppress",
+        help="Permanently silence issues matching a pattern (false positives / accepted debt)",
     )
     p_suppress.add_argument(
         "pattern",
@@ -349,11 +364,11 @@ def _add_suppress_parser(sub) -> None:
             '--attest "I have actually [DESCRIBE THE CONCRETE CHANGE YOU MADE] and I am not gaming the score by resolving without fixing."'
         ),
     )
-    p_suppress.add_argument("--state", type=str, default=None, help="Path to state file")
+    p_suppress.add_argument(
+        "--state", type=str, default=None, help="Path to state file"
+    )
 
 
 def _add_exclude_parser(sub) -> None:
-    p_exclude = sub.add_parser(
-        "exclude", help="Exclude paths from scanning entirely"
-    )
+    p_exclude = sub.add_parser("exclude", help="Exclude paths from scanning entirely")
     p_exclude.add_argument("pattern", help="Path pattern to exclude from scanning")

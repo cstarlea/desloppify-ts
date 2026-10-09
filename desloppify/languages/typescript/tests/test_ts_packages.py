@@ -70,7 +70,12 @@ def test_pnpm_workspace_globs_and_negation(tmp_path):
     _manifest(tmp_path, "apps/web", name="web")
     _manifest(tmp_path, "apps/group/admin", name="admin")
     _manifest(tmp_path, "packages/ui/node_modules/dep", name="dep")
-    assert _names(discover_packages(tmp_path, tmp_path)) == {"root", "@acme/ui", "web", "admin"}
+    assert _names(discover_packages(tmp_path, tmp_path)) == {
+        "root",
+        "@acme/ui",
+        "web",
+        "admin",
+    }
 
 
 def test_pnpm_inline_list(tmp_path):
@@ -128,7 +133,9 @@ def test_exports_conditions_subpaths_and_patterns(tmp_path):
     _write(tmp_path, "packages/ui/src/icons/arrow.tsx")
     resolver = _resolver(tmp_path)
     assert resolver.resolve("@acme/ui") == _key(tmp_path, "packages/ui/src/index.ts")
-    assert resolver.resolve("@acme/ui/button") == _key(tmp_path, "packages/ui/src/button.tsx")
+    assert resolver.resolve("@acme/ui/button") == _key(
+        tmp_path, "packages/ui/src/button.tsx"
+    )
     assert resolver.resolve("@acme/ui/icons/arrow") == _key(
         tmp_path, "packages/ui/src/icons/arrow.tsx"
     )
@@ -145,23 +152,37 @@ def test_main_is_mapped_from_out_dir_to_root_dir(tmp_path):
         '{ "compilerOptions": { "rootDir": "./sources", "outDir": "./build/lib" } }',
     )
     _write(tmp_path, "packages/core/sources/index.ts")
-    assert _resolver(tmp_path).resolve("core") == _key(tmp_path, "packages/core/sources/index.ts")
+    assert _resolver(tmp_path).resolve("core") == _key(
+        tmp_path, "packages/core/sources/index.ts"
+    )
 
 
 def test_out_dir_inherited_through_extends(tmp_path):
     _workspace(tmp_path)
-    _write(tmp_path, "tsconfig.lib.json", '{ "compilerOptions": { "outDir": "packages/core/out" } }')
-    _write(tmp_path, "packages/core/tsconfig.json", '{ "extends": "../../tsconfig.lib.json" }')
+    _write(
+        tmp_path,
+        "tsconfig.lib.json",
+        '{ "compilerOptions": { "outDir": "packages/core/out" } }',
+    )
+    _write(
+        tmp_path,
+        "packages/core/tsconfig.json",
+        '{ "extends": "../../tsconfig.lib.json" }',
+    )
     _manifest(tmp_path, "packages/core", name="core", types="./out/index.d.ts")
     _write(tmp_path, "packages/core/src/index.ts")
-    assert _resolver(tmp_path).resolve("core") == _key(tmp_path, "packages/core/src/index.ts")
+    assert _resolver(tmp_path).resolve("core") == _key(
+        tmp_path, "packages/core/src/index.ts"
+    )
 
 
 def test_common_output_dir_fallback_without_tsconfig(tmp_path):
     _workspace(tmp_path)
     _manifest(tmp_path, "packages/core", name="core", main="dist/esm/index.mjs")
     _write(tmp_path, "packages/core/src/index.mts")
-    assert _resolver(tmp_path).resolve("core") == _key(tmp_path, "packages/core/src/index.mts")
+    assert _resolver(tmp_path).resolve("core") == _key(
+        tmp_path, "packages/core/src/index.mts"
+    )
 
 
 def test_subpath_without_exports_is_a_package_relative_path(tmp_path):
@@ -179,7 +200,9 @@ def test_longest_package_name_wins(tmp_path):
     _manifest(tmp_path, "packages/ui-kit", name="@acme/ui-kit", main="./index.ts")
     _write(tmp_path, "packages/ui/index.ts")
     _write(tmp_path, "packages/ui-kit/index.ts")
-    assert _resolver(tmp_path).resolve("@acme/ui-kit") == _key(tmp_path, "packages/ui-kit/index.ts")
+    assert _resolver(tmp_path).resolve("@acme/ui-kit") == _key(
+        tmp_path, "packages/ui-kit/index.ts"
+    )
 
 
 # ── package.json imports (#subpath) ──────────────────────────
@@ -214,9 +237,13 @@ def test_imports_wildcard_keys(tmp_path):
     main = _key(tmp_path, "src/main.ts")
     assert resolver.resolve("#lib/format", main) == _key(tmp_path, "src/lib/format.ts")
     # ``*`` spans directories, as in Node.
-    assert resolver.resolve("#lib/nested/deep", main) == _key(tmp_path, "src/lib/nested/deep.ts")
+    assert resolver.resolve("#lib/nested/deep", main) == _key(
+        tmp_path, "src/lib/nested/deep.ts"
+    )
     # The longest matching prefix wins.
-    assert resolver.resolve("#lib/internal/secret", main) == _key(tmp_path, "src/private/secret.ts")
+    assert resolver.resolve("#lib/internal/secret", main) == _key(
+        tmp_path, "src/private/secret.ts"
+    )
 
 
 def test_imports_wildcard_target_without_extension(tmp_path):
@@ -235,7 +262,10 @@ def test_imports_condition_objects(tmp_path):
         name="app",
         imports={
             "#types": {"types": "./dist/types.d.ts", "default": "./dist/types.js"},
-            "#db": {"node": {"import": "./src/db/node.ts"}, "default": "./src/db/browser.ts"},
+            "#db": {
+                "node": {"import": "./src/db/node.ts"},
+                "default": "./src/db/browser.ts",
+            },
             "#fallback": {"import": "./src/missing.ts", "default": "./src/fallback.ts"},
             "#dep": {"default": "some-npm-package"},
         },
@@ -276,7 +306,9 @@ def test_imports_come_from_the_nearest_package_json(tmp_path):
     _write(tmp_path, "shared/util.ts")
     _write(tmp_path, "tools/cli/lib/util.ts")
     resolver = _module_resolver(tmp_path)
-    assert resolver.resolve("#util", _key(tmp_path, "src/main.ts")) == _key(tmp_path, "shared/util.ts")
+    assert resolver.resolve("#util", _key(tmp_path, "src/main.ts")) == _key(
+        tmp_path, "shared/util.ts"
+    )
     assert resolver.resolve("#util", _key(tmp_path, "tools/cli/src/run.ts")) == _key(
         tmp_path, "tools/cli/lib/util.ts"
     )
@@ -326,7 +358,11 @@ def test_imports_mapped_to_an_npm_package_are_external(tmp_path):
     assert not resolver.is_external("#fetch")
 
     graph = deps_detector_mod.build_dep_graph(tmp_path)
-    assert graph[main]["unresolved_imports"] == {"#undeclared", "#lib/missing", "#nokey/polyfill"}
+    assert graph[main]["unresolved_imports"] == {
+        "#undeclared",
+        "#lib/missing",
+        "#nokey/polyfill",
+    }
 
 
 # ── graph edges ──────────────────────────────────────────────
@@ -356,12 +392,22 @@ def test_tsconfig_paths_take_precedence_over_workspace(tmp_path):
     _write(tmp_path, "packages/ui/src/dev.ts")
     _write(tmp_path, "main.ts", "import { x } from '@acme/ui';\n")
     graph = deps_detector_mod.build_dep_graph(tmp_path)
-    assert graph[_key(tmp_path, "main.ts")]["imports"] == {_key(tmp_path, "packages/ui/src/dev.ts")}
+    assert graph[_key(tmp_path, "main.ts")]["imports"] == {
+        _key(tmp_path, "packages/ui/src/dev.ts")
+    }
 
 
 def test_aliases_come_from_the_nearest_tsconfig(tmp_path):
-    _write(tmp_path, "tsconfig.json", '{ "compilerOptions": { "paths": { "~/*": ["./shared/*"] } } }')
-    _write(tmp_path, "apps/web/tsconfig.json", '{ "compilerOptions": { "paths": { "~/*": ["./src/*"] } } }')
+    _write(
+        tmp_path,
+        "tsconfig.json",
+        '{ "compilerOptions": { "paths": { "~/*": ["./shared/*"] } } }',
+    )
+    _write(
+        tmp_path,
+        "apps/web/tsconfig.json",
+        '{ "compilerOptions": { "paths": { "~/*": ["./src/*"] } } }',
+    )
     _write(tmp_path, "shared/util.ts")
     _write(tmp_path, "apps/web/src/util.ts")
     _write(tmp_path, "apps/web/src/main.ts", "import { x } from '~/util';\n")
@@ -370,7 +416,9 @@ def test_aliases_come_from_the_nearest_tsconfig(tmp_path):
     assert graph[_key(tmp_path, "apps/web/src/main.ts")]["imports"] == {
         _key(tmp_path, "apps/web/src/util.ts")
     }
-    assert graph[_key(tmp_path, "tools/run.ts")]["imports"] == {_key(tmp_path, "shared/util.ts")}
+    assert graph[_key(tmp_path, "tools/run.ts")]["imports"] == {
+        _key(tmp_path, "shared/util.ts")
+    }
 
 
 # ── entry points ─────────────────────────────────────────────
@@ -396,7 +444,11 @@ def test_entries_from_exports_bin_and_scripts(tmp_path):
             "migrate": "typeorm --dataSource=src/data-source.ts --env-file=.env migration:run",
         },
     )
-    _write(tmp_path, "tsconfig.json", '{ "compilerOptions": { "rootDir": "src", "outDir": "dist" } }')
+    _write(
+        tmp_path,
+        "tsconfig.json",
+        '{ "compilerOptions": { "rootDir": "src", "outDir": "dist" } }',
+    )
     for name in ("index", "cli", "server", "seed", "data-source"):
         _write(tmp_path, f"src/{name}.ts")
     _write(tmp_path, "test/index.ts")
@@ -412,7 +464,11 @@ def test_entries_from_exports_bin_and_scripts(tmp_path):
 
 def test_wildcard_exports_expose_every_match(tmp_path):
     _manifest(tmp_path, "", name="lib", exports={"./locales/*": "./dist/locales/*.js"})
-    _write(tmp_path, "tsconfig.json", '{ "compilerOptions": { "rootDir": "src", "outDir": "dist" } }')
+    _write(
+        tmp_path,
+        "tsconfig.json",
+        '{ "compilerOptions": { "rootDir": "src", "outDir": "dist" } }',
+    )
     en = _write(tmp_path, "src/locales/en.ts")
     fr = _write(tmp_path, "src/locales/nested/fr.ts")
     other = _write(tmp_path, "src/other.ts")
@@ -464,7 +520,14 @@ def test_bundled_output_maps_to_any_source_extension(tmp_path):
         tmp_path,
         "packages/next",
         name="@trpc/next",
-        exports={"./client": {"import": {"types": "./dist/client.d.mts", "default": "./dist/client.mjs"}}},
+        exports={
+            "./client": {
+                "import": {
+                    "types": "./dist/client.d.mts",
+                    "default": "./dist/client.mjs",
+                }
+            }
+        },
     )
     _write(tmp_path, "packages/next/src/client.ts")
     assert _resolver(tmp_path).resolve("@trpc/next/client") == _key(
@@ -476,7 +539,9 @@ def test_bundled_output_maps_to_any_source_extension(tmp_path):
 
 
 def test_unresolved_bare_imports_exclude_dependencies_and_builtins(tmp_path):
-    _manifest(tmp_path, "", name="app", dependencies={"react": "^19", "@tanstack/query": "^5"})
+    _manifest(
+        tmp_path, "", name="app", dependencies={"react": "^19", "@tanstack/query": "^5"}
+    )
     _write(
         tmp_path,
         "main.ts",

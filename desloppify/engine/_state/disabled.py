@@ -16,7 +16,9 @@ from desloppify.engine._state.schema import StateModel
 
 DISABLED_PATTERN_PREFIX = "disabled:"
 # Review findings are imported, not detected; review_dimensions governs them.
-_NOT_DISABLEABLE = frozenset({"review", "concerns", "subjective_review", "subjective_assessment"})
+_NOT_DISABLEABLE = frozenset(
+    {"review", "concerns", "subjective_review", "subjective_assessment"}
+)
 
 
 def _dimension_detectors() -> dict[str, list[str]]:
@@ -62,7 +64,9 @@ def disabled_detectors(entries: Iterable[object]) -> set[str]:
     return out
 
 
-def apply_disabled(state: StateModel, entries: Iterable[object], now: str) -> tuple[int, int]:
+def apply_disabled(
+    state: StateModel, entries: Iterable[object], now: str
+) -> tuple[int, int]:
     """Record the disabled detectors in state and hide or unhide their issues.
 
     Returns ``(hidden, restored)`` issue counts.

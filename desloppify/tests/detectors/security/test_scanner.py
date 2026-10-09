@@ -96,7 +96,13 @@ def test_scan_line_passes_is_test_only_to_secret_rules(monkeypatch):
 
     # All five rule functions were called
     assert len(seen) == 5
-    assert set(seen.keys()) == {"format", "name", "random", "weak_crypto", "sensitive_log"}
+    assert set(seen.keys()) == {
+        "format",
+        "name",
+        "random",
+        "weak_crypto",
+        "sensitive_log",
+    }
 
     # Secret rules receive is_test as 4th argument
     assert seen["format"] == (
@@ -118,4 +124,3 @@ def test_scan_line_passes_is_test_only_to_secret_rules(monkeypatch):
     assert len(seen["weak_crypto"]) == 3
     assert seen["sensitive_log"] == ("src/file.ts", 12, "const token = random.random()")
     assert len(seen["sensitive_log"]) == 3
-

@@ -160,7 +160,6 @@ def test_scan_reset_seeds_subjective_dimensions_when_missing():
     assert assessments["low_level_elegance"]["placeholder"] is True
 
 
-
 def test_scan_reset_raises_when_subjective_assessments_not_object():
     state = {"subjective_assessments": []}
     try:

@@ -245,7 +245,10 @@ def sync_issue_clusters(
                 )
                 continue
 
-        if cluster_name in clusters and clusters[cluster_name].get("cluster_key") != key:
+        if (
+            cluster_name in clusters
+            and clusters[cluster_name].get("cluster_key") != key
+        ):
             cluster_name = f"{cluster_name}-{len(member_ids)}"
 
         sync_result = _sync_auto_cluster(

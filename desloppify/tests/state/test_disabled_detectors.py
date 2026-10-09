@@ -18,11 +18,15 @@ from desloppify.state import MergeScanOptions, empty_state, make_issue, merge_sc
 
 
 def _smell(name: str) -> dict:
-    return make_issue("smells", "src/a.ts", name, tier=3, confidence="high", summary=name)
+    return make_issue(
+        "smells", "src/a.ts", name, tier=3, confidence="high", summary=name
+    )
 
 
 def _structural() -> dict:
-    return make_issue("structural", "src/b.ts", "", tier=3, confidence="high", summary="big")
+    return make_issue(
+        "structural", "src/b.ts", "", tier=3, confidence="high", summary="big"
+    )
 
 
 def _scan(state: dict, issues: list[dict], disabled: list[str]) -> dict:
@@ -42,7 +46,10 @@ def test_entries_resolve_to_detectors():
     assert canonical_disabled_entry("smells") == "smells"
     assert canonical_disabled_entry("file_health") == "File health"
     assert canonical_disabled_entry(" test-health ") == "Test health"
-    assert disabled_detectors(["File health", "smells", "nonsense"]) == {"structural", "smells"}
+    assert disabled_detectors(["File health", "smells", "nonsense"]) == {
+        "structural",
+        "smells",
+    }
     for bad in ("nonsense", "review", "subjective_review"):
         with pytest.raises(ValueError):
             canonical_disabled_entry(bad)
@@ -118,13 +125,21 @@ def test_config_set_validates_and_unset_removes_one_value(monkeypatch, capsys):
     monkeypatch.setattr(config_cmd, "command_runtime", lambda _args: runtime)
     monkeypatch.setattr(config_cmd, "save_config", lambda _config: None)
 
-    config_cmd._config_set(SimpleNamespace(config_key="disabled", config_value="test_health"))
-    config_cmd._config_set(SimpleNamespace(config_key="disabled", config_value="smells"))
+    config_cmd._config_set(
+        SimpleNamespace(config_key="disabled", config_value="test_health")
+    )
+    config_cmd._config_set(
+        SimpleNamespace(config_key="disabled", config_value="smells")
+    )
     assert config["disabled"] == ["Test health", "smells"]
     with pytest.raises(Exception, match="Unknown detector or dimension"):
-        config_cmd._config_set(SimpleNamespace(config_key="disabled", config_value="bogus"))
+        config_cmd._config_set(
+            SimpleNamespace(config_key="disabled", config_value="bogus")
+        )
 
-    config_cmd._config_unset(SimpleNamespace(config_key="disabled", config_value="smells"))
+    config_cmd._config_unset(
+        SimpleNamespace(config_key="disabled", config_value="smells")
+    )
     assert config["disabled"] == ["Test health"]
     with pytest.raises(ValueError):
         unset_config_value(config, "disabled", "smells")

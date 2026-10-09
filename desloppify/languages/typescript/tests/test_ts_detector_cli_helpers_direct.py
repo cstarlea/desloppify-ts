@@ -90,7 +90,10 @@ def test_patterns_cli_json_output(monkeypatch, capsys) -> None:
     )
     families = {"state": {"patterns": {"redux": r"\bcreateStore\("}}}
     args = argparse.Namespace(
-        path=".", json=True, top=5, lang_run=SimpleNamespace(runtime_setting={"pattern_families": families}.get)
+        path=".",
+        json=True,
+        top=5,
+        lang_run=SimpleNamespace(runtime_setting={"pattern_families": families}.get),
     )
     patterns_cli_mod.cmd_patterns(args)
     payload = json.loads(capsys.readouterr().out)
@@ -103,7 +106,10 @@ def test_react_cli_json_and_empty_paths(monkeypatch, capsys) -> None:
     monkeypatch.setattr(
         react_cli_mod,
         "detect_state_sync",
-        lambda _path: ([{"file": "/repo/src/a.tsx", "line": 10, "setters": ["setX"]}], {}),
+        lambda _path: (
+            [{"file": "/repo/src/a.tsx", "line": 10, "setters": ["setX"]}],
+            {},
+        ),
     )
     monkeypatch.setattr(react_cli_mod, "rel", lambda p: str(p).split("/repo/")[-1])
     args = argparse.Namespace(path=".", json=True, top=5)

@@ -15,7 +15,9 @@ build_work_queue = build_execution_queue
 
 def _subjective_threshold_for_state(state: PlanState | dict | None) -> float:
     raw_target = (
-        (state or {}).get("config", {}).get("target_strict_score", DEFAULT_TARGET_STRICT_SCORE)
+        (state or {})
+        .get("config", {})
+        .get("target_strict_score", DEFAULT_TARGET_STRICT_SCORE)
         if isinstance(state, dict)
         else DEFAULT_TARGET_STRICT_SCORE
     )

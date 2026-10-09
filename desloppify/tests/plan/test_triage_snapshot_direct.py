@@ -47,7 +47,9 @@ def test_coverage_open_ids_falls_back_to_queue_order_before_first_scan() -> None
     }
 
 
-def test_manual_clusters_with_issues_and_find_cluster_for_ignore_auto_clusters() -> None:
+def test_manual_clusters_with_issues_and_find_cluster_for_ignore_auto_clusters() -> (
+    None
+):
     plan = {
         "clusters": {
             "manual": {"issue_ids": ["review::a"], "auto": False},

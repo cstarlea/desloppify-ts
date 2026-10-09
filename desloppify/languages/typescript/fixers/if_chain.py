@@ -55,7 +55,9 @@ def fix_empty_if_chain(
 
     skip_reasons: dict[str, int] = defaultdict(int)
 
-    def transform(lines: list[str], file_entries: list[dict]) -> tuple[list[str], list[dict]]:
+    def transform(
+        lines: list[str], file_entries: list[dict]
+    ) -> tuple[list[str], list[dict]]:
         path = str(file_entries[0].get("file", "")) if file_entries else ""
         parsed = parse_text("".join(lines), path)
         if parsed is None:
@@ -80,7 +82,9 @@ def remove_empty_if_chains(
     while stack:
         node = stack.pop()
         stack.extend(node.named_children)
-        if node.type == "if_statement" and (node.parent is None or node.parent.type != "else_clause"):
+        if node.type == "if_statement" and (
+            node.parent is None or node.parent.type != "else_clause"
+        ):
             heads_by_line[parsed.line(node)].append(node)
 
     planned: dict[tuple, object] = {}

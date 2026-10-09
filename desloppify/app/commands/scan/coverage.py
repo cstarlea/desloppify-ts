@@ -88,7 +88,9 @@ def normalize_coverage_warning(raw: object) -> DetectorCoverageRecord | None:
     }
 
 
-def seed_runtime_coverage_warnings(lang: LangRun | None) -> list[DetectorCoverageRecord]:
+def seed_runtime_coverage_warnings(
+    lang: LangRun | None,
+) -> list[DetectorCoverageRecord]:
     """Collect preflight scan-coverage warnings and seed runtime coverage state."""
     if lang is None:
         return []
@@ -126,13 +128,14 @@ def persist_scan_coverage(
     warnings: list[DetectorCoverageRecord] = []
     for warning in lang.coverage_warnings:
         normalized_warning = normalize_coverage_warning(warning)
-        if normalized_warning is not None and normalized_warning.get("status") == "reduced":
+        if (
+            normalized_warning is not None
+            and normalized_warning.get("status") == "reduced"
+        ):
             warnings.append(normalized_warning)
 
     reduced_entries = [
-        payload
-        for payload in detectors.values()
-        if payload.get("status") == "reduced"
+        payload for payload in detectors.values() if payload.get("status") == "reduced"
     ]
     if reduced_entries:
         confidence = min(

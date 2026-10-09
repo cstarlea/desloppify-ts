@@ -87,7 +87,9 @@ def _empty_health_breakdown() -> HealthBreakdown:
     }
 
 
-def _subjective_row(name: str, score: float, configured: float) -> dict[str, float | str]:
+def _subjective_row(
+    name: str, score: float, configured: float
+) -> dict[str, float | str]:
     return {
         "name": str(name),
         "score": score,
@@ -124,7 +126,9 @@ def _categorize_dimension_row(
     return "mechanical", _mechanical_row(name, score, data)
 
 
-def _pool_average(weighted_sum: float, total_weight: float, *, empty_default: float | None) -> float | None:
+def _pool_average(
+    weighted_sum: float, total_weight: float, *, empty_default: float | None
+) -> float | None:
     if total_weight <= 0:
         return empty_default
     return weighted_sum / total_weight
@@ -166,7 +170,9 @@ def _breakdown_entry(
     total_weight: float,
     pool_fraction: float,
 ) -> HealthBreakdownEntry:
-    pool_share = float(row["effective_weight"]) / total_weight if total_weight > 0 else 0.0
+    pool_share = (
+        float(row["effective_weight"]) / total_weight if total_weight > 0 else 0.0
+    )
     per_point = pool_fraction * pool_share
     score = float(row["score"])
     checks = float(row["checks"]) if "checks" in row else 0.0
@@ -286,9 +292,7 @@ def compute_health_score(
 ) -> float:
     """Budget-weighted blend of mechanical and subjective dimension scores."""
     return float(
-        compute_health_breakdown(dimension_scores, score_key=score_key)[
-            "overall_score"
-        ]
+        compute_health_breakdown(dimension_scores, score_key=score_key)["overall_score"]
     )
 
 

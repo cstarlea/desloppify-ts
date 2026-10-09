@@ -42,7 +42,9 @@ def test_function_wrapper_entrypoints_delegate_to_functions_module(monkeypatch) 
     ]
 
 
-def test_component_wrapper_entrypoints_delegate_to_components_module(monkeypatch) -> None:
+def test_component_wrapper_entrypoints_delegate_to_components_module(
+    monkeypatch,
+) -> None:
     calls: list[tuple[str, object]] = []
     monkeypatch.setattr(
         extractors_mod.components_mod,
@@ -62,7 +64,9 @@ def test_component_wrapper_entrypoints_delegate_to_components_module(monkeypatch
     monkeypatch.setattr(
         extractors_mod.components_mod,
         "detect_passthrough_components",
-        lambda path: calls.append(("detect_passthrough_components", path)) or [{"name": "A"}],
+        lambda path: (
+            calls.append(("detect_passthrough_components", path)) or [{"name": "A"}]
+        ),
     )
 
     path = Path("widget.tsx")

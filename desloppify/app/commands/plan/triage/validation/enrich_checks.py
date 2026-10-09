@@ -36,9 +36,7 @@ def _manual_clusters_with_issues(plan: dict):
 def _cluster_steps(cluster: dict) -> list[dict]:
     """Return structured action steps for one cluster."""
     return [
-        step
-        for step in (cluster.get("action_steps") or [])
-        if isinstance(step, dict)
+        step for step in (cluster.get("action_steps") or []) if isinstance(step, dict)
     ]
 
 
@@ -91,14 +89,17 @@ def _underspecified_steps(plan: dict) -> list[tuple[str, int, int]]:
         bare = sum(
             1
             for step in steps
-            if isinstance(step, dict) and (not step.get("detail") or not step.get("issue_refs"))
+            if isinstance(step, dict)
+            and (not step.get("detail") or not step.get("issue_refs"))
         )
         if bare > 0:
             results.append((name, bare, len(steps)))
     return results
 
 
-def _steps_with_bad_paths(plan: dict, repo_root: Path) -> list[tuple[str, int, list[str]]]:
+def _steps_with_bad_paths(
+    plan: dict, repo_root: Path
+) -> list[tuple[str, int, list[str]]]:
     """Return steps referencing file paths that don't exist on disk."""
     results: list[tuple[str, int, list[str]]] = []
     for name, cluster in _manual_clusters_with_issues(plan):
@@ -124,7 +125,9 @@ def _steps_without_effort(plan: dict) -> list[tuple[str, int, int]]:
         if not steps:
             continue
         missing = sum(
-            1 for step in steps if isinstance(step, dict) and step.get("effort") not in _VALID_EFFORTS
+            1
+            for step in steps
+            if isinstance(step, dict) and step.get("effort") not in _VALID_EFFORTS
         )
         if missing:
             results.append((name, missing, len(steps)))
@@ -245,12 +248,28 @@ def _enrich_report_or_error(report: str | None) -> str | None:
         print(colorize("  --report is required for --stage enrich.", "red"))
         print(colorize("  Summarize the enrichment work you did:", "dim"))
         print(colorize("  - Which clusters did you add detail/refs to?", "dim"))
-        print(colorize("  - Are steps specific enough for an executor with zero context?", "dim"))
-        print(colorize("  - Did you link issue_refs so steps auto-complete on resolve?", "dim"))
+        print(
+            colorize(
+                "  - Are steps specific enough for an executor with zero context?",
+                "dim",
+            )
+        )
+        print(
+            colorize(
+                "  - Did you link issue_refs so steps auto-complete on resolve?", "dim"
+            )
+        )
         return None
     if len(report) < 100:
-        print(colorize(f"  Report too short: {len(report)} chars (minimum 100).", "red"))
-        print(colorize("  Explain what enrichment you did and why steps are executor-ready.", "dim"))
+        print(
+            colorize(f"  Report too short: {len(report)} chars (minimum 100).", "red")
+        )
+        print(
+            colorize(
+                "  Explain what enrichment you did and why steps are executor-ready.",
+                "dim",
+            )
+        )
         return None
     return report
 

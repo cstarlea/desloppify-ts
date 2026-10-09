@@ -24,7 +24,12 @@ def _state(**overrides) -> dict:
         "verified_strict_score": 91.7,
         "stats": {"open": 12},
         "dimension_scores": {
-            "Code quality": {"score": 86.4, "strict": 86.4, "failing": 12, "detectors": {"smells": {}}},
+            "Code quality": {
+                "score": 86.4,
+                "strict": 86.4,
+                "failing": 12,
+                "detectors": {"smells": {}},
+            },
             "Duplication": {
                 "score": 100.0,
                 "strict": 100.0,
@@ -48,7 +53,9 @@ _DIFF = {"new": 12, "auto_resolved": 1, "reopened": 0}
 
 
 def test_report_is_plain_and_complete():
-    lines = ci_report_lines(_state(), _DIFF, ["Coverage reduced (unused): tsc unavailable"], None)
+    lines = ci_report_lines(
+        _state(), _DIFF, ["Coverage reduced (unused): tsc unavailable"], None
+    )
 
     assert lines == [
         "desloppify scan (profile ci)",

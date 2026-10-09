@@ -11,4 +11,5 @@ def cmd_status(args: argparse.Namespace) -> None:
 
     _cmd_status(args)
 
+
 __all__ = ["cmd_status"]

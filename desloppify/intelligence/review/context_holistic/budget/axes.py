@@ -123,8 +123,7 @@ def _build_type_discipline_context(
         context["enum_bypass_patterns"] = enum_bypass_patterns[:30]
     if type_strategy_census:
         context["type_strategy_census"] = {
-            strategy: len(items)
-            for strategy, items in type_strategy_census.items()
+            strategy: len(items) for strategy, items in type_strategy_census.items()
         }
     return context
 
@@ -183,9 +182,7 @@ def _assemble_context(
     context.update(
         _build_delegation_density_context(delegation_classes=delegation_classes)
     )
-    context.update(
-        _build_definition_directness_context(facade_modules=facade_modules)
-    )
+    context.update(_build_definition_directness_context(facade_modules=facade_modules))
     context.update(
         _build_type_discipline_context(
             dict_any_annotations=dict_any_annotations,

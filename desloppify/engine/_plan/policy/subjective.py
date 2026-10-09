@@ -22,9 +22,14 @@ from desloppify.engine.planning.helpers import CONFIDENCE_ORDER
 
 # Legacy export for modules that still need detector-name display behavior.
 # Objective/non-objective semantics should flow through issue_kind helpers.
-NON_OBJECTIVE_DETECTORS: frozenset[str] = frozenset({
-    "review", "concerns", "subjective_review", "subjective_assessment",
-})
+NON_OBJECTIVE_DETECTORS: frozenset[str] = frozenset(
+    {
+        "review",
+        "concerns",
+        "subjective_review",
+        "subjective_assessment",
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -110,7 +115,7 @@ def compute_subjective_visibility(
         else scan_path
     )
 
-    issues = (state.get("work_items") or state.get("issues", {}))
+    issues = state.get("work_items") or state.get("issues", {})
     skipped_ids = set((plan or {}).get("skipped", {}).keys())
 
     # Count open, non-suppressed, objective issues.

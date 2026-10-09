@@ -12,6 +12,7 @@ from desloppify.base.discovery.file_paths import count_lines, rel, resolve_path
 
 _DUNDER_ALL_RE = re.compile(r"^__all__\s*[:=]", re.MULTILINE)
 
+
 @dataclass(frozen=True)
 class EntryConventions:
     """Files a framework loads by file-system convention, so nothing imports them.
@@ -73,29 +74,41 @@ class EntryConventions:
             return False
         if path.stem in self.root_stems and len(path.parts) <= self.root_depth:
             return True
-        if self.entry_dir_names and not self.entry_dir_names.isdisjoint(path.parts[:-1]):
+        if self.entry_dir_names and not self.entry_dir_names.isdisjoint(
+            path.parts[:-1]
+        ):
             return True
-        if self.entry_dirs and rel_path.startswith(tuple(d + "/" for d in self.entry_dirs)):
+        if self.entry_dirs and rel_path.startswith(
+            tuple(d + "/" for d in self.entry_dirs)
+        ):
             return True
         if self.entry_paths and path.with_suffix("").as_posix() in self.entry_paths:
             return True
         if self.route_dir is None or self.route_dir not in path.parts[:-1]:
             return False
         return path.stem in self.route_stems or (
-            self.route_stem_prefix is not None and path.stem.startswith(self.route_stem_prefix)
+            self.route_stem_prefix is not None
+            and path.stem.startswith(self.route_stem_prefix)
         )
 
 
 def package_dependency_names(package_root: Path) -> set[str]:
     """Every dependency name the package.json at *package_root* declares."""
     try:
-        payload = json.loads((package_root / "package.json").read_text(encoding="utf-8"))
+        payload = json.loads(
+            (package_root / "package.json").read_text(encoding="utf-8")
+        )
     except (OSError, UnicodeDecodeError, ValueError):
         return set()
     if not isinstance(payload, dict):
         return set()
     names: set[str] = set()
-    for key in ("dependencies", "devDependencies", "peerDependencies", "optionalDependencies"):
+    for key in (
+        "dependencies",
+        "devDependencies",
+        "peerDependencies",
+        "optionalDependencies",
+    ):
         section = payload.get(key)
         if isinstance(section, dict):
             names.update(str(name) for name in section)
@@ -132,7 +145,9 @@ class _FrameworkConventions:
         roots = {scan_path.resolve(), *(Path(r).resolve() for r in package_roots or ())}
         self._roots = sorted(roots, key=lambda p: len(p.parts), reverse=True)
         self._conventions = conventions
-        self._detected: dict[Path, tuple[tuple[EntryConventions, ...], frozenset[str]]] = {}
+        self._detected: dict[
+            Path, tuple[tuple[EntryConventions, ...], frozenset[str]]
+        ] = {}
 
     def is_entry(self, filepath: str) -> bool:
         file_path = Path(resolve_path(filepath))
@@ -158,7 +173,9 @@ class _FrameworkConventions:
 def _has_dunder_all(filepath: str) -> bool:
     """Return True if the file defines ``__all__``, signaling a public API surface."""
     try:
-        text = Path(resolve_path(filepath)).read_text(encoding="utf-8", errors="replace")
+        text = Path(resolve_path(filepath)).read_text(
+            encoding="utf-8", errors="replace"
+        )
     except OSError:
         return False
     return _DUNDER_ALL_RE.search(text) is not None

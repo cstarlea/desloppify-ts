@@ -129,9 +129,9 @@ def _render_output_schema(context: PromptBatchContext, batch_index: int) -> str:
         '      "unsettle": ["header of insight to unsettle"]\n'
         "    }  // omit context_updates entirely if no changes\n"
         "  }\n"
-        "}\n"
-        + _render_context_update_example()
+        "}\n" + _render_context_update_example()
     )
+
 
 def render_batch_prompt(
     *,
@@ -144,7 +144,9 @@ def render_batch_prompt(
     """Render one subagent prompt for a holistic investigation batch."""
     context = build_batch_context(batch, batch_index)
     dim_prompts = context.dimension_prompts or batch_dimension_prompts(batch)
-    dimension_contexts = batch.get("dimension_contexts") if isinstance(batch, dict) else None
+    dimension_contexts = (
+        batch.get("dimension_contexts") if isinstance(batch, dict) else None
+    )
     persona = resolve_persona(context.persona)
     return join_non_empty_sections(
         _render_metadata_block(
@@ -166,7 +168,9 @@ def render_batch_prompt(
         render_dimension_deferral_context(batch),
         render_mechanical_concern_signals(batch),
         render_judgment_findings_section(batch),
-        render_task_requirements(issues_cap=context.issues_cap, dim_set=context.dimension_set),
+        render_task_requirements(
+            issues_cap=context.issues_cap, dim_set=context.dimension_set
+        ),
         render_scope_enums(),
         _render_output_schema(context, batch_index),
     )

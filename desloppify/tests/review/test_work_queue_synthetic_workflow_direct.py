@@ -176,9 +176,12 @@ def test_build_communicate_score_item_formats_command_and_delta(monkeypatch) -> 
 
 def test_build_deferred_disposition_item_returns_none_without_temporary_skips() -> None:
     assert workflow_mod.build_deferred_disposition_item({"skipped": {}}) is None
-    assert workflow_mod.build_deferred_disposition_item(
-        {"skipped": {"i1": {"kind": "permanent"}}}
-    ) is None
+    assert (
+        workflow_mod.build_deferred_disposition_item(
+            {"skipped": {"i1": {"kind": "permanent"}}}
+        )
+        is None
+    )
 
 
 def test_build_deferred_disposition_item_with_temporary_skips() -> None:
@@ -210,7 +213,10 @@ def test_build_deferred_disposition_item_with_temporary_skips() -> None:
     assert "backlog" in tools[3]["command"]
     assert "decision_options" in item["detail"]
     assert len(item["detail"]["decision_options"]) == 3
-    assert item["detail"]["decision_options"][1]["label"] == "Move deferred work to backlog"
+    assert (
+        item["detail"]["decision_options"][1]["label"]
+        == "Move deferred work to backlog"
+    )
 
 
 def test_build_deferred_disposition_item_counts_clusters_and_individuals() -> None:

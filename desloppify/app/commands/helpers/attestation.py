@@ -25,12 +25,14 @@ def _missing_attestation_keywords(
 ) -> list[str]:
     normalized = " ".join((attestation or "").strip().lower().split())
     phrases = tuple(required_phrases or _REQUIRED_ATTESTATION_PHRASES)
-    missing = [
-        phrase for phrase in phrases if phrase not in normalized
-    ]
+    missing = [phrase for phrase in phrases if phrase not in normalized]
     for phrase_group in any_of_phrases or ():
-        normalized_group = tuple(phrase.strip().lower() for phrase in phrase_group if phrase)
-        if normalized_group and not any(phrase in normalized for phrase in normalized_group):
+        normalized_group = tuple(
+            phrase.strip().lower() for phrase in phrase_group if phrase
+        )
+        if normalized_group and not any(
+            phrase in normalized for phrase in normalized_group
+        ):
             missing.append(" or ".join(normalized_group))
     return missing
 
@@ -70,7 +72,9 @@ def show_attestation_requirement(
             f"{label} attestation is missing required keyword(s): {missing_str}."
         )
     display_phrases = list(
-        _ATTESTATION_KEYWORD_HINT if required_phrases is None else tuple(required_phrases)
+        _ATTESTATION_KEYWORD_HINT
+        if required_phrases is None
+        else tuple(required_phrases)
     )
     display_phrases.extend(
         " or ".join(f"'{phrase}'" for phrase in group)

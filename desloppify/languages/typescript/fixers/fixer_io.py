@@ -90,7 +90,11 @@ def _process_fixer_file(
     transform_fn,
     dry_run: bool,
 ) -> dict[str, object] | None:
-    path = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
+    path = (
+        Path(filepath)
+        if Path(filepath).is_absolute()
+        else get_project_root() / filepath
+    )
     raw = path.read_bytes().decode("utf-8")  # undecodable files are skipped
     has_bom = raw.startswith(_UTF8_BOM)
     # Only an all-CRLF file is normalized: restoring "\r\n" everywhere would
@@ -130,7 +134,9 @@ def _process_fixer_file(
     problem = syntax_regression(path, original, new_content)
     if problem:
         print(
-            colorize(f"  Skip {rel(filepath)}: {problem}; file left unchanged", "yellow"),
+            colorize(
+                f"  Skip {rel(filepath)}: {problem}; file left unchanged", "yellow"
+            ),
             file=sys.stderr,
         )
         return None

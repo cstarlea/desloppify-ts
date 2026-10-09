@@ -35,10 +35,22 @@ DIM_KEYS = ("naming_quality", "logic_clarity", "type_safety")
 DIM_DISPLAY = {k: DISPLAY_NAMES[k] for k in DIM_KEYS}
 
 OBJECTIVE_ISSUES = [
-    {"id": "obj-1", "detector": "complexity", "file": "src/app.py", "status": "open",
-     "tier": 2, "confidence": "high"},
-    {"id": "obj-2", "detector": "naming", "file": "src/util.py", "status": "open",
-     "tier": 3, "confidence": "medium"},
+    {
+        "id": "obj-1",
+        "detector": "complexity",
+        "file": "src/app.py",
+        "status": "open",
+        "tier": 2,
+        "confidence": "high",
+    },
+    {
+        "id": "obj-2",
+        "detector": "naming",
+        "file": "src/util.py",
+        "status": "open",
+        "tier": 3,
+        "confidence": "medium",
+    },
 ]
 
 
@@ -46,13 +58,19 @@ OBJECTIVE_ISSUES = [
 # State / plan helpers
 # ---------------------------------------------------------------------------
 
+
 def _placeholder_dim_entries(key: str) -> tuple[str, dict, dict]:
     """(display_name, dim_scores_entry, subjective_assessment) for a placeholder."""
     return (
         DIM_DISPLAY[key],
         {
-            "score": 0, "strict": 0, "failing": 0, "checks": 0,
-            "detectors": {"subjective_assessment": {"placeholder": True, "dimension_key": key}},
+            "score": 0,
+            "strict": 0,
+            "failing": 0,
+            "checks": 0,
+            "detectors": {
+                "subjective_assessment": {"placeholder": True, "dimension_key": key}
+            },
         },
         {"score": 0, "placeholder": True},
     )
@@ -63,8 +81,13 @@ def _scored_dim_entries(key: str, score: float) -> tuple[str, dict, dict]:
     return (
         DIM_DISPLAY[key],
         {
-            "score": score, "strict": score, "failing": 0, "checks": 1,
-            "detectors": {"subjective_assessment": {"placeholder": False, "dimension_key": key}},
+            "score": score,
+            "strict": score,
+            "failing": 0,
+            "checks": 1,
+            "detectors": {
+                "subjective_assessment": {"placeholder": False, "dimension_key": key}
+            },
         },
         {"score": score, "placeholder": False},
     )
@@ -103,10 +126,16 @@ def _reconcile(state: dict, plan: dict, monkeypatch) -> dict:
     """Simulate a scan boundary: run reconcile_plan_post_scan with mocked I/O."""
     saved: list[dict] = []
     monkeypatch.setattr(reconcile_mod, "load_plan", lambda _path=None: plan)
-    monkeypatch.setattr(reconcile_mod, "save_plan", lambda p, _path=None: saved.append(p))
-    reconcile_mod.reconcile_plan_post_scan(SimpleNamespace(
-        state=state, state_path=Path("/tmp/fake-state.json"), config={},
-    ))
+    monkeypatch.setattr(
+        reconcile_mod, "save_plan", lambda p, _path=None: saved.append(p)
+    )
+    reconcile_mod.reconcile_plan_post_scan(
+        SimpleNamespace(
+            state=state,
+            state_path=Path("/tmp/fake-state.json"),
+            config={},
+        )
+    )
     return saved[-1] if saved else plan
 
 
@@ -145,8 +174,11 @@ def _add_review_issues(state: dict) -> None:
     for key in ("naming_quality", "logic_clarity"):
         fid = f"review-{key}"
         work_items[fid] = {
-            "id": fid, "detector": "review", "file": "src/app.py",
-            "status": "open", "detail": {"dimension": key},
+            "id": fid,
+            "detector": "review",
+            "file": "src/app.py",
+            "status": "open",
+            "detail": {"dimension": key},
         }
 
 
@@ -154,11 +186,13 @@ def _add_review_issues(state: dict) -> None:
 # Test 1: Fresh scan — only initial reviews visible
 # ---------------------------------------------------------------------------
 
-class TestPhase1OnlyInitialReviews:
 
+class TestPhase1OnlyInitialReviews:
     def test_only_initial_reviews_visible(self, monkeypatch):
         """Fresh scan with placeholders: only subjective initial review items appear."""
-        state = _build_state(OBJECTIVE_ISSUES, [_placeholder_dim_entries(k) for k in DIM_KEYS])
+        state = _build_state(
+            OBJECTIVE_ISSUES, [_placeholder_dim_entries(k) for k in DIM_KEYS]
+        )
         plan = _reconcile(state, empty_plan(), monkeypatch)
 
         ids = _queue_ids(state, plan)
@@ -173,15 +207,19 @@ class TestPhase1OnlyInitialReviews:
 # Test 2: Complete reviews (between scans) → objectives unlock immediately
 # ---------------------------------------------------------------------------
 
-class TestCompleteReviewsUnlocksObjectives:
 
+class TestCompleteReviewsUnlocksObjectives:
     def test_objectives_visible_after_completing_reviews(self, monkeypatch):
         """After completing reviews (no reconcile), lifecycle filter lets objectives through."""
-        state = _build_state(OBJECTIVE_ISSUES, [_placeholder_dim_entries(k) for k in DIM_KEYS])
+        state = _build_state(
+            OBJECTIVE_ISSUES, [_placeholder_dim_entries(k) for k in DIM_KEYS]
+        )
         plan = _reconcile(state, empty_plan(), monkeypatch)
 
         # Complete reviews: update state + purge subjective IDs
-        subj_ids = [fid for fid in _queue_ids(state, plan) if fid.startswith("subjective::")]
+        subj_ids = [
+            fid for fid in _queue_ids(state, plan) if fid.startswith("subjective::")
+        ]
         _spoof_reviews_complete(state)
         purge_ids(plan, subj_ids)
 
@@ -197,19 +235,23 @@ class TestCompleteReviewsUnlocksObjectives:
 # Test 3: Next scan after reviews → score checkpoint + create-plan
 # ---------------------------------------------------------------------------
 
-class TestScanAfterReviewsInjectsWorkflow:
 
+class TestScanAfterReviewsInjectsWorkflow:
     def test_workflow_items_injected_on_next_scan(self, monkeypatch):
         """Scan after completing reviews checkpoints score and queues create-plan.
 
         Postflight is exclusive once the scan boundary is crossed:
         planning work surfaces first, and only then does execute backlog reappear.
         """
-        state = _build_state(OBJECTIVE_ISSUES, [_placeholder_dim_entries(k) for k in DIM_KEYS])
+        state = _build_state(
+            OBJECTIVE_ISSUES, [_placeholder_dim_entries(k) for k in DIM_KEYS]
+        )
         plan = _reconcile(state, empty_plan(), monkeypatch)
 
         # Complete reviews between scans
-        subj_ids = [fid for fid in _queue_ids(state, plan) if fid.startswith("subjective::")]
+        subj_ids = [
+            fid for fid in _queue_ids(state, plan) if fid.startswith("subjective::")
+        ]
         _spoof_reviews_complete(state)
         purge_ids(plan, subj_ids)
 
@@ -230,8 +272,8 @@ class TestScanAfterReviewsInjectsWorkflow:
 # Phase-order contract: assessment -> score -> triage -> review (after objective drains)
 # ---------------------------------------------------------------------------
 
-class TestPhaseOrderInvariant:
 
+class TestPhaseOrderInvariant:
     def test_assessment_then_score_when_no_review_followup(self):
         """Endgame queue order is fixed once objective backlog is drained."""
         state = _build_state(
@@ -257,7 +299,9 @@ class TestPhaseOrderInvariant:
 
         # After subjective follow-up completion, workflow appears.
         ids = _queue_ids(state, plan)
-        state["subjective_assessments"]["naming_quality"]["needs_review_refresh"] = False
+        state["subjective_assessments"]["naming_quality"]["needs_review_refresh"] = (
+            False
+        )
         state["subjective_assessments"]["naming_quality"]["score"] = 100.0
         state["dimension_scores"][DIM_DISPLAY["naming_quality"]]["score"] = 100.0
         state["dimension_scores"][DIM_DISPLAY["naming_quality"]]["strict"] = 100.0
@@ -274,15 +318,19 @@ class TestPhaseOrderInvariant:
 # Test 4: Triage injected when review issues appear
 # ---------------------------------------------------------------------------
 
-class TestTriageInjectedOnScan:
 
+class TestTriageInjectedOnScan:
     def test_triage_after_review_issues_on_scan(self, monkeypatch):
         """Review-driven triage waits behind planning workflow after review import."""
-        state = _build_state(OBJECTIVE_ISSUES, [_placeholder_dim_entries(k) for k in DIM_KEYS])
+        state = _build_state(
+            OBJECTIVE_ISSUES, [_placeholder_dim_entries(k) for k in DIM_KEYS]
+        )
         plan = _reconcile(state, empty_plan(), monkeypatch)
 
         # Complete reviews between scans
-        subj_ids = [fid for fid in _queue_ids(state, plan) if fid.startswith("subjective::")]
+        subj_ids = [
+            fid for fid in _queue_ids(state, plan) if fid.startswith("subjective::")
+        ]
         _spoof_reviews_complete(state)
         purge_ids(plan, subj_ids)
 
@@ -307,10 +355,14 @@ class TestTriageInjectedOnScan:
         # After triage completes for the live review issue set, the findings surface.
         triage_meta = plan.setdefault("epic_triage_meta", {})
         triage_meta["triaged_ids"] = sorted(
-            fid for fid in state["work_items"] if state["work_items"][fid].get("detector") == "review"
+            fid
+            for fid in state["work_items"]
+            if state["work_items"][fid].get("detector") == "review"
         )
         triage_meta["triage_stages"] = {
-            stage_id.removeprefix("triage::"): {"confirmed_at": "2026-03-13T00:00:00+00:00"}
+            stage_id.removeprefix("triage::"): {
+                "confirmed_at": "2026-03-13T00:00:00+00:00"
+            }
             for stage_id in TRIAGE_STAGE_IDS
         }
         purge_ids(plan, TRIAGE_STAGE_IDS)
@@ -323,11 +375,13 @@ class TestTriageInjectedOnScan:
 # Test 5: Full lifecycle golden path
 # ---------------------------------------------------------------------------
 
-class TestFullLifecycleGoldenPath:
 
+class TestFullLifecycleGoldenPath:
     def test_golden_path(self, monkeypatch):
         """Walk through every lifecycle stage, completing items between scans."""
-        state = _build_state(OBJECTIVE_ISSUES, [_placeholder_dim_entries(k) for k in DIM_KEYS])
+        state = _build_state(
+            OBJECTIVE_ISSUES, [_placeholder_dim_entries(k) for k in DIM_KEYS]
+        )
         plan = empty_plan()
 
         # ── Scan 1: initial reviews ──
@@ -343,7 +397,9 @@ class TestFullLifecycleGoldenPath:
         ids = _queue_ids(state, plan)
         # Objectives unlocked immediately, no workflow items yet
         assert "obj-1" in ids, f"Post-reviews (no scan): {ids}"
-        assert WORKFLOW_COMMUNICATE_SCORE_ID not in ids, f"Post-reviews (no scan): {ids}"
+        assert WORKFLOW_COMMUNICATE_SCORE_ID not in ids, (
+            f"Post-reviews (no scan): {ids}"
+        )
 
         # ── Scan 2: score checkpoint auto-resolves and planning surfaces ──
         plan = _reconcile(state, plan, monkeypatch)
@@ -386,10 +442,14 @@ class TestFullLifecycleGoldenPath:
         # ── Complete triage → review findings finally become executable ──
         triage_meta = plan.setdefault("epic_triage_meta", {})
         triage_meta["triaged_ids"] = sorted(
-            fid for fid in state["work_items"] if state["work_items"][fid].get("detector") == "review"
+            fid
+            for fid in state["work_items"]
+            if state["work_items"][fid].get("detector") == "review"
         )
         triage_meta["triage_stages"] = {
-            stage_id.removeprefix("triage::"): {"confirmed_at": "2026-03-13T00:00:00+00:00"}
+            stage_id.removeprefix("triage::"): {
+                "confirmed_at": "2026-03-13T00:00:00+00:00"
+            }
             for stage_id in TRIAGE_STAGE_IDS
         }
         purge_ids(plan, list(TRIAGE_STAGE_IDS))

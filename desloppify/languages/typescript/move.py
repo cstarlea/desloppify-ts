@@ -83,7 +83,9 @@ def _is_index(path: str) -> bool:
 
 def _styled(base: str, old_spec: str, old_target: str, new_target: str) -> str:
     """Path *base* (new target, extension stripped) in the style of *old_spec*."""
-    old_suffix = next((s for s in (*_TS_SUFFIXES, *_JS_SUFFIXES) if old_spec.endswith(s)), "")
+    old_suffix = next(
+        (s for s in (*_TS_SUFFIXES, *_JS_SUFFIXES) if old_spec.endswith(s)), ""
+    )
     directory_form = _is_index(old_target) and not _strip_ts_ext(
         old_spec.removesuffix(old_suffix)
     ).endswith("index")
@@ -160,7 +162,9 @@ def find_replacements(
         for spec in _specifiers(content):
             if resolver.resolve(spec, importer) != source_abs:
                 continue
-            new_spec = rewrite_specifier(spec, importer, source_abs, importer, dest_abs, resolver)
+            new_spec = rewrite_specifier(
+                spec, importer, source_abs, importer, dest_abs, resolver
+            )
             if new_spec is not None and new_spec != spec:
                 replacements.extend(_quoted(content, spec, new_spec))
         if replacements:
@@ -189,7 +193,9 @@ def find_self_replacements(
         target = resolver.resolve(spec, source_abs)
         if target is None or target == source_abs:
             continue
-        new_spec = rewrite_specifier(spec, source_abs, target, dest_abs, target, resolver)
+        new_spec = rewrite_specifier(
+            spec, source_abs, target, dest_abs, target, resolver
+        )
         if new_spec is not None and new_spec != spec:
             replacements.extend(_quoted(content, spec, new_spec))
     return _dedup(replacements)

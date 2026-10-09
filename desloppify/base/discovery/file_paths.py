@@ -36,8 +36,10 @@ def matches_exclusion(rel_path: str, exclusion: str) -> bool:
                 return True
     if "/" in exclusion or os.sep in exclusion:
         normalized = exclusion.rstrip("/").rstrip(os.sep)
-        return rel_path == normalized or rel_path.startswith(normalized + "/") or rel_path.startswith(
-            normalized + os.sep
+        return (
+            rel_path == normalized
+            or rel_path.startswith(normalized + "/")
+            or rel_path.startswith(normalized + os.sep)
         )
     return False
 

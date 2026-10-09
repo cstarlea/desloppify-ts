@@ -90,13 +90,24 @@ class SenseCheckRecord(TypedDict, total=False):
 
 TriageStages = dict[
     str,
-    StrategizeRecord | ObserveRecord | ReflectRecord | OrganizeRecord | EnrichRecord | SenseCheckRecord,
+    StrategizeRecord
+    | ObserveRecord
+    | ReflectRecord
+    | OrganizeRecord
+    | EnrichRecord
+    | SenseCheckRecord,
 ]
 
 
 def resolve_reusable_report(
     report: str | None,
-    existing_stage: dict | ObserveRecord | ReflectRecord | OrganizeRecord | EnrichRecord | SenseCheckRecord | None,
+    existing_stage: dict
+    | ObserveRecord
+    | ReflectRecord
+    | OrganizeRecord
+    | EnrichRecord
+    | SenseCheckRecord
+    | None,
 ) -> tuple[str | None, bool]:
     if report:
         return report, False
@@ -164,8 +175,12 @@ def record_strategize_stage(
         "confirmed_text": "auto-confirmed",
     }
     if is_reuse and existing_stage:
-        strategize["confirmed_at"] = existing_stage.get("confirmed_at", strategize["confirmed_at"])
-        strategize["confirmed_text"] = existing_stage.get("confirmed_text", strategize["confirmed_text"])
+        strategize["confirmed_at"] = existing_stage.get(
+            "confirmed_at", strategize["confirmed_at"]
+        )
+        strategize["confirmed_text"] = existing_stage.get(
+            "confirmed_text", strategize["confirmed_text"]
+        )
     stages["strategize"] = strategize
     return cascade_clear_later_confirmations(stages, "strategize")
 

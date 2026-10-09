@@ -137,8 +137,12 @@ class TestShowPostScanAnalysis:
     def test_subjective_score_nudge_removed_from_post_scan(self, monkeypatch, capsys):
         """Subjective score nudges were removed — verify they no longer appear."""
         import desloppify.intelligence.narrative.core as narrative_mod
-        monkeypatch.setattr(narrative_mod, "compute_narrative",
-                            lambda state, **kw: {"headline": None, "actions": []})
+
+        monkeypatch.setattr(
+            narrative_mod,
+            "compute_narrative",
+            lambda state, **kw: {"headline": None, "actions": []},
+        )
 
         class FakeLang:
             name = "python"
@@ -164,6 +168,7 @@ class TestShowPostScanAnalysis:
     def test_reminders_and_plan_fields_removed_from_scan(self, monkeypatch, capsys):
         """Reminders and narrative plan fields are no longer shown in scan output."""
         import desloppify.intelligence.narrative.core as narrative_mod
+
         monkeypatch.setattr(
             narrative_mod,
             "compute_narrative",
@@ -174,7 +179,10 @@ class TestShowPostScanAnalysis:
                     {"type": "review_stale", "message": "Design review is stale"},
                 ],
                 "why_now": "Security work should come first.",
-                "primary_action": {"command": "desloppify show security", "description": "review security"},
+                "primary_action": {
+                    "command": "desloppify show security",
+                    "description": "review security",
+                },
                 "risk_flags": [{"severity": "high", "message": "40% issues hidden"}],
             },
         )
@@ -183,7 +191,12 @@ class TestShowPostScanAnalysis:
             name = "python"
 
         diff = {"new": 0, "auto_resolved": 0, "reopened": 0, "chronic_reopeners": []}
-        state = {"issues": {}, "overall_score": 90, "objective_score": 90, "strict_score": 90}
+        state = {
+            "issues": {},
+            "overall_score": 90,
+            "objective_score": 90,
+            "strict_score": 90,
+        }
         show_post_scan_analysis(diff, state, FakeLang())
         out = capsys.readouterr().out
         # These sections moved to status — scan only shows headline + pointers

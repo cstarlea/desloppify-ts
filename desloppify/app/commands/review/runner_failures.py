@@ -145,7 +145,9 @@ def looks_like_restricted_sandbox(log_text: str) -> bool:
     return any(phrase in text for phrase in _SANDBOX_PATH_WARNING_PHRASES)
 
 
-def summarize_failure_categories(*, failures: list[int], logs_dir: Path) -> dict[str, int]:
+def summarize_failure_categories(
+    *, failures: list[int], logs_dir: Path
+) -> dict[str, int]:
     """Return counts by failure category for failed batches."""
     categories: dict[str, int] = {}
     for idx in sorted(set(failures)):

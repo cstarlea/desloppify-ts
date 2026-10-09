@@ -12,10 +12,16 @@ import desloppify.engine.plan_triage as triage_mod
 
 def test_print_stage_progress_shows_enrichment_gap(monkeypatch, capsys) -> None:
     monkeypatch.setattr(primitives_mod, "colorize", lambda text, _style: text)
-    monkeypatch.setattr(primitives_mod, "unenriched_clusters", lambda _plan: [("cluster-a", ["steps"])])
-    monkeypatch.setattr(primitives_mod, "manual_clusters_with_issues", lambda _plan: ["cluster-a"])
+    monkeypatch.setattr(
+        primitives_mod, "unenriched_clusters", lambda _plan: [("cluster-a", ["steps"])]
+    )
+    monkeypatch.setattr(
+        primitives_mod, "manual_clusters_with_issues", lambda _plan: ["cluster-a"]
+    )
 
-    display_mod.print_stage_progress({"observe": {}, "reflect": {}}, plan={"clusters": {}})
+    display_mod.print_stage_progress(
+        {"observe": {}, "reflect": {}}, plan={"clusters": {}}
+    )
 
     out = capsys.readouterr().out
     assert "cluster(s) need enrichment" in out
@@ -64,7 +70,14 @@ def _stub_si(*, new_since_last=None, resolved_since_last=None, **kwargs):
     )
 
 
-def _stub_snapshot(*, triage_has_run=False, is_triage_stale=False, current_stage=None, blocked_reason=None, next_command=None):
+def _stub_snapshot(
+    *,
+    triage_has_run=False,
+    is_triage_stale=False,
+    current_stage=None,
+    blocked_reason=None,
+    next_command=None,
+):
     progress = SimpleNamespace(
         current_stage=current_stage,
         blocked_reason=blocked_reason,
@@ -108,7 +121,11 @@ def test_action_guidance_shows_execution_after_completion(monkeypatch, capsys) -
 def test_action_guidance_shows_observe_when_never_triaged(monkeypatch, capsys) -> None:
     """When triaged_ids is absent (never triaged), should show observe guidance."""
     monkeypatch.setattr(layout_mod, "colorize", lambda text, _style: text)
-    monkeypatch.setattr(layout_mod, "triage_runner_commands", lambda only_stages=None: [("runner", "cmd")])
+    monkeypatch.setattr(
+        layout_mod,
+        "triage_runner_commands",
+        lambda only_stages=None: [("runner", "cmd")],
+    )
 
     stages: dict = {}
     meta: dict = {}
@@ -132,7 +149,11 @@ def test_action_guidance_shows_retriage_when_new_issues(monkeypatch, capsys) -> 
     """When triage completed but new issues appeared, should NOT short-circuit
     to 'complete' — should show two-paths or observe guidance."""
     monkeypatch.setattr(layout_mod, "colorize", lambda text, _style: text)
-    monkeypatch.setattr(layout_mod, "triage_runner_commands", lambda only_stages=None: [("runner", "cmd")])
+    monkeypatch.setattr(
+        layout_mod,
+        "triage_runner_commands",
+        lambda only_stages=None: [("runner", "cmd")],
+    )
 
     stages: dict = {}
     meta = {
@@ -155,7 +176,9 @@ def test_action_guidance_shows_retriage_when_new_issues(monkeypatch, capsys) -> 
     assert "Triage complete" not in out
 
 
-def test_action_guidance_shows_resolved_count_after_completion(monkeypatch, capsys) -> None:
+def test_action_guidance_shows_resolved_count_after_completion(
+    monkeypatch, capsys
+) -> None:
     """Post-completion with only resolutions should mention resolved count."""
     monkeypatch.setattr(layout_mod, "colorize", lambda text, _style: text)
 
@@ -201,7 +224,9 @@ def test_triage_phase_banner_reports_recovery_gap() -> None:
     assert "3 review work item(s)" in banner
 
 
-def test_action_guidance_blocks_enrich_until_organize_confirmed(monkeypatch, capsys) -> None:
+def test_action_guidance_blocks_enrich_until_organize_confirmed(
+    monkeypatch, capsys
+) -> None:
     monkeypatch.setattr(layout_mod, "colorize", lambda text, _style: text)
 
     stages = {
@@ -226,5 +251,7 @@ def test_action_guidance_blocks_enrich_until_organize_confirmed(monkeypatch, cap
     )
 
     out = capsys.readouterr().out
-    assert "blocked until Defer contradictions, cluster, & prioritize is confirmed" in out
+    assert (
+        "blocked until Defer contradictions, cluster, & prioritize is confirmed" in out
+    )
     assert "desloppify plan triage --confirm organize" in out

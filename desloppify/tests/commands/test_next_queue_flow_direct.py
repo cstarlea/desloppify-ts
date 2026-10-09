@@ -148,7 +148,9 @@ def test_write_next_payload_adds_guardrail_warnings(monkeypatch) -> None:
     assert written == [payload]
 
 
-def test_build_and_render_execution_queue_renders_real_issue_and_payload(capsys) -> None:
+def test_build_and_render_execution_queue_renders_real_issue_and_payload(
+    capsys,
+) -> None:
     written: list[dict] = []
     item = {
         "id": "smells::a.py::x",

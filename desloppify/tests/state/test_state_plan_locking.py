@@ -67,7 +67,9 @@ def _command_worker(state_dir: str, worker: int, rounds: int) -> None:
     """Simulate a mutating command: load state and plan, edit both, save."""
     state_file = Path(state_dir) / "state.json"
     plan_file = Path(state_dir) / "plan.json"
-    args = argparse.Namespace(command="plan", plan_action="queue", state=str(state_file))
+    args = argparse.Namespace(
+        command="plan", plan_action="queue", state=str(state_file)
+    )
     for i in range(rounds):
         with command_lock(args):
             state = load_state(state_file)
@@ -162,8 +164,17 @@ def test_concurrent_cli_commands_keep_every_cluster(tmp_path: Path) -> None:
     names = [f"cluster{i}" for i in range(_WORKERS)]
     procs = [
         subprocess.Popen(
-            [sys.executable, "-m", "desloppify", "plan", "cluster", "create", name,
-             "--description", "race"],
+            [
+                sys.executable,
+                "-m",
+                "desloppify",
+                "plan",
+                "cluster",
+                "create",
+                name,
+                "--description",
+                "race",
+            ],
             cwd=tmp_path,
             env=env,
             stdout=subprocess.DEVNULL,
@@ -417,7 +428,9 @@ def test_nested_locks_inside_a_command_do_not_deadlock(tmp_path: Path) -> None:
     state_file = state_dir / "state.json"
     plan_file = state_dir / "plan.json"
     save_state(_scanned_state(), state_file)
-    args = argparse.Namespace(command="plan", plan_action="cluster", state=str(state_file))
+    args = argparse.Namespace(
+        command="plan", plan_action="cluster", state=str(state_file)
+    )
 
     def nested() -> None:
         with command_lock(args):
@@ -525,10 +538,13 @@ def test_lock_released_after_exception_and_fd_closed(tmp_path: Path) -> None:
     assert entry.depth == 0 and entry.fd is None
     # Another process can take it straight away.
     probe = subprocess.run(
-        [sys.executable, "-c",
-         "import sys; from pathlib import Path;"
-         "from desloppify.base.discovery.file_paths import exclusive_file_lock as l\n"
-         f"with l(Path({str(lock)!r}), timeout=0): pass"],
+        [
+            sys.executable,
+            "-c",
+            "import sys; from pathlib import Path;"
+            "from desloppify.base.discovery.file_paths import exclusive_file_lock as l\n"
+            f"with l(Path({str(lock)!r}), timeout=0): pass",
+        ],
         capture_output=True,
         timeout=60,
     )
@@ -541,11 +557,14 @@ def test_lock_released_after_exception_and_fd_closed(tmp_path: Path) -> None:
 def test_lock_times_out_against_another_process(tmp_path: Path) -> None:
     lock = tmp_path / "x.lock"
     holder = subprocess.Popen(
-        [sys.executable, "-c",
-         "import sys, time; from pathlib import Path;"
-         "from desloppify.base.discovery.file_paths import exclusive_file_lock as l\n"
-         f"with l(Path({str(lock)!r}), timeout=10):\n"
-         "    print('held', flush=True); time.sleep(30)"],
+        [
+            sys.executable,
+            "-c",
+            "import sys, time; from pathlib import Path;"
+            "from desloppify.base.discovery.file_paths import exclusive_file_lock as l\n"
+            f"with l(Path({str(lock)!r}), timeout=10):\n"
+            "    print('held', flush=True); time.sleep(30)",
+        ],
         stdout=subprocess.PIPE,
     )
     try:
@@ -553,7 +572,9 @@ def test_lock_times_out_against_another_process(tmp_path: Path) -> None:
         assert holder.stdout.readline().strip() == b"held"
         waits: list[int] = []
         with pytest.raises(TimeoutError):
-            with exclusive_file_lock(lock, timeout=0.2, on_wait=lambda: waits.append(1)):
+            with exclusive_file_lock(
+                lock, timeout=0.2, on_wait=lambda: waits.append(1)
+            ):
                 pass
         assert waits == [1]
     finally:
@@ -575,7 +596,10 @@ def test_lock_times_out_against_another_process(tmp_path: Path) -> None:
         ({"command": "plan", "plan_action": "triage", "run_stages": True}, False),
         ({"command": "review", "import_file": "x.json"}, True),
         ({"command": "review", "run_batches": True}, False),
-        ({"command": "review", "import_file": "x.json", "scan_after_import": True}, False),
+        (
+            {"command": "review", "import_file": "x.json", "scan_after_import": True},
+            False,
+        ),
         ({"command": "suppress"}, True),
         ({"command": "exclude"}, True),
         ({"command": "zone"}, True),

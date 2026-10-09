@@ -188,7 +188,9 @@ def _trim_query_plan(payload: dict, notes: list[str]) -> dict:
     return trimmed
 
 
-def _annotate_query_truncation(payload: dict, notes: list[str], *, max_bytes: int) -> dict:
+def _annotate_query_truncation(
+    payload: dict, notes: list[str], *, max_bytes: int
+) -> dict:
     if not notes:
         return payload
 
@@ -242,7 +244,9 @@ def write_query(data: dict, *, query_file: Path) -> OutputResult:
 
     payload, truncation_notes = _enforce_payload_budget(payload)
     try:
-        safe_write_text(query_file, json.dumps(payload, indent=2, default=json_default) + "\n")
+        safe_write_text(
+            query_file, json.dumps(payload, indent=2, default=json_default) + "\n"
+        )
         print("  → query.json updated", file=sys.stderr)
         if truncation_notes:
             print(

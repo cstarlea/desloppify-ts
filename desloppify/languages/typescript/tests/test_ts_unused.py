@@ -188,7 +188,9 @@ class TestDenoFallback:
         with pytest.raises(OSError, match="TypeScript compiler not found"):
             tsc_mod.run_tsc_check(tmp_path, tmp_path / "tsconfig.json")
 
-    def test_detect_unused_uses_deno_fallback_for_url_imports(self, tmp_path, monkeypatch):
+    def test_detect_unused_uses_deno_fallback_for_url_imports(
+        self, tmp_path, monkeypatch
+    ):
         """Deno-style URL imports should bypass tsc and use source-based fallback."""
         _write(
             tmp_path,
@@ -245,9 +247,7 @@ class TestDenoFallback:
         _write(tmp_path, "src/app.ts", "const x = 1;\n")
 
         class _Result:
-            stdout = (
-                "src/app.ts(1,7): error TS6133: 'x' is declared but its value is never read.\n"
-            )
+            stdout = "src/app.ts(1,7): error TS6133: 'x' is declared but its value is never read.\n"
             stderr = ""
             returncode = 2
 
@@ -274,9 +274,7 @@ class TestDenoFallback:
         _write(tmp_path, "src/app.ts", "const x = 1;\n")
 
         class _Result:
-            stdout = (
-                "src/app.ts(1,7): error TS6133: 'x' is declared but its value is never read.\n"
-            )
+            stdout = "src/app.ts(1,7): error TS6133: 'x' is declared but its value is never read.\n"
             stderr = ""
             returncode = 2
 
@@ -336,7 +334,9 @@ class TestTscFailureModes:
         result = SimpleNamespace(stdout=stdout, stderr=stderr, returncode=returncode)
         monkeypatch.setattr(tsc_mod, "run_tsc_check", lambda *_a: result)
 
-    def test_missing_compiler_falls_back_with_reduced_coverage(self, tmp_path, monkeypatch):
+    def test_missing_compiler_falls_back_with_reduced_coverage(
+        self, tmp_path, monkeypatch
+    ):
         self._project(tmp_path)
 
         def _missing(*_a):
@@ -356,16 +356,22 @@ class TestTscFailureModes:
             stdout="This is not the tsc command you are looking for\n",
             returncode=1,
         )
-        _entries, _total, coverage = ts_unused_mod.detect_unused_result(tmp_path / "src")
+        _entries, _total, coverage = ts_unused_mod.detect_unused_result(
+            tmp_path / "src"
+        )
         assert coverage is not None and coverage.reason == "wrong_tsc_package"
 
     def test_nonzero_exit_without_diagnostics_is_a_failure(self, tmp_path, monkeypatch):
         self._project(tmp_path)
         self._fake_result(monkeypatch, stderr="node: command crashed\n", returncode=1)
-        _entries, _total, coverage = ts_unused_mod.detect_unused_result(tmp_path / "src")
+        _entries, _total, coverage = ts_unused_mod.detect_unused_result(
+            tmp_path / "src"
+        )
         assert coverage is not None and coverage.reason == "tsc_failed"
 
-    def test_config_errors_keep_results_but_reduce_coverage(self, tmp_path, monkeypatch):
+    def test_config_errors_keep_results_but_reduce_coverage(
+        self, tmp_path, monkeypatch
+    ):
         self._project(tmp_path)
         self._fake_result(
             monkeypatch,

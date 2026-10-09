@@ -37,13 +37,17 @@ def _compute_fp_rates(issues: dict) -> dict[tuple[str, str], float]:
 
 
 def _auto_fixer_reminder(actions: list[dict]) -> list[dict]:
-    auto_fix_actions = [action for action in actions if action.get("type") == "auto_fix"]
+    auto_fix_actions = [
+        action for action in actions if action.get("type") == "auto_fix"
+    ]
     if not auto_fix_actions:
         return []
     total = sum(action.get("count", 0) for action in auto_fix_actions)
     if total <= 0:
         return []
-    first_cmd = auto_fix_actions[0].get("command", "desloppify autofix <fixer> --dry-run")
+    first_cmd = auto_fix_actions[0].get(
+        "command", "desloppify autofix <fixer> --dry-run"
+    )
     return [
         {
             "type": "auto_fixers_available",
@@ -119,7 +123,9 @@ def _wontfix_debt_reminders(
         try:
             age_days = (_dt.now(UTC) - _dt.fromisoformat(resolved_at)).days
         except (ValueError, TypeError) as exc:
-            log_best_effort_failure(logger, f"parse wontfix timestamp {resolved_at!r}", exc)
+            log_best_effort_failure(
+                logger, f"parse wontfix timestamp {resolved_at!r}", exc
+            )
             continue
         if age_days > 60:
             stale_wontfix.append(issue)

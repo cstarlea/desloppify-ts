@@ -34,7 +34,7 @@ class TestTriageCoverage:
             "review::test.py::naming_issue",
             "review::test.py::coupling_issue",
             "naming-convention::test.py",  # mechanical — should be excluded
-            "unused-import::test.py",       # mechanical — should be excluded
+            "unused-import::test.py",  # mechanical — should be excluded
             clustered=["review::test.py::naming_issue"],
         )
         organized, total, _ = triage_coverage(
@@ -71,7 +71,8 @@ class TestTriageCoverage:
         """Empty queue returns (0, 0, clusters)."""
         plan = _plan_with_queue()  # only triage stage IDs
         organized, total, clusters = triage_coverage(
-            plan, open_review_ids=set(),
+            plan,
+            open_review_ids=set(),
         )
         assert organized == 0
         assert total == 0

@@ -20,7 +20,13 @@ def test_typescript_overrides_replace_python_flavoured_prompts():
     _dims, prompts, _system = load_dimensions_for_lang("typescript")
     for dim in ("type_safety", "dependency_health", "test_strategy"):
         text = str(prompts[dim])
-        for python_term in ("TypedDict", "Optional", "requirements.txt", "dict[str, Any]", "-> str"):
+        for python_term in (
+            "TypedDict",
+            "Optional",
+            "requirements.txt",
+            "dict[str, Any]",
+            "-> str",
+        ):
             assert python_term not in text, (dim, python_term)
     assert any("`as` casts" in item for item in prompts["type_safety"]["look_for"])
 
@@ -30,7 +36,9 @@ def test_scan_evidence_focus_points_at_toolchain_evidence():
         render_scan_evidence_focus,
     )
 
-    text = render_scan_evidence_focus({"type_safety", "dependency_health", "test_strategy"})
+    text = render_scan_evidence_focus(
+        {"type_safety", "dependency_health", "test_strategy"}
+    )
     assert "abstractions.type_errors" in text
     assert "dependencies.manifest_issues" in text
     assert "testing.coverage" in text
@@ -39,7 +47,9 @@ def test_scan_evidence_focus_points_at_toolchain_evidence():
 def test_task_requirements_renumber_focus_lines_past_9j():
     from desloppify.app.commands.review.prompt_sections import render_task_requirements
 
-    text = render_task_requirements(issues_cap=5, dim_set={"dependency_health", "test_strategy"})
+    text = render_task_requirements(
+        issues_cap=5, dim_set={"dependency_health", "test_strategy"}
+    )
     assert "12. For dependency_health" in text
     assert "13. For test_strategy" in text
 
@@ -63,7 +73,13 @@ def test_review_prompts_carry_no_python_file_examples():
     _dims, prompts, system_prompt = load_dimensions_for_lang("typescript")
     for dim in ("convention_outlier", "package_organization"):
         text = str(prompts[dim])
-        for python_term in ("__init__.py", "TypedDict", "dataclass", ".py", "__pycache__"):
+        for python_term in (
+            "__init__.py",
+            "TypedDict",
+            "dataclass",
+            ".py",
+            "__pycache__",
+        ):
             assert python_term not in text, (dim, python_term)
     assert ".py" not in system_prompt
     assert "__init__" not in system_prompt

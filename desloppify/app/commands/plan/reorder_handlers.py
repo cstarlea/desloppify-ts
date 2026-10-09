@@ -64,10 +64,20 @@ def cmd_plan_reorder(args: argparse.Namespace) -> None:
     target: str | None = getattr(args, "target", None)
 
     if position in ("before", "after") and target is None:
-        print(colorize(f"  '{position}' requires --target (-t). Example: plan reorder <pat> {position} -t <id>", "red"))
+        print(
+            colorize(
+                f"  '{position}' requires --target (-t). Example: plan reorder <pat> {position} -t <id>",
+                "red",
+            )
+        )
         return
     if position in ("up", "down") and target is None:
-        print(colorize(f"  '{position}' requires --target (-t) with an integer offset. Example: plan reorder <pat> {position} -t 3", "red"))
+        print(
+            colorize(
+                f"  '{position}' requires --target (-t) with an integer offset. Example: plan reorder <pat> {position} -t 3",
+                "red",
+            )
+        )
         return
 
     plan = load_plan()
@@ -90,7 +100,10 @@ def cmd_plan_reorder(args: argparse.Namespace) -> None:
 
     count = move_items(plan, issue_ids, position, target=target, offset=offset)
     append_log_entry(
-        plan, "reorder", issue_ids=issue_ids, actor="user",
+        plan,
+        "reorder",
+        issue_ids=issue_ids,
+        actor="user",
         detail={"position": position, "target": target, "offset": offset},
     )
     save_plan(plan)
@@ -108,7 +121,12 @@ def cmd_plan_promote(args: argparse.Namespace) -> None:
     target: str | None = getattr(args, "target", None)
 
     if position in ("before", "after") and target is None:
-        print(colorize(f"  '{position}' requires --target (-t). Example: plan promote <pat> {position} -t <id>", "red"))
+        print(
+            colorize(
+                f"  '{position}' requires --target (-t). Example: plan promote <pat> {position} -t <id>",
+                "red",
+            )
+        )
         return
 
     plan = load_plan()

@@ -108,11 +108,17 @@ def find_report_files(root: Path) -> list[tuple[Path, Path]]:
         directory = Path(dirpath)
         depth = len(directory.relative_to(root).parts)
         dirnames[:] = [
-            d for d in dirnames
+            d
+            for d in dirnames
             if d not in _PRUNED_DIRS and not d.startswith(".") and depth < _MAX_DEPTH
         ]
-        for report_dir in [directory / _DEFAULT_REPORT_DIR, *_configured_report_dirs(directory)]:
-            candidates.extend((report_dir / name, directory) for name in (ISTANBUL_FILE, LCOV_FILE))
+        for report_dir in [
+            directory / _DEFAULT_REPORT_DIR,
+            *_configured_report_dirs(directory),
+        ]:
+            candidates.extend(
+                (report_dir / name, directory) for name in (ISTANBUL_FILE, LCOV_FILE)
+            )
     seen: set[Path] = set()
     found: list[tuple[Path, Path]] = []
     for report, base in candidates:
@@ -220,12 +226,20 @@ def load_measured_coverage(
     for report, base in find_report_files(root):
         try:
             text = report.read_text(encoding="utf-8", errors="replace")
-            parsed = _parse_istanbul(text) if report.name == ISTANBUL_FILE else _parse_lcov(text)
+            parsed = (
+                _parse_istanbul(text)
+                if report.name == ISTANBUL_FILE
+                else _parse_lcov(text)
+            )
             report_mtime = report.stat().st_mtime
         except (OSError, ValueError) as exc:
             logger.debug("unreadable coverage report %s: %s", report, exc)
             continue
-        report_rel = report.relative_to(root).as_posix() if report.is_relative_to(root) else str(report)
+        report_rel = (
+            report.relative_to(root).as_posix()
+            if report.is_relative_to(root)
+            else str(report)
+        )
         used = False
         for path, data in parsed.items():
             rel = _to_project_path(path, base, root)
@@ -237,7 +251,11 @@ def load_measured_coverage(
             except OSError:
                 continue
             line_count = _line_count(source)
-            if newer_source or line_count is None or (data.lines and max(data.lines) > line_count):
+            if (
+                newer_source
+                or line_count is None
+                or (data.lines and max(data.lines) > line_count)
+            ):
                 result.stale.add(rel)
                 continue
             used = True
@@ -245,7 +263,9 @@ def load_measured_coverage(
             merged.lines |= data.lines
             merged.hit_lines |= data.hit_lines
             if data.branches and (
-                not merged.branches or data.hit_branches * merged.branches > merged.hit_branches * data.branches
+                not merged.branches
+                or data.hit_branches * merged.branches
+                > merged.hit_branches * data.branches
             ):
                 merged.branches, merged.hit_branches = data.branches, data.hit_branches
         if used:

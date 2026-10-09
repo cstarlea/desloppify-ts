@@ -106,7 +106,9 @@ def parse_biome_output(stdout: str, run: LinterRun, files: set[Path]) -> bool:
                 line=line,
                 col=col,
                 rule=rule,
-                severity="error" if diagnostic.get("severity") in ("error", "fatal") else "warning",
+                severity="error"
+                if diagnostic.get("severity") in ("error", "fatal")
+                else "warning",
                 message=str(diagnostic.get("description") or ""),
                 fixable=isinstance(tags, list) and "fixable" in tags,
                 meta=_GROUP_META.get(rule.split("/", 1)[0]),
@@ -122,11 +124,15 @@ def parse_biome_output(stdout: str, run: LinterRun, files: set[Path]) -> bool:
     return True
 
 
-def run_biome(binary: Path, config: LinterConfig, targets: list[str], files: set[Path]) -> LinterRun:
+def run_biome(
+    binary: Path, config: LinterConfig, targets: list[str], files: set[Path]
+) -> LinterRun:
     """``biome lint`` from the config's directory on ``targets``; ``files`` are the scan's."""
     cmd = [str(binary), "lint", "--reporter=json", "--max-diagnostics=none", *targets]
     return run_linter(
-        cmd, LinterRun(config=config), lambda stdout, run: parse_biome_output(stdout, run, files)
+        cmd,
+        LinterRun(config=config),
+        lambda stdout, run: parse_biome_output(stdout, run, files),
     )
 
 

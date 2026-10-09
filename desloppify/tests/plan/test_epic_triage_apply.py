@@ -262,7 +262,9 @@ class TestClusterUpdate:
 
         result = apply_triage_to_plan(plan, state, triage)
 
-        assert plan["clusters"]["epic/existing"]["triage_version"] == result.triage_version
+        assert (
+            plan["clusters"]["epic/existing"]["triage_version"] == result.triage_version
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -605,4 +607,3 @@ class TestTriageMeta:
 # ---------------------------------------------------------------------------
 # Edge cases
 # ---------------------------------------------------------------------------
-

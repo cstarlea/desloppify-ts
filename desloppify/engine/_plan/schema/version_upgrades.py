@@ -83,7 +83,9 @@ def migrate_epics_to_clusters(plan: dict[str, Any]) -> None:
             "action_steps": epic.get("action_steps", []),
             "source_clusters": epic.get("source_clusters", []),
             "status": epic.get("status", "pending"),
-            "triage_version": epic.get("triage_version", epic.get("synthesis_version", 0)),
+            "triage_version": epic.get(
+                "triage_version", epic.get("synthesis_version", 0)
+            ),
         }
 
 
@@ -102,8 +104,18 @@ def migrate_v5_to_v6(plan: dict[str, Any]) -> None:
             idx = order.index(legacy_pending)
             order.remove(legacy_pending)
             meta = plan.get("epic_triage_meta", plan.get("epic_synthesis_meta", {}))
-            confirmed = set(meta.get("triage_stages", meta.get("synthesis_stages", {})).keys())
-            stage_names = ("strategize", "observe", "reflect", "organize", "enrich", "sense-check", "commit")
+            confirmed = set(
+                meta.get("triage_stages", meta.get("synthesis_stages", {})).keys()
+            )
+            stage_names = (
+                "strategize",
+                "observe",
+                "reflect",
+                "organize",
+                "enrich",
+                "sense-check",
+                "commit",
+            )
             to_inject = [
                 stage_id
                 for stage_id, name in zip(TRIAGE_STAGE_IDS, stage_names, strict=False)
@@ -117,7 +129,9 @@ def migrate_v5_to_v6(plan: dict[str, Any]) -> None:
         if WORKFLOW_CREATE_PLAN_ID not in order:
             insert_at = 0
             for idx, issue_id in enumerate(order):
-                if issue_id.startswith("triage::") or issue_id.startswith("synthesis::"):
+                if issue_id.startswith("triage::") or issue_id.startswith(
+                    "synthesis::"
+                ):
                     insert_at = idx + 1
             order.insert(insert_at, WORKFLOW_CREATE_PLAN_ID)
     else:
@@ -129,11 +143,11 @@ def migrate_synthesis_to_triage(plan: dict[str, Any]) -> None:
     order: list[str] = plan.get("queue_order", [])
     for index, issue_id in enumerate(order):
         if issue_id.startswith("synthesis::"):
-            order[index] = "triage::" + issue_id[len("synthesis::"):]
+            order[index] = "triage::" + issue_id[len("synthesis::") :]
 
     skipped: dict = plan.get("skipped", {})
     for old_key in [key for key in skipped if key.startswith("synthesis::")]:
-        new_key = "triage::" + old_key[len("synthesis::"):]
+        new_key = "triage::" + old_key[len("synthesis::") :]
         entry = skipped.pop(old_key)
         if isinstance(entry, dict):
             entry["issue_id"] = new_key
@@ -193,15 +207,18 @@ def upgrade_plan_to_v7(plan: dict[str, Any]) -> bool:
 
     normalize_cluster_defaults(plan, recover_from_log=needs_legacy_upgrade)
 
-    changed = _drop_legacy_plan_keys(
-        plan,
-        (
-            "epics",
-            "epic_synthesis_meta",
-            "pending_plan_gate",
-            "uncommitted_findings",
-        ),
-    ) or changed
+    changed = (
+        _drop_legacy_plan_keys(
+            plan,
+            (
+                "epics",
+                "epic_synthesis_meta",
+                "pending_plan_gate",
+                "uncommitted_findings",
+            ),
+        )
+        or changed
+    )
 
     meta = plan.get("epic_triage_meta")
     if _cleanup_synthesis_meta(meta):

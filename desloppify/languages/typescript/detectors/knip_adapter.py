@@ -126,7 +126,10 @@ def _knip_invocation(path: Path) -> tuple[list[str], Path] | str:
 def _parse_report(stdout: str) -> dict | None:
     """Knip's JSON report is one line; plugins loading project config may print
     their own lines to stdout before it."""
-    candidates = [stdout, *(line for line in reversed(stdout.splitlines()) if line.startswith("{"))]
+    candidates = [
+        stdout,
+        *(line for line in reversed(stdout.splitlines()) if line.startswith("{")),
+    ]
     for text in candidates:
         try:
             data = json.loads(text)
@@ -158,7 +161,9 @@ def _execute(argv: list[str], cwd: Path, timeout: int) -> KnipRun:
 
     stdout = result.stdout.strip()
     if not stdout:
-        logger.debug("knip: no output (rc=%s): %s", result.returncode, result.stderr[-500:])
+        logger.debug(
+            "knip: no output (rc=%s): %s", result.returncode, result.stderr[-500:]
+        )
         return KnipRun(cwd, failure="knip_failed")
     data = _parse_report(stdout)
     if data is None:
@@ -230,7 +235,9 @@ def _duplicate_entry(filepath: Path, group: list, unused: set[str]) -> dict | No
     except OSError:
         lines = []
     members = [
-        m for m in members if m["name"] not in unused and not _is_deprecated(lines, _issue_line(m))
+        m
+        for m in members
+        if m["name"] not in unused and not _is_deprecated(lines, _issue_line(m))
     ]
     if len(members) < 2:
         return None
@@ -248,17 +255,33 @@ def export_entries(run: KnipRun, path: Path) -> list[dict]:
     entries: list[dict] = []
     for category, kind in (("exports", "export"), ("types", "type")):
         for filepath, item in run.items(category):
-            if isinstance(item, dict) and item.get("name") and in_scan_path(filepath, path):
+            if (
+                isinstance(item, dict)
+                and item.get("name")
+                and in_scan_path(filepath, path)
+            ):
                 entries.append(
-                    {"file": rel(str(filepath)), "name": item["name"], "line": _issue_line(item), "kind": kind}
+                    {
+                        "file": rel(str(filepath)),
+                        "name": item["name"],
+                        "line": _issue_line(item),
+                        "kind": kind,
+                    }
                 )
     for filepath, item in run.items("enumMembers"):
-        if not (isinstance(item, dict) and item.get("name") and in_scan_path(filepath, path)):
+        if not (
+            isinstance(item, dict) and item.get("name") and in_scan_path(filepath, path)
+        ):
             continue
         enum = item.get("namespace")
         name = f"{enum}.{item['name']}" if enum else item["name"]
         entries.append(
-            {"file": rel(str(filepath)), "name": name, "line": _issue_line(item), "kind": "enum_member"}
+            {
+                "file": rel(str(filepath)),
+                "name": name,
+                "line": _issue_line(item),
+                "kind": "enum_member",
+            }
         )
     unused_by_file: dict[str, set[str]] = {}
     for entry in entries:

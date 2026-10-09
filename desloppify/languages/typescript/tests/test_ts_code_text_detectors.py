@@ -42,7 +42,9 @@ def mode(request, monkeypatch):
     return request.param
 
 
-def _smell_lines(tmp_path: Path, content: str, name: str = "a.ts") -> dict[str, list[int]]:
+def _smell_lines(
+    tmp_path: Path, content: str, name: str = "a.ts"
+) -> dict[str, list[int]]:
     (tmp_path / name).write_text(content)
     entries, _ = detect_smells(tmp_path)
     return {e["id"]: sorted(m["line"] for m in e["matches"]) for e in entries}
@@ -70,7 +72,9 @@ def test_source_text_anchors():
     assert list(source.line_matches("TODO")) == []
     assert [i for i, _ in source.line_matches("'TODO", "literal")] == [1]
     # The first match on a line may be in a string; a later one in code still counts.
-    assert [i for i, _ in SourceText("f('rgba(1'); rgba(2)").line_matches(r"rgba\(")] == [0]
+    assert [
+        i for i, _ in SourceText("f('rgba(1'); rgba(2)").line_matches(r"rgba\(")
+    ] == [0]
 
 
 @needs_treesitter
@@ -129,8 +133,8 @@ def test_comment_and_literal_anchored_smells(tmp_path, mode):
     content = (
         "const a = 'see // TODO not a comment';\n"
         "f(); // later // TODO: real\n"
-        "const u = \"https://example.com/x\";\n"
-        "// \"https://example.com/in-comment\"\n"
+        'const u = "https://example.com/x";\n'
+        '// "https://example.com/in-comment"\n'
     )
     found = _smell_lines(tmp_path, content)
     assert found["todo_fixme"] == [2]
@@ -173,7 +177,9 @@ def test_logs_ignore_comments_and_strings(tmp_path, mode):
 
 @needs_treesitter
 def test_logs_find_multi_line_calls_where_they_start(tmp_path):
-    (tmp_path / "a.ts").write_text("x();\nconsole.log(\n  `[Sync] ${n} done`,\n  n,\n);\n")
+    (tmp_path / "a.ts").write_text(
+        "x();\nconsole.log(\n  `[Sync] ${n} done`,\n  n,\n);\n"
+    )
     entries = detect_logs(tmp_path).entries
     assert [(e["line"], e["tag"]) for e in entries] == [(2, "Sync")]
 
@@ -197,10 +203,14 @@ def test_security_ignores_comments_and_strings(tmp_path):
         "eval(code);\n"
     )
     entries = detect_ts_security([str(path)], None).entries
-    assert [(e["detail"]["kind"], e["detail"]["line"]) for e in entries] == [("eval_injection", 11)]
+    assert [(e["detail"]["kind"], e["detail"]["line"]) for e in entries] == [
+        ("eval_injection", 11)
+    ]
 
 
-def _cross_language_security(tmp_path: Path, content: str, name: str = "a.ts") -> list[tuple[str, int]]:
+def _cross_language_security(
+    tmp_path: Path, content: str, name: str = "a.ts"
+) -> list[tuple[str, int]]:
     (tmp_path / name).write_text(content)
     entries, _ = detect_security_issues([name], None, "typescript", scan_root=tmp_path)
     return [(e["detail"]["kind"], e["detail"]["line"]) for e in entries]
@@ -208,7 +218,8 @@ def _cross_language_security(tmp_path: Path, content: str, name: str = "a.ts") -
 
 def test_cross_language_security_finds_secrets_in_any_text(tmp_path):
     content = (
-        "const apiKey = 'sk_" "live_abcdefghijklmnopqrstuvwx';\n"  # 1: in a string (split so push protection passes)
+        "const apiKey = 'sk_"
+        "live_abcdefghijklmnopqrstuvwx';\n"  # 1: in a string (split so push protection passes)
         "// AKIAIOSFODNN7EXAMPLE\n"  # 2: in a comment
         "const password = `Qwerty123456`;\n"  # 3: a template is a literal too
     )
@@ -250,7 +261,9 @@ def test_cross_language_security_reads_jsx_text(tmp_path):
         "export const A = () => <p>Don't share your token = 'Zx81sk29Fq0p'</p>;\n"
         "export const B = () => <p>It's</p>; const secret = 'Zx81sk29Fq0p';\n"
     )
-    assert _cross_language_security(tmp_path, content, "a.tsx") == [("hardcoded_secret_name", 2)]
+    assert _cross_language_security(tmp_path, content, "a.tsx") == [
+        ("hardcoded_secret_name", 2)
+    ]
 
 
 # ── file-level heuristics ────────────────────────────────────

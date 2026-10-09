@@ -123,7 +123,6 @@ def user_facing_mode(display_phase: str) -> str:
     return "plan"
 
 
-
 def migrate_legacy_phase(plan: PlanModel) -> bool:
     """Normalize legacy persisted lifecycle values in-place once per load."""
     refresh_state = plan.get("refresh_state")
@@ -199,7 +198,6 @@ def derive_display_phase(
     if has_execution:
         return LIFECYCLE_PHASE_EXECUTE
     return LIFECYCLE_PHASE_SCAN
-
 
 
 def _set_lifecycle_phase(plan: PlanModel, phase: str) -> bool:

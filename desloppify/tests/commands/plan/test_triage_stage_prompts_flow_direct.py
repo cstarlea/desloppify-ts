@@ -78,12 +78,21 @@ def test_observe_and_sense_prompt_builders_include_expected_context(tmp_path) ->
         repo_root=tmp_path,
     )
 
-    _assert_sections(observe, ("Issues to Verify", "OBSERVE Batch Instructions", "IMPORTANT: Output Rules"))
+    _assert_sections(
+        observe,
+        ("Issues to Verify", "OBSERVE Batch Instructions", "IMPORTANT: Output Rules"),
+    )
     assert "observe batch 1/2" in observe
     assert "naming_quality" in observe
     assert f"Repo root: {tmp_path}" in observe
     assert "[review::s" not in observe  # hash prefix truncation is used
-    for required_field in ("- hash:", "verdict:", "verdict_reasoning:", "files_read:", "recommendation:"):
+    for required_field in (
+        "- hash:",
+        "verdict:",
+        "verdict_reasoning:",
+        "files_read:",
+        "recommendation:",
+    ):
         assert required_field in observe
     assert "Do NOT run any `desloppify` commands" in observe
 
@@ -109,7 +118,14 @@ def test_observe_and_sense_prompt_builders_include_expected_context(tmp_path) ->
     )
     _assert_sections(
         content_prompt,
-        ("Your job", "What to check and fix", "How to report fixes", "What NOT to do", "Current Steps", "Output"),
+        (
+            "Your job",
+            "What to check and fix",
+            "How to report fixes",
+            "What NOT to do",
+            "Current Steps",
+            "Output",
+        ),
     )
     structure_prompt = prompts_sense_mod.build_sense_check_structure_prompt(
         plan=plan,
@@ -154,14 +170,14 @@ def test_run_stage_enrich_handles_no_queue_and_records_stage(tmp_path, capsys) -
 
     plan = {
         "epic_triage_meta": {
-            "triage_stages": {
-                "organize": {"confirmed_at": "2026-03-09T00:00:00+00:00"}
-            }
+            "triage_stages": {"organize": {"confirmed_at": "2026-03-09T00:00:00+00:00"}}
         }
     }
     services = _Services(plan=plan)
 
-    def _record_enrich(stages: dict, *, report: str, shallow_count: int, existing_stage, is_reuse):
+    def _record_enrich(
+        stages: dict, *, report: str, shallow_count: int, existing_stage, is_reuse
+    ):
         stages["enrich"] = {
             "stage": "enrich",
             "report": report,
@@ -191,7 +207,9 @@ def test_run_stage_enrich_handles_no_queue_and_records_stage(tmp_path, capsys) -
     assert services.save_calls >= 2
 
 
-def test_record_sense_stage_and_run_stage_sense_check(tmp_path, capsys, monkeypatch) -> None:
+def test_record_sense_stage_and_run_stage_sense_check(
+    tmp_path, capsys, monkeypatch
+) -> None:
     stages: dict = {}
     monkeypatch.setattr(
         "desloppify.app.commands.plan.triage.stages.records.utc_now",
@@ -212,15 +230,18 @@ def test_record_sense_stage_and_run_stage_sense_check(tmp_path, capsys, monkeypa
 
     plan = {
         "epic_triage_meta": {
-            "triage_stages": {
-                "enrich": {"confirmed_at": "2026-03-09T00:00:00+00:00"}
-            }
+            "triage_stages": {"enrich": {"confirmed_at": "2026-03-09T00:00:00+00:00"}}
         }
     }
     services = _Services(plan=plan)
-    args = argparse.Namespace(report="Verified all steps: src/services/main.ts lines 10-50 match descriptions. Structure and content accurate. " + "y" * 30)
+    args = argparse.Namespace(
+        report="Verified all steps: src/services/main.ts lines 10-50 match descriptions. Structure and content accurate. "
+        + "y" * 30
+    )
 
-    def _record_sense(stages: dict, *, report: str, existing_stage, is_reuse, value_targets=None):
+    def _record_sense(
+        stages: dict, *, report: str, existing_stage, is_reuse, value_targets=None
+    ):
         stages["sense-check"] = {
             "stage": "sense-check",
             "report": report,

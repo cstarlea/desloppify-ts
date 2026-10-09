@@ -90,7 +90,9 @@ def apply_replacements(content: str, replacements: ReplacementList) -> str:
     mapping = dict(replacements)
     if not mapping:
         return content
-    pattern = re.compile("|".join(re.escape(old) for old in sorted(mapping, key=len, reverse=True)))
+    pattern = re.compile(
+        "|".join(re.escape(old) for old in sorted(mapping, key=len, reverse=True))
+    )
     return pattern.sub(lambda match: mapping[match.group(0)], content)
 
 

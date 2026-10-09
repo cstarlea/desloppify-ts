@@ -13,12 +13,14 @@ PARSE_INIT_ERRORS: tuple[type[Exception], ...] = (
 def _make_query(language, source: str):
     """Create a tree-sitter Query."""
     from tree_sitter import Query
+
     return Query(language, source)
 
 
 def _run_query(query, root_node) -> list[tuple[int, dict]]:
     """Run a query and return matches."""
     from tree_sitter import QueryCursor
+
     cursor = QueryCursor(query)
     return cursor.matches(root_node)
 
@@ -49,7 +51,9 @@ def note_grammar_failure(grammar: str, error: str) -> None:
     _GRAMMAR_FAILURES.setdefault(grammar, error)
 
 
-def prepare_grammars(grammars: tuple[str, ...] = REQUIRED_GRAMMARS) -> tuple[dict[str, str | None], list[str]]:
+def prepare_grammars(
+    grammars: tuple[str, ...] = REQUIRED_GRAMMARS,
+) -> tuple[dict[str, str | None], list[str]]:
     """Download missing grammars, then load each one.
 
     Returns each grammar's load error (None when it loads) and the grammars

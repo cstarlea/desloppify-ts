@@ -22,8 +22,14 @@ PLAN_VERSION = 8
 
 EPIC_PREFIX = "epic/"
 VALID_EPIC_DIRECTIONS = {
-    "delete", "merge", "flatten", "enforce",
-    "simplify", "decompose", "extract", "inline",
+    "delete",
+    "merge",
+    "flatten",
+    "enforce",
+    "simplify",
+    "decompose",
+    "extract",
+    "inline",
 }
 
 
@@ -48,11 +54,11 @@ class ItemOverride(TypedDict, total=False):
 
 
 class ActionStep(TypedDict, total=False):
-    title: Required[str]        # Short summary, 1 line
-    detail: str                 # Long description, paragraphs OK
-    issue_refs: list[str]       # Issue ID suffixes this step addresses
-    effort: str                 # "trivial" | "small" | "medium" | "large"
-    done: bool                  # Completion tracking (default False)
+    title: Required[str]  # Short summary, 1 line
+    detail: str  # Long description, paragraphs OK
+    issue_refs: list[str]  # Issue ID suffixes this step addresses
+    effort: str  # "trivial" | "small" | "medium" | "large"
+    done: bool  # Completion tracking (default False)
 
 
 class Cluster(TypedDict, total=False):
@@ -85,17 +91,19 @@ class Cluster(TypedDict, total=False):
 
 
 class CommitRecord(TypedDict, total=False):
-    sha: Required[str]           # git commit SHA
-    branch: str | None           # branch name
-    issue_ids: list[str]       # issues included
-    recorded_at: str             # ISO timestamp
-    note: str | None             # user-provided rationale
-    cluster_name: str | None     # cluster context
+    sha: Required[str]  # git commit SHA
+    branch: str | None  # branch name
+    issue_ids: list[str]  # issues included
+    recorded_at: str  # ISO timestamp
+    note: str | None  # user-provided rationale
+    cluster_name: str | None  # cluster context
 
 
 class ExecutionLogEntry(TypedDict, total=False):
     timestamp: Required[str]
-    action: Required[str]  # "done", "skip", "unskip", "resolve", "reconcile", "cluster_done", "focus", "reset"
+    action: Required[
+        str
+    ]  # "done", "skip", "unskip", "resolve", "reconcile", "cluster_done", "focus", "reset"
     issue_ids: list[str]
     cluster_name: str | None
     actor: str  # "user" | "system" | "agent"
@@ -142,7 +150,9 @@ class IssueDisposition(TypedDict, total=False):
     # Reflect writes (what should we do about it?):
     decision: str  # "cluster" | "skip"
     target: str  # cluster name or skip reason
-    decision_source: str  # "observe_auto" (false-positive auto-skip) | "reflect" (strategy)
+    decision_source: (
+        str  # "observe_auto" (false-positive auto-skip) | "reflect" (strategy)
+    )
 
 
 class ReflectDisposition(TypedDict, total=False):
@@ -393,9 +403,7 @@ def executable_objective_ids(
     queued_ids = {
         issue_id
         for issue_id in plan.get("queue_order", [])
-        if isinstance(issue_id, str)
-        and issue_id
-        and issue_id not in skipped_ids
+        if isinstance(issue_id, str) and issue_id and issue_id not in skipped_ids
     }
     live_queue_ids = live_planned_queue_ids(plan)
     queued_objective_ids = all_objective_ids & live_queue_ids

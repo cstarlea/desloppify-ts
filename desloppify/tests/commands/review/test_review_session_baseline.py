@@ -28,16 +28,23 @@ def _git(head: str, status: str = ""):
 
 
 def test_baseline_outside_git_has_no_git_fingerprint(tmp_path):
-    baseline = build_review_session_baseline(state=_state(), packet=_packet(), project_root=tmp_path)
+    baseline = build_review_session_baseline(
+        state=_state(), packet=_packet(), project_root=tmp_path
+    )
     assert baseline["scan_count"] == 3
     assert baseline["git_head"] is None and baseline["git_status_sha256"] is None
-    assert evaluate_session_baseline_drift(
-        expected=baseline, state=_state(), packet=_packet(), project_root=tmp_path
-    ) == []
+    assert (
+        evaluate_session_baseline_drift(
+            expected=baseline, state=_state(), packet=_packet(), project_root=tmp_path
+        )
+        == []
+    )
 
 
 def test_drift_names_each_change(tmp_path):
-    baseline = build_review_session_baseline(state=_state(), packet=_packet(), project_root=tmp_path)
+    baseline = build_review_session_baseline(
+        state=_state(), packet=_packet(), project_root=tmp_path
+    )
     reasons = evaluate_session_baseline_drift(
         expected=baseline,
         state=_state(scan_count=4),
@@ -72,7 +79,14 @@ def test_git_drift_compares_head_and_working_tree(tmp_path):
 
 
 def test_assessment_store_normalizes_legacy_scores_in_place():
-    state = {"subjective_assessments": {"naming_quality": 72, "logic_clarity": {"score": 80.0}, "bad": "x", 5: {}}}
+    state = {
+        "subjective_assessments": {
+            "naming_quality": 72,
+            "logic_clarity": {"score": 80.0},
+            "bad": "x",
+            5: {},
+        }
+    }
     store = subjective_assessment_store(state)
     assert store == {
         "naming_quality": {"score": 72.0},

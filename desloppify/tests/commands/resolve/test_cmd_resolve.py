@@ -25,6 +25,7 @@ def _isolate_plan(monkeypatch):
     """Prevent resolve tests from touching the real .desloppify/plan.json."""
     monkeypatch.setattr(plan_mod, "has_living_plan", lambda: False)
 
+
 # ---------------------------------------------------------------------------
 # Module-level sanity
 # ---------------------------------------------------------------------------
@@ -108,7 +109,9 @@ class TestCmdResolve:
     def test_resolve_no_matches(self, monkeypatch, capsys):
         """When no issues match, should print a warning."""
         monkeypatch.setattr(resolve_mod, "state_path", lambda a: "/tmp/fake.json")
-        monkeypatch.setattr(resolve_mod, "require_triage_current_or_exit", lambda **kwargs: None)
+        monkeypatch.setattr(
+            resolve_mod, "require_triage_current_or_exit", lambda **kwargs: None
+        )
 
         fake_state = {
             "issues": {},
@@ -141,8 +144,12 @@ class TestCmdResolve:
     def test_resolve_successful(self, monkeypatch, capsys):
         """Resolving issues should print a success message."""
         monkeypatch.setattr(resolve_mod, "state_path", lambda a: "/tmp/fake.json")
-        monkeypatch.setattr(resolve_mod, "require_triage_current_or_exit", lambda **kwargs: None)
-        monkeypatch.setattr(resolve_mod, "_write_resolve_query_entry", lambda _ctx: None)
+        monkeypatch.setattr(
+            resolve_mod, "require_triage_current_or_exit", lambda **kwargs: None
+        )
+        monkeypatch.setattr(
+            resolve_mod, "_write_resolve_query_entry", lambda _ctx: None
+        )
 
         fake_state = {
             "issues": {"f1": {"status": "fixed"}},
@@ -185,7 +192,9 @@ class TestCmdResolve:
     def test_wontfix_shows_strict_cost_warning(self, monkeypatch, capsys):
         """Wontfix resolution should warn about strict score impact."""
         monkeypatch.setattr(resolve_mod, "state_path", lambda a: "/tmp/fake.json")
-        monkeypatch.setattr(resolve_mod, "_write_resolve_query_entry", lambda _ctx: None)
+        monkeypatch.setattr(
+            resolve_mod, "_write_resolve_query_entry", lambda _ctx: None
+        )
 
         fake_state = {
             "issues": {"f1": {"status": "wontfix", "detector": "smells"}},
@@ -227,7 +236,9 @@ class TestCmdResolve:
 
     def test_reopen_without_attestation_allowed(self, monkeypatch, capsys):
         monkeypatch.setattr(resolve_mod, "state_path", lambda a: "/tmp/fake.json")
-        monkeypatch.setattr(resolve_mod, "_write_resolve_query_entry", lambda _ctx: None)
+        monkeypatch.setattr(
+            resolve_mod, "_write_resolve_query_entry", lambda _ctx: None
+        )
 
         fake_state = {
             "issues": {"f1": {"status": "open"}},
@@ -267,7 +278,9 @@ class TestCmdResolve:
 
     def test_resolve_save_state_error_exits(self, monkeypatch, capsys):
         monkeypatch.setattr(resolve_mod, "state_path", lambda a: "/tmp/fake.json")
-        monkeypatch.setattr(resolve_mod, "require_triage_current_or_exit", lambda **kwargs: None)
+        monkeypatch.setattr(
+            resolve_mod, "require_triage_current_or_exit", lambda **kwargs: None
+        )
 
         fake_state = {
             "issues": {"f1": {"status": "fixed"}},
@@ -360,7 +373,10 @@ class TestCmdSuppress:
         assert exc_info.value.exit_code == 1
         err = capsys.readouterr().err
         assert "Suppress requires --attest" in err
-        assert "Required keywords: 'not gaming' and 'i have actually' or 'reviewed'." in err
+        assert (
+            "Required keywords: 'not gaming' and 'i have actually' or 'reviewed'."
+            in err
+        )
         assert f'--attest "{ATTEST_EXAMPLE}"' in err
 
     def test_suppress_save_state_error_exits(self, monkeypatch, capsys):
@@ -377,10 +393,10 @@ class TestCmdSuppress:
             "save_state",
             lambda state, sp: (_ for _ in ()).throw(OSError("readonly")),
         )
-        monkeypatch.setattr(state_mod, "remove_ignored_issues", lambda state, pattern: 0)
         monkeypatch.setattr(
-            suppress_mod, "save_config_or_exit", lambda _config: None
+            state_mod, "remove_ignored_issues", lambda state, pattern: 0
         )
+        monkeypatch.setattr(suppress_mod, "save_config_or_exit", lambda _config: None)
         monkeypatch.setattr(suppress_mod, "resolve_lang", lambda args: None)
 
         class FakeArgs:
@@ -404,13 +420,23 @@ class TestCmdSuppress:
             state={"issues": {}, "last_scan": "2026-05-13T00:00:00+00:00"},
             state_path=Path("/tmp/fake.json"),
         )
-        monkeypatch.setattr(state_mod, "remove_ignored_issues", lambda state, pattern: 0)
+        monkeypatch.setattr(
+            state_mod, "remove_ignored_issues", lambda state, pattern: 0
+        )
         monkeypatch.setattr(suppress_mod, "save_config_or_exit", lambda _config: None)
-        monkeypatch.setattr(suppress_mod, "save_state_or_exit", lambda _state, _state_file: None)
-        monkeypatch.setattr(suppress_mod, "show_score_with_plan_context", lambda *_a, **_k: None)
-        monkeypatch.setattr(suppress_mod, "check_config_staleness", lambda _config: None)
+        monkeypatch.setattr(
+            suppress_mod, "save_state_or_exit", lambda _state, _state_file: None
+        )
+        monkeypatch.setattr(
+            suppress_mod, "show_score_with_plan_context", lambda *_a, **_k: None
+        )
+        monkeypatch.setattr(
+            suppress_mod, "check_config_staleness", lambda _config: None
+        )
         monkeypatch.setattr(suppress_mod, "resolve_lang", lambda args: None)
-        monkeypatch.setattr(suppress_mod.narrative_mod, "compute_narrative", lambda *_a, **_k: {})
+        monkeypatch.setattr(
+            suppress_mod.narrative_mod, "compute_narrative", lambda *_a, **_k: {}
+        )
         monkeypatch.setattr(suppress_mod, "write_query", lambda _payload: None)
 
         class FakeArgs:
@@ -432,14 +458,18 @@ class TestResolveHelperModules:
             state_path=Path("/tmp/desloppify-state.json"),
         )
 
-        loaded = command_runtime_mod.command_runtime(argparse.Namespace(runtime=runtime))
+        loaded = command_runtime_mod.command_runtime(
+            argparse.Namespace(runtime=runtime)
+        )
 
         assert loaded is runtime
         assert loaded.config["strict_target"] == 95
         assert loaded.state == {"issues": {}}
         assert loaded.state_path == Path("/tmp/desloppify-state.json")
 
-    def test_command_runtime_builds_runtime_from_config_and_state(self, monkeypatch) -> None:
+    def test_command_runtime_builds_runtime_from_config_and_state(
+        self, monkeypatch
+    ) -> None:
         fake_state = {"issues": {"one": {"status": "open"}}}
         captured: dict[str, object] = {}
 
@@ -448,7 +478,9 @@ class TestResolveHelperModules:
             return fake_state
 
         monkeypatch.setattr(command_runtime_mod, "load_config", lambda: {"badge": True})
-        monkeypatch.setattr(command_runtime_mod, "state_path", lambda _args: "var/desloppify.json")
+        monkeypatch.setattr(
+            command_runtime_mod, "state_path", lambda _args: "var/desloppify.json"
+        )
         monkeypatch.setattr(command_runtime_mod, "load_state", _fake_load_state)
 
         runtime = command_runtime_mod.command_runtime(argparse.Namespace())
@@ -458,7 +490,9 @@ class TestResolveHelperModules:
         assert runtime.state_path == Path("var/desloppify.json")
         assert captured["state_path"] == Path("var/desloppify.json")
 
-    def test_state_persistence_helpers_delegate_and_wrap_os_errors(self, monkeypatch) -> None:
+    def test_state_persistence_helpers_delegate_and_wrap_os_errors(
+        self, monkeypatch
+    ) -> None:
         saved: dict[str, object] = {}
 
         monkeypatch.setattr(

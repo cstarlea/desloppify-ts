@@ -52,8 +52,7 @@ def test_no_language_phase_imports_shared_detector():
     The authoritative list lives in phase_builders.EXCLUSIVE_DETECTOR_MODULES.
     """
     phase_files = sorted(
-        p for p in _LANGUAGES_DIR.rglob("phases*.py")
-        if "_framework" not in p.parts
+        p for p in _LANGUAGES_DIR.rglob("phases*.py") if "_framework" not in p.parts
     )
     violations = []
     for phase_file in phase_files:

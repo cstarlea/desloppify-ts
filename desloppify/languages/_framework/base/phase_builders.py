@@ -28,15 +28,18 @@ def _make_detector_phase_factory(
     *exclusive_detector*: if set, the detector module path that this phase owns.
     Language-specific phase files must not import that module directly.
     """
+
     def factory() -> DetectorPhase:
         return DetectorPhase(label, run_fn, slow=slow)
+
     factory.exclusive_detector = exclusive_detector
     return factory
 
 
 SHARED_PHASE_FACTORIES = {
     "test_coverage": _make_detector_phase_factory(
-        "Test coverage", phase_test_coverage,
+        "Test coverage",
+        phase_test_coverage,
         exclusive_detector="desloppify.engine.detectors.test_coverage",
     ),
     "security": _make_detector_phase_factory(
@@ -48,19 +51,25 @@ SHARED_PHASE_FACTORIES = {
         exclusive_detector="desloppify.engine.detectors.security",
     ),
     "signature": _make_detector_phase_factory(
-        "Signature analysis", phase_signature,
+        "Signature analysis",
+        phase_signature,
         exclusive_detector="desloppify.engine.detectors.signature",
     ),
     "subjective_review": _make_detector_phase_factory(
-        "Subjective review", phase_subjective_review,
+        "Subjective review",
+        phase_subjective_review,
         exclusive_detector="desloppify.engine.detectors.review_coverage",
     ),
     "duplicates": _make_detector_phase_factory(
-        "Duplicates", phase_dupes, slow=True,
+        "Duplicates",
+        phase_dupes,
+        slow=True,
         exclusive_detector="desloppify.engine.detectors.dupes",
     ),
     "boilerplate_duplication": _make_detector_phase_factory(
-        "Boilerplate duplication", phase_boilerplate_duplication, slow=True,
+        "Boilerplate duplication",
+        phase_boilerplate_duplication,
+        slow=True,
         exclusive_detector="desloppify.engine.detectors.jscpd_adapter",
     ),
 }
@@ -77,7 +86,9 @@ detector_phase_security = SHARED_PHASE_FACTORIES["security"]
 detector_phase_signature = SHARED_PHASE_FACTORIES["signature"]
 detector_phase_subjective_review = SHARED_PHASE_FACTORIES["subjective_review"]
 detector_phase_duplicates = SHARED_PHASE_FACTORIES["duplicates"]
-detector_phase_boilerplate_duplication = SHARED_PHASE_FACTORIES["boilerplate_duplication"]
+detector_phase_boilerplate_duplication = SHARED_PHASE_FACTORIES[
+    "boilerplate_duplication"
+]
 
 
 def shared_subjective_duplicates_tail(

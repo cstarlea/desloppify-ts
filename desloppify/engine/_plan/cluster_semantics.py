@@ -71,9 +71,13 @@ def infer_cluster_action_type(
         # Legacy safeguard: a detector may be auto-fixable in principle, but
         # if the stored action is not an autofix command, keep cluster handling
         # conservative and render it as refactor work.
-        if meta.action_type == ACTION_TYPE_AUTO_FIX and action and (
-            not action.startswith("desloppify autofix ")
-            or "--dry-run" not in action
+        if (
+            meta.action_type == ACTION_TYPE_AUTO_FIX
+            and action
+            and (
+                not action.startswith("desloppify autofix ")
+                or "--dry-run" not in action
+            )
         ):
             return ACTION_TYPE_REFACTOR
         if meta.action_type in VALID_ACTION_TYPES:
@@ -102,7 +106,8 @@ def infer_cluster_execution_policy(
     # String-sniffing fallback — handles old clusters without detector context.
     if (
         cluster.get("auto")
-        and infer_cluster_action_type(cluster, detector=detector) == ACTION_TYPE_AUTO_FIX
+        and infer_cluster_action_type(cluster, detector=detector)
+        == ACTION_TYPE_AUTO_FIX
     ):
         return EXECUTION_POLICY_EPHEMERAL_AUTOPROMOTE
     return EXECUTION_POLICY_PLANNED_ONLY

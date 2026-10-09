@@ -37,16 +37,17 @@ from desloppify.engine.policy.zones import should_skip_detector_in_zone
 logger = logging.getLogger(__name__)
 
 # Plan-aware sort tiers (item_sort_key)
-_TIER_PLANNED = 0   # Items with explicit plan position
+_TIER_PLANNED = 0  # Items with explicit plan position
 _TIER_EXISTING = 1  # Known items, natural ranking
-_TIER_NEW = 2       # Newly discovered items
+_TIER_NEW = 2  # Newly discovered items
 
 # Natural ranking groups (_natural_sort_key)
 _RANK_INITIAL_REVIEW = -3  # Unassessed subjective dimensions
-_RANK_WORKFLOW = -2         # Score checkpoints, create-plan
-_RANK_TRIAGE_STAGE = -1     # Epic triage workflow stages
-_RANK_CLUSTER = 0           # Auto-clustered issues
-_RANK_ISSUE = 1           # Individual issues + assessed subjective
+_RANK_WORKFLOW = -2  # Score checkpoints, create-plan
+_RANK_TRIAGE_STAGE = -1  # Epic triage workflow stages
+_RANK_CLUSTER = 0  # Auto-clustered issues
+_RANK_ISSUE = 1  # Individual issues + assessed subjective
+
 
 def _workflow_stage_index(item: WorkQueueItem) -> int:
     raw_index = item.get("stage_index")
@@ -131,7 +132,9 @@ def build_issue_items(
     chronic: bool,
     forced_ids: set[str] | None = None,
 ) -> list[WorkQueueItem]:
-    scoped = path_scoped_issues((state.get("work_items") or state.get("issues", {})), scan_path)
+    scoped = path_scoped_issues(
+        (state.get("work_items") or state.get("issues", {})), scan_path
+    )
     subjective_scores = subjective_strict_scores(state)
     out: list[WorkQueueItem] = []
     forced_ids = forced_ids or set()
@@ -163,9 +166,7 @@ def build_issue_items(
         item["action_type"] = meta.action_type if meta is not None else "manual_fix"
         item["is_review"] = is_review_issue(item)
         item["is_subjective"] = is_subjective_issue(item)
-        item["review_weight"] = (
-            review_issue_weight(item) if item["is_review"] else None
-        )
+        item["review_weight"] = review_issue_weight(item) if item["is_review"] else None
         subjective_score = None
         if item["is_subjective"]:
             detail = detail_dict(issue)
@@ -194,7 +195,12 @@ def _natural_sort_key(item: WorkQueueItem) -> tuple:
 
     # Initial-review subjective items: highest priority
     if kind == "subjective_dimension" and item.get("initial_review"):
-        return (_RANK_INITIAL_REVIEW, 0, subjective_score_value(item), item.get("id", ""))
+        return (
+            _RANK_INITIAL_REVIEW,
+            0,
+            subjective_score_value(item),
+            item.get("id", ""),
+        )
 
     # Triage stage items: stage order, blocked after unblocked
     if kind == "workflow_stage":
@@ -208,9 +214,7 @@ def _natural_sort_key(item: WorkQueueItem) -> tuple:
 
     if kind == "cluster":
         # Clusters sort before individual issues, ordered by action type
-        action_pri = ACTION_TYPE_PRIORITY.get(
-            item.get("action_type", "manual_fix"), 3
-        )
+        action_pri = ACTION_TYPE_PRIORITY.get(item.get("action_type", "manual_fix"), 3)
         return (
             _RANK_CLUSTER,
             action_pri,

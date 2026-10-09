@@ -84,9 +84,7 @@ def _lock_targets(args: argparse.Namespace) -> tuple[Path, list[Path]]:
 
 def _report_wait() -> None:
     print(
-        colorize(
-            "  Waiting for another desloppify command to finish...", "dim"
-        ),
+        colorize("  Waiting for another desloppify command to finish...", "dim"),
         file=sys.stderr,
     )
 
@@ -119,4 +117,9 @@ def command_lock(args: argparse.Namespace) -> Iterator[None]:
         yield
 
 
-__all__ = ["COMMAND_LOCK_TIMEOUT", "READ_ONLY_COMMANDS", "command_lock", "command_needs_lock"]
+__all__ = [
+    "COMMAND_LOCK_TIMEOUT",
+    "READ_ONLY_COMMANDS",
+    "command_lock",
+    "command_needs_lock",
+]

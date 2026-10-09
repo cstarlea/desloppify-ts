@@ -77,7 +77,9 @@ def _filter_boilerplate_entries_by_zone(
     return _filter_boilerplate_entries_by_zone_impl(entries, zone_map)
 
 
-def _log_phase_summary(label: str, results: list[Issue], potential: int, unit: str) -> None:
+def _log_phase_summary(
+    label: str, results: list[Issue], potential: int, unit: str
+) -> None:
     """Compatibility wrapper with patchable module-level logger."""
     _log_phase_summary_impl(label, results, potential, unit, log_fn=log)
 

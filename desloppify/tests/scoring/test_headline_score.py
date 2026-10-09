@@ -75,5 +75,7 @@ def test_scan_summary_prints_the_provisional_headline(capsys):
     out = capsys.readouterr().out
     assert f"Score: {state['objective_score']:.1f}/100 objective (provisional" in out
 
-    _print_provisional_headline(_scanned([load_dimensions_for_lang("typescript")[0][0]]))
+    _print_provisional_headline(
+        _scanned([load_dimensions_for_lang("typescript")[0][0]])
+    )
     assert capsys.readouterr().out == ""

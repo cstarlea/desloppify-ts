@@ -46,7 +46,9 @@ def project(tmp_path, monkeypatch):
 
         def run(project_root, tsconfig):
             calls.append(tsconfig)
-            return SimpleNamespace(stdout=listed + stdout, stderr="", returncode=2 if stdout else 0)
+            return SimpleNamespace(
+                stdout=listed + stdout, stderr="", returncode=2 if stdout else 0
+            )
 
         monkeypatch.setattr(tsc_mod, "run_tsc_check", run)
         return calls
@@ -68,7 +70,10 @@ def test_reports_type_errors_and_leaves_unused_to_its_detector(project):
     )
     result = detect_type_errors_result(root / "src")
 
-    assert [(e["code"], e["line"], e["cols"], e["count"], e["confidence"]) for e in result.entries] == [
+    assert [
+        (e["code"], e["line"], e["cols"], e["count"], e["confidence"])
+        for e in result.entries
+    ] == [
         ("TS2322", 3, [7, 20], 2, "high"),
         ("TS7006", 9, [3], 1, "medium"),
     ]
@@ -87,7 +92,9 @@ def test_one_tsc_run_serves_unused_and_type_errors(project):
         files=("src/a.ts",),
     )
     cache: dict = {}
-    unused, _total, _coverage = unused_mod.detect_unused_result(root / "src", cache=cache)
+    unused, _total, _coverage = unused_mod.detect_unused_result(
+        root / "src", cache=cache
+    )
     result = detect_type_errors_result(root / "src", cache=cache)
 
     assert [e["name"] for e in unused] == ["y"]
@@ -163,7 +170,9 @@ def test_uninstalled_dependencies_skip_the_detector(project):
     result = detect_type_errors_result(root / "src")
 
     assert result.entries == [] and result.checked_files is None
-    assert result.coverage is not None and result.coverage.reason == "deps_not_installed"
+    assert (
+        result.coverage is not None and result.coverage.reason == "deps_not_installed"
+    )
 
 
 def test_missing_tsc_skips_cleanly(project, monkeypatch):
@@ -192,15 +201,22 @@ def test_phase_issue_ids_are_code_and_line(project):
     issues, potentials = phases_basic_mod.phase_type_errors(root / "src", lang)
 
     assert [issue["id"] for issue in issues] == ["type_error::src/a.ts::TS2322::3"]
-    assert issues[0]["summary"] == "TS2322: Type 'string' is not assignable to type 'number'."
-    assert issues[0]["detail"]["message"].endswith("Types of property 'a' are incompatible.")
+    assert (
+        issues[0]["summary"]
+        == "TS2322: Type 'string' is not assignable to type 'number'."
+    )
+    assert issues[0]["detail"]["message"].endswith(
+        "Types of property 'a' are incompatible."
+    )
     assert potentials == {"type_error": 1}
 
 
 def test_phase_reports_no_potential_when_skipped(project, monkeypatch):
     root, _fake = project
     _write(root, "src/a.ts")
-    monkeypatch.setattr(tsc_mod, "run_tsc_check", lambda *_a: (_ for _ in ()).throw(OSError("no tsc")))
+    monkeypatch.setattr(
+        tsc_mod, "run_tsc_check", lambda *_a: (_ for _ in ()).throw(OSError("no tsc"))
+    )
     lang = _lang()
     issues, potentials = phases_basic_mod.phase_type_errors(root / "src", lang)
 

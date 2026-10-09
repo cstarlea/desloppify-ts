@@ -36,7 +36,9 @@ def test_runtime_config_value_helpers() -> None:
         "enabled": SimpleNamespace(type=bool, default=False),
         "limit": SimpleNamespace(type=int, default=5),
     }
-    normalized = runtime_mod.normalize_spec_values({"enabled": "yes", "limit": "10"}, specs)
+    normalized = runtime_mod.normalize_spec_values(
+        {"enabled": "yes", "limit": "10"}, specs
+    )
     assert normalized == {"enabled": True, "limit": 10}
 
     defaults = {"enabled": True}
@@ -44,7 +46,9 @@ def test_runtime_config_value_helpers() -> None:
     assert runtime_mod.runtime_value(defaults, specs, "limit", default=0) == 5
 
 
-def test_shared_phase_helpers_cover_filtering_and_coverage_recording(monkeypatch, tmp_path) -> None:
+def test_shared_phase_helpers_cover_filtering_and_coverage_recording(
+    monkeypatch, tmp_path
+) -> None:
     zone_map = _ZoneMap({"src/a.py", "src/b.py"})
     entries = [
         {
@@ -61,7 +65,9 @@ def test_shared_phase_helpers_cover_filtering_and_coverage_recording(monkeypatch
 
     project_root = tmp_path
     (project_root / "tests").mkdir(parents=True, exist_ok=True)
-    (project_root / "tests" / "sample_test.py").write_text("print('ok')\n", encoding="utf-8")
+    (project_root / "tests" / "sample_test.py").write_text(
+        "print('ok')\n", encoding="utf-8"
+    )
     lang = SimpleNamespace(
         external_test_dirs=["tests"],
         test_file_extensions=[".py"],
@@ -90,11 +96,17 @@ def test_shared_phase_helpers_cover_filtering_and_coverage_recording(monkeypatch
     assert issues[0]["detector"] == "unused"
 
     logs: list[str] = []
-    shared_helpers_mod._log_phase_summary("unused", issues, 1, "symbols", log_fn=logs.append)
+    shared_helpers_mod._log_phase_summary(
+        "unused", issues, 1, "symbols", log_fn=logs.append
+    )
     assert logs and "unused" in logs[0]
 
-    full = DetectorCoverageStatus(detector="unused", status="full", confidence=0.9, summary="ok")
-    reduced = DetectorCoverageStatus(detector="unused", status="reduced", confidence=0.5, summary="partial")
+    full = DetectorCoverageStatus(
+        detector="unused", status="full", confidence=0.9, summary="ok"
+    )
+    reduced = DetectorCoverageStatus(
+        detector="unused", status="reduced", confidence=0.5, summary="partial"
+    )
 
     full_dict = shared_helpers_mod._coverage_to_dict(full)
     reduced_dict = shared_helpers_mod._coverage_to_dict(reduced)

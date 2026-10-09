@@ -50,8 +50,13 @@ pytestmark = pytest.mark.skipif(
 EXPECTATIONS = json.loads((harness.GOLDEN_DIR / "expectations.json").read_text())
 PROJECTS = harness.project_names()
 _NODE_HINT = "npm ci --prefix desloppify/languages/typescript/tests/golden/node"
-if os.environ.get("DESLOPPIFY_REQUIRE_NODE_GOLDEN") and not harness.node_tools_installed():
-    raise RuntimeError(f"DESLOPPIFY_REQUIRE_NODE_GOLDEN is set but tsc/knip are missing: {_NODE_HINT}")
+if (
+    os.environ.get("DESLOPPIFY_REQUIRE_NODE_GOLDEN")
+    and not harness.node_tools_installed()
+):
+    raise RuntimeError(
+        f"DESLOPPIFY_REQUIRE_NODE_GOLDEN is set but tsc/knip are missing: {_NODE_HINT}"
+    )
 needs_node = pytest.mark.skipif(
     not harness.node_tools_installed(),
     reason=f"pinned tsc/knip not installed ({_NODE_HINT})",
@@ -100,7 +105,9 @@ def test_snapshot(name, node_tools, scans):
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(actual)
         return
-    assert path.exists(), f"missing snapshot {path.name}; run with {harness.UPDATE_ENV}=1"
+    assert path.exists(), (
+        f"missing snapshot {path.name}; run with {harness.UPDATE_ENV}=1"
+    )
     expected = path.read_text()
     if actual != expected:
         diff = "".join(

@@ -116,8 +116,7 @@ def _print_subjective_reset_hint(
 ) -> None:
     work_items = state.get("work_items") or state.get("issues", {})
     has_review = any(
-        work_items.get(fid, {}).get("detector") == "review"
-        for fid in all_resolved
+        work_items.get(fid, {}).get("detector") == "review" for fid in all_resolved
     )
     if not has_review or not state.get("subjective_assessments"):
         return
@@ -125,9 +124,7 @@ def _print_subjective_reset_hint(
     stale_dims = sorted(
         dim
         for dim in {
-            str(
-                work_items.get(fid, {}).get("detail", {}).get("dimension", "")
-            ).strip()
+            str(work_items.get(fid, {}).get("detail", {}).get("dimension", "")).strip()
             for fid in all_resolved
             if work_items.get(fid, {}).get("detector") == "review"
         }
@@ -176,7 +173,9 @@ def _render_committed_block(commit_log: list[dict]) -> None:
         return
     committed_count = sum(len(r.get("issue_ids", [])) for r in commit_log)
     nc = len(commit_log)
-    print(f"\n  Already committed ({nc} commit{'s' if nc != 1 else ''}, {committed_count} issue{'s' if committed_count != 1 else ''}):")
+    print(
+        f"\n  Already committed ({nc} commit{'s' if nc != 1 else ''}, {committed_count} issue{'s' if committed_count != 1 else ''}):"
+    )
     for record in commit_log[-3:]:
         sha = record.get("sha", "?")[:7]
         note = record.get("note", "")
@@ -227,12 +226,17 @@ def render_commit_guidance(
             print("\n  Suggested commit message:")
             print(colorize(f'    "{msg}"', "cyan"))
 
-        print(colorize("\n  After committing → `desloppify plan commit-log record`", "dim"))
+        print(
+            colorize(
+                "\n  After committing → `desloppify plan commit-log record`", "dim"
+            )
+        )
         print(colorize("  ─────────────────────────────────────────────", "dim"))
 
     except PLAN_LOAD_EXCEPTIONS:
         logging.getLogger(__name__).debug(
-            "commit guidance rendering skipped", exc_info=True,
+            "commit guidance rendering skipped",
+            exc_info=True,
         )
 
 
@@ -241,8 +245,7 @@ def _print_next_command(state: dict) -> str:
     remaining = sum(
         1
         for issue in work_items.values()
-        if issue["status"] == "open"
-        and not issue.get("suppressed")
+        if issue["status"] == "open" and not issue.get("suppressed")
     )
     next_command = "desloppify scan"
     if remaining > 0:

@@ -137,7 +137,11 @@ def test_value_and_type_import_of_same_module_is_a_runtime_edge(tmp_path):
         "a.ts",
         "import type { T } from './b';\nimport { b } from './b';\nexport const a = b;\n",
     )
-    _write(tmp_path, "b.ts", "import { a } from './a';\nexport const b = 1;\nexport type T = typeof a;\n")
+    _write(
+        tmp_path,
+        "b.ts",
+        "import { a } from './a';\nexport const b = 1;\nexport type T = typeof a;\n",
+    )
     cycles, _ = detect_cycles(deps_detector_mod.build_dep_graph(tmp_path))
     assert [c["length"] for c in cycles] == [2]
 
@@ -163,7 +167,9 @@ def test_imports_in_comments_create_no_edges(tmp_path, monkeypatch, treesitter):
 @needs_treesitter
 def test_import_inside_a_string_creates_no_edge(tmp_path):
     _write(tmp_path, "legacy.ts")
-    _write(tmp_path, "main.ts", "export const sample = \"import { x } from './legacy'\";\n")
+    _write(
+        tmp_path, "main.ts", "export const sample = \"import { x } from './legacy'\";\n"
+    )
     graph = deps_detector_mod.build_dep_graph(tmp_path)
     assert graph[_key(tmp_path, "legacy.ts")]["importers"] == set()
 
@@ -189,7 +195,11 @@ def test_import_meta_glob_links_every_match(tmp_path):
     _write(tmp_path, "src/widgets/Clock.tsx")
     _write(tmp_path, "src/widgets/nested/Deep.tsx")
     _write(tmp_path, "src/widgets/helper.ts")
-    _write(tmp_path, "src/main.ts", "import.meta.glob('./widgets/**/*.tsx', { eager: true });\n")
+    _write(
+        tmp_path,
+        "src/main.ts",
+        "import.meta.glob('./widgets/**/*.tsx', { eager: true });\n",
+    )
     graph = deps_detector_mod.build_dep_graph(tmp_path)
     main = graph[_key(tmp_path, "src/main.ts")]
     assert main["imports"] == {
@@ -229,7 +239,9 @@ def test_template_literal_dynamic_import_links_files_under_prefix(tmp_path):
 def test_require_resolve_is_a_deferred_reference(monkeypatch, treesitter):
     if treesitter and not _TREESITTER:
         pytest.skip("needs tree-sitter with the tsx grammar")
-    text = "export default { theme: require.resolve('./theme.js'), x: require('./x') };\n"
+    text = (
+        "export default { theme: require.resolve('./theme.js'), x: require('./x') };\n"
+    )
     if treesitter:
         refs = ImportExtractor().extract_text(text)
     else:
@@ -243,7 +255,11 @@ def test_require_resolve_is_a_deferred_reference(monkeypatch, treesitter):
 @needs_treesitter
 def test_require_resolve_target_is_not_orphaned_by_the_graph(tmp_path):
     _write(tmp_path, "theme.js", "module.exports = {};\n")
-    _write(tmp_path, "site.config.ts", "export default { theme: require.resolve('./theme.js') };\n")
+    _write(
+        tmp_path,
+        "site.config.ts",
+        "export default { theme: require.resolve('./theme.js') };\n",
+    )
     graph = deps_detector_mod.build_dep_graph(tmp_path)
     theme = _key(tmp_path, "theme.js")
     assert graph[theme]["importers"] == {_key(tmp_path, "site.config.ts")}
@@ -269,7 +285,9 @@ def test_specifier_extensions_map_to_typescript_sources(tmp_path, specifier, tar
 
 
 def test_directory_import_uses_package_json_entry(tmp_path):
-    _write(tmp_path, "vendor/chart/package.json", json.dumps({"types": "./src/chart.ts"}))
+    _write(
+        tmp_path, "vendor/chart/package.json", json.dumps({"types": "./src/chart.ts"})
+    )
     _write(tmp_path, "vendor/chart/src/chart.ts")
     _write(tmp_path, "main.ts", "import { x } from './vendor/chart';\n")
     graph = deps_detector_mod.build_dep_graph(tmp_path)
@@ -280,13 +298,33 @@ def test_directory_import_uses_package_json_entry(tmp_path):
 
 def test_declaration_and_minified_files_are_not_sources(tmp_path):
     names = (
-        "a.ts", "b.mts", "c.cts", "d.tsx", "e.d.ts", "f.d.mts", "g.d.cts",
-        "h.js", "i.jsx", "j.mjs", "k.cjs", "l.min.js", "m.min.mjs",
+        "a.ts",
+        "b.mts",
+        "c.cts",
+        "d.tsx",
+        "e.d.ts",
+        "f.d.mts",
+        "g.d.cts",
+        "h.js",
+        "i.jsx",
+        "j.mjs",
+        "k.cjs",
+        "l.min.js",
+        "m.min.mjs",
     )
     for name in names:
         _write(tmp_path, name)
     found = {Path(f).name for f in find_ts_and_js_files(tmp_path)}
-    assert found == {"a.ts", "b.mts", "c.cts", "d.tsx", "h.js", "i.jsx", "j.mjs", "k.cjs"}
+    assert found == {
+        "a.ts",
+        "b.mts",
+        "c.cts",
+        "d.tsx",
+        "h.js",
+        "i.jsx",
+        "j.mjs",
+        "k.cjs",
+    }
 
 
 @pytest.mark.parametrize(

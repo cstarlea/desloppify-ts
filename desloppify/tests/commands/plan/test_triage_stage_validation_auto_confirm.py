@@ -80,9 +80,15 @@ def test_auto_confirm_reflect_for_organize_records_confirmation(monkeypatch) -> 
     }
     saved: list[dict] = []
 
-    monkeypatch.setattr(validation, "command_runtime", lambda _args: SimpleNamespace(state={}))
-    monkeypatch.setattr(validation, "collect_triage_input", lambda _plan, _state: _triage_input())
-    monkeypatch.setattr(validation, "detect_recurring_patterns", lambda _open, _resolved: {})
+    monkeypatch.setattr(
+        validation, "command_runtime", lambda _args: SimpleNamespace(state={})
+    )
+    monkeypatch.setattr(
+        validation, "collect_triage_input", lambda _plan, _state: _triage_input()
+    )
+    monkeypatch.setattr(
+        validation, "detect_recurring_patterns", lambda _open, _resolved: {}
+    )
     monkeypatch.setattr(validation, "save_plan", lambda p: saved.append(p))
     monkeypatch.setattr(validation, "utc_now", lambda: "2026-03-08T00:00:00Z")
 
@@ -106,7 +112,9 @@ def test_auto_confirm_reflect_for_organize_records_confirmation(monkeypatch) -> 
     assert saved == [plan]
 
 
-def test_auto_confirm_reflect_for_organize_blocks_incomplete_accounting(monkeypatch, capsys) -> None:
+def test_auto_confirm_reflect_for_organize_blocks_incomplete_accounting(
+    monkeypatch, capsys
+) -> None:
     plan = {"clusters": {}}
     stages = {
         "reflect": {
@@ -115,7 +123,9 @@ def test_auto_confirm_reflect_for_organize_blocks_incomplete_accounting(monkeypa
         }
     }
 
-    monkeypatch.setattr(validation, "command_runtime", lambda _args: SimpleNamespace(state={}))
+    monkeypatch.setattr(
+        validation, "command_runtime", lambda _args: SimpleNamespace(state={})
+    )
     monkeypatch.setattr(
         validation,
         "collect_triage_input",
@@ -127,7 +137,9 @@ def test_auto_confirm_reflect_for_organize_blocks_incomplete_accounting(monkeypa
             resolved_issues={},
         ),
     )
-    monkeypatch.setattr(validation, "detect_recurring_patterns", lambda _open, _resolved: {})
+    monkeypatch.setattr(
+        validation, "detect_recurring_patterns", lambda _open, _resolved: {}
+    )
 
     ok = validation._auto_confirm_reflect_for_organize(
         args=argparse.Namespace(),

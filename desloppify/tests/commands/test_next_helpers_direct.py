@@ -38,16 +38,30 @@ def test_next_options_from_args_defaults_and_overrides() -> None:
 
 def test_flow_helpers_focus_context_and_safe_merge(monkeypatch) -> None:
     plan = {"active_cluster": "auto/test"}
-    assert flow_helpers_mod.resolve_cluster_focus(plan, cluster_arg=None, scope=None) == "auto/test"
-    assert flow_helpers_mod.resolve_cluster_focus(plan, cluster_arg="manual", scope=None) == "manual"
+    assert (
+        flow_helpers_mod.resolve_cluster_focus(plan, cluster_arg=None, scope=None)
+        == "auto/test"
+    )
+    assert (
+        flow_helpers_mod.resolve_cluster_focus(plan, cluster_arg="manual", scope=None)
+        == "manual"
+    )
 
     monkeypatch.setattr(flow_helpers_mod, "get_plan_start_strict", lambda _plan: 88.1)
-    monkeypatch.setattr(flow_helpers_mod, "plan_aware_queue_breakdown", lambda *_a, **_k: {"ok": True})
-    strict, breakdown = flow_helpers_mod.plan_queue_context(state={}, plan_data=plan, context=None)
+    monkeypatch.setattr(
+        flow_helpers_mod, "plan_aware_queue_breakdown", lambda *_a, **_k: {"ok": True}
+    )
+    strict, breakdown = flow_helpers_mod.plan_queue_context(
+        state={}, plan_data=plan, context=None
+    )
     assert strict == 88.1
     assert breakdown == {"ok": True}
 
-    monkeypatch.setattr(flow_helpers_mod, "merge_potentials", lambda _raw: (_ for _ in ()).throw(TypeError("bad")))
+    monkeypatch.setattr(
+        flow_helpers_mod,
+        "merge_potentials",
+        lambda _raw: (_ for _ in ()).throw(TypeError("bad")),
+    )
     raw = {"a": 1}
     assert flow_helpers_mod.merge_potentials_safe(raw) == raw
 
@@ -70,14 +84,18 @@ def test_queue_progress_render_helpers() -> None:
     assert "1 planning step" in headline
     assert "2 planned" in headline
     assert "1 skipped" in headline
-    block = queue_render_mod.format_queue_block(breakdown, frozen_score=79.0, live_score=80.0)
+    block = queue_render_mod.format_queue_block(
+        breakdown, frozen_score=79.0, live_score=80.0
+    )
     assert any("strict 80.0/100" in line and "+1.0" in line for line, _tone in block)
 
 
 def test_cluster_action_commands_are_parseable_semantic_fields() -> None:
     commands = support_mod.cluster_action_commands("manual/refactor-a")
     assert sorted(commands) == ["drill_in", "resolve_all", "skip"]
-    assert commands["drill_in"] == "desloppify next --cluster manual/refactor-a --count 10"
+    assert (
+        commands["drill_in"] == "desloppify next --cluster manual/refactor-a --count 10"
+    )
     assert commands["skip"] == "desloppify plan skip manual/refactor-a"
     assert (
         commands["resolve_all"]
@@ -122,8 +140,11 @@ def test_workflow_render_action_shows_decision_options(capsys) -> None:
                 ],
                 "decision_options": [
                     {"label": "Reactivate", "command": 'desloppify plan unskip "*"'},
-                    {"label": "Wontfix", "command": 'desloppify plan skip --permanent "*"'},
-                ]
+                    {
+                        "label": "Wontfix",
+                        "command": 'desloppify plan skip --permanent "*"',
+                    },
+                ],
             },
             "primary_command": 'desloppify plan unskip "*"',
         },

@@ -16,9 +16,7 @@ def normalize_word_set(text: str) -> set[str]:
     return {word for word in words if len(word) >= 3}
 
 
-def merge_list_fields(
-    target: dict, source: dict, fields: Sequence[str]
-) -> None:
+def merge_list_fields(target: dict, source: dict, fields: Sequence[str]) -> None:
     """Deduplicated merge of list *fields* from *source* into *target*."""
     for field in fields:
         merged: list[str] = []

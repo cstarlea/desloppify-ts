@@ -11,7 +11,9 @@ def test_dimension_name_returns_dimension_or_unknown(monkeypatch) -> None:
     monkeypatch.setattr(
         routing_mod,
         "get_dimension_for_detector",
-        lambda detector: SimpleNamespace(name="Complexity") if detector == "large" else None,
+        lambda detector: (
+            SimpleNamespace(name="Complexity") if detector == "large" else None
+        ),
     )
 
     assert routing_mod._dimension_name("large") == "Complexity"

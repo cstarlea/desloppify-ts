@@ -51,7 +51,9 @@ def coerce_string_list(raw: object) -> tuple[str, ...]:
     return tuple(str(item) for item in raw if isinstance(item, str) and item)
 
 
-def build_batch_context(batch: PromptBatchPayload, batch_index: int) -> PromptBatchContext:
+def build_batch_context(
+    batch: PromptBatchPayload, batch_index: int
+) -> PromptBatchContext:
     dimensions = coerce_string_list(batch.get("dimensions", []))
     return PromptBatchContext(
         name=str(batch.get("name", f"Batch {batch_index + 1}")),
@@ -131,9 +133,7 @@ SCAN_EVIDENCE_FOCUS_BY_DIMENSION = {
 def render_scan_evidence_focus(dim_set: set[str]) -> str:
     """Render dimension-specific scan_evidence guidance."""
     return "".join(
-        text
-        for dim, text in SCAN_EVIDENCE_FOCUS_BY_DIMENSION.items()
-        if dim in dim_set
+        text for dim, text in SCAN_EVIDENCE_FOCUS_BY_DIMENSION.items() if dim in dim_set
     )
 
 
@@ -211,7 +211,9 @@ def render_historical_focus(batch: PromptBatchPayload) -> str:
 
     lines.append("")
     lines.append("Explore past review issues:")
-    lines.append("  desloppify show review --no-budget              # all open review issues")
+    lines.append(
+        "  desloppify show review --no-budget              # all open review issues"
+    )
     lines.append("  desloppify show review --status deferred         # deferred issues")
 
     return "\n".join(lines) + "\n\n"
@@ -233,9 +235,7 @@ def render_dimension_deferral_context(batch: PromptBatchPayload) -> str:
         lines.append(
             f"Note: {dim} was deferred for {cycles} scan cycle(s) while objective issues took priority."
         )
-        lines.append(
-            "Previous assessment may be stale — calibrate accordingly."
-        )
+        lines.append("Previous assessment may be stale — calibrate accordingly.")
     if not lines:
         return ""
     return "\n".join(lines) + "\n\n"
@@ -249,7 +249,11 @@ def _concern_signal_lines(entry: dict[str, object]) -> list[str]:
     question = str(entry.get("question", "")).strip()
     evidence_raw = entry.get("evidence", [])
     evidence = (
-        [str(item).strip() for item in evidence_raw if isinstance(item, str) and item.strip()]
+        [
+            str(item).strip()
+            for item in evidence_raw
+            if isinstance(item, str) and item.strip()
+        ]
         if isinstance(evidence_raw, list)
         else []
     )
@@ -308,19 +312,17 @@ def render_mechanical_concern_signals(batch: PromptBatchPayload) -> str:
     lines: list[str] = []
     lines.append("Mechanical concern signals — investigate and adjudicate:")
     lines.extend(_build_concern_summary(valid_signals))
-    lines.append("For each concern, read the source code and report your verdict in issues[]:")
     lines.append(
-        '  - Confirm → full issue object with concern_verdict: "confirmed"'
+        "For each concern, read the source code and report your verdict in issues[]:"
     )
+    lines.append('  - Confirm → full issue object with concern_verdict: "confirmed"')
     lines.append(
         '  - Dismiss → minimal object: {concern_verdict: "dismissed", concern_fingerprint: "<hash>"}'
     )
     lines.append(
         "    (only these 2 fields required — add optional reasoning/concern_type/concern_file)"
     )
-    lines.append(
-        "  - Unsure → skip it (will be re-evaluated next review)"
-    )
+    lines.append("  - Unsure → skip it (will be re-evaluated next review)")
     lines.append("")
 
     capped_signals = valid_signals[:30]
@@ -329,7 +331,9 @@ def render_mechanical_concern_signals(batch: PromptBatchPayload) -> str:
 
     extra = max(0, len(valid_signals) - len(capped_signals))
     if extra:
-        lines.append(f"  (+{extra} more — use `desloppify show <detector> --no-budget` to explore)")
+        lines.append(
+            f"  (+{extra} more — use `desloppify show <detector> --no-budget` to explore)"
+        )
     return "\n".join(lines) + "\n\n"
 
 

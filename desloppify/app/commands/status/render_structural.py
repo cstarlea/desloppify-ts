@@ -20,7 +20,8 @@ def collect_structural_areas(
     structural = [
         issue
         for issue in issues.values()
-        if issue["tier"] in (3, 4) and (issue["status"] == "open" or is_wontfix_debt(issue))
+        if issue["tier"] in (3, 4)
+        and (issue["status"] == "open" or is_wontfix_debt(issue))
     ]
     if len(structural) < 5:
         return None

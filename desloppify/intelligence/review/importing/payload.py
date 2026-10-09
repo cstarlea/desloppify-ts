@@ -96,9 +96,7 @@ def parse_review_import_payload(
             f"{mode_name} review import payload 'assessments' must be an object"
         )
     raw_judgment = data.get("dimension_judgment")
-    dimension_judgment = (
-        raw_judgment if isinstance(raw_judgment, dict) else None
-    )
+    dimension_judgment = raw_judgment if isinstance(raw_judgment, dict) else None
 
     raw_context_updates = data.get("context_updates")
     context_updates = (

@@ -69,9 +69,7 @@ def check_tool_staleness(state: dict, *, tool_dir: Path | None = None) -> str | 
     return None
 
 
-_NEEDS_RESCAN_WARNING = (
-    "Config changed — scores may be stale. Run: desloppify scan"
-)
+_NEEDS_RESCAN_WARNING = "Config changed — scores may be stale. Run: desloppify scan"
 
 
 def check_config_staleness(config: dict) -> str | None:

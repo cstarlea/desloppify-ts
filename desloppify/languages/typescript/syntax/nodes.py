@@ -32,7 +32,9 @@ PARAMETERS = frozenset({"required_parameter", "optional_parameter"})
 ALL_DESTRUCTURED = "(all destructured elements)"
 _DECLARATIONS = frozenset({"lexical_declaration", "variable_declaration"})
 # Nodes whose children are statements that can be deleted outright.
-STATEMENT_PARENTS = frozenset({"program", "statement_block", "switch_case", "switch_default"})
+STATEMENT_PARENTS = frozenset(
+    {"program", "statement_block", "switch_case", "switch_default"}
+)
 
 
 def byte_offset(source: bytes, line: int, col: int) -> int | None:
@@ -69,7 +71,9 @@ def same(a, b) -> bool:
 
 
 def within(node, container) -> bool:
-    return container.start_byte <= node.start_byte and node.end_byte <= container.end_byte
+    return (
+        container.start_byte <= node.start_byte and node.end_byte <= container.end_byte
+    )
 
 
 class NameIndex:
@@ -153,10 +157,20 @@ def binding_names(pattern) -> list:
         parent = node.parent
         if node.type == "shorthand_property_identifier_pattern":
             names.append(node)
-        elif node.type == "identifier" and parent is not None and (
-            parent.type in ("array_pattern", "rest_pattern")
-            or (parent.type == "pair_pattern" and same(parent.child_by_field_name("value"), node))
-            or (parent.type == "assignment_pattern" and same(parent.child_by_field_name("left"), node))
+        elif (
+            node.type == "identifier"
+            and parent is not None
+            and (
+                parent.type in ("array_pattern", "rest_pattern")
+                or (
+                    parent.type == "pair_pattern"
+                    and same(parent.child_by_field_name("value"), node)
+                )
+                or (
+                    parent.type == "assignment_pattern"
+                    and same(parent.child_by_field_name("left"), node)
+                )
+            )
         ):
             names.append(node)
         elif node.type in _PATTERN_WRAPPERS or node.type == "rest_pattern":
@@ -167,10 +181,16 @@ def binding_names(pattern) -> list:
 def is_parameter(node) -> bool:
     """Whether ``node`` sits in a function's parameter list."""
     child, parent = node, node.parent
-    while parent is not None and parent.type not in ("statement_block", "program", *_DECLARATIONS):
+    while parent is not None and parent.type not in (
+        "statement_block",
+        "program",
+        *_DECLARATIONS,
+    ):
         if parent.type == "formal_parameters":
             return True
-        if parent.type == "arrow_function" and same(parent.child_by_field_name("parameter"), child):
+        if parent.type == "arrow_function" and same(
+            parent.child_by_field_name("parameter"), child
+        ):
             return True
         child, parent = parent, parent.parent
     return False
@@ -193,7 +213,12 @@ _SAFE_LEAVES = frozenset(
     }
 )
 _SAFE_WRAPPERS = frozenset(
-    {"parenthesized_expression", "as_expression", "satisfies_expression", "non_null_expression"}
+    {
+        "parenthesized_expression",
+        "as_expression",
+        "satisfies_expression",
+        "non_null_expression",
+    }
 )
 # Built-ins that only read their arguments.
 _PURE_CALLS = frozenset(
@@ -247,7 +272,9 @@ def asi_hazards(source: bytes, statements: dict) -> list:
     """
     removing = dict(statements)
     kept = []
-    while hazards := [k for k, node in removing.items() if _asi_hazard(source, node, removing)]:
+    while hazards := [
+        k for k, node in removing.items() if _asi_hazard(source, node, removing)
+    ]:
         key = max(hazards)
         removing.pop(key)
         kept.append(key)
@@ -274,7 +301,9 @@ def _neighbour(statement, removing: dict, *, forward: bool):
     sibling = statement
     while True:
         sibling = sibling.next_named_sibling if forward else sibling.prev_named_sibling
-        if sibling is None or (sibling.type != "comment" and node_key(sibling) not in removing):
+        if sibling is None or (
+            sibling.type != "comment" and node_key(sibling) not in removing
+        ):
             return sibling
 
 
@@ -312,14 +341,20 @@ def reads_only(parsed: ParsedSource, node) -> bool:
     if kind in ("binary_expression", "ternary_expression"):
         return all(reads_only(parsed, c) for c in node.named_children)
     if kind == "array":
-        return all(c.type != "spread_element" and reads_only(parsed, c) for c in node.named_children)
+        return all(
+            c.type != "spread_element" and reads_only(parsed, c)
+            for c in node.named_children
+        )
     if kind == "object":
         for child in node.named_children:
             if child.type == "shorthand_property_identifier":
                 continue
             if child.type != "pair":
                 return False
-            key, value = child.child_by_field_name("key"), child.child_by_field_name("value")
+            key, value = (
+                child.child_by_field_name("key"),
+                child.child_by_field_name("value"),
+            )
             if key is None or key.type == "computed_property_name" or value is None:
                 return False
             if not reads_only(parsed, value):
@@ -379,7 +414,12 @@ def _is_binding(node) -> bool:
     if node.type == "shorthand_property_identifier_pattern":
         return True
     if parent.type in (*PARAMETERS, "assignment_pattern"):
-        return same(parent.child_by_field_name("pattern" if parent.type in PARAMETERS else "left"), node)
+        return same(
+            parent.child_by_field_name(
+                "pattern" if parent.type in PARAMETERS else "left"
+            ),
+            node,
+        )
     if parent.type == "pair_pattern":
         return same(parent.child_by_field_name("value"), node)
     if parent.type == "arrow_function":

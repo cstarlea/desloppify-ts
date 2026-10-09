@@ -464,14 +464,20 @@ class TestTsconfigPaths:
         _write(
             tmp_path,
             "tsconfig.base.json",
-            json.dumps({"compilerOptions": {"paths": {"@ui/*": ["./packages/ui/src/*"]}}}),
+            json.dumps(
+                {"compilerOptions": {"paths": {"@ui/*": ["./packages/ui/src/*"]}}}
+            ),
         )
         app = tmp_path / "apps" / "web"
-        _write(app, "tsconfig.json", json.dumps({"extends": "../../tsconfig.base.json"}))
+        _write(
+            app, "tsconfig.json", json.dumps({"extends": "../../tsconfig.base.json"})
+        )
         _write(tmp_path, "packages/ui/src/button.ts", "export const Button = 1;\n")
         _write(app, "src/page.ts", "import { Button } from '@ui/button';\n")
 
-        assert deps_detector_mod._load_tsconfig_paths(app) == {"@ui/": "../../packages/ui/src/"}
+        assert deps_detector_mod._load_tsconfig_paths(app) == {
+            "@ui/": "../../packages/ui/src/"
+        }
         graph = deps_detector_mod.build_dep_graph(app / "src")
         page = str((app / "src/page.ts").resolve())
         button = str((tmp_path / "packages/ui/src/button.ts").resolve())
@@ -492,7 +498,9 @@ class TestTsconfigPaths:
         _write(
             tmp_path,
             "tsconfig.json",
-            json.dumps({"extends": ["@repo/tsconfig/base.json", "@repo/tsconfig/paths.json"]}),
+            json.dumps(
+                {"extends": ["@repo/tsconfig/base.json", "@repo/tsconfig/paths.json"]}
+            ),
         )
         paths = deps_detector_mod._load_tsconfig_paths(tmp_path)
         # paths are relative to baseUrl, which the base config defines in its own dir.
@@ -500,9 +508,15 @@ class TestTsconfigPaths:
 
     def test_base_url_resolves_bare_specifiers(self, tmp_path):
         """Next.js-style `baseUrl: "."` lets `components/x` import from the root."""
-        _write(tmp_path, "tsconfig.json", json.dumps({"compilerOptions": {"baseUrl": "."}}))
+        _write(
+            tmp_path, "tsconfig.json", json.dumps({"compilerOptions": {"baseUrl": "."}})
+        )
         _write(tmp_path, "components/cart.tsx", "export const Cart = () => null;\n")
-        _write(tmp_path, "app/page.tsx", "import { Cart } from 'components/cart';\nimport React from 'react';\n")
+        _write(
+            tmp_path,
+            "app/page.tsx",
+            "import { Cart } from 'components/cart';\nimport React from 'react';\n",
+        )
 
         assert deps_detector_mod._load_tsconfig_paths(tmp_path) == {"": ""}
         graph = deps_detector_mod.build_dep_graph(tmp_path)
@@ -514,7 +528,9 @@ class TestTsconfigPaths:
         _write(
             tmp_path,
             "tsconfig.json",
-            json.dumps({"compilerOptions": {"paths": {"@/*": ["./generated/*", "./src/*"]}}}),
+            json.dumps(
+                {"compilerOptions": {"paths": {"@/*": ["./generated/*", "./src/*"]}}}
+            ),
         )
         (tmp_path / "src").mkdir()
         assert deps_detector_mod._load_tsconfig_paths(tmp_path) == {"@/": "src/"}
@@ -581,7 +597,11 @@ class TestFrameworkFiles:
         """``@site/`` is the Docusaurus site directory, set by its bundler."""
 
         _write(tmp_path, "www/docusaurus.config.ts", "export default {};\n")
-        _write(tmp_path, "www/src/components/Snippet.tsx", "export const Snippet = () => null;\n")
+        _write(
+            tmp_path,
+            "www/src/components/Snippet.tsx",
+            "export const Snippet = () => null;\n",
+        )
         _write(
             tmp_path,
             "www/docs/setup.mdx",
@@ -590,20 +610,32 @@ class TestFrameworkFiles:
 
         graph = deps_detector_mod.build_dep_graph(tmp_path)
         snippet_key = str((tmp_path / "www/src/components/Snippet.tsx").resolve())
-        assert graph[snippet_key]["importers"] == {str((tmp_path / "www/docs/setup.mdx").resolve())}
+        assert graph[snippet_key]["importers"] == {
+            str((tmp_path / "www/docs/setup.mdx").resolve())
+        }
 
     def test_markdown_imports_only_inside_docusaurus_sites(self, tmp_path):
         """Docusaurus compiles a site's ``.md`` as MDX; Markdown elsewhere isn't ESM."""
 
         _write(tmp_path, "www/docusaurus.config.ts", "export default {};\n")
-        _write(tmp_path, "www/src/components/Snippet.tsx", "export const Snippet = () => null;\n")
-        _write(tmp_path, "www/docs/links.md", "import { Snippet } from '@site/src/components/Snippet';\n")
+        _write(
+            tmp_path,
+            "www/src/components/Snippet.tsx",
+            "export const Snippet = () => null;\n",
+        )
+        _write(
+            tmp_path,
+            "www/docs/links.md",
+            "import { Snippet } from '@site/src/components/Snippet';\n",
+        )
         _write(tmp_path, "lib/util.ts", "export const u = 1;\n")
         _write(tmp_path, "README.md", "import { u } from './lib/util';\n")
 
         graph = deps_detector_mod.build_dep_graph(tmp_path)
         snippet_key = str((tmp_path / "www/src/components/Snippet.tsx").resolve())
-        assert graph[snippet_key]["importers"] == {str((tmp_path / "www/docs/links.md").resolve())}
+        assert graph[snippet_key]["importers"] == {
+            str((tmp_path / "www/docs/links.md").resolve())
+        }
         assert graph[str((tmp_path / "lib/util.ts").resolve())]["importers"] == set()
 
     def test_mdx_esm_forms(self):
@@ -848,7 +880,9 @@ class TestAliasScanPath:
         orphan_files = {o["file"] for o in orphans}
         assert core_key not in orphan_files
 
-    def test_subdirectory_tsconfig_relative_imports_use_project_file_root(self, tmp_path):
+    def test_subdirectory_tsconfig_relative_imports_use_project_file_root(
+        self, tmp_path
+    ):
         """Relative imports should not double the tsconfig subdirectory prefix."""
         pkg = tmp_path / "packages" / "frontend" / "app"
         _write(pkg, "tsconfig.json", json.dumps({"compilerOptions": {}}))
@@ -876,9 +910,7 @@ class TestResolveAliasLongestPrefix:
     def test_longer_prefix_wins(self, tmp_path):
         """When aliases overlap, the longest matching prefix is used."""
         paths = {"@/": "app/", "@components/": "lib/components/"}
-        result = deps_resolve_mod.resolve_alias(
-            "@components/Button", paths, tmp_path
-        )
+        result = deps_resolve_mod.resolve_alias("@components/Button", paths, tmp_path)
         expected = (tmp_path / "lib/components/Button").resolve()
         assert result == expected
 

@@ -44,7 +44,9 @@ def project_names() -> list[str]:
 
 
 def node_tools_installed() -> bool:
-    return (NODE_MODULES / ".bin" / "tsc").is_file() and (NODE_MODULES / ".bin" / "knip").is_file()
+    return (NODE_MODULES / ".bin" / "tsc").is_file() and (
+        NODE_MODULES / ".bin" / "knip"
+    ).is_file()
 
 
 def _hermetic_path(bin_dir: Path, tools: tuple[str, ...]) -> str:
@@ -60,7 +62,9 @@ def _hermetic_path(bin_dir: Path, tools: tuple[str, ...]) -> str:
 
 def copy_project(name: str, dest_root: Path, *, node_tools: bool = False) -> Path:
     dest = dest_root / name
-    shutil.copytree(PROJECTS_DIR / name, dest, ignore=shutil.ignore_patterns("node_modules"))
+    shutil.copytree(
+        PROJECTS_DIR / name, dest, ignore=shutil.ignore_patterns("node_modules")
+    )
     if node_tools:
         (dest / "node_modules").symlink_to(NODE_MODULES)
     return dest
@@ -79,7 +83,9 @@ def scan_project(
     # checks this); default to the project, as when the CLI runs inside it.
     os.chdir(cwd or project)
     tools = ("git", "node") if node_tools else ("git",)
-    os.environ["PATH"] = _hermetic_path(project.parent / f".golden-bin-{len(tools)}", tools)
+    os.environ["PATH"] = _hermetic_path(
+        project.parent / f".golden-bin-{len(tools)}", tools
+    )
     load_tsconfig_paths_cached.cache_clear()
     clear_resolver_cache()
     reset_grammar_load_failures()

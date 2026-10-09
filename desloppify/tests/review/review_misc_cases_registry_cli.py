@@ -92,7 +92,9 @@ class TestCLI:
 
     def test_review_allow_partial_flag(self):
         parser = create_parser()
-        args = parser.parse_args(["review", "--import", "issues.json", "--allow-partial"])
+        args = parser.parse_args(
+            ["review", "--import", "issues.json", "--allow-partial"]
+        )
         assert args.allow_partial is True
 
     def test_review_max_age_flag_rejected(self):
@@ -172,4 +174,3 @@ class TestCLI:
 
 
 # ── New dimension tests ──────────────────────────────────────────
-

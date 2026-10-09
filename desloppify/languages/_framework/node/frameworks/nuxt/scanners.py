@@ -20,11 +20,17 @@ from desloppify.languages._framework.node.js_text import code_text
 
 from ..component_sources import SourceFile, body_span, dependency_major, package_sources
 
-_PROCESS_FLAG_RE = re.compile(r"(?<![\w$.])process\.(?P<flag>client|server|browser|dev)\b(?!\s*=[^=])")
+_PROCESS_FLAG_RE = re.compile(
+    r"(?<![\w$.])process\.(?P<flag>client|server|browser|dev)\b(?!\s*=[^=])"
+)
 # Node-side code: the config, local modules and the Nitro server.
-_NODE_SIDE_RE = re.compile(r"(?:^|/)(?:server|modules)/|(?:^|/)nuxt\.config\.[cm]?[jt]s$")
+_NODE_SIDE_RE = re.compile(
+    r"(?:^|/)(?:server|modules)/|(?:^|/)nuxt\.config\.[cm]?[jt]s$"
+)
 
-_DATA_COMPOSABLE_RE = re.compile(r"(?<![\w$.])(?P<name>use(?:Lazy)?(?:Fetch|AsyncData))\s*\(")
+_DATA_COMPOSABLE_RE = re.compile(
+    r"(?<![\w$.])(?P<name>use(?:Lazy)?(?:Fetch|AsyncData))\s*\("
+)
 _NAMED_FUNCTION_RE = re.compile(
     r"(?<![\w$.])(?:async\s+)?function\s*\*?\s*(?P<name>[A-Za-z_$][\w$]*)\s*\("
     r"|\b(?:const|let|var)\s+(?P<var>[A-Za-z_$][\w$]*)\s*(?::[^=;]+?)?=\s*(?=(?:async\b|function\b|\(|[A-Za-z_$][\w$]*\s*=>))"
@@ -37,12 +43,16 @@ _LATE_CALLBACK_RE = re.compile(
 )
 _TEMPLATE_BINDING_RE = r"""(?:@|v-on:|:|v-bind:)[\w.:-]+\s*=\s*(?P<q>["'])[^"']*(?<![\w$.]){name}\b[^"']*(?P=q)"""
 
-_CONFIG_NAMES = tuple(f"nuxt.config.{ext}" for ext in ("ts", "mts", "cts", "js", "mjs", "cjs"))
+_CONFIG_NAMES = tuple(
+    f"nuxt.config.{ext}" for ext in ("ts", "mts", "cts", "js", "mjs", "cjs")
+)
 _RUNTIME_CONFIG_RE = re.compile(r"(?<![\w$.])runtimeConfig\s*:\s*\{")
 _CONFIG_KEY_RE = re.compile(r"\s*([A-Za-z_$][\w$]*)\s*(?=:|$)")
 _QUOTED_KEY_RE = re.compile(r"""(['"])([\w$-]+)\1\s*$""")
 _RUNTIME_CONFIG_CALL_RE = re.compile(r"(?<![\w$.])useRuntimeConfig\s*\(\s*\)")
-_ASSIGNED_RE = re.compile(r"\b(?:const|let|var)\s+(?:(?P<name>[A-Za-z_$][\w$]*)|\{(?P<keys>[^}]*)\})\s*(?::[^=;]+?)?=\s*$")
+_ASSIGNED_RE = re.compile(
+    r"\b(?:const|let|var)\s+(?:(?P<name>[A-Za-z_$][\w$]*)|\{(?P<keys>[^}]*)\})\s*(?::[^=;]+?)?=\s*$"
+)
 _PUBLIC_KEYS = frozenset({"public", "app"})
 
 
@@ -163,13 +173,22 @@ def scan_data_composables_outside_setup(path: Path) -> tuple[list[dict], int]:
         for call in calls:
             if _inside(flagged, call.start()):
                 entries.append(
-                    {"file": source.path, "line": source.line(call.start()), "composable": call.group("name")}
+                    {
+                        "file": source.path,
+                        "line": source.line(call.start()),
+                        "composable": call.group("name"),
+                    }
                 )
     return entries, scanned
 
 
 def _is_late(
-    code: str, markup: str, name: str, at: int, span: tuple[int, int], late: list[tuple[int, int]]
+    code: str,
+    markup: str,
+    name: str,
+    at: int,
+    span: tuple[int, int],
+    late: list[tuple[int, int]],
 ) -> bool:
     if markup and re.search(_TEMPLATE_BINDING_RE.format(name=re.escape(name)), markup):
         return True
@@ -239,7 +258,8 @@ def _read_keys(code: str, call: re.Match[str]) -> Iterator[tuple[str, int]]:
         return
     if assigned.group("name"):
         for ref in re.finditer(
-            rf"(?<![\w$.]){re.escape(assigned.group('name'))}\s*(?:\?\.|\.)\s*([A-Za-z_$][\w$]*)", code
+            rf"(?<![\w$.]){re.escape(assigned.group('name'))}\s*(?:\?\.|\.)\s*([A-Za-z_$][\w$]*)",
+            code,
         ):
             yield ref.group(1), ref.start(1)
         return
@@ -275,7 +295,9 @@ def scan_private_runtime_config_in_client(path: Path) -> tuple[list[dict], int]:
             for key, at in _read_keys(source.code, call):
                 if key in private and key not in seen:
                     seen.add(key)
-                    entries.append({"file": source.path, "line": source.line(at), "key": key})
+                    entries.append(
+                        {"file": source.path, "line": source.line(at), "key": key}
+                    )
     return entries, scanned
 
 

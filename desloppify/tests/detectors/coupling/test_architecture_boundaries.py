@@ -28,7 +28,9 @@ def test_detectors_do_not_import_language_modules() -> None:
             if isinstance(node, ast.Import):
                 for alias in node.names:
                     name = alias.name
-                    if name == "desloppify.languages" or name.startswith("desloppify.languages."):
+                    if name == "desloppify.languages" or name.startswith(
+                        "desloppify.languages."
+                    ):
                         offenders.append(f"{file_path}:{node.lineno} imports {name}")
                 continue
 
@@ -37,7 +39,9 @@ def test_detectors_do_not_import_language_modules() -> None:
 
             module = node.module or ""
             level = node.level or 0
-            if module == "desloppify.languages" or module.startswith("desloppify.languages."):
+            if module == "desloppify.languages" or module.startswith(
+                "desloppify.languages."
+            ):
                 offenders.append(f"{file_path}:{node.lineno} imports from {module}")
                 continue
 

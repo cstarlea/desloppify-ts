@@ -8,7 +8,10 @@ import desloppify.intelligence.narrative.strategy_engine_hints as hints_mod
 def test_compute_fixer_leverage_recommendation_branches() -> None:
     strong = hints_mod.compute_fixer_leverage(
         by_detector={"smells": 10},
-        actions=[{"type": "auto_fix", "count": 5, "impact": 4.0}, {"type": "manual_fix", "count": 5, "impact": 2.0}],
+        actions=[
+            {"type": "auto_fix", "count": 5, "impact": 4.0},
+            {"type": "manual_fix", "count": 5, "impact": 2.0},
+        ],
         phase="middle_grind",
         _lang="python",
     )

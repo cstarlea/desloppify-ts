@@ -73,7 +73,9 @@ def ensure_builtin_specs_loaded() -> None:
     _register_builtin_specs()
 
 
-def framework_entry_conventions(*, ecosystem: str = "node") -> tuple[EntryConventions, ...]:
+def framework_entry_conventions(
+    *, ecosystem: str = "node"
+) -> tuple[EntryConventions, ...]:
     """File-system entry conventions declared by the built-in framework specs."""
     ensure_builtin_specs_loaded()
     conventions: list[EntryConventions] = []

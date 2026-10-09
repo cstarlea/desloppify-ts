@@ -124,7 +124,8 @@ def _auto_confirm_reflect_for_organize(
     wrapped_deps = ReflectAutoConfirmDeps(
         triage_input=resolved_deps.triage_input,
         command_runtime_fn=resolved_deps.command_runtime_fn or command_runtime,
-        collect_triage_input_fn=resolved_deps.collect_triage_input_fn or collect_triage_input,
+        collect_triage_input_fn=resolved_deps.collect_triage_input_fn
+        or collect_triage_input,
         detect_recurring_patterns_fn=(
             resolved_deps.detect_recurring_patterns_fn or detect_recurring_patterns
         ),
@@ -162,7 +163,11 @@ def _validate_recurring_dimension_mentions(
                 "yellow",
             )
         )
-    print(colorize("  Your report must mention at least one recurring dimension name.", "dim"))
+    print(
+        colorize(
+            "  Your report must mention at least one recurring dimension name.", "dim"
+        )
+    )
     return False
 
 

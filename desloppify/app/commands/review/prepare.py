@@ -59,7 +59,10 @@ def do_prepare(
 
 
 def _print_prepare_summary(
-    data: dict, *, next_command: str, retrospective: bool,
+    data: dict,
+    *,
+    next_command: str,
+    retrospective: bool,
 ) -> None:
     """Print the prepare summary to the terminal."""
     total = data.get("total_files", 0)
@@ -126,7 +129,7 @@ def _print_prepare_summary(
     )
     print(
         colorize(
-            "  5. Emergency only: `--manual-override --attest \"<why>\"` (provisional; expires on next scan)",
+            '  5. Emergency only: `--manual-override --attest "<why>"` (provisional; expires on next scan)',
             "dim",
         )
     )

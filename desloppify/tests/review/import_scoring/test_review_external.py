@@ -40,7 +40,9 @@ def test_external_start_creates_session_and_template(tmp_path, monkeypatch):
         "_prepare_packet_snapshot",
         lambda *_args, **_kwargs: (packet, packet_path, blind_path),
     )
-    monkeypatch.setattr(runtime_paths_mod, "EXTERNAL_SESSION_ROOT", tmp_path / "sessions")
+    monkeypatch.setattr(
+        runtime_paths_mod, "EXTERNAL_SESSION_ROOT", tmp_path / "sessions"
+    )
 
     args = SimpleNamespace(
         external_runner="claude",
@@ -58,14 +60,19 @@ def test_external_start_creates_session_and_template(tmp_path, monkeypatch):
     session = json.loads(session_files[0].read_text())
     assert session["runner"] == "claude"
     assert session["status"] == "open"
-    assert session["packet_sha256"] == hashlib.sha256(blind_path.read_bytes()).hexdigest()
+    assert (
+        session["packet_sha256"] == hashlib.sha256(blind_path.read_bytes()).hexdigest()
+    )
     template = Path(session["template_path"])
     assert template.exists()
     template_payload = json.loads(template.read_text())
     assert "session" in template_payload
     assert template_payload["session"]["id"] == session["session_id"]
     assert template_payload["session"]["token"] == session["token"]
-    assert sorted(template_payload["assessments"]) == ["logic_clarity", "naming_quality"]
+    assert sorted(template_payload["assessments"]) == [
+        "logic_clarity",
+        "naming_quality",
+    ]
     launch_prompt = Path(session["launch_prompt_path"])
     assert launch_prompt.exists()
     prompt_text = launch_prompt.read_text()
@@ -95,9 +102,13 @@ def test_external_submit_rejects_missing_session_metadata(tmp_path, monkeypatch)
     session_path = session_dir / "session.json"
     session_path.write_text(json.dumps(session_payload))
     issues = tmp_path / "issues.json"
-    issues.write_text(json.dumps({"assessments": {"naming_quality": 100}, "issues": []}))
+    issues.write_text(
+        json.dumps({"assessments": {"naming_quality": 100}, "issues": []})
+    )
 
-    monkeypatch.setattr(runtime_paths_mod, "EXTERNAL_SESSION_ROOT", tmp_path / "sessions")
+    monkeypatch.setattr(
+        runtime_paths_mod, "EXTERNAL_SESSION_ROOT", tmp_path / "sessions"
+    )
     lang = MagicMock()
     lang.name = "python"
 
@@ -149,7 +160,9 @@ def test_external_submit_canonicalizes_and_imports(tmp_path, monkeypatch):
         captured["import_path"] = import_path
         captured["kwargs"] = kwargs
 
-    monkeypatch.setattr(runtime_paths_mod, "EXTERNAL_SESSION_ROOT", tmp_path / "sessions")
+    monkeypatch.setattr(
+        runtime_paths_mod, "EXTERNAL_SESSION_ROOT", tmp_path / "sessions"
+    )
     monkeypatch.setattr(external_mod, "do_import", _capture_import)
 
     lang = MagicMock()
@@ -215,7 +228,9 @@ def test_external_submit_dry_run_uses_validate_import(tmp_path, monkeypatch):
     def _capture_import(*_args, **_kwargs):
         calls["import"] += 1
 
-    monkeypatch.setattr(runtime_paths_mod, "EXTERNAL_SESSION_ROOT", tmp_path / "sessions")
+    monkeypatch.setattr(
+        runtime_paths_mod, "EXTERNAL_SESSION_ROOT", tmp_path / "sessions"
+    )
     monkeypatch.setattr(external_mod, "do_validate_import", _capture_validate)
     monkeypatch.setattr(external_mod, "do_import", _capture_import)
 
@@ -237,9 +252,7 @@ def test_external_submit_dry_run_uses_validate_import(tmp_path, monkeypatch):
 
 def test_template_payload_includes_dimension_notes():
     packet = {"dimensions": ["naming_quality", "logic_clarity"]}
-    payload = external_mod._build_template_payload(
-        packet, session_id="s1", token="t1"
-    )
+    payload = external_mod._build_template_payload(packet, session_id="s1", token="t1")
     assert "dimension_notes" in payload
     assert payload["dimension_notes"] == {}
     assert payload["dimension_judgment"] == {}
@@ -336,7 +349,9 @@ def test_external_start_template_has_dimension_notes(tmp_path, monkeypatch):
         "_prepare_packet_snapshot",
         lambda *_args, **_kwargs: (packet, packet_path, blind_path),
     )
-    monkeypatch.setattr(runtime_paths_mod, "EXTERNAL_SESSION_ROOT", tmp_path / "sessions")
+    monkeypatch.setattr(
+        runtime_paths_mod, "EXTERNAL_SESSION_ROOT", tmp_path / "sessions"
+    )
 
     args = SimpleNamespace(
         external_runner="claude",

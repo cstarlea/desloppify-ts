@@ -25,7 +25,11 @@ def _print_cluster_member(idx: int, fid: str, issue: dict | None) -> None:
     summary = issue.get("summary", "")
     if summary:
         print(colorize(f"       {summary}", "dim"))
-    suggestion = issue.get("detail", {}).get("suggestion", "") if isinstance(issue.get("detail"), dict) else ""
+    suggestion = (
+        issue.get("detail", {}).get("suggestion", "")
+        if isinstance(issue.get("detail"), dict)
+        else ""
+    )
     if suggestion:
         print(colorize(f"       Suggestion: {suggestion[:200]}", "dim"))
 
@@ -81,7 +85,9 @@ def _short_member_id(fid: str) -> str:
     return fid.rsplit("::", 1)[-1]
 
 
-def _print_cluster_members(args: argparse.Namespace, issue_ids: list[str], *, has_steps: bool) -> None:
+def _print_cluster_members(
+    args: argparse.Namespace, issue_ids: list[str], *, has_steps: bool
+) -> None:
     print()
     if not issue_ids:
         print(colorize("  Members: (none)", "dim"))
@@ -117,8 +123,18 @@ def _print_cluster_members(args: argparse.Namespace, issue_ids: list[str], *, ha
 def _print_cluster_commands(cluster_name: str) -> None:
     print()
     print(colorize("  Commands:", "dim"))
-    print(colorize(f'    Resolve all:  desloppify plan resolve "{cluster_name}" --note "<what>" --attest "..."', "dim"))
-    print(colorize(f"    Drill in:     desloppify next --cluster {cluster_name} --count 10", "dim"))
+    print(
+        colorize(
+            f'    Resolve all:  desloppify plan resolve "{cluster_name}" --note "<what>" --attest "..."',
+            "dim",
+        )
+    )
+    print(
+        colorize(
+            f"    Drill in:     desloppify next --cluster {cluster_name} --count 10",
+            "dim",
+        )
+    )
     print(colorize(f"    Skip:         desloppify plan skip {cluster_name}", "dim"))
 
 
@@ -144,7 +160,9 @@ def _sorted_clusters_by_queue_pos(
     pos_map = {fid: i for i, fid in enumerate(queue_order)}
 
     def _min_pos(cluster_data: dict) -> int:
-        positions = [pos_map[fid] for fid in cluster_issue_ids(cluster_data) if fid in pos_map]
+        positions = [
+            pos_map[fid] for fid in cluster_issue_ids(cluster_data) if fid in pos_map
+        ]
         return min(positions) if positions else 999_999
 
     min_pos_cache = {name: _min_pos(c) for name, c in clusters.items()}
@@ -163,7 +181,8 @@ def _print_cluster_list_verbose(
     """Print the verbose table view of the cluster list."""
     # Filter out empty auto-clusters — they're noise
     visible = [
-        (name, cluster) for name, cluster in sorted_clusters
+        (name, cluster)
+        for name, cluster in sorted_clusters
         if len(cluster_issue_ids(cluster)) > 0 or not cluster.get("auto")
     ]
     if not visible:
@@ -174,15 +193,17 @@ def _print_cluster_list_verbose(
     name_width = max(20, min(35, max(len(name) for name, _ in visible)))
     total_items = sum(len(cluster_issue_ids(c)) for _, c in visible)
     total_steps = sum(len(c.get("action_steps") or []) for _, c in visible)
-    print(colorize(
-        f"  {len(visible)} clusters ({total_items} issues, {total_steps} steps):",
-        "bold",
-    ))
+    print(
+        colorize(
+            f"  {len(visible)} clusters ({total_items} issues, {total_steps} steps):",
+            "bold",
+        )
+    )
     if empty_auto:
         print(colorize(f"  ({empty_auto} empty auto-clusters hidden)", "dim"))
     print()
     header = f"  {'Name':<{name_width}}  {'Issues':>6}  {'Steps':>5}  {'Effort':<10}"
-    sep = f"  {'─'*name_width}  {'─'*6}  {'─'*5}  {'─'*10}"
+    sep = f"  {'─' * name_width}  {'─' * 6}  {'─' * 5}  {'─' * 10}"
     print(colorize(header, "dim"))
     print(colorize(sep, "dim"))
     for name, cluster in visible:
@@ -208,10 +229,10 @@ def _cluster_list_verbose_header(name_width: int, has_dep: bool) -> tuple[str, s
         f"  {'#pos':<5}  {'Pri':>3}{dep_header}  {'Name':<{name_width}}"
         f"  {'Items':>5}  {'Steps':>5}  {'Effort':<14}  {'Type':<6}  Description"
     )
-    dep_sep = f"  {'─'*3}" if has_dep else ""
+    dep_sep = f"  {'─' * 3}" if has_dep else ""
     sep = (
-        f"  {'─'*4}  {'─'*3}{dep_sep}  {'─'*name_width}"
-        f"  {'─'*5}  {'─'*5}  {'─'*14}  {'─'*6}  {'─'*40}"
+        f"  {'─' * 4}  {'─' * 3}{dep_sep}  {'─' * name_width}"
+        f"  {'─' * 5}  {'─' * 5}  {'─' * 14}  {'─' * 6}  {'─' * 40}"
     )
     return header, sep
 
@@ -235,6 +256,7 @@ def _effort_summary(steps: list[dict]) -> str:
     if not steps:
         return "—"
     from collections import Counter
+
     counts: Counter[str] = Counter()
     for s in steps:
         if isinstance(s, dict):
@@ -278,8 +300,18 @@ def _print_missing_steps(gaps: list[tuple[str, list[str]]]) -> None:
         print(colorize(f"    {name}: missing {', '.join(missing)}", "yellow"))
     print()
     print(colorize("  Fix with:", "dim"))
-    print(colorize('    desloppify plan cluster update <name> --description "..." --steps "step1" "step2"', "dim"))
-    print(colorize('    desloppify plan cluster update <name> --add-step "step title" --detail "sub-details"', "dim"))
+    print(
+        colorize(
+            '    desloppify plan cluster update <name> --description "..." --steps "step1" "step2"',
+            "dim",
+        )
+    )
+    print(
+        colorize(
+            '    desloppify plan cluster update <name> --add-step "step title" --detail "sub-details"',
+            "dim",
+        )
+    )
 
 
 def _print_cluster_list_summary(
@@ -298,7 +330,9 @@ def _print_cluster_list_summary(
         marker = " (focused)" if name == active else ""
         desc_str = f" — {desc}" if desc else ""
         auto_tag = " [auto]" if cluster.get("auto") else ""
-        print(f"    {pos_str:>5} {pri_tag} {name}: {member_count} items{auto_tag}{desc_str}{marker}")
+        print(
+            f"    {pos_str:>5} {pri_tag} {name}: {member_count} items{auto_tag}{desc_str}{marker}"
+        )
 
 
 def _cmd_cluster_list(args: argparse.Namespace) -> None:
@@ -313,7 +347,9 @@ def _cmd_cluster_list(args: argparse.Namespace) -> None:
         return
 
     queue_order: list[str] = plan.get("queue_order", [])
-    sorted_clusters, min_pos_cache = _sorted_clusters_by_queue_pos(clusters, queue_order)
+    sorted_clusters, min_pos_cache = _sorted_clusters_by_queue_pos(
+        clusters, queue_order
+    )
 
     if missing_steps:
         from desloppify.app.commands.plan.triage.stages.helpers import (

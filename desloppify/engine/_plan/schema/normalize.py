@@ -50,7 +50,9 @@ def ensure_container_types(plan: dict[str, Any]) -> None:
     _rename_key(plan, "uncommitted_findings", "uncommitted_issues")
     for key, expected_type in CONTAINER_TYPES:
         _ensure_container(plan, key, expected_type, expected_type)
-    _rename_key(plan["epic_triage_meta"], "finding_snapshot_hash", "issue_snapshot_hash")
+    _rename_key(
+        plan["epic_triage_meta"], "finding_snapshot_hash", "issue_snapshot_hash"
+    )
     if "commit_tracking_branch" not in plan:
         plan["commit_tracking_branch"] = None
 
@@ -233,7 +235,11 @@ def _append_normalized_issue_id(
     hash_lookup: dict[str, str],
 ) -> None:
     issue_id = _normalize_cluster_issue_id(raw_id)
-    if issue_id is None and isinstance(raw_id, str) and _HEX_SUFFIX_RE.fullmatch(raw_id):
+    if (
+        issue_id is None
+        and isinstance(raw_id, str)
+        and _HEX_SUFFIX_RE.fullmatch(raw_id)
+    ):
         issue_id = hash_lookup.get(raw_id)
     if issue_id is None or issue_id in seen:
         return

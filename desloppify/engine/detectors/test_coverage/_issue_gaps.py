@@ -148,4 +148,8 @@ def measured_coverage_issue(
     }
 
 
-__all__ = ["measured_coverage_issue", "transitive_coverage_gap_issue", "untested_module_issue"]
+__all__ = [
+    "measured_coverage_issue",
+    "transitive_coverage_gap_issue",
+    "untested_module_issue",
+]

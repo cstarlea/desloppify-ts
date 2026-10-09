@@ -224,8 +224,7 @@ def _recover_corrupt_plan(plan_path: Path, exc: Exception) -> PlanLoadStatus:
             return _finish_plan_load(plan_path, plan, quarantined)
     except (TimeoutError, LockOrderError) as lock_exc:
         logger.warning(
-            "Plan lock unavailable while recovering %s (%s); "
-            "recovering in memory only",
+            "Plan lock unavailable while recovering %s (%s); recovering in memory only",
             plan_path,
             lock_exc,
         )
@@ -292,7 +291,9 @@ def _load_plan_after_failure(
                 quarantined=quarantined,
             )
 
-    logger.warning("Plan file load degraded for %s (%s); starting fresh.", plan_path, exc)
+    logger.warning(
+        "Plan file load degraded for %s (%s); starting fresh.", plan_path, exc
+    )
     print(f"  Warning: {problem}; starting fresh.", file=sys.stderr)
     return PlanLoadStatus(
         plan=empty_plan(),
@@ -348,9 +349,7 @@ def has_living_plan(path: Path | None = None) -> bool:
         return False
     plan = load_plan(plan_path)
     return bool(
-        plan.get("queue_order")
-        or plan.get("overrides")
-        or plan.get("clusters")
+        plan.get("queue_order") or plan.get("overrides") or plan.get("clusters")
     )
 
 

@@ -40,7 +40,9 @@ def print_stage_progress(stages: dict, plan: dict | None = None) -> None:
         gaps = unenriched_clusters(plan)
         manual = manual_clusters_with_issues(plan)
         if not manual:
-            print(colorize("\n    No manual clusters yet. Preferred next step:", "yellow"))
+            print(
+                colorize("\n    No manual clusters yet. Preferred next step:", "yellow")
+            )
             for label, command in triage_runner_commands(only_stages="organize"):
                 print(colorize(f"      {label}: {command}", "dim"))
             print(
@@ -55,7 +57,11 @@ def print_stage_progress(stages: dict, plan: dict | None = None) -> None:
                 print(colorize(f"      {name}: missing {', '.join(missing)}", "yellow"))
             print(colorize(f"      Fix: {TRIAGE_CMD_CLUSTER_ENRICH_COMPACT}", "dim"))
         else:
-            print(colorize(f"\n    All {len(manual)} manual cluster(s) enriched.", "green"))
+            print(
+                colorize(
+                    f"\n    All {len(manual)} manual cluster(s) enriched.", "green"
+                )
+            )
 
 
 __all__ = ["print_stage_progress"]

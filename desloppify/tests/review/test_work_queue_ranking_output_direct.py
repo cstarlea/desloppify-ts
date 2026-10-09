@@ -46,7 +46,11 @@ def test_item_explain_for_workflow_stage_and_cluster(monkeypatch) -> None:
     )
     assert cluster["kind"] == "cluster"
     assert cluster["member_count"] == 4
-    assert cluster["ranking_factors"] == ["action_type asc", "member_count desc", "id asc"]
+    assert cluster["ranking_factors"] == [
+        "action_type asc",
+        "member_count desc",
+        "id asc",
+    ]
 
 
 def test_item_explain_for_issue_variants_includes_expected_fields() -> None:

@@ -106,9 +106,15 @@ def _node_framework_evidence(
 ) -> tuple[bool, FrameworkEvidence]:
     dep_hits = tuple(sorted(set(cfg.dependencies).intersection(deps)))
     dev_dep_hits = tuple(sorted(set(cfg.dev_dependencies).intersection(dev_deps)))
-    config_hits = _existing_relpaths(package_root, project_root, cfg.config_files, kind="file")
-    marker_file_hits = _existing_relpaths(package_root, project_root, cfg.marker_files, kind="file")
-    marker_dir_hits = _existing_relpaths(package_root, project_root, cfg.marker_dirs, kind="dir")
+    config_hits = _existing_relpaths(
+        package_root, project_root, cfg.config_files, kind="file"
+    )
+    marker_file_hits = _existing_relpaths(
+        package_root, project_root, cfg.marker_files, kind="file"
+    )
+    marker_dir_hits = _existing_relpaths(
+        package_root, project_root, cfg.marker_dirs, kind="dir"
+    )
 
     script_hits: list[str] = []
     if scripts and cfg.script_pattern:
@@ -116,7 +122,9 @@ def _node_framework_evidence(
         script_hits = [s for s in scripts if pat.search(s)]
 
     # Presence is deterministic: deps/config/scripts imply presence. Marker dirs are context by default.
-    present = bool(dep_hits or dev_dep_hits or config_hits or marker_file_hits or script_hits)
+    present = bool(
+        dep_hits or dev_dep_hits or config_hits or marker_file_hits or script_hits
+    )
     if cfg.marker_dirs_imply_presence and marker_dir_hits:
         present = True
 
@@ -181,8 +189,10 @@ def detect_ecosystem_frameworks(
     package_root = (package_json.parent if package_json else project_root).resolve()
     payload = _read_package_json(package_json) if package_json else {}
 
-    deps = _dep_set(payload, "dependencies") | _dep_set(payload, "peerDependencies") | _dep_set(
-        payload, "optionalDependencies"
+    deps = (
+        _dep_set(payload, "dependencies")
+        | _dep_set(payload, "peerDependencies")
+        | _dep_set(payload, "optionalDependencies")
     )
     dev_deps = _dep_set(payload, "devDependencies")
     scripts = _script_values(payload)
@@ -212,7 +222,10 @@ def detect_ecosystem_frameworks(
     # The ``presets`` config can turn a framework on where detection misses it.
     for framework_id in _selected_frameworks(lang):
         if framework_id in specs and framework_id not in present:
-            present[framework_id] = {**{key: [] for key in _EVIDENCE_KEYS}, "selected": True}
+            present[framework_id] = {
+                **{key: [] for key in _EVIDENCE_KEYS},
+                "selected": True,
+            }
 
     result = EcosystemFrameworkDetection(
         ecosystem=eco,
@@ -285,12 +298,17 @@ def framework_values(
     return tuple(values)
 
 
-def injected_class_decorators(scan_path: Path, lang: LangRuntimeContract | None) -> frozenset[str]:
+def injected_class_decorators(
+    scan_path: Path, lang: LangRuntimeContract | None
+) -> frozenset[str]:
     """DI class decorators of the Node frameworks present for *scan_path*."""
     detection = detect_ecosystem_frameworks(scan_path, lang, "node")
     specs = list_framework_specs(ecosystem="node")
     return frozenset().union(
-        *(specs[framework_id].injected_class_decorators for framework_id in detection.present)
+        *(
+            specs[framework_id].injected_class_decorators
+            for framework_id in detection.present
+        )
     )
 
 

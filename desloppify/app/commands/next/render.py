@@ -65,10 +65,12 @@ def _render_subjective_dimension(item: dict, *, explain: bool) -> None:
             "cyan",
         )
     )
-    print(colorize(
-        "  Note: re-review scores what it finds — scores can go down if issues are discovered.",
-        "dim",
-    ))
+    print(
+        colorize(
+            "  Note: re-review scores what it finds — scores can go down if issues are discovered.",
+            "dim",
+        )
+    )
     print_user_message(
         "Hey — this is a subjective review item. Run"
         " `desloppify review --run-batches --dry-run`"
@@ -120,10 +122,15 @@ def _render_plan_cluster_detail(
     item_id = item.get("id", "")
     item_hash = item_id.rsplit("::", 1)[-1] if item_id else ""
     relevant = [
-        (idx, step) for idx, step in enumerate(steps, 1)
-        if isinstance(step, dict) and (
+        (idx, step)
+        for idx, step in enumerate(steps, 1)
+        if isinstance(step, dict)
+        and (
             item_id in step.get("issue_refs", [])
-            or any(item_hash and ref.endswith(item_hash) for ref in step.get("issue_refs", []))
+            or any(
+                item_hash and ref.endswith(item_hash)
+                for ref in step.get("issue_refs", [])
+            )
         )
     ]
 
@@ -176,7 +183,10 @@ def _render_issue_snippet(item: dict, detail: dict) -> None:
 
 
 def _render_issue_detail(
-    item: dict, *, single_item: bool = False, header_showed_plan: bool = False,
+    item: dict,
+    *,
+    single_item: bool = False,
+    header_showed_plan: bool = False,
 ) -> dict:
     """Render plan overrides, file info, and detail fields. Returns parsed detail dict."""
     plan_description = item.get("plan_description")
@@ -201,7 +211,9 @@ def _render_issue_detail(
 
 
 def _render_score_impact(
-    item: dict, dim_scores: dict, potentials: dict | None,
+    item: dict,
+    dim_scores: dict,
+    potentials: dict | None,
 ) -> None:
     _render_score_impact_impl(
         item,
@@ -255,7 +267,10 @@ def _render_auto_fix_batch_hint(item: dict, issues_scoped: dict) -> None:
 
 
 def _render_item_explain(
-    item: dict, detail: dict, confidence: str, dim_scores: dict,
+    item: dict,
+    detail: dict,
+    confidence: str,
+    dim_scores: dict,
 ) -> None:
     _render_item_explain_impl(
         item,
@@ -268,7 +283,10 @@ def _render_item_explain(
 
 
 def _render_item(
-    item: dict, dim_scores: dict, issues_scoped: dict, explain: bool,
+    item: dict,
+    dim_scores: dict,
+    issues_scoped: dict,
+    explain: bool,
     potentials: dict | None = None,
     single_item: bool = False,
     header_showed_plan: bool = False,
@@ -291,7 +309,9 @@ def _render_item(
     _render_item_type(item)
 
     detail = _render_issue_detail(
-        item, single_item=single_item, header_showed_plan=header_showed_plan,
+        item,
+        single_item=single_item,
+        header_showed_plan=header_showed_plan,
     )
     _render_score_impact(item, dim_scores, potentials)
     _render_auto_fix_batch_hint(item, issues_scoped)
@@ -305,7 +325,7 @@ def _item_label(item: dict, idx: int, total: int) -> str:
         return f"  [#{queue_pos}]"
     if total > 1:
         return f"  [{idx + 1}/{total}]"
-    pos_str = f"  (#{ queue_pos} in queue)" if queue_pos else ""
+    pos_str = f"  (#{queue_pos} in queue)" if queue_pos else ""
     return f"  Next item{pos_str}"
 
 
@@ -319,7 +339,12 @@ def _render_cluster_drill_header(
     cluster_data = clusters.get(cluster_name, {})
     total = len(cluster_data.get("issue_ids", []))
     desc = cluster_data.get("description") or ""
-    print(colorize(f"\n  ┌─ Cluster: {cluster_name} ({len(items)} of {total} remaining) ─┐", "cyan"))
+    print(
+        colorize(
+            f"\n  ┌─ Cluster: {cluster_name} ({len(items)} of {total} remaining) ─┐",
+            "cyan",
+        )
+    )
     if desc:
         print(colorize(f"  │ {desc}", "cyan"))
     steps = cluster_data.get("action_steps") or []
@@ -333,8 +358,17 @@ def _render_cluster_drill_header(
     print(colorize("  └" + "─" * 60 + "┘", "cyan"))
     print(colorize("  Back to full queue: desloppify next", "dim"))
     if steps:
-        print(colorize(f"  Step detail: desloppify plan cluster show {cluster_name}", "dim"))
-        print(colorize(f"  Mark step done: desloppify plan cluster update {cluster_name} --done-step N", "dim"))
+        print(
+            colorize(
+                f"  Step detail: desloppify plan cluster show {cluster_name}", "dim"
+            )
+        )
+        print(
+            colorize(
+                f"  Mark step done: desloppify plan cluster update {cluster_name} --done-step N",
+                "dim",
+            )
+        )
     return bool(steps)
 
 
@@ -373,7 +407,11 @@ def render_terminal_items(
         label = _item_label(item, idx, len(items))
         print(colorize(label, "bold"))
         _render_item(
-            item, dim_scores, issues_scoped, explain=explain, potentials=potentials,
+            item,
+            dim_scores,
+            issues_scoped,
+            explain=explain,
+            potentials=potentials,
             single_item=len(items) == 1,
             header_showed_plan=header_showed_plan,
         )

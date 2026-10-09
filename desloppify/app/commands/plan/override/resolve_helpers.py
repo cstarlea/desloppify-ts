@@ -20,7 +20,7 @@ from desloppify.engine.plan_triage import (
 def check_cluster_guard(patterns: list[str], plan: dict, state: dict) -> bool:
     """Return True when a cluster-name resolve should be blocked."""
     clusters = plan.get("clusters", {})
-    issues = (state.get("work_items") or state.get("issues", {}))
+    issues = state.get("work_items") or state.get("issues", {})
     for pattern in patterns:
         if pattern in clusters:
             cluster = clusters[pattern]
@@ -36,13 +36,18 @@ def check_cluster_guard(patterns: list[str], plan: dict, state: dict) -> bool:
                         "yellow",
                     )
                 )
-                print(colorize(f"  Use: desloppify plan cluster add {pattern} <issue-id>", "dim"))
+                print(
+                    colorize(
+                        f"  Use: desloppify plan cluster add {pattern} <issue-id>",
+                        "dim",
+                    )
+                )
                 return True
     return False
 
 
 def print_cluster_guard(cluster_name: str, issue_ids: list[str], state: dict) -> None:
-    issues = (state.get("work_items") or state.get("issues", {}))
+    issues = state.get("work_items") or state.get("issues", {})
     print(
         colorize(
             f"\n  Cluster '{cluster_name}' has {len(issue_ids)} item(s) — mark them done individually first:\n",
@@ -104,7 +109,9 @@ def blocked_triage_stages(plan: dict) -> dict[str, list[str]]:
         for stage_id, name in zip(TRIAGE_STAGE_IDS, stage_names, strict=False)
         if stage_id in (order_set & TRIAGE_IDS)
     }
-    present_names.update(recorded_unconfirmed_triage_stage_names(plan.get("epic_triage_meta", {})))
+    present_names.update(
+        recorded_unconfirmed_triage_stage_names(plan.get("epic_triage_meta", {}))
+    )
     if not present_names:
         return {}
 
@@ -117,7 +124,8 @@ def blocked_triage_stages(plan: dict) -> dict[str, list[str]]:
         unmet = [
             prerequisite.stage_name
             for prerequisite in TRIAGE_STAGE_PREREQUISITES.get(name, ())
-            if prerequisite.stage_name in present_names and prerequisite.stage_name not in confirmed
+            if prerequisite.stage_name in present_names
+            and prerequisite.stage_name not in confirmed
         ]
         if unmet:
             blocked[stage_id] = [f"triage::{unmet[-1]}"]

@@ -64,7 +64,9 @@ def detect_phase(history: list[dict], strict_score: float | None) -> str:
 
 
 def detect_milestone(
-    state: StateModel, _diff: dict | None, history: list[dict],
+    state: StateModel,
+    _diff: dict | None,
+    history: list[dict],
 ) -> str | None:
     """Detect notable milestones worth celebrating."""
     strict_score = score_snapshot(state).strict

@@ -45,9 +45,7 @@ def _print_queue_header(
     plan_skipped_total = len(plan.get("skipped", {}))
 
     # Count subjective items in the visible list
-    subjective = sum(
-        1 for it in items if it.get("kind") == "subjective_dimension"
-    )
+    subjective = sum(1 for it in items if it.get("kind") == "subjective_dimension")
 
     # Count plan-ordered items (minus skipped)
     queue_order = plan.get("queue_order", [])
@@ -100,16 +98,15 @@ def _render_cluster_banner(item: dict, position: int, new_ids: set[str]) -> None
     action_type = item.get("action_type", "manual_fix")
     type_label = _cluster_type_label(name, action_type)
     cluster_type_tag = "[auto]" if item.get("cluster_auto", True) else "[triage]"
-    new_in_cluster = sum(
-        1 for m in item.get("members", [])
-        if m.get("id") in new_ids
-    )
+    new_in_cluster = sum(1 for m in item.get("members", []) if m.get("id") in new_ids)
     new_tag = f"  (+{new_in_cluster} new)" if new_in_cluster else ""
     # Step progress badge
     action_steps = item.get("action_steps") or []
     step_badge = ""
     if action_steps:
-        done_count = sum(1 for s in action_steps if isinstance(s, dict) and s.get("done"))
+        done_count = sum(
+            1 for s in action_steps if isinstance(s, dict) and s.get("done")
+        )
         step_badge = f"  [{done_count}/{len(action_steps)} steps]"
     summary = item.get("summary", "")
     command = item.get("primary_command", "")
@@ -128,7 +125,9 @@ def _render_cluster_banner(item: dict, position: int, new_ids: set[str]) -> None
     print(colorize(f"  {bar}", "dim"))
 
 
-def _build_rows(display_items: list[dict], new_ids: set[str] | None = None) -> list[list[str]]:
+def _build_rows(
+    display_items: list[dict], new_ids: set[str] | None = None
+) -> list[list[str]]:
     rows: list[list[str]] = []
     _new = new_ids or set()
     for idx, item in enumerate(display_items, 1):
@@ -155,7 +154,9 @@ def _build_rows(display_items: list[dict], new_ids: set[str] | None = None) -> l
             detector = item.get("detector", "")
             summary = item.get("summary", "")
             plan_cluster = item.get("plan_cluster")
-            cluster_name = plan_cluster.get("name", "") if isinstance(plan_cluster, dict) else ""
+            cluster_name = (
+                plan_cluster.get("name", "") if isinstance(plan_cluster, dict) else ""
+            )
 
         prefix = "* " if item.get("id") in _new else ""
         suffix = " [skip]" if item.get("plan_skipped") else ""
@@ -202,7 +203,9 @@ def _build_queue_items(
     return items, queue
 
 
-def _compute_visible_new_ids(*, queue: dict, plan: dict, state: dict, items: list[dict]) -> set[str]:
+def _compute_visible_new_ids(
+    *, queue: dict, plan: dict, state: dict, items: list[dict]
+) -> set[str]:
     """Compute new IDs for the current queue view, including review-driven IDs."""
     all_new_ids: set[str] = queue.get("new_ids", set())
     all_new_ids |= compute_new_issue_ids(plan, state)
@@ -280,17 +283,19 @@ def cmd_plan_queue(args: argparse.Namespace) -> None:
     rows_rendered = _render_queue_rows(display_items, new_ids)
 
     if cluster_count and rows_rendered:
-        print(colorize(
-            f"  ({cluster_count} cluster banner{'s' if cluster_count != 1 else ''}"
-            " shown above — table shows remaining individual items)",
-            "dim",
-        ))
+        print(
+            colorize(
+                f"  ({cluster_count} cluster banner{'s' if cluster_count != 1 else ''}"
+                " shown above — table shows remaining individual items)",
+                "dim",
+            )
+        )
 
     if top > 0 and len(items) > top:
         remaining = len(items) - top
-        print(colorize(
-            f"\n  ... and {remaining} more (use --top 0 to show all)", "dim"
-        ))
+        print(
+            colorize(f"\n  ... and {remaining} more (use --top 0 to show all)", "dim")
+        )
     print()
 
 

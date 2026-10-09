@@ -58,7 +58,9 @@ def migrate_legacy_lang_state(state_dir: Path) -> Path | None:
     target = state_dir / "state.json"
     if target.exists():
         return None
-    legacy = next((state_dir / n for n in LEGACY_STATE_FILES if (state_dir / n).is_file()), None)
+    legacy = next(
+        (state_dir / n for n in LEGACY_STATE_FILES if (state_dir / n).is_file()), None
+    )
     if legacy is None:
         return None
     try:

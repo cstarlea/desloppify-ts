@@ -10,9 +10,15 @@ from desloppify.engine._state.scoring import (
 
 def test_state_score_snapshot_loads_all_canonical_scores(monkeypatch) -> None:
     state = {"issues": {}}
-    monkeypatch.setattr(state_score_snapshot_mod, "get_overall_score", lambda _state: 81.0)
-    monkeypatch.setattr(state_score_snapshot_mod, "get_objective_score", lambda _state: 73.0)
-    monkeypatch.setattr(state_score_snapshot_mod, "get_strict_score", lambda _state: 69.0)
+    monkeypatch.setattr(
+        state_score_snapshot_mod, "get_overall_score", lambda _state: 81.0
+    )
+    monkeypatch.setattr(
+        state_score_snapshot_mod, "get_objective_score", lambda _state: 73.0
+    )
+    monkeypatch.setattr(
+        state_score_snapshot_mod, "get_strict_score", lambda _state: 69.0
+    )
     monkeypatch.setattr(
         state_score_snapshot_mod,
         "get_verified_strict_score",

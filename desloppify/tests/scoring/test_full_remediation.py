@@ -19,7 +19,12 @@ from desloppify.state import (
 
 _POTENTIALS = {"unused": 20, "smells": 20}
 _NOW = "2026-01-01T00:00:00+00:00"
-_SCORE_KEYS = ("overall_score", "objective_score", "strict_score", "verified_strict_score")
+_SCORE_KEYS = (
+    "overall_score",
+    "objective_score",
+    "strict_score",
+    "verified_strict_score",
+)
 
 
 def _raw_issue(detector: str, name: str) -> dict:
@@ -104,7 +109,9 @@ def test_fix_and_rescan_reaches_100_in_every_mode(scanned):
     # The code is fixed: the next scan reports nothing.
     _scan(state, [], root)
 
-    statuses = {issue["summary"]: issue["status"] for issue in state["work_items"].values()}
+    statuses = {
+        issue["summary"]: issue["status"] for issue in state["work_items"].values()
+    }
     assert statuses == {
         "left_open": "auto_resolved",
         "left_open_too": "auto_resolved",

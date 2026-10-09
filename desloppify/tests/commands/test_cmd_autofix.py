@@ -93,8 +93,17 @@ class TestResolveFixerResults:
             ("unused::a.ts::foo:3", "open"),
             ("unused::a.ts::bar:4", "open"),
         )
-        entries = [self._entry("unused::a.ts::foo:3"), self._entry("unused::a.ts::bar:4")]
-        results = [{"file": "a.ts", "removed": ["foo"], "fixed_issue_ids": ["unused::a.ts::foo:3"]}]
+        entries = [
+            self._entry("unused::a.ts::foo:3"),
+            self._entry("unused::a.ts::bar:4"),
+        ]
+        results = [
+            {
+                "file": "a.ts",
+                "removed": ["foo"],
+                "fixed_issue_ids": ["unused::a.ts::foo:3"],
+            }
+        ]
         resolved = _resolve_fixer_results(state, results, entries, "unused-imports")
         assert resolved == ["unused::a.ts::foo:3"]
         assert state["work_items"]["unused::a.ts::foo:3"]["status"] == "fixed"

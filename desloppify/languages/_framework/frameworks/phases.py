@@ -42,9 +42,7 @@ def _record_capability_degradation(
     """Record reduced coverage metadata when a framework rule cannot run."""
     if not missing:
         return
-    summary = (
-        f"Skipped {detector} framework rule '{rule_id}' (missing: {', '.join(missing)})."
-    )
+    summary = f"Skipped {detector} framework rule '{rule_id}' (missing: {', '.join(missing)})."
     record = {
         "detector": detector,
         "status": "reduced",
@@ -74,7 +72,8 @@ def _record_capability_degradation(
     coverage_warnings = getattr(lang, "coverage_warnings", None)
     if isinstance(coverage_warnings, list):
         if not any(
-            isinstance(entry, dict) and entry.get("detector") == detector for entry in coverage_warnings
+            isinstance(entry, dict) and entry.get("detector") == detector
+            for entry in coverage_warnings
         ):
             coverage_warnings.append(dict(record))
 
@@ -115,7 +114,9 @@ def _run_scanner_rules(
     return issues, potential
 
 
-def _framework_roots(path: Path, lang: LangRuntimeContract, spec: FrameworkSpec) -> list[Path]:
+def _framework_roots(
+    path: Path, lang: LangRuntimeContract, spec: FrameworkSpec
+) -> list[Path]:
     """Package roots to run a framework's scanners on: the scan's own package,
     then each workspace package inside the scan path that uses the framework."""
     roots: list[Path] = []
@@ -138,13 +139,17 @@ def _display_root(root: Path) -> str:
 def _framework_smells_phase(spec: FrameworkSpec) -> DetectorPhase:
     label = f"{spec.label} framework smells"
 
-    def run(path: Path, lang: LangRuntimeContract) -> tuple[list[Issue], dict[str, int]]:
+    def run(
+        path: Path, lang: LangRuntimeContract
+    ) -> tuple[list[Issue], dict[str, int]]:
         roots = _framework_roots(path, lang, spec)
         issues: list[Issue] = []
         seen: set[str] = set()
         potential = 0
         for root in roots:
-            found, scanned = _run_scanner_rules(root, lang, detector=spec.id, rules=spec.scanners)
+            found, scanned = _run_scanner_rules(
+                root, lang, detector=spec.id, rules=spec.scanners
+            )
             # A package nested in another root was already walked by that root's scanners.
             if not any(other in root.parents for other in roots):
                 potential += scanned
@@ -173,7 +178,9 @@ def _framework_tool_phase(spec: FrameworkSpec, tool: ToolIntegration) -> Detecto
     )
     tool_phase.slow = bool(tool.slow)
 
-    def run(path: Path, lang: LangRuntimeContract) -> tuple[list[Issue], dict[str, int]]:
+    def run(
+        path: Path, lang: LangRuntimeContract
+    ) -> tuple[list[Issue], dict[str, int]]:
         detection = detect_ecosystem_frameworks(path, lang, spec.ecosystem)
         if spec.id not in detection.present:
             return [], {}
@@ -183,7 +190,11 @@ def _framework_tool_phase(spec: FrameworkSpec, tool: ToolIntegration) -> Detecto
         if command is None or command == tool.cmd:
             return tool_phase.run(scan_root, lang)
         resolved_phase = make_tool_phase(
-            tool.label, command, tool.fmt, tool.id, tool.tier,
+            tool.label,
+            command,
+            tool.fmt,
+            tool.id,
+            tool.tier,
             confidence=tool.confidence,
         )
         return resolved_phase.run(scan_root, lang)

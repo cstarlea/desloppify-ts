@@ -44,7 +44,21 @@ def scan_code(text: str) -> Generator[tuple[int, str, bool], None, None]:
 # A ``/`` after one of these (or at the start) begins a regex literal, not a division.
 _REGEX_AFTER = frozenset("(,=:[!&|?{};+-*%>~^")
 _REGEX_AFTER_WORDS = frozenset(
-    {"return", "typeof", "case", "do", "else", "in", "of", "void", "yield", "await", "delete", "throw", "new"}
+    {
+        "return",
+        "typeof",
+        "case",
+        "do",
+        "else",
+        "in",
+        "of",
+        "void",
+        "yield",
+        "await",
+        "delete",
+        "throw",
+        "new",
+    }
 )
 
 

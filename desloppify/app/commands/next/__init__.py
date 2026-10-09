@@ -11,4 +11,5 @@ def cmd_next(args: argparse.Namespace) -> None:
 
     _cmd_next(args)
 
+
 __all__ = ["cmd_next"]

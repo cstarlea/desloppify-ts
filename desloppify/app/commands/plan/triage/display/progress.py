@@ -21,7 +21,9 @@ def _print_progress(plan: dict, open_issues: dict) -> None:
 def _print_active_clusters(clusters: dict[str, dict]) -> None:
     """Print current clusters that contain issues."""
     active_clusters = {
-        name: cluster for name, cluster in clusters.items() if cluster_issue_ids(cluster)
+        name: cluster
+        for name, cluster in clusters.items()
+        if cluster_issue_ids(cluster)
     }
     if not active_clusters:
         return
@@ -48,7 +50,9 @@ def _cluster_tag_summary(cluster: dict) -> str:
     return f" [{', '.join(tags)}]"
 
 
-def _collect_unclustered_issues(clusters: dict[str, dict], open_issues: dict) -> list[str]:
+def _collect_unclustered_issues(
+    clusters: dict[str, dict], open_issues: dict
+) -> list[str]:
     """Return issue IDs that are not attached to any cluster."""
     all_clustered: set[str] = set()
     for cluster in clusters.values():
@@ -63,7 +67,9 @@ def _print_unclustered_issues(
 ) -> None:
     """Print unclustered issues summary or all-clustered confirmation."""
     if unclustered:
-        print(colorize(f"\n  {len(unclustered)} issues not yet in a cluster:", "yellow"))
+        print(
+            colorize(f"\n  {len(unclustered)} issues not yet in a cluster:", "yellow")
+        )
         for issue_id in unclustered[:10]:
             issue = open_issues[issue_id]
             dim = (

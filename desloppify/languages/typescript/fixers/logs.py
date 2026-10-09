@@ -54,9 +54,19 @@ from .fixer_io import apply_fixer
 # A `//` comment directly above a removed log that only explains the log.
 _DEBUG_COMMENT_RE = re.compile(r"\b(?:debug|temp|log|logging|trace)\b", re.IGNORECASE)
 _LOGGER_NAMES = frozenset(
-    {"log", "logger", "info", "warn", "warning", "error", "debug", "trace", "fatal", "notice"}
+    {
+        "log",
+        "logger",
+        "info",
+        "warn",
+        "warning",
+        "error",
+        "debug",
+        "trace",
+        "fatal",
+        "notice",
+    }
 )
-
 
 
 def fix_debug_logs(entries: list[dict], *, dry_run: bool = False) -> FixResult:
@@ -76,7 +86,9 @@ def fix_debug_logs(entries: list[dict], *, dry_run: bool = False) -> FixResult:
     for entry in entries:
         logs_per_file[entry.get("file", "")] += 1
 
-    def transform(lines: list[str], file_entries: list[dict]) -> tuple[list[str], list[dict]]:
+    def transform(
+        lines: list[str], file_entries: list[dict]
+    ) -> tuple[list[str], list[dict]]:
         path = str(file_entries[0].get("file", "")) if file_entries else ""
         parsed = parse_text("".join(lines), path)
         if parsed is None:

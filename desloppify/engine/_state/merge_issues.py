@@ -160,7 +160,10 @@ def verify_disappeared(
 
     for issue_id, previous in existing.items():
         previous_status = previous.get("status")
-        if issue_id in current_ids or previous_status not in _CONFIRMED_ABSENCE_STATUSES:
+        if (
+            issue_id in current_ids
+            or previous_status not in _CONFIRMED_ABSENCE_STATUSES
+        ):
             continue
 
         if lang and previous.get("lang") and previous["lang"] != lang:
@@ -199,7 +202,11 @@ def verify_disappeared(
             reason = f"zone policy now skips {detector} for this file"
         elif file_deleted:
             reason = "source file no longer exists"
-        elif detector and confirmed_detectors is not None and detector in confirmed_detectors:
+        elif (
+            detector
+            and confirmed_detectors is not None
+            and detector in confirmed_detectors
+        ):
             reason = "absent from latest detector output"
         else:
             continue
@@ -312,7 +319,8 @@ def upsert_issues(
             if (
                 is_assessment_request(previous)
                 and previous["status"] in {"fixed", "auto_resolved"}
-                and (previous.get("resolution_attestation") or {}).get("kind") == "agent_import"
+                and (previous.get("resolution_attestation") or {}).get("kind")
+                == "agent_import"
             ):
                 continue
             previous_status = previous["status"]
@@ -329,7 +337,14 @@ def upsert_issues(
             reopened_count += 1
             changed_detectors.add(detector)
 
-    return current_ids, new_count, reopened_count, by_detector, ignored_count, changed_detectors
+    return (
+        current_ids,
+        new_count,
+        reopened_count,
+        by_detector,
+        ignored_count,
+        changed_detectors,
+    )
 
 
 def _suppression_metadata_from_state(

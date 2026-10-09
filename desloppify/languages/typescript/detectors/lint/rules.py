@@ -56,7 +56,12 @@ DUPLICATED_BY: dict[str, str] = {
 _FORMATTING_PREFIXES = ("@stylistic/", "prettier/", "dprint/", "format/")
 
 # Naming, ordering and file-name conventions: the project's taste, low weight.
-_CONVENTION_PREFIXES = ("perfectionist/", "simple-import-sort/", "import-x/order", "import/order")
+_CONVENTION_PREFIXES = (
+    "perfectionist/",
+    "simple-import-sort/",
+    "import-x/order",
+    "import/order",
+)
 _CONVENTION_RULES = frozenset(
     {
         "camelcase",
@@ -145,7 +150,9 @@ _LOWER = {"high": "medium", "medium": "low", "low": "low"}
 
 
 def is_formatting(rule: str, meta: dict[str, Any] | None) -> bool:
-    return rule.startswith(_FORMATTING_PREFIXES) or bool(meta and meta.get("type") == "layout")
+    return rule.startswith(_FORMATTING_PREFIXES) or bool(
+        meta and meta.get("type") == "layout"
+    )
 
 
 def _base_confidence(rule: str, meta: dict[str, Any] | None) -> str:

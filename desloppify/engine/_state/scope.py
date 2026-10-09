@@ -22,11 +22,7 @@ def issue_in_scan_scope(file_path: str, scan_path: str | None) -> bool:
     if not scan_path or scan_path == ".":
         return True
     prefix = scan_path.rstrip("/") + "/"
-    return (
-        file_path.startswith(prefix)
-        or file_path == scan_path
-        or file_path == "."
-    )
+    return file_path.startswith(prefix) or file_path == scan_path or file_path == "."
 
 
 def open_scope_breakdown(

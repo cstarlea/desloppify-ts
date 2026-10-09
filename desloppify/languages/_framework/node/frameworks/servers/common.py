@@ -38,7 +38,9 @@ class SourceFile:
 
 def _import_re(modules: tuple[str, ...]) -> re.Pattern[str]:
     names = "|".join(re.escape(m) for m in modules)
-    return re.compile(rf"""(?:\bfrom\s*|\brequire\s*\(\s*|\bimport\s*\(\s*)['"](?:{names})(?:/[^'"]*)?['"]""")
+    return re.compile(
+        rf"""(?:\bfrom\s*|\brequire\s*\(\s*|\bimport\s*\(\s*)['"](?:{names})(?:/[^'"]*)?['"]"""
+    )
 
 
 def source_files(path: Path, modules: tuple[str, ...]) -> Iterator[SourceFile]:
@@ -50,7 +52,11 @@ def source_files(path: Path, modules: tuple[str, ...]) -> Iterator[SourceFile]:
             continue
         if any(marker in normalized for marker in _NON_MODULE_MARKERS):
             continue
-        full = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
+        full = (
+            Path(filepath)
+            if Path(filepath).is_absolute()
+            else get_project_root() / filepath
+        )
         try:
             text = full.read_text(encoding="utf-8", errors="replace")
         except OSError as exc:

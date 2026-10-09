@@ -6,14 +6,28 @@ import argparse
 
 
 def _add_queue_subparser(plan_sub) -> None:
-    p_queue = plan_sub.add_parser("queue", help="Compact table of execution queue items")
-    p_queue.add_argument("--top", type=int, default=30, help="Max items (default: 30, 0=all)")
-    p_queue.add_argument("--cluster", type=str, default=None, metavar="NAME",
-                         help="Filter to a specific cluster")
-    p_queue.add_argument("--include-skipped", action="store_true",
-                         help="Include skipped items at end")
-    p_queue.add_argument("--sort", choices=["priority", "recent"], default="priority",
-                         help="Sort order (default: priority)")
+    p_queue = plan_sub.add_parser(
+        "queue", help="Compact table of execution queue items"
+    )
+    p_queue.add_argument(
+        "--top", type=int, default=30, help="Max items (default: 30, 0=all)"
+    )
+    p_queue.add_argument(
+        "--cluster",
+        type=str,
+        default=None,
+        metavar="NAME",
+        help="Filter to a specific cluster",
+    )
+    p_queue.add_argument(
+        "--include-skipped", action="store_true", help="Include skipped items at end"
+    )
+    p_queue.add_argument(
+        "--sort",
+        choices=["priority", "recent"],
+        default="priority",
+        help="Sort order (default: priority)",
+    )
 
 
 def _add_promote_subparser(plan_sub) -> None:
@@ -31,15 +45,22 @@ examples:
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     p_promote.add_argument(
-        "patterns", nargs="+", metavar="PATTERN",
+        "patterns",
+        nargs="+",
+        metavar="PATTERN",
         help="Issue ID(s), detector, file path, glob, or cluster name",
     )
     p_promote.add_argument(
-        "position", nargs="?", choices=["top", "bottom", "before", "after"], default="bottom",
+        "position",
+        nargs="?",
+        choices=["top", "bottom", "before", "after"],
+        default="bottom",
         help="Where to insert in the active queue (default: bottom)",
     )
     p_promote.add_argument(
-        "-t", "--target", default=None,
+        "-t",
+        "--target",
+        default=None,
         help="Required for before/after (issue ID or cluster name)",
     )
 
@@ -64,16 +85,22 @@ examples:
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     p_move.add_argument(
-        "patterns", nargs="+", metavar="PATTERN",
+        "patterns",
+        nargs="+",
+        metavar="PATTERN",
         help="Issue ID(s), detector, file path, glob, or cluster name",
     )
     p_move.add_argument(
-        "position", choices=["top", "bottom", "before", "after", "up", "down"],
+        "position",
+        choices=["top", "bottom", "before", "after", "up", "down"],
         help="Where to move",
     )
     p_move.add_argument(
-        "-t", "--target", default=None,
+        "-t",
+        "--target",
+        default=None,
         help="Required for before/after (issue ID or cluster name) and up/down (integer offset)",
     )
+
 
 __all__ = ["_add_promote_subparser", "_add_queue_subparser", "_add_reorder_subparser"]

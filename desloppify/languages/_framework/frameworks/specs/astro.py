@@ -21,7 +21,9 @@ ASTRO_ENTRY_CONVENTIONS = EntryConventions(
     extensions=SCRIPT_EXTENSIONS | {".astro", ".vue", ".svelte"},
     root_stems=frozenset({"middleware", "content.config", "live.config"}),
     entry_dirs=("src/pages",),
-    entry_paths=frozenset({"src/content/config", "src/middleware/index", "src/actions/index"}),
+    entry_paths=frozenset(
+        {"src/content/config", "src/middleware/index", "src/actions/index"}
+    ),
 )
 
 ASTRO_SCANNERS: tuple[ScannerRule, ...] = (
@@ -42,7 +44,9 @@ ASTRO_SCANNERS: tuple[ScannerRule, ...] = (
             ),
             detail={"line": entry["line"], "name": entry["name"]},
         ),
-        log_message=lambda count: f"       astro: {count} server-only env reads in client scripts",
+        log_message=lambda count: (
+            f"       astro: {count} server-only env reads in client scripts"
+        ),
     ),
     ScannerRule(
         id="client_directive_on_astro_component",
@@ -57,9 +61,15 @@ ASTRO_SCANNERS: tuple[ScannerRule, ...] = (
                 f"{entry['directive']} on <{entry['component']}>, an Astro component: it never "
                 "hydrates, so the directive does nothing."
             ),
-            detail={"line": entry["line"], "component": entry["component"], "directive": entry["directive"]},
+            detail={
+                "line": entry["line"],
+                "component": entry["component"],
+                "directive": entry["directive"],
+            },
         ),
-        log_message=lambda count: f"       astro: {count} client directives on Astro components",
+        log_message=lambda count: (
+            f"       astro: {count} client directives on Astro components"
+        ),
     ),
     ScannerRule(
         id="deprecated_astro_glob",
@@ -72,7 +82,11 @@ ASTRO_SCANNERS: tuple[ScannerRule, ...] = (
             confidence="high",
             summary=(
                 "Astro.glob() is deprecated since Astro 5; use import.meta.glob() or a content collection"
-                + (f" ({entry['count']} calls in this file)." if entry["count"] > 1 else ".")
+                + (
+                    f" ({entry['count']} calls in this file)."
+                    if entry["count"] > 1
+                    else "."
+                )
             ),
             detail={"line": entry["line"], "count": entry["count"]},
         ),

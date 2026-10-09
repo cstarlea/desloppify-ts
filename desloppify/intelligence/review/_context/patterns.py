@@ -59,6 +59,7 @@ def default_review_module_patterns(content: str) -> list[str]:
         out.append("explicit_api")
     return out
 
+
 __all__ = [
     "CLASS_NAME_RE",
     "ERROR_PATTERNS",

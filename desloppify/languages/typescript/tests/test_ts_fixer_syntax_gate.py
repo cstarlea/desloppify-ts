@@ -50,7 +50,7 @@ def test_angle_bracket_cast_is_valid_in_ts_files():
 
 
 def test_jsx_parses_in_tsx_and_js_files():
-    source = "export const A = () => <div className=\"x\">{1}</div>;\n"
+    source = 'export const A = () => <div className="x">{1}</div>;\n'
     assert count_syntax_errors(source, "a.tsx") == 0
     assert count_syntax_errors(source, "a.js") == 0
 

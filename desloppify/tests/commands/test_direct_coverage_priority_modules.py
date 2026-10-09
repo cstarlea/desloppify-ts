@@ -31,7 +31,9 @@ def test_app_plan_modules_avoid_old_plan_queue_facade():
     app_root = package_root / "app"
     for module_path in app_root.rglob("*.py"):
         text = module_path.read_text(encoding="utf-8")
-        assert "desloppify.engine.plan_queue" not in text, str(module_path.relative_to(package_root))
+        assert "desloppify.engine.plan_queue" not in text, str(
+            module_path.relative_to(package_root)
+        )
 
 
 def test_selected_command_modules_use_focused_plan_facades() -> None:

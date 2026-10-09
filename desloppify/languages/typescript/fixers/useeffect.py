@@ -60,7 +60,9 @@ def fix_dead_useeffect(
 
     skip_reasons: dict[str, int] = defaultdict(int)
 
-    def transform(lines: list[str], file_entries: list[dict]) -> tuple[list[str], list[dict]]:
+    def transform(
+        lines: list[str], file_entries: list[dict]
+    ) -> tuple[list[str], list[dict]]:
         path = str(file_entries[0].get("file", "")) if file_entries else ""
         parsed = parse_text("".join(lines), path)
         if parsed is None:
@@ -136,7 +138,9 @@ def _blocker(parsed: ParsedSource, call) -> str | None:
     values = args.named_children
     if not values or not _is_empty_callback(values[0]):
         return "not_empty"
-    if not all(v.type != "spread_element" and reads_only(parsed, v) for v in values[1:]):
+    if not all(
+        v.type != "spread_element" and reads_only(parsed, v) for v in values[1:]
+    ):
         return "side_effects"
     return None
 

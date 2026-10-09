@@ -86,7 +86,9 @@ def _file_concerns(state: StateModel, dismissals: dict[str, Any]) -> list[Concer
     return concerns
 
 
-def _cross_file_patterns(state: StateModel, dismissals: dict[str, Any]) -> list[Concern]:
+def _cross_file_patterns(
+    state: StateModel, dismissals: dict[str, Any]
+) -> list[Concern]:
     """Build systemic concerns for detector-combo patterns across files."""
     by_file = _group_by_file(state)
 

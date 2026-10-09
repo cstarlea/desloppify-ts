@@ -54,7 +54,9 @@ def function_at(code: str, pos: int) -> FunctionLiteral | None:
         after = match.end()
         arrow = True
     else:
-        open_at = match.start("fparams") if match.group("fparams") else match.start("aparams")
+        open_at = (
+            match.start("fparams") if match.group("fparams") else match.start("aparams")
+        )
         close_at = matching(code, open_at)
         if close_at >= len(code):
             return None
@@ -71,7 +73,9 @@ def function_at(code: str, pos: int) -> FunctionLiteral | None:
             after += 2
     after = _SPACE_RE.match(code, after).end()
     if code.startswith("{", after):
-        return FunctionLiteral(match.start(), is_async, params, (after + 1, matching(code, after)))
+        return FunctionLiteral(
+            match.start(), is_async, params, (after + 1, matching(code, after))
+        )
     if not arrow:
         return None
     return FunctionLiteral(match.start(), is_async, params, None)
@@ -83,7 +87,9 @@ def _previous_char(code: str, pos: int, floor: int) -> str:
     return code[pos - 1] if pos > floor else ""
 
 
-def call_arguments(code: str, callee: re.Pattern[str]) -> Iterator[tuple[re.Match[str], list[tuple[int, int]]]]:
+def call_arguments(
+    code: str, callee: re.Pattern[str]
+) -> Iterator[tuple[re.Match[str], list[tuple[int, int]]]]:
     """Each call whose callee *callee* matches (ending at its ``(``), with argument spans."""
     for match in callee.finditer(code):
         open_at = match.end() - 1
@@ -92,7 +98,9 @@ def call_arguments(code: str, callee: re.Pattern[str]) -> Iterator[tuple[re.Matc
         yield match, split_top_level(code, open_at + 1, matching(code, open_at))
 
 
-def statement_calls(code: str, body: tuple[int, int], pattern: re.Pattern[str]) -> Iterator[re.Match[str]]:
+def statement_calls(
+    code: str, body: tuple[int, int], pattern: re.Pattern[str]
+) -> Iterator[re.Match[str]]:
     """Matches of *pattern* in *body* that start a statement (not returned, awaited or assigned)."""
     start, end = body
     for match in pattern.finditer(code, start, end):

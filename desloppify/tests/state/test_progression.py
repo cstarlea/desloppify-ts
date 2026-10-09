@@ -85,8 +85,7 @@ class TestAppendAndLoad:
     ) -> None:
         """Corrupt lines are skipped with warning; valid lines returned."""
         progression_file.write_text(
-            'not valid json\n'
-            '{"event_type":"valid","schema_version":1,"payload":{}}\n'
+            'not valid json\n{"event_type":"valid","schema_version":1,"payload":{}}\n'
         )
         with caplog.at_level(logging.WARNING):
             events = load_progression(progression_file)
@@ -139,8 +138,7 @@ class TestAppendAndLoad:
         )
 
         assert (
-            last_plan_checkpoint_timestamp(progression_file)
-            == "2026-01-04T00:00:00Z"
+            last_plan_checkpoint_timestamp(progression_file) == "2026-01-04T00:00:00Z"
         )
 
     def test_last_plan_checkpoint_timestamp_returns_none_when_absent(
@@ -190,10 +188,7 @@ class TestAppendAndLoad:
 class TestTrim:
     def test_trim_enforcement(self, progression_file: Path) -> None:
         """2001 lines trimmed to 2000."""
-        lines = [
-            json.dumps({"event_type": "e", "n": i}) + "\n"
-            for i in range(2001)
-        ]
+        lines = [json.dumps({"event_type": "e", "n": i}) + "\n" for i in range(2001)]
         progression_file.write_text("".join(lines))
         _trim_if_needed(progression_file, max_lines=2000)
 
@@ -202,10 +197,7 @@ class TestTrim:
         assert result[0]["n"] == 1  # first line (n=0) was trimmed
 
     def test_no_trim_when_under_limit(self, progression_file: Path) -> None:
-        lines = [
-            json.dumps({"event_type": "e", "n": i}) + "\n"
-            for i in range(100)
-        ]
+        lines = [json.dumps({"event_type": "e", "n": i}) + "\n" for i in range(100)]
         progression_file.write_text("".join(lines))
         _trim_if_needed(progression_file, max_lines=2000)
         assert len(load_progression(progression_file)) == 100
@@ -281,17 +273,28 @@ class TestBuilders:
             new_review_ids=["rev-1", "rev-2"],
             dimension_notes_summary={"naming": "Consistent snake_case in api/"},
             review_issue_summaries=[
-                {"dimension": "naming", "summary": "Inconsistent naming in utils", "confidence": "high"},
+                {
+                    "dimension": "naming",
+                    "summary": "Inconsistent naming in utils",
+                    "confidence": "high",
+                },
             ],
         )
         assert event["event_type"] == "subjective_review_completed"
         payload = event["payload"]
         assert payload["assessment_mode"] == "trusted_internal"
         assert payload["covered_dimension_count"] == 3
-        assert payload["covered_dimensions"] == ["naming", "complexity", "error_handling"]
+        assert payload["covered_dimensions"] == [
+            "naming",
+            "complexity",
+            "error_handling",
+        ]
         assert payload["new_review_ids_count"] == 2
         assert payload["new_review_ids"] == ["rev-1", "rev-2"]
-        assert payload["dimension_notes_summary"]["naming"] == "Consistent snake_case in api/"
+        assert (
+            payload["dimension_notes_summary"]["naming"]
+            == "Consistent snake_case in api/"
+        )
         assert len(payload["review_issue_summaries"]) == 1
         assert "scores" not in payload
         assert "dimension_scores" in payload
@@ -457,9 +460,7 @@ class TestBuilders:
 
 
 class TestConditionalHelpers:
-    def test_entered_planning_on_phase_change(
-        self, progression_file: Path
-    ) -> None:
+    def test_entered_planning_on_phase_change(self, progression_file: Path) -> None:
         """Phase change to planning phase fires exactly one event."""
         state = _mock_state()
         plan = _mock_plan(phase="plan")
@@ -481,9 +482,7 @@ class TestConditionalHelpers:
         ]
         assert len(planning_events) == 1
 
-    def test_no_entered_planning_when_same_phase(
-        self, progression_file: Path
-    ) -> None:
+    def test_no_entered_planning_when_same_phase(self, progression_file: Path) -> None:
         state = _mock_state()
         plan = _mock_plan(phase="execute")
         with patch(
@@ -499,13 +498,9 @@ class TestConditionalHelpers:
                 phase_before="execute",
             )
         events = load_progression(progression_file)
-        assert not any(
-            e["event_type"] == "entered_planning_mode" for e in events
-        )
+        assert not any(e["event_type"] == "entered_planning_mode" for e in events)
 
-    def test_execution_drain_on_phase_change(
-        self, progression_file: Path
-    ) -> None:
+    def test_execution_drain_on_phase_change(self, progression_file: Path) -> None:
         state = _mock_state()
         plan = _mock_plan(phase="plan")
         with patch(
@@ -520,14 +515,10 @@ class TestConditionalHelpers:
                 phase_before="execute",
             )
         events = load_progression(progression_file)
-        drain_events = [
-            e for e in events if e["event_type"] == "execution_drain"
-        ]
+        drain_events = [e for e in events if e["event_type"] == "execution_drain"]
         assert len(drain_events) == 1
 
-    def test_no_execution_drain_when_same_phase(
-        self, progression_file: Path
-    ) -> None:
+    def test_no_execution_drain_when_same_phase(self, progression_file: Path) -> None:
         state = _mock_state()
         plan = _mock_plan(phase="execute")
         with patch(

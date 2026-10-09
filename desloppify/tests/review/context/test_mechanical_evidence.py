@@ -456,8 +456,7 @@ class TestMechanicalStaleness:
             "initialization_coupling": {"score": 80.0},
         }
         new_issues = [
-            _issue(id="s1", detector="structural", file="big.py",
-                     detail={"loc": 500}),
+            _issue(id="s1", detector="structural", file="big.py", detail={"loc": 500}),
         ]
         merge_scan(state, new_issues)
 
@@ -541,8 +540,7 @@ class TestMechanicalStaleness:
             },
         }
         new_issues = [
-            _issue(id="s1", detector="structural", file="big.py",
-                     detail={"loc": 500}),
+            _issue(id="s1", detector="structural", file="big.py", detail={"loc": 500}),
         ]
         merge_scan(state, new_issues)
 
@@ -559,8 +557,12 @@ class TestMechanicalStaleness:
             "initialization_coupling": {"score": 80.0},
         }
         new_issues = [
-            _issue(id="g1", detector="global_mutable_config", file="registry.py",
-                     detail={"name": "_registry"}),
+            _issue(
+                id="g1",
+                detector="global_mutable_config",
+                file="registry.py",
+                detail={"name": "_registry"},
+            ),
         ]
         merge_scan(state, new_issues)
 
@@ -626,7 +628,9 @@ class TestMechanicalStaleness:
         # Second scan: structural ran and the issue is absent → scan-verified,
         # detector changed
         merge_scan(
-            state, [], MergeScanOptions(force_resolve=True, potentials={"structural": 1})
+            state,
+            [],
+            MergeScanOptions(force_resolve=True, potentials={"structural": 1}),
         )
 
         dc = state["subjective_assessments"]["design_coherence"]
@@ -682,7 +686,9 @@ class TestStaleReminderGating:
 def test_type_strictness_evidence_lists_open_tsconfig_issues():
     issues = [
         _issue(id="a", detector="tsconfig_health", file="tsconfig.json"),
-        _issue(id="b", detector="tsconfig_health", file="pkg/tsconfig.json", status="fixed"),
+        _issue(
+            id="b", detector="tsconfig_health", file="pkg/tsconfig.json", status="fixed"
+        ),
         _issue(id="c", detector="smells", file="src/a.ts"),
     ]
     state = {"issues": {issue["id"]: issue for issue in issues}}
@@ -693,13 +699,34 @@ def test_type_strictness_evidence_lists_open_tsconfig_issues():
 
 def test_toolchain_evidence_groups_type_errors_lint_rules_and_coverage():
     issues = [
-        _issue(id="t1", detector="type_error", file="src/a.ts", detail={"code": "TS2322"}),
-        _issue(id="t2", detector="type_error", file="src/a.ts", detail={"code": "TS2345"}),
-        _issue(id="t3", detector="type_error", file="src/b.ts", detail={"code": "TS2322"}),
-        _issue(id="l1", detector="lint", file="src/a.ts", detail={"rule": "@typescript-eslint/no-floating-promises"}),
-        _issue(id="l2", detector="lint", file="src/b.ts", detail={"rule": "@typescript-eslint/no-floating-promises"}),
+        _issue(
+            id="t1", detector="type_error", file="src/a.ts", detail={"code": "TS2322"}
+        ),
+        _issue(
+            id="t2", detector="type_error", file="src/a.ts", detail={"code": "TS2345"}
+        ),
+        _issue(
+            id="t3", detector="type_error", file="src/b.ts", detail={"code": "TS2322"}
+        ),
+        _issue(
+            id="l1",
+            detector="lint",
+            file="src/a.ts",
+            detail={"rule": "@typescript-eslint/no-floating-promises"},
+        ),
+        _issue(
+            id="l2",
+            detector="lint",
+            file="src/b.ts",
+            detail={"rule": "@typescript-eslint/no-floating-promises"},
+        ),
         _issue(id="l3", detector="lint", file="src/b.ts", detail={"rule": "eqeqeq"}),
-        _issue(id="c1", detector="test_coverage", file="src/a.ts", detail={"kind": "untested_module"}),
+        _issue(
+            id="c1",
+            detector="test_coverage",
+            file="src/a.ts",
+            detail={"kind": "untested_module"},
+        ),
         _issue(
             id="c2",
             detector="test_coverage",
@@ -712,14 +739,20 @@ def test_toolchain_evidence_groups_type_errors_lint_rules_and_coverage():
             },
         ),
     ]
-    evidence = gather_mechanical_evidence({"issues": {issue["id"]: issue for issue in issues}})
+    evidence = gather_mechanical_evidence(
+        {"issues": {issue["id"]: issue for issue in issues}}
+    )
     assert evidence["type_errors"] == {
         "total": 3,
         "by_code": {"TS2322": 2, "TS2345": 1},
         "files": [{"file": "src/a.ts", "errors": 2}, {"file": "src/b.ts", "errors": 1}],
     }
     assert evidence["lint_rules"] == [
-        {"rule": "@typescript-eslint/no-floating-promises", "count": 2, "files": ["src/a.ts", "src/b.ts"]},
+        {
+            "rule": "@typescript-eslint/no-floating-promises",
+            "count": 2,
+            "files": ["src/a.ts", "src/b.ts"],
+        },
         {"rule": "eqeqeq", "count": 1, "files": ["src/b.ts"]},
     ]
     assert evidence["coverage_gaps"] == {
@@ -730,7 +763,12 @@ def test_toolchain_evidence_groups_type_errors_lint_rules_and_coverage():
 
 
 def test_coverage_evidence_without_a_report_has_only_graph_verdicts():
-    issue = _issue(id="c1", detector="test_coverage", file="src/a.ts", detail={"kind": "transitive_only"})
+    issue = _issue(
+        id="c1",
+        detector="test_coverage",
+        file="src/a.ts",
+        detail={"kind": "transitive_only"},
+    )
     assert gather_mechanical_evidence({"issues": {"c1": issue}})["coverage_gaps"] == {
         "by_kind": {"transitive_only": 1}
     }
@@ -738,9 +776,25 @@ def test_coverage_evidence_without_a_report_has_only_graph_verdicts():
 
 def test_dependency_manifest_evidence_lists_open_knip_issues():
     issues = [
-        _issue(id="d1", detector="dependencies", file="packages/a/package.json", detail={"kind": "unused", "package": "lodash"}),
-        _issue(id="d2", detector="dependencies", file="package.json", detail={"kind": "unlisted", "package": "zod"}),
-        _issue(id="d3", detector="dependencies", file="package.json", detail={"kind": "unused", "package": "x"}, status="fixed"),
+        _issue(
+            id="d1",
+            detector="dependencies",
+            file="packages/a/package.json",
+            detail={"kind": "unused", "package": "lodash"},
+        ),
+        _issue(
+            id="d2",
+            detector="dependencies",
+            file="package.json",
+            detail={"kind": "unlisted", "package": "zod"},
+        ),
+        _issue(
+            id="d3",
+            detector="dependencies",
+            file="package.json",
+            detail={"kind": "unused", "package": "x"},
+            status="fixed",
+        ),
     ]
     state = {"issues": {issue["id"]: issue for issue in issues}}
     assert dependency_manifest_evidence(state) == [

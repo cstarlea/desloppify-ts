@@ -86,7 +86,11 @@ def strip_sql(text: str) -> str:
 def _key(raw: str) -> tuple[str, str]:
     """``"public"."todos"`` / ``todos`` → ``("public", "todos")``."""
     parts = [p.strip('"').lower() for p in re.findall(r'"[^"]+"|[^".\s]+', raw)]
-    return (parts[0], parts[1]) if len(parts) >= 2 else ("public", parts[0] if parts else "")
+    return (
+        (parts[0], parts[1])
+        if len(parts) >= 2
+        else ("public", parts[0] if parts else "")
+    )
 
 
 def _invoker_on(options: str) -> bool | None:
@@ -127,7 +131,9 @@ def _statement(text: str, start: int) -> str:
     return text[start : end.start() if end else len(text)]
 
 
-def _replay(root: Path) -> tuple[dict[tuple[str, str], _Object], dict[tuple[str, str], _Object], int]:
+def _replay(
+    root: Path,
+) -> tuple[dict[tuple[str, str], _Object], dict[tuple[str, str], _Object], int]:
     """Apply the migrations: public tables (secured = RLS on) and views
     (secured = security_invoker), and the number of SQL files read."""
     tables: dict[tuple[str, str], _Object] = {}

@@ -125,10 +125,8 @@ def triage_phase_banner(
             f"TRIAGE MODE ({progress.completed_count}/{total_stages} stages recorded) — "
             f"complete all stages to exit. {run_hint}"
         )
-    return (
-        "TRIAGE MODE — review work items need analysis before fixing. "
-        f"{run_hint}"
-    )
+    return f"TRIAGE MODE — review work items need analysis before fixing. {run_hint}"
+
 
 __all__ = [
     "TRIAGE_CMD_CLUSTER_ADD",

@@ -59,7 +59,9 @@ def _package_json(directory: Path) -> dict:
 
 
 def _first(directory: Path, names: tuple[str, ...]) -> Path | None:
-    return next((directory / name for name in names if (directory / name).is_file()), None)
+    return next(
+        (directory / name for name in names if (directory / name).is_file()), None
+    )
 
 
 def _biome_linter_enabled(config: Path) -> bool:
@@ -76,7 +78,10 @@ def _xo_config(directory: Path) -> Path | None:
     if found is not None:
         return found
     package = _package_json(directory)
-    dependencies = {**(package.get("dependencies") or {}), **(package.get("devDependencies") or {})}
+    dependencies = {
+        **(package.get("dependencies") or {}),
+        **(package.get("devDependencies") or {}),
+    }
     if "xo" in package or "xo" in dependencies:
         return directory / "package.json"
     return None
@@ -140,7 +145,10 @@ def nested_config_dirs(scan_root: Path, config_dir: Path) -> list[Path]:
             d for d in dirnames if d not in DEFAULT_EXCLUSIONS and not d.startswith(".")
         )
         directory = Path(dirpath)
-        if directory != config_dir and _first(directory, ESLINT_FLAT_CONFIGS) is not None:
+        if (
+            directory != config_dir
+            and _first(directory, ESLINT_FLAT_CONFIGS) is not None
+        ):
             found.append(directory)
             dirnames[:] = []
     return found

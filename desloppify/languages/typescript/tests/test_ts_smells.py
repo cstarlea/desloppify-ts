@@ -329,6 +329,7 @@ def test_async_without_await_and_signature_braces_still_flagged(tmp_path):
     ids = {e["id"] for e in entries}
     assert "async_no_await" in ids
 
+
 def test_detect_console_error_no_throw(tmp_path):
     """Detects console.error not followed by throw or return."""
 
@@ -558,7 +559,11 @@ def test_entries_sorted_by_severity_then_count(tmp_path):
 def test_smell_matches_are_not_truncated(tmp_path):
     """Every match must survive; a global cap hid most files in large repos."""
     for i in range(30):
-        _write(tmp_path, f"f{i:02d}.ts", "const a: any = 1;\nconst b: any = 2;\nconst c: any = 3;\n")
+        _write(
+            tmp_path,
+            f"f{i:02d}.ts",
+            "const a: any = 1;\nconst b: any = 2;\nconst c: any = 3;\n",
+        )
     entries, _ = detect_smells(tmp_path)
     any_type = next(e for e in entries if e["id"] == "any_type")
     assert any_type["count"] == 90

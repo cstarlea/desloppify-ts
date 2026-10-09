@@ -13,8 +13,7 @@ def _has_synthesis_artifacts(
     meta: object,
 ) -> bool:
     has_synthesis_ids = any(
-        isinstance(item, str) and item.startswith("synthesis::")
-        for item in queue_order
+        isinstance(item, str) and item.startswith("synthesis::") for item in queue_order
     )
     has_synthesis_skips = any(
         isinstance(item, str) and item.startswith("synthesis::")
@@ -73,7 +72,11 @@ def _migrate_action_steps_to_v8(cluster: dict[str, Any]) -> bool:
                     if pos != -1:
                         title = step[: pos + 1].strip()
                         detail = step[pos + len(sep) :].strip()
-                        steps[i] = {"title": title, "detail": detail} if detail else {"title": title}
+                        steps[i] = (
+                            {"title": title, "detail": detail}
+                            if detail
+                            else {"title": title}
+                        )
                         break
                 else:
                     steps[i] = {"title": step}

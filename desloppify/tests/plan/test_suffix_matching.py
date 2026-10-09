@@ -114,7 +114,10 @@ def test_name_segment_no_partial_match():
 
 def test_name_segment_no_match_with_colons():
     """Pattern containing :: uses prefix rule, not name-segment."""
-    assert _matches_pattern(_NAME_SEG_ID, _NAME_SEG_ISSUE, "review::timing_attack") is False
+    assert (
+        _matches_pattern(_NAME_SEG_ID, _NAME_SEG_ISSUE, "review::timing_attack")
+        is False
+    )
 
 
 def test_name_segment_does_not_shadow_detector():

@@ -120,7 +120,9 @@ def triage_epics(
 
     if dry_run or deps is None or deps.llm_call is None:
         result = TriageMutationResult(dry_run=True)
-        result.strategy_summary = f"[dry-run] Prompt built with {len(si.review_issues)} issues"
+        result.strategy_summary = (
+            f"[dry-run] Prompt built with {len(si.review_issues)} issues"
+        )
         return result
 
     try:

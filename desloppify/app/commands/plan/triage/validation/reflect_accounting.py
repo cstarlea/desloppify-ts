@@ -23,7 +23,11 @@ class ReflectDisposition:
 
     def to_dict(self) -> dict:
         """Serialize for JSON persistence in ``plan.json``."""
-        return {"issue_id": self.issue_id, "decision": self.decision, "target": self.target}
+        return {
+            "issue_id": self.issue_id,
+            "decision": self.decision,
+            "target": self.target,
+        }
 
     @classmethod
     def from_dict(cls, data: dict | ReflectDisposition) -> ReflectDisposition:
@@ -54,7 +58,9 @@ def _build_id_resolution_maps(valid_ids: set[str]) -> _IdResolutionMaps:
     short_id_buckets: dict[str, list[str]] = {}
     short_hex_map: dict[str, str] = {}
     slug_prefix_map: dict[str, str] = {}
-    short_id_counts: Counter[str] = Counter(issue_id.rsplit("::", 1)[-1] for issue_id in valid_ids)
+    short_id_counts: Counter[str] = Counter(
+        issue_id.rsplit("::", 1)[-1] for issue_id in valid_ids
+    )
     issue_tokens: dict[str, str] = {}
     ambiguous_slugs: set[str] = set()
     for issue_id in sorted(valid_ids):
@@ -62,7 +68,9 @@ def _build_id_resolution_maps(valid_ids: set[str]) -> _IdResolutionMaps:
         short_id = parts[-1]
         slug = parts[0] if len(parts) == 2 else ""
         short_id_buckets.setdefault(short_id, []).append(issue_id)
-        issue_tokens[issue_id] = short_id if short_id_counts[short_id] == 1 else issue_id
+        issue_tokens[issue_id] = (
+            short_id if short_id_counts[short_id] == 1 else issue_id
+        )
         if re.fullmatch(r"[0-9a-f]{8,}", short_id):
             existing = short_hex_map.get(short_id)
             if existing is None:
@@ -131,7 +139,11 @@ def _parse_ledger_line_with_patterns(
         match = pattern.match(line)
         if match:
             token = _clean_ledger_token(match.group(1))
-            return token, match.group(2).strip().lower(), match.group(3).strip().strip("\"'")
+            return (
+                token,
+                match.group(2).strip().lower(),
+                match.group(3).strip().strip("\"'"),
+            )
     return "", None, None
 
 
@@ -148,11 +160,15 @@ def _parse_token_only_ledger_line(line: str) -> tuple[str, str | None, str | Non
 
 def _extract_ledger_entry(line: str) -> tuple[str, str | None, str | None]:
     """Parse one ledger line into ``(token, decision, target)``."""
-    token, decision, target = _parse_ledger_line_with_patterns(line, _CANONICAL_LEDGER_PATTERNS)
+    token, decision, target = _parse_ledger_line_with_patterns(
+        line, _CANONICAL_LEDGER_PATTERNS
+    )
     if token:
         return token, decision, target
 
-    token, decision, target = _parse_ledger_line_with_patterns(line, _COMPAT_LEDGER_PATTERNS)
+    token, decision, target = _parse_ledger_line_with_patterns(
+        line, _COMPAT_LEDGER_PATTERNS
+    )
     if token:
         return token, decision, target
 
@@ -316,7 +332,9 @@ def analyze_reflect_issue_accounting(
     result = _walk_coverage_ledger(report, valid_ids)
     if result.found_section and result.hits:
         cited = set(result.hits)
-        duplicates = sorted(issue_id for issue_id, count in result.hits.items() if count > 1)
+        duplicates = sorted(
+            issue_id for issue_id, count in result.hits.items() if count > 1
+        )
         missing = sorted(valid_ids - cited)
         return cited, missing, duplicates
 
@@ -377,7 +395,9 @@ def validate_reflect_accounting(
         print(colorize(f"    Duplicated: {duplicate_tokens}", "yellow"))
     print(colorize("  Fix the reflect blueprint before running organize.", "dim"))
     if missing:
-        print(colorize("  Expected format — include a ## Coverage Ledger section:", "dim"))
+        print(
+            colorize("  Expected format — include a ## Coverage Ledger section:", "dim")
+        )
         print(colorize('    - <token> -> cluster "cluster-name"', "dim"))
         print(colorize('    - <token> -> skip "reason"', "dim"))
         print(colorize("  Use the exact required ledger token for each issue.", "dim"))
@@ -448,13 +468,15 @@ def parse_backlog_decisions(report: str) -> list[BacklogDecision]:
             continue
         cluster_name = match.group(1).strip().strip("`")
         decision_raw = match.group(2).strip().lower()
-        reason = match.group(3).strip().strip('"\'')
+        reason = match.group(3).strip().strip("\"'")
         if decision_raw in ("promote", "skip", "supersede"):
-            decisions.append(BacklogDecision(
-                cluster_name=cluster_name,
-                decision=decision_raw,  # type: ignore[arg-type]
-                reason=reason,
-            ))
+            decisions.append(
+                BacklogDecision(
+                    cluster_name=cluster_name,
+                    decision=decision_raw,  # type: ignore[arg-type]
+                    reason=reason,
+                )
+            )
     return decisions
 
 

@@ -19,7 +19,9 @@ def _normalized_non_empty_text(value: object) -> str | None:
 def _normalized_non_empty_text_list(value: object) -> list[str] | None:
     if not isinstance(value, list):
         return None
-    cleaned = [str(item).strip() for item in value if isinstance(item, str) and item.strip()]
+    cleaned = [
+        str(item).strip() for item in value if isinstance(item, str) and item.strip()
+    ]
     return cleaned if cleaned else None
 
 
@@ -93,11 +95,15 @@ def validate_review_issue_payload(
 
     related_files = _normalized_non_empty_text_list(issue.get("related_files"))
     if related_files is None:
-        errors.append(f"{label}.related_files must contain at least one file path string")
+        errors.append(
+            f"{label}.related_files must contain at least one file path string"
+        )
 
     evidence = _normalized_non_empty_text_list(issue.get("evidence"))
     if evidence is None:
-        errors.append(f"{label}.evidence must contain at least one concrete evidence string")
+        errors.append(
+            f"{label}.evidence must contain at least one concrete evidence string"
+        )
 
     if errors:
         return None, errors

@@ -33,14 +33,20 @@ class TestMoveSafety:
         )
 
         replacements = [("'./y'", "'../../new/y'"), ("'@/feature/y'", "'@/new/y'")]
-        kept = filter_intra_package_importer_changes("/p/src/feature/x.ts", replacements, set())
+        kept = filter_intra_package_importer_changes(
+            "/p/src/feature/x.ts", replacements, set()
+        )
         assert kept == [("'@/feature/y'", "'@/new/y'")]
 
     @pytest.mark.skipif(sys.platform == "win32", reason="POSIX absolute paths")
     def test_self_rewrites_to_files_moving_together_are_dropped(self):
         from desloppify.languages.typescript.move import filter_directory_self_changes
 
-        moving = {"/p/src/feature/x.ts", "/p/src/feature/y.ts", "/p/src/feature/sub/index.ts"}
+        moving = {
+            "/p/src/feature/x.ts",
+            "/p/src/feature/y.ts",
+            "/p/src/feature/sub/index.ts",
+        }
         changes = [
             ("'./y'", "'../../feature/y'"),  # sibling, moving too
             ("'./y.js'", "'../../feature/y.js'"),
@@ -67,7 +73,9 @@ class TestMoveSafety:
         from desloppify.base.exception_sets import CommandError
 
         graph = {
-            "/p/src/y.ts": {"importers": {"/p/src/x.ts", "/p/src/z.ts", "/p/src/y_sib.ts"}},
+            "/p/src/y.ts": {
+                "importers": {"/p/src/x.ts", "/p/src/z.ts", "/p/src/y_sib.ts"}
+            },
         }
         moving = {"/p/src/y.ts", "/p/src/y_sib.ts"}
         assert find_unrewritable_importers(graph, moving, {"/p/src/x.ts"}) == {
@@ -79,7 +87,13 @@ class TestMoveSafety:
         kwargs = dict(rel_fn=lambda p: p, warn_fn=warnings.append)
         with pytest.raises(CommandError, match="z.ts"):
             check_unrewritable_importers(
-                strict, graph, moving, {"/p/src/x.ts"}, dry_run=False, force=False, **kwargs
+                strict,
+                graph,
+                moving,
+                {"/p/src/x.ts"},
+                dry_run=False,
+                force=False,
+                **kwargs,
             )
         check_unrewritable_importers(
             strict, graph, moving, {"/p/src/x.ts"}, dry_run=True, force=False, **kwargs
@@ -91,7 +105,13 @@ class TestMoveSafety:
 
         # Languages whose imports don't depend on file location (C#) never abort.
         check_unrewritable_importers(
-            SimpleNamespace(), graph, moving, set(), dry_run=False, force=False, **kwargs
+            SimpleNamespace(),
+            graph,
+            moving,
+            set(),
+            dry_run=False,
+            force=False,
+            **kwargs,
         )
 
 
@@ -126,7 +146,9 @@ class TestFindReplacements:
     def test_relative_specifiers_keep_their_style(self, project):
         _write(project, "src/lib/format.ts")
         esm = _write(project, "src/a.ts", "import { x } from './lib/format.js';\n")
-        plain = _write(project, "src/views/b.ts", 'import { x } from "../lib/format";\n')
+        plain = _write(
+            project, "src/views/b.ts", 'import { x } from "../lib/format";\n'
+        )
         changes, _ = _replacements(project, "src/lib/format.ts", "src/util/text.ts")
         assert changes == {
             esm: [("'./lib/format.js'", "'./util/text.js'")],
@@ -140,26 +162,44 @@ class TestFindReplacements:
         assert changes == {importer: [("'./widgets'", "'./ui'")]}
 
     def test_tsconfig_alias_is_kept_when_it_covers_the_destination(self, project):
-        _write(project, "tsconfig.json", json.dumps({"compilerOptions": {"paths": {"~/*": ["./app/*"]}}}))
+        _write(
+            project,
+            "tsconfig.json",
+            json.dumps({"compilerOptions": {"paths": {"~/*": ["./app/*"]}}}),
+        )
         _write(project, "app/lib/format.ts")
         importer = _write(project, "app/page.ts", "import { x } from '~/lib/format';\n")
         changes, _ = _replacements(project, "app/lib/format.ts", "app/util/text.ts")
         assert changes == {importer: [("'~/lib/format'", "'~/util/text'")]}
 
     def test_alias_falls_back_to_relative_outside_its_directory(self, project):
-        _write(project, "tsconfig.json", json.dumps({"compilerOptions": {"paths": {"~/*": ["./app/*"]}}}))
+        _write(
+            project,
+            "tsconfig.json",
+            json.dumps({"compilerOptions": {"paths": {"~/*": ["./app/*"]}}}),
+        )
         _write(project, "app/lib/format.ts")
         importer = _write(project, "app/page.ts", "import { x } from '~/lib/format';\n")
         changes, _ = _replacements(project, "app/lib/format.ts", "shared/format.ts")
         assert changes == {importer: [("'~/lib/format'", "'../shared/format'")]}
 
     def test_workspace_package_import_is_not_rewritten(self, project):
-        _write(project, "package.json", json.dumps({"name": "root", "workspaces": ["packages/*"]}))
-        _write(project, "packages/ui/package.json", json.dumps({"name": "@acme/ui", "exports": "./src/index.ts"}))
+        _write(
+            project,
+            "package.json",
+            json.dumps({"name": "root", "workspaces": ["packages/*"]}),
+        )
+        _write(
+            project,
+            "packages/ui/package.json",
+            json.dumps({"name": "@acme/ui", "exports": "./src/index.ts"}),
+        )
         _write(project, "packages/ui/src/index.ts")
         _write(project, "packages/app/package.json", json.dumps({"name": "app"}))
         _write(project, "packages/app/main.ts", "import { x } from '@acme/ui';\n")
-        changes, _ = _replacements(project, "packages/ui/src/index.ts", "packages/ui/src/main.ts")
+        changes, _ = _replacements(
+            project, "packages/ui/src/index.ts", "packages/ui/src/main.ts"
+        )
         assert changes == {}
 
     def test_commented_out_import_is_not_an_importer_specifier(self, project):
@@ -181,7 +221,9 @@ class TestFindReplacements:
             "src/lib/report.ts",
             "import { x } from './format.js';\nimport { y } from './util';\nimport z from 'react';\n",
         )
-        _, self_changes = _replacements(project, "src/lib/report.ts", "src/features/report.ts")
+        _, self_changes = _replacements(
+            project, "src/lib/report.ts", "src/features/report.ts"
+        )
         assert self_changes == [
             ("'./format.js'", "'../lib/format.js'"),
             ("'./util'", "'../lib/util'"),

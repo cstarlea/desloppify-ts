@@ -34,7 +34,10 @@ class Budget:
     """
 
     def __init__(
-        self, seconds: float, max_memory_mb: int, clock: Callable[[], float] = time.monotonic
+        self,
+        seconds: float,
+        max_memory_mb: int,
+        clock: Callable[[], float] = time.monotonic,
     ) -> None:
         self.seconds = seconds
         self.max_memory_mb = max_memory_mb

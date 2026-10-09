@@ -17,7 +17,14 @@ def summary_lines(stats: dict) -> list[str]:
     deferred_count = stats.get("deferred", 0) + stats.get("triaged_out", 0)
     total_issues = sum(
         stats.get(key, 0)
-        for key in ("open", "fixed", "wontfix", "auto_resolved", "deferred", "triaged_out")
+        for key in (
+            "open",
+            "fixed",
+            "wontfix",
+            "auto_resolved",
+            "deferred",
+            "triaged_out",
+        )
     )
     addressed = total_issues - open_count - deferred_count
     pct = round(addressed / total_issues * 100) if total_issues else 100
@@ -125,7 +132,9 @@ def plan_user_ordered_section(
 
     emitted: set[str] = set()
     for cluster_name in sorted_cluster_names:
-        member_ids = [mid for mid in cluster_members[cluster_name] if mid not in emitted]
+        member_ids = [
+            mid for mid in cluster_members[cluster_name] if mid not in emitted
+        ]
         if not member_ids:
             continue
         desc = clusters[cluster_name].get("description") or ""

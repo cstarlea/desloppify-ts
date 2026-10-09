@@ -91,7 +91,11 @@ class _Locator:
             if not value.startswith(prefix):
                 continue
             rest = value[len(prefix) :]
-            slice_name = rest.split("/")[0] if self.layers[index].sliced and "/" in rest else None
+            slice_name = (
+                rest.split("/")[0]
+                if self.layers[index].sliced and "/" in rest
+                else None
+            )
             return _Location(index, prefix, slice_name, rest)
         return None
 
@@ -207,7 +211,9 @@ def detect_boundary_candidates(
                 raise FileNotFoundError(resolved)
             loc = count_lines(resolved)
         except (OSError, UnicodeDecodeError) as exc:
-            log_best_effort_failure(logger, f"read coupling detector candidate {filepath}", exc)
+            log_best_effort_failure(
+                logger, f"read coupling detector candidate {filepath}", exc
+            )
             continue
         entries.append(
             {

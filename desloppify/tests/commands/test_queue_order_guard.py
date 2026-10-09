@@ -12,9 +12,11 @@ from desloppify.engine._plan.schema import empty_plan, ensure_plan_defaults
 # Lazy import helper — avoids the circular import in resolve/render
 # ---------------------------------------------------------------------------
 
+
 def _import_guard():
     """Import _check_queue_order_guard, patching away the render dependency."""
     import desloppify.app.commands.resolve.cmd as cmd_mod
+
     return cmd_mod._check_queue_order_guard
 
 
@@ -25,6 +27,7 @@ def _get_guard_fn():
     except ImportError:
         # Fall back: patch the problematic render import chain
         import sys
+
         stub = MagicMock()
         modules_to_stub = [
             "desloppify.app.commands.helpers.score_update",
@@ -38,6 +41,7 @@ def _get_guard_fn():
 
         # Force reimport
         import desloppify.app.commands.resolve.cmd as cmd_mod
+
         importlib.reload(cmd_mod)
         fn = cmd_mod._check_queue_order_guard
 
@@ -57,6 +61,7 @@ _check_queue_order_guard = _get_guard_fn()
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _state_with_issues(*ids: str) -> dict:
     work_items = {}
     for fid in ids:
@@ -72,7 +77,9 @@ def _state_with_issues(*ids: str) -> dict:
     return {"work_items": work_items, "issues": work_items, "scan_count": 5}
 
 
-def _setup_plan(tmp_path, monkeypatch, queue_order: list[str], clusters: dict | None = None):
+def _setup_plan(
+    tmp_path, monkeypatch, queue_order: list[str], clusters: dict | None = None
+):
     """Create and save a plan with given queue order, monkeypatch PLAN_FILE."""
     import desloppify.engine._plan.persistence as persist_mod
 
@@ -89,6 +96,7 @@ def _setup_plan(tmp_path, monkeypatch, queue_order: list[str], clusters: dict | 
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
+
 
 def test_guard_blocks_out_of_order(tmp_path, monkeypatch, capsys):
     """Resolving item #2 when item #1 is next should be blocked."""
@@ -125,7 +133,8 @@ def test_guard_allows_cluster_member(tmp_path, monkeypatch):
     """If the front item is a cluster, its members should be allowed."""
     state = _state_with_issues("a", "b", "c")
     _setup_plan(
-        tmp_path, monkeypatch,
+        tmp_path,
+        monkeypatch,
         ["a", "b", "c"],
         clusters={
             "auto/unused": {
@@ -152,7 +161,8 @@ def test_guard_blocks_item_behind_cluster(tmp_path, monkeypatch, capsys):
     """Item behind a cluster should be blocked."""
     state = _state_with_issues("a", "b", "c")
     _setup_plan(
-        tmp_path, monkeypatch,
+        tmp_path,
+        monkeypatch,
         ["a", "b", "c"],
         clusters={
             "auto/unused": {
@@ -209,6 +219,7 @@ def test_guard_prints_reorganize_commands(tmp_path, monkeypatch, capsys):
 # Stale issue ID tests (issue #182)
 # ---------------------------------------------------------------------------
 
+
 def test_guard_skips_stale_ids_in_queue_order(tmp_path, monkeypatch):
     """Stale IDs at the front of queue_order should not block live items."""
     # "stale" is in queue_order but NOT in state issues at all
@@ -237,7 +248,8 @@ def test_guard_cluster_with_stale_members(tmp_path, monkeypatch):
     # "a" is alive, "stale_member" is not in state
     state = _state_with_issues("a", "c")
     _setup_plan(
-        tmp_path, monkeypatch,
+        tmp_path,
+        monkeypatch,
         ["a", "stale_member", "c"],
         clusters={
             "auto/unused": {
@@ -268,7 +280,8 @@ def test_guard_all_resolved_ids_stale(tmp_path, monkeypatch):
 
 
 def test_guard_allows_objective_when_triage_pending_and_stale_cluster_exists(
-    tmp_path, monkeypatch,
+    tmp_path,
+    monkeypatch,
 ):
     """Triage-pending state must not surface stale cluster ahead of objective work."""
     state = {
@@ -345,7 +358,8 @@ def test_guard_allows_objective_when_triage_pending_and_stale_cluster_exists(
 
 
 def test_guard_allows_front_planned_review_ids_even_if_synthetic_items_render_first(
-    tmp_path, monkeypatch,
+    tmp_path,
+    monkeypatch,
 ):
     state = {
         "issues": {
@@ -379,7 +393,10 @@ def test_guard_allows_front_planned_review_ids_even_if_synthetic_items_render_fi
         "build_work_queue",
         lambda *_args, **_kwargs: {
             "items": [
-                {"id": "subjective::abstraction_fitness", "kind": "subjective_dimension"},
+                {
+                    "id": "subjective::abstraction_fitness",
+                    "kind": "subjective_dimension",
+                },
                 {"id": "review::a", "kind": "issue"},
                 {"id": "review::b", "kind": "issue"},
             ]

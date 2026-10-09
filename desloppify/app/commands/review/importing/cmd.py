@@ -90,7 +90,9 @@ def _resolve_import_payload(
             import_file=str(import_file),
             colorize_fn=colorize,
         )
-        raise PacketValidationError("import payload validation failed", exit_code=1) from exc
+        raise PacketValidationError(
+            "import payload validation failed", exit_code=1
+        ) from exc
 
     return issues_data, override_enabled, override_attest
 
@@ -169,7 +171,7 @@ def _append_assessment_import_audit(
             "attest": (override_attest or "").strip(),
             "import_file": str(import_file),
             "packet_sha256": str(provenance_dict.get("packet_sha256", "")).strip(),
-        }
+        },
     )
 
 
@@ -403,11 +405,11 @@ def do_validate_import(
             import_file=str(import_file),
             colorize_fn=colorize,
         )
-        raise PacketValidationError("import payload validation failed", exit_code=1) from exc
+        raise PacketValidationError(
+            "import payload validation failed", exit_code=1
+        ) from exc
 
-    assessment_policy = assessment_policy_model_from_payload(
-        issues_data
-    )
+    assessment_policy = assessment_policy_model_from_payload(issues_data)
     print_assessment_mode_banner(
         assessment_policy.to_dict(),
         colorize_fn=colorize,

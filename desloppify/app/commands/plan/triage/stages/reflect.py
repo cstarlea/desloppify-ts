@@ -59,7 +59,11 @@ def _validate_recurring_dimension_mentions(
                 "yellow",
             )
         )
-    print(colorize("  Your report must mention at least one recurring dimension name.", "dim"))
+    print(
+        colorize(
+            "  Your report must mention at least one recurring dimension name.", "dim"
+        )
+    )
     return False
 
 
@@ -80,10 +84,27 @@ def _validate_reflect_submission(
     stages: dict,
     attestation: str | None,
     services: TriageServices,
-) -> tuple[object, int, dict, list[str], set[str], list[str], list[str], list[ReflectDisposition], list[BacklogDecision]] | None:
+) -> (
+    tuple[
+        object,
+        int,
+        dict,
+        list[str],
+        set[str],
+        list[str],
+        list[str],
+        list[ReflectDisposition],
+        list[BacklogDecision],
+    ]
+    | None
+):
     if "observe" not in stages:
         print(colorize("  Cannot reflect: observe stage not complete.", "red"))
-        print(colorize('  Run: desloppify plan triage --stage observe --report "..."', "dim"))
+        print(
+            colorize(
+                '  Run: desloppify plan triage --stage observe --report "..."', "dim"
+            )
+        )
         return None
 
     triage_input = services.collect_triage_input(plan, state)
@@ -96,7 +117,9 @@ def _validate_reflect_submission(
     ):
         return None
 
-    review_issues = getattr(triage_input, "review_issues", getattr(triage_input, "open_issues", {}))
+    review_issues = getattr(
+        triage_input, "review_issues", getattr(triage_input, "open_issues", {})
+    )
     issue_count = len(review_issues)
     if not validate_stage_report_length(
         report=report,
@@ -119,9 +142,17 @@ def _validate_reflect_submission(
 
     epic_meta = plan.get("epic_triage_meta", {})
     strategist_briefing = epic_meta.get("strategist_briefing", {})
-    rework_warnings = strategist_briefing.get("rework_warnings", []) if isinstance(strategist_briefing, dict) else []
+    rework_warnings = (
+        strategist_briefing.get("rework_warnings", [])
+        if isinstance(strategist_briefing, dict)
+        else []
+    )
     if rework_warnings and not _mentions_rework_dimensions(report, rework_warnings):
-        print(colorize("  Warning: strategist flagged rework loops not addressed:", "yellow"))
+        print(
+            colorize(
+                "  Warning: strategist flagged rework loops not addressed:", "yellow"
+            )
+        )
         for warning in rework_warnings:
             if not isinstance(warning, dict):
                 continue
@@ -139,7 +170,8 @@ def _validate_reflect_submission(
     # Exclude issues already auto-skipped by observe from reflect accounting
     dispositions = epic_meta.get("issue_dispositions", {})
     auto_skipped_ids = {
-        issue_id for issue_id, disp in dispositions.items()
+        issue_id
+        for issue_id, disp in dispositions.items()
         if disp.get("decision_source") == "observe_auto"
     }
     accounting_ids = valid_ids - auto_skipped_ids
@@ -162,7 +194,11 @@ def _validate_reflect_submission(
         if failure.blocking
     ]
     if blocking_skips:
-        print(colorize(format_evidence_failures(blocking_skips, stage_label="reflect"), "red"))
+        print(
+            colorize(
+                format_evidence_failures(blocking_skips, stage_label="reflect"), "red"
+            )
+        )
         return None
 
     # Parse structured disposition ledger from Coverage Ledger section
@@ -251,7 +287,11 @@ def _persist_reflect_stage(
         plan,
         "triage_reflect",
         actor="user",
-        detail={"issue_count": issue_count, "reuse": is_reuse, "recurring_dims": recurring_dims},
+        detail={
+            "issue_count": issue_count,
+            "reuse": is_reuse,
+            "recurring_dims": recurring_dims,
+        },
     )
     services.save_plan(plan)
     return reflect_stage, cleared
@@ -272,7 +312,11 @@ def _cmd_stage_reflect(
     plan = resolved_services.load_plan()
 
     if not has_triage_in_queue(plan):
-        print(colorize("  No planning stages in the queue — nothing to reflect on.", "yellow"))
+        print(
+            colorize(
+                "  No planning stages in the queue — nothing to reflect on.", "yellow"
+            )
+        )
         return
 
     meta = plan.get("epic_triage_meta", {})
@@ -295,8 +339,14 @@ def _cmd_stage_reflect(
     if submission is None:
         return
     (
-        triage_input, issue_count, recurring, recurring_dims,
-        cited_ids, missing_ids, duplicate_ids, disposition_ledger,
+        triage_input,
+        issue_count,
+        recurring,
+        recurring_dims,
+        cited_ids,
+        missing_ids,
+        duplicate_ids,
+        disposition_ledger,
         backlog_decisions,
     ) = submission
     reflect_stage, cleared = _persist_reflect_stage(

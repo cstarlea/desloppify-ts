@@ -47,11 +47,17 @@ _HOOKS = {
     "useActionData": ("action", "clientAction"),
 }
 _EXPORT_STAR_RE = re.compile(r"\bexport\s*\*")
-_HOOK_CALL_RE = re.compile(r"\b(?P<hook>useLoaderData|useActionData)\s*(?:<[^()]*>)?\s*\(")
+_HOOK_CALL_RE = re.compile(
+    r"\b(?P<hook>useLoaderData|useActionData)\s*(?:<[^()]*>)?\s*\("
+)
 
 
 def _read(filepath: str) -> str | None:
-    full = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
+    full = (
+        Path(filepath)
+        if Path(filepath).is_absolute()
+        else get_project_root() / filepath
+    )
     try:
         return full.read_text(encoding="utf-8", errors="replace")
     except OSError as exc:
@@ -60,7 +66,11 @@ def _read(filepath: str) -> str | None:
 
 
 def _relative_to(filepath: str, root: Path) -> str | None:
-    full = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
+    full = (
+        Path(filepath)
+        if Path(filepath).is_absolute()
+        else get_project_root() / filepath
+    )
     try:
         return full.resolve().relative_to(root.resolve()).as_posix()
     except ValueError:
@@ -84,7 +94,9 @@ def scan_route_config_missing_modules(path: Path) -> tuple[list[dict], int]:
         return [], 0
     config_path = path / config.config_file
     try:
-        display = config_path.resolve().relative_to(get_project_root().resolve()).as_posix()
+        display = (
+            config_path.resolve().relative_to(get_project_root().resolve()).as_posix()
+        )
     except ValueError:
         display = config_path.as_posix()
     entries = [
@@ -151,13 +163,16 @@ def _route_modules(path: Path) -> set[str]:
         for candidate in (path / routes_dir).glob(f"*{ext}"):
             modules.add((routes_dir / candidate.name).as_posix())
         for candidate in (path / routes_dir).glob(f"*/route{ext}"):
-            modules.add((routes_dir / candidate.parent.name / candidate.name).as_posix())
+            modules.add(
+                (routes_dir / candidate.parent.name / candidate.name).as_posix()
+            )
     return modules
 
 
 def _exports_name(code: str, name: str) -> bool:
     if re.search(
-        rf"\bexport\s+(?:async\s+)?(?:function\s*\*?\s*|const\s+|let\s+|var\s+){name}\b", code
+        rf"\bexport\s+(?:async\s+)?(?:function\s*\*?\s*|const\s+|let\s+|var\s+){name}\b",
+        code,
     ):
         return True
     for clause in re.finditer(r"\bexport\s*(?:type\s*)?\{([^}]*)\}", code):
@@ -194,7 +209,9 @@ def scan_data_hooks_without_export(path: Path) -> tuple[list[dict], int]:
         reported: set[str] = set()
         for match in _HOOK_CALL_RE.finditer(code):
             hook = match.group("hook")
-            if hook in reported or any(_exports_name(code, name) for name in _HOOKS[hook]):
+            if hook in reported or any(
+                _exports_name(code, name) for name in _HOOKS[hook]
+            ):
                 continue
             reported.add(hook)
             entries.append(

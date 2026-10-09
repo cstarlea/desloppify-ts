@@ -121,7 +121,9 @@ def test_sync_subjective_clusters_creates_optional_under_target_cluster() -> Non
         objective_count=0,
         unscored_ids=frozenset({"subjective::naming"}),
         stale_ids=frozenset({"subjective::error_handling"}),
-        under_target_ids=frozenset({"subjective::architecture", "subjective::api_surface"}),
+        under_target_ids=frozenset(
+            {"subjective::architecture", "subjective::api_surface"}
+        ),
     )
 
     changes = sync_mod.sync_subjective_clusters(
@@ -168,7 +170,9 @@ def test_sync_subjective_clusters_no_eviction_when_objective_exists() -> None:
         objective_count=1,
         unscored_ids=frozenset(),
         stale_ids=frozenset(),
-        under_target_ids=frozenset({"subjective::architecture", "subjective::api_surface"}),
+        under_target_ids=frozenset(
+            {"subjective::architecture", "subjective::api_surface"}
+        ),
     )
 
     sync_mod.sync_subjective_clusters(
@@ -214,16 +218,36 @@ def test_sync_stale_escalates_after_repeated_defers() -> None:
         "last_scan": "2026-03-01T00:00:00+00:00",
         "dimension_scores": {
             "architecture": {
-                "score": 50.0, "strict": 50.0, "checks": 1, "failing": 0,
-                "detectors": {"subjective_assessment": {"dimension_key": "architecture", "placeholder": False}},
+                "score": 50.0,
+                "strict": 50.0,
+                "checks": 1,
+                "failing": 0,
+                "detectors": {
+                    "subjective_assessment": {
+                        "dimension_key": "architecture",
+                        "placeholder": False,
+                    }
+                },
             },
             "api_surface": {
-                "score": 50.0, "strict": 50.0, "checks": 1, "failing": 0,
-                "detectors": {"subjective_assessment": {"dimension_key": "api_surface", "placeholder": False}},
+                "score": 50.0,
+                "strict": 50.0,
+                "checks": 1,
+                "failing": 0,
+                "detectors": {
+                    "subjective_assessment": {
+                        "dimension_key": "api_surface",
+                        "placeholder": False,
+                    }
+                },
             },
         },
         "subjective_assessments": {
-            "architecture": {"score": 50.0, "needs_review_refresh": True, "stale_since": "2026-01-01T00:00:00+00:00"},
+            "architecture": {
+                "score": 50.0,
+                "needs_review_refresh": True,
+                "stale_since": "2026-01-01T00:00:00+00:00",
+            },
             "api_surface": {"score": 50.0, "needs_review_refresh": False},
         },
     }
@@ -264,7 +288,9 @@ def test_sync_stale_escalates_after_repeated_defers() -> None:
 
 
 def test_subjective_state_sets_fallback_uses_module_helpers(monkeypatch) -> None:
-    monkeypatch.setattr(sync_mod, "current_unscored_ids", lambda _state: {"subjective::a"})
+    monkeypatch.setattr(
+        sync_mod, "current_unscored_ids", lambda _state: {"subjective::a"}
+    )
     monkeypatch.setattr(
         sync_mod.stale_policy_mod,
         "current_stale_ids",
@@ -305,7 +331,9 @@ def test_sync_subjective_clusters_does_not_append_skipped_under_target_ids() -> 
         objective_count=0,
         unscored_ids=frozenset(),
         stale_ids=frozenset(),
-        under_target_ids=frozenset({"subjective::architecture", "subjective::api_surface"}),
+        under_target_ids=frozenset(
+            {"subjective::architecture", "subjective::api_surface"}
+        ),
     )
 
     changes = sync_mod.sync_subjective_clusters(

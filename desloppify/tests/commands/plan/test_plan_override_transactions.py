@@ -117,7 +117,9 @@ def test_cmd_plan_skip_permanent_rollback_when_plan_write_fails(
         attest=_ATTEST,
     )
 
-    monkeypatch.setattr(override_skip, "resolve_ids_from_patterns", lambda *_a, **_k: [issue_id])
+    monkeypatch.setattr(
+        override_skip, "resolve_ids_from_patterns", lambda *_a, **_k: [issue_id]
+    )
 
     def _boom(*_args, **_kwargs):
         raise OSError("simulated plan write failure")

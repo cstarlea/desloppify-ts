@@ -75,9 +75,7 @@ def _build_holistic_context_inner(
     """Inner holistic context builder (runs with file cache enabled)."""
     file_contents = _read_file_contents(files)
     allowed_rel_files = {
-        rel(filepath)
-        for filepath in files
-        if isinstance(filepath, str) and filepath
+        rel(filepath) for filepath in files if isinstance(filepath, str) and filepath
     }
 
     context = HolisticContext(
@@ -85,7 +83,9 @@ def _build_holistic_context_inner(
         coupling=_coupling_context(file_contents),
         conventions={
             "naming_by_directory": _naming_conventions_context(file_contents),
-            "sibling_behavior": _sibling_behavior_context(file_contents, base_path=path),
+            "sibling_behavior": _sibling_behavior_context(
+                file_contents, base_path=path
+            ),
         },
         errors={
             "strategy_by_directory": _error_strategy_context(file_contents),
@@ -132,9 +132,7 @@ def _build_holistic_context_inner(
     return context
 
 
-def _enrich_sections_from_evidence(
-    context: HolisticContext, evidence: dict
-) -> None:
+def _enrich_sections_from_evidence(context: HolisticContext, evidence: dict) -> None:
     """Merge mechanical evidence into existing holistic context sections."""
     if "complexity_hotspots" in evidence:
         context.abstractions["complexity_hotspots"] = evidence["complexity_hotspots"]
@@ -145,7 +143,9 @@ def _enrich_sections_from_evidence(
     if "boundary_violations" in evidence:
         context.coupling["boundary_violations"] = evidence["boundary_violations"]
     if "deferred_import_density" in evidence:
-        context.dependencies["deferred_import_density"] = evidence["deferred_import_density"]
+        context.dependencies["deferred_import_density"] = evidence[
+            "deferred_import_density"
+        ]
     if "duplicate_clusters" in evidence:
         context.conventions["duplicate_clusters"] = evidence["duplicate_clusters"]
     if "naming_drift" in evidence:

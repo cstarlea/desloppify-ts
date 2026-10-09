@@ -32,7 +32,11 @@ def _recovered_review_summary(issue_id: str) -> str:
 
 def _recovered_review_detail(issue_id: str) -> dict:
     parts = issue_id.split("::")
-    dimension = parts[3] if issue_id.startswith("review::.::holistic::") and len(parts) > 3 else "unknown"
+    dimension = (
+        parts[3]
+        if issue_id.startswith("review::.::holistic::") and len(parts) > 3
+        else "unknown"
+    )
     return {
         "dimension": dimension or "unknown",
         "recovered_from_plan": True,
@@ -100,10 +104,7 @@ def _append_review_id(
     normalized = issue_id.strip()
     if not normalized:
         return
-    if not (
-        normalized.startswith("review::")
-        or normalized.startswith("concerns::")
-    ):
+    if not (normalized.startswith("review::") or normalized.startswith("concerns::")):
         return
     if normalized in seen:
         return
@@ -163,7 +164,9 @@ def saved_plan_skipped_entries(plan: dict | None) -> dict[str, dict]:
     for issue_id, raw in skipped.items():
         if not isinstance(issue_id, str) or not issue_id:
             continue
-        entries[issue_id] = dict(raw) if isinstance(raw, dict) else {"kind": "temporary"}
+        entries[issue_id] = (
+            dict(raw) if isinstance(raw, dict) else {"kind": "temporary"}
+        )
     return entries
 
 
@@ -193,7 +196,7 @@ def _hydrate_saved_issue_ids(
     issue_ids: list[str],
 ) -> dict:
     recovered = dict(state)
-    issues = (state.get("work_items") or state.get("issues", {}))
+    issues = state.get("work_items") or state.get("issues", {})
     recovered_issues = dict(issues) if isinstance(issues, dict) else {}
 
     for issue_id in issue_ids:

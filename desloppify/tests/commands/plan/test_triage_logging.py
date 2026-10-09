@@ -14,6 +14,7 @@ from desloppify.engine.plan_ops import append_log_entry
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _state_with_review_issues(*ids: str) -> dict:
     issues = {}
     for fid in ids:
@@ -49,7 +50,9 @@ def _plan_with_stages(*stage_names: str, confirmed: bool = False) -> dict:
             stages[name]["confirmed_text"] = "auto-confirmed"
         if confirmed:
             stages[name]["confirmed_at"] = "2025-06-01T00:01:00Z"
-            stages[name]["confirmed_text"] = "I have thoroughly reviewed all the issues in this stage"
+            stages[name]["confirmed_text"] = (
+                "I have thoroughly reviewed all the issues in this stage"
+            )
     return plan
 
 
@@ -83,13 +86,17 @@ def _fake_services(plan, state, save_plan_fn=None):
         command_runtime=lambda args: _fake_runtime(state),
         load_plan=lambda *a, **kw: plan,
         save_plan=save_plan_fn or (lambda p, *a, **kw: None),
-        collect_triage_input=lambda p, s: type("TI", (), {
-            "open_issues": s.get("issues", {}),
-            "resolved_issues": {},
-            "new_since_last": [],
-            "resolved_since_last": [],
-            "existing_clusters": {},
-        })(),
+        collect_triage_input=lambda p, s: type(
+            "TI",
+            (),
+            {
+                "open_issues": s.get("issues", {}),
+                "resolved_issues": {},
+                "new_since_last": [],
+                "resolved_since_last": [],
+                "existing_clusters": {},
+            },
+        )(),
         detect_recurring_patterns=lambda _a, _b: {},
         append_log_entry=append_log_entry,
         extract_issue_citations=lambda text, ids: set(),
@@ -100,7 +107,8 @@ def _fake_services(plan, state, save_plan_fn=None):
 def _patch_triage(monkeypatch, plan, state, save_plan_fn=None):
     """Apply standard triage monkeypatches."""
     monkeypatch.setattr(
-        triage_mod, "default_triage_services",
+        triage_mod,
+        "default_triage_services",
         lambda: _fake_services(plan, state, save_plan_fn),
     )
     monkeypatch.setattr(triage_mod, "require_issue_inventory", lambda s: True)
@@ -114,6 +122,7 @@ def _log_actions(plan: dict) -> list[str]:
 # ---------------------------------------------------------------------------
 # Observe stage logs entry
 # ---------------------------------------------------------------------------
+
 
 class TestObserveLogging:
     def test_observe_stage_logs_entry(self, monkeypatch, capsys):
@@ -132,6 +141,7 @@ class TestObserveLogging:
 # Confirm observe logs entry
 # ---------------------------------------------------------------------------
 
+
 class TestConfirmObserveLogging:
     def test_confirm_observe_logs_entry(self, monkeypatch, capsys):
         plan = _plan_with_stages("observe")
@@ -149,6 +159,7 @@ class TestConfirmObserveLogging:
 # Reflect stage logs entry
 # ---------------------------------------------------------------------------
 
+
 class TestReflectLogging:
     def test_reflect_stage_logs_entry(self, monkeypatch, capsys):
         plan = _plan_with_stages("observe", confirmed=True)
@@ -165,6 +176,7 @@ class TestReflectLogging:
 # ---------------------------------------------------------------------------
 # Complete logs entry
 # ---------------------------------------------------------------------------
+
 
 class TestCompleteLogging:
     def test_complete_logs_entry(self, monkeypatch, capsys):
@@ -186,7 +198,10 @@ class TestCompleteLogging:
 
         _patch_triage(monkeypatch, plan, state)
 
-        strategy = "A detailed strategy describing execution order, priorities, verification approach, " * 3
+        strategy = (
+            "A detailed strategy describing execution order, priorities, verification approach, "
+            * 3
+        )
         args = _fake_args(complete=True, strategy=strategy)
         triage_mod.cmd_plan_triage(args)
         assert "triage_complete" in _log_actions(plan)

@@ -230,7 +230,9 @@ def _normalize_issue(state: StateModel | dict, issue_id: str, issue: dict) -> No
     issue.setdefault("suppression_pattern", None)
 
 
-def _quarantine_reason(state: StateModel | dict, issue_id: str, issue: object) -> str | None:
+def _quarantine_reason(
+    state: StateModel | dict, issue_id: str, issue: object
+) -> str | None:
     """Normalize one loaded issue in place; return why it is unusable, if it is."""
     if not isinstance(issue, dict):
         return f"issue {issue_id!r} is a {type(issue).__name__}, not an object"
@@ -354,7 +356,11 @@ def validate_state_invariants(state: StateModel) -> None:
         raise ValueError(f"state.scan_metadata.source has invalid value {source!r}")
     if source == "plan_reconstruction":
         issue_count = metadata.get("reconstructed_issue_count", 0)
-        if not isinstance(issue_count, int) or isinstance(issue_count, bool) or issue_count < 0:
+        if (
+            not isinstance(issue_count, int)
+            or isinstance(issue_count, bool)
+            or issue_count < 0
+        ):
             raise ValueError(
                 "state.scan_metadata.reconstructed_issue_count must be a non-negative int"
             )
@@ -395,7 +401,9 @@ def _coerce_scan_source(
     state: StateModel | dict[str, Any],
     metadata: dict[str, Any] | None = None,
 ) -> str:
-    raw_metadata = metadata if isinstance(metadata, dict) else state.get("scan_metadata")
+    raw_metadata = (
+        metadata if isinstance(metadata, dict) else state.get("scan_metadata")
+    )
     metadata_dict = raw_metadata if isinstance(raw_metadata, dict) else {}
     raw_source = metadata_dict.get("source")
     source = raw_source if isinstance(raw_source, str) else ""

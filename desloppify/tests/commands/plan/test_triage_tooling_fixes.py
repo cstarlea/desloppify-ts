@@ -30,7 +30,9 @@ def test_steps_with_bad_paths_valid(tmp_path: Path) -> None:
     """Step with a valid path should not be flagged."""
     (tmp_path / "src").mkdir()
     (tmp_path / "src" / "foo.ts").write_text("export {}")
-    plan = _plan_with_steps([{"title": "fix", "detail": "Update src/foo.ts to remove dead code"}])
+    plan = _plan_with_steps(
+        [{"title": "fix", "detail": "Update src/foo.ts to remove dead code"}]
+    )
     result = _steps_with_bad_paths(plan, tmp_path)
     assert result == []
 
@@ -38,7 +40,9 @@ def test_steps_with_bad_paths_valid(tmp_path: Path) -> None:
 def test_steps_with_bad_paths_invalid(tmp_path: Path) -> None:
     """Step with a non-existent path should be flagged."""
     (tmp_path / "src").mkdir()
-    plan = _plan_with_steps([{"title": "fix", "detail": "Update src/nonexistent.ts to fix bug"}])
+    plan = _plan_with_steps(
+        [{"title": "fix", "detail": "Update src/nonexistent.ts to fix bug"}]
+    )
     result = _steps_with_bad_paths(plan, tmp_path)
     assert len(result) == 1
     cluster_name, step_num, bad = result[0]
@@ -58,7 +62,9 @@ def test_steps_with_bad_paths_extension_swap(tmp_path: Path) -> None:
 
 def test_steps_with_bad_paths_no_paths(tmp_path: Path) -> None:
     """Step with no file paths in detail should not be flagged."""
-    plan = _plan_with_steps([{"title": "fix", "detail": "Refactor the error handling logic"}])
+    plan = _plan_with_steps(
+        [{"title": "fix", "detail": "Refactor the error handling logic"}]
+    )
     result = _steps_with_bad_paths(plan, tmp_path)
     assert result == []
 
@@ -66,11 +72,20 @@ def test_steps_with_bad_paths_no_paths(tmp_path: Path) -> None:
 def test_steps_with_bad_paths_monorepo_prefix(tmp_path: Path) -> None:
     """Monorepo paths like packages/backend/src/foo.ts should be validated correctly."""
     (tmp_path / "packages" / "backend" / "src").mkdir(parents=True)
-    (tmp_path / "packages" / "backend" / "src" / "middleware" / "auth.ts").parent.mkdir(parents=True)
-    (tmp_path / "packages" / "backend" / "src" / "middleware" / "auth.ts").write_text("export {}")
-    plan = _plan_with_steps([
-        {"title": "fix", "detail": "Update packages/backend/src/middleware/auth.ts to fix auth"},
-    ])
+    (tmp_path / "packages" / "backend" / "src" / "middleware" / "auth.ts").parent.mkdir(
+        parents=True
+    )
+    (tmp_path / "packages" / "backend" / "src" / "middleware" / "auth.ts").write_text(
+        "export {}"
+    )
+    plan = _plan_with_steps(
+        [
+            {
+                "title": "fix",
+                "detail": "Update packages/backend/src/middleware/auth.ts to fix auth",
+            },
+        ]
+    )
     result = _steps_with_bad_paths(plan, tmp_path)
     assert result == [], f"Valid monorepo path was flagged as bad: {result}"
 
@@ -78,9 +93,11 @@ def test_steps_with_bad_paths_monorepo_prefix(tmp_path: Path) -> None:
 def test_steps_with_bad_paths_monorepo_invalid(tmp_path: Path) -> None:
     """Monorepo paths that don't exist should still be flagged."""
     (tmp_path / "packages" / "backend" / "src").mkdir(parents=True)
-    plan = _plan_with_steps([
-        {"title": "fix", "detail": "Update packages/backend/src/nonexistent.ts"},
-    ])
+    plan = _plan_with_steps(
+        [
+            {"title": "fix", "detail": "Update packages/backend/src/nonexistent.ts"},
+        ]
+    )
     result = _steps_with_bad_paths(plan, tmp_path)
     assert len(result) == 1
     assert "packages/backend/src/nonexistent.ts" in result[0][2]
@@ -106,21 +123,25 @@ def test_steps_with_bad_paths_auto_cluster_skipped(tmp_path: Path) -> None:
 
 def test_steps_without_effort_all_tagged() -> None:
     """Steps with effort tags should not be flagged."""
-    plan = _plan_with_steps([
-        {"title": "step 1", "effort": "small"},
-        {"title": "step 2", "effort": "large"},
-    ])
+    plan = _plan_with_steps(
+        [
+            {"title": "step 1", "effort": "small"},
+            {"title": "step 2", "effort": "large"},
+        ]
+    )
     result = _steps_without_effort(plan)
     assert result == []
 
 
 def test_steps_without_effort_missing() -> None:
     """Steps without effort tags should be flagged."""
-    plan = _plan_with_steps([
-        {"title": "step 1", "effort": "small"},
-        {"title": "step 2"},
-        {"title": "step 3"},
-    ])
+    plan = _plan_with_steps(
+        [
+            {"title": "step 1", "effort": "small"},
+            {"title": "step 2"},
+            {"title": "step 3"},
+        ]
+    )
     result = _steps_without_effort(plan)
     assert len(result) == 1
     name, missing, total = result[0]
@@ -213,16 +234,27 @@ def test_depends_on_persisted(monkeypatch, capsys, tmp_path: Path) -> None:
     }
     saved_plans: list[dict] = []
     monkeypatch.setattr(cluster_update_mod, "load_plan", lambda: test_plan)
-    monkeypatch.setattr(cluster_update_mod, "save_plan", lambda p: saved_plans.append(p))
+    monkeypatch.setattr(
+        cluster_update_mod, "save_plan", lambda p: saved_plans.append(p)
+    )
     monkeypatch.setattr(cluster_update_mod, "append_log_entry", lambda *a, **kw: None)
 
     args = argparse.Namespace(
         cluster_name="cluster-b",
-        description=None, steps=None, steps_file=None,
-        add_step=None, detail=None, update_step=None,
-        remove_step=None, done_step=None, undone_step=None,
-        priority=None, effort=None, depends_on=["cluster-a"],
-        issue_refs=None, state=None,
+        description=None,
+        steps=None,
+        steps_file=None,
+        add_step=None,
+        detail=None,
+        update_step=None,
+        remove_step=None,
+        done_step=None,
+        undone_step=None,
+        priority=None,
+        effort=None,
+        depends_on=["cluster-a"],
+        issue_refs=None,
+        state=None,
     )
     cluster_handlers._cmd_cluster_update(args)
     assert test_plan["clusters"]["cluster-b"]["depends_on_clusters"] == ["cluster-a"]
@@ -243,11 +275,20 @@ def test_depends_on_invalid_cluster(monkeypatch, capsys) -> None:
 
     args = argparse.Namespace(
         cluster_name="cluster-a",
-        description=None, steps=None, steps_file=None,
-        add_step=None, detail=None, update_step=None,
-        remove_step=None, done_step=None, undone_step=None,
-        priority=None, effort=None, depends_on=["nonexistent"],
-        issue_refs=None, state=None,
+        description=None,
+        steps=None,
+        steps_file=None,
+        add_step=None,
+        detail=None,
+        update_step=None,
+        remove_step=None,
+        done_step=None,
+        undone_step=None,
+        priority=None,
+        effort=None,
+        depends_on=["nonexistent"],
+        issue_refs=None,
+        state=None,
     )
     cluster_handlers._cmd_cluster_update(args)
     captured = capsys.readouterr()
@@ -274,12 +315,20 @@ def test_effort_persisted_add_step(monkeypatch, capsys) -> None:
 
     args = argparse.Namespace(
         cluster_name="cluster-a",
-        description=None, steps=None, steps_file=None,
-        add_step="Fix the thing", detail="Details here",
-        update_step=None, remove_step=None,
-        done_step=None, undone_step=None,
-        priority=None, effort="small", depends_on=None,
-        issue_refs=None, state=None,
+        description=None,
+        steps=None,
+        steps_file=None,
+        add_step="Fix the thing",
+        detail="Details here",
+        update_step=None,
+        remove_step=None,
+        done_step=None,
+        undone_step=None,
+        priority=None,
+        effort="small",
+        depends_on=None,
+        issue_refs=None,
+        state=None,
     )
     cluster_handlers._cmd_cluster_update(args)
     steps = test_plan["clusters"]["cluster-a"]["action_steps"]
@@ -307,12 +356,20 @@ def test_effort_persisted_update_step(monkeypatch, capsys) -> None:
 
     args = argparse.Namespace(
         cluster_name="cluster-a",
-        description=None, steps=None, steps_file=None,
-        add_step=None, detail="New detail",
-        update_step=1, remove_step=None,
-        done_step=None, undone_step=None,
-        priority=None, effort="medium", depends_on=None,
-        issue_refs=None, state=None,
+        description=None,
+        steps=None,
+        steps_file=None,
+        add_step=None,
+        detail="New detail",
+        update_step=1,
+        remove_step=None,
+        done_step=None,
+        undone_step=None,
+        priority=None,
+        effort="medium",
+        depends_on=None,
+        issue_refs=None,
+        state=None,
     )
     cluster_handlers._cmd_cluster_update(args)
     steps = test_plan["clusters"]["cluster-a"]["action_steps"]
@@ -341,12 +398,20 @@ def test_long_title_warning(monkeypatch, capsys) -> None:
     long_title = "x" * 200
     args = argparse.Namespace(
         cluster_name="cluster-a",
-        description=None, steps=None, steps_file=None,
-        add_step=long_title, detail=None,
-        update_step=None, remove_step=None,
-        done_step=None, undone_step=None,
-        priority=None, effort=None, depends_on=None,
-        issue_refs=None, state=None,
+        description=None,
+        steps=None,
+        steps_file=None,
+        add_step=long_title,
+        detail=None,
+        update_step=None,
+        remove_step=None,
+        done_step=None,
+        undone_step=None,
+        priority=None,
+        effort=None,
+        depends_on=None,
+        issue_refs=None,
+        state=None,
     )
     cluster_handlers._cmd_cluster_update(args)
     captured = capsys.readouterr()
@@ -371,12 +436,20 @@ def test_short_title_no_warning(monkeypatch, capsys) -> None:
 
     args = argparse.Namespace(
         cluster_name="cluster-a",
-        description=None, steps=None, steps_file=None,
-        add_step="Fix the thing", detail=None,
-        update_step=None, remove_step=None,
-        done_step=None, undone_step=None,
-        priority=None, effort=None, depends_on=None,
-        issue_refs=None, state=None,
+        description=None,
+        steps=None,
+        steps_file=None,
+        add_step="Fix the thing",
+        detail=None,
+        update_step=None,
+        remove_step=None,
+        done_step=None,
+        undone_step=None,
+        priority=None,
+        effort=None,
+        depends_on=None,
+        issue_refs=None,
+        state=None,
     )
     cluster_handlers._cmd_cluster_update(args)
     captured = capsys.readouterr()
@@ -403,12 +476,20 @@ def test_issue_refs_persisted_add_step(monkeypatch, capsys) -> None:
 
     args = argparse.Namespace(
         cluster_name="cluster-a",
-        description=None, steps=None, steps_file=None,
-        add_step="Fix the thing", detail="Details",
-        update_step=None, remove_step=None,
-        done_step=None, undone_step=None,
-        priority=None, effort=None, depends_on=None,
-        issue_refs=["review::a::b", "review::c::d"], state=None,
+        description=None,
+        steps=None,
+        steps_file=None,
+        add_step="Fix the thing",
+        detail="Details",
+        update_step=None,
+        remove_step=None,
+        done_step=None,
+        undone_step=None,
+        priority=None,
+        effort=None,
+        depends_on=None,
+        issue_refs=["review::a::b", "review::c::d"],
+        state=None,
     )
     cluster_handlers._cmd_cluster_update(args)
     steps = test_plan["clusters"]["cluster-a"]["action_steps"]
@@ -424,10 +505,12 @@ def test_steps_missing_issue_refs() -> None:
         _steps_missing_issue_refs,
     )
 
-    plan = _plan_with_steps([
-        {"title": "step 1", "detail": "fix things", "issue_refs": ["review::a::b"]},
-        {"title": "step 2", "detail": "fix more things"},
-    ])
+    plan = _plan_with_steps(
+        [
+            {"title": "step 1", "detail": "fix things", "issue_refs": ["review::a::b"]},
+            {"title": "step 2", "detail": "fix more things"},
+        ]
+    )
     result = _steps_missing_issue_refs(plan)
     assert len(result) == 1
     name, missing, total = result[0]
@@ -442,9 +525,11 @@ def test_steps_missing_issue_refs_all_have_refs() -> None:
         _steps_missing_issue_refs,
     )
 
-    plan = _plan_with_steps([
-        {"title": "step 1", "detail": "fix things", "issue_refs": ["review::a::b"]},
-    ])
+    plan = _plan_with_steps(
+        [
+            {"title": "step 1", "detail": "fix things", "issue_refs": ["review::a::b"]},
+        ]
+    )
     result = _steps_missing_issue_refs(plan)
     assert result == []
 
@@ -491,9 +576,15 @@ def test_steps_referencing_skipped_issues() -> None:
         _steps_referencing_skipped_issues,
     )
 
-    plan = _plan_with_steps([
-        {"title": "fix", "detail": "d", "issue_refs": ["review::a::b", "review::skipped::c"]},
-    ])
+    plan = _plan_with_steps(
+        [
+            {
+                "title": "fix",
+                "detail": "d",
+                "issue_refs": ["review::a::b", "review::skipped::c"],
+            },
+        ]
+    )
     plan["wontfix"] = {"review::skipped::c": {"reason": "false positive"}}
     result = _steps_referencing_skipped_issues(plan)
     assert len(result) == 1
@@ -507,9 +598,11 @@ def test_steps_referencing_skipped_issues_clean() -> None:
         _steps_referencing_skipped_issues,
     )
 
-    plan = _plan_with_steps([
-        {"title": "fix", "detail": "d", "issue_refs": ["review::a::b"]},
-    ])
+    plan = _plan_with_steps(
+        [
+            {"title": "fix", "detail": "d", "issue_refs": ["review::a::b"]},
+        ]
+    )
     plan["wontfix"] = {}
     result = _steps_referencing_skipped_issues(plan)
     assert result == []
@@ -524,14 +617,22 @@ def test_directory_scatter_detected() -> None:
         _clusters_with_directory_scatter,
     )
 
-    plan = _plan_with_steps([
-        {"title": "s1", "detail": "Fix src/domains/billing/hooks/useAutoTopup.ts"},
-        {"title": "s2", "detail": "Fix src/domains/media-lightbox/hooks/useShare.ts"},
-        {"title": "s3", "detail": "Fix src/shared/hooks/useTimestamp.ts"},
-        {"title": "s4", "detail": "Fix src/tools/travel-between-images/components/Timeline.tsx"},
-        {"title": "s5", "detail": "Fix src/tools/edit-images/hooks/useInline.ts"},
-        {"title": "s6", "detail": "Fix src/features/tasks/components/TaskPane.tsx"},
-    ])
+    plan = _plan_with_steps(
+        [
+            {"title": "s1", "detail": "Fix src/domains/billing/hooks/useAutoTopup.ts"},
+            {
+                "title": "s2",
+                "detail": "Fix src/domains/media-lightbox/hooks/useShare.ts",
+            },
+            {"title": "s3", "detail": "Fix src/shared/hooks/useTimestamp.ts"},
+            {
+                "title": "s4",
+                "detail": "Fix src/tools/travel-between-images/components/Timeline.tsx",
+            },
+            {"title": "s5", "detail": "Fix src/tools/edit-images/hooks/useInline.ts"},
+            {"title": "s6", "detail": "Fix src/features/tasks/components/TaskPane.tsx"},
+        ]
+    )
     result = _clusters_with_directory_scatter(plan)
     assert len(result) == 1
     name, dir_count, _ = result[0]
@@ -545,11 +646,13 @@ def test_directory_scatter_not_flagged_few_dirs() -> None:
         _clusters_with_directory_scatter,
     )
 
-    plan = _plan_with_steps([
-        {"title": "s1", "detail": "Fix src/domains/billing/hooks/useAutoTopup.ts"},
-        {"title": "s2", "detail": "Fix src/domains/billing/components/Credits.tsx"},
-        {"title": "s3", "detail": "Fix src/domains/billing/types.ts"},
-    ])
+    plan = _plan_with_steps(
+        [
+            {"title": "s1", "detail": "Fix src/domains/billing/hooks/useAutoTopup.ts"},
+            {"title": "s2", "detail": "Fix src/domains/billing/components/Credits.tsx"},
+            {"title": "s3", "detail": "Fix src/domains/billing/types.ts"},
+        ]
+    )
     result = _clusters_with_directory_scatter(plan)
     assert result == []
 
@@ -568,7 +671,10 @@ def test_high_step_ratio_detected() -> None:
             "test-cluster": {
                 "issue_ids": ["r1", "r2", "r3"],
                 "action_steps": [
-                    {"title": "s1"}, {"title": "s2"}, {"title": "s3"}, {"title": "s4"},
+                    {"title": "s1"},
+                    {"title": "s2"},
+                    {"title": "s3"},
+                    {"title": "s4"},
                 ],
             }
         }
@@ -593,7 +699,8 @@ def test_high_step_ratio_ok() -> None:
             "test-cluster": {
                 "issue_ids": ["r1", "r2", "r3", "r4"],
                 "action_steps": [
-                    {"title": "s1"}, {"title": "s2"},
+                    {"title": "s1"},
+                    {"title": "s2"},
                 ],
             }
         }
@@ -613,7 +720,9 @@ def test_high_step_ratio_skips_small_clusters() -> None:
             "test-cluster": {
                 "issue_ids": ["r1", "r2"],
                 "action_steps": [
-                    {"title": "s1"}, {"title": "s2"}, {"title": "s3"},
+                    {"title": "s1"},
+                    {"title": "s2"},
+                    {"title": "s3"},
                 ],
             }
         }
@@ -642,10 +751,14 @@ def test_auto_start_preserves_existing_stages(monkeypatch) -> None:
 
     saved_plans = []
     monkeypatch.setattr(
-        observe_flow, "has_triage_in_queue", lambda p: False,
+        observe_flow,
+        "has_triage_in_queue",
+        lambda p: False,
     )
     monkeypatch.setattr(
-        observe_flow, "inject_triage_stages", lambda p: None,
+        observe_flow,
+        "inject_triage_stages",
+        lambda p: None,
     )
 
     class FakeRuntime:
@@ -655,15 +768,21 @@ def test_auto_start_preserves_existing_stages(monkeypatch) -> None:
     class FakeServices:
         def command_runtime(self, args):
             return FakeRuntime()
+
         def load_plan(self):
             return test_plan
+
         def save_plan(self, p):
             saved_plans.append(dict(p))
+
         def collect_triage_input(self, plan, state):
             from types import SimpleNamespace
+
             return SimpleNamespace(open_issues={}, resolved_issues={})
+
         def extract_issue_citations(self, report, valid_ids):
             return set()
+
         def append_log_entry(self, plan, action, **kw):
             pass
 
@@ -759,14 +878,16 @@ def test_steps_with_bad_paths_any_layout(tmp_path: Path) -> None:
     import aliases aren't paths."""
     (tmp_path / "source").mkdir()
     (tmp_path / "source" / "core.ts").write_text("export {}")
-    plan = _plan_with_steps([
-        {
-            "title": "fix",
-            "detail": (
-                "In source/core.ts:10-20 and source/guessed.ts; see https://ky.dev/docs/a.md, "
-                "and @/lib/x.ts"
-            ),
-        },
-    ])
+    plan = _plan_with_steps(
+        [
+            {
+                "title": "fix",
+                "detail": (
+                    "In source/core.ts:10-20 and source/guessed.ts; see https://ky.dev/docs/a.md, "
+                    "and @/lib/x.ts"
+                ),
+            },
+        ]
+    )
     result = _steps_with_bad_paths(plan, tmp_path)
     assert result == [("test-cluster", 1, ["source/guessed.ts"])]

@@ -37,10 +37,14 @@ def test_formatting_helpers():
 def test_warn_no_source_files(capsys, tmp_path):
     lang = SimpleNamespace(name="typescript")
 
-    scan_helpers_mod.warn_no_source_files(lang, Path(tmp_path), metrics={"total_files": 0})
+    scan_helpers_mod.warn_no_source_files(
+        lang, Path(tmp_path), metrics={"total_files": 0}
+    )
     assert "No TypeScript or JavaScript source files found" in capsys.readouterr().out
 
-    scan_helpers_mod.warn_no_source_files(lang, Path(tmp_path), metrics={"total_files": 3})
+    scan_helpers_mod.warn_no_source_files(
+        lang, Path(tmp_path), metrics={"total_files": 3}
+    )
     assert capsys.readouterr().out == ""
 
 

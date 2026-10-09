@@ -21,9 +21,7 @@ def test_is_subjective_review_open_checks_detector_and_status():
 
 
 def test_is_holistic_subjective_issue_accepts_id_summary_or_detail_markers():
-    assert is_holistic_subjective_issue(
-        {"id": "subjective_review::.::holistic_stale"}
-    )
+    assert is_holistic_subjective_issue({"id": "subjective_review::.::holistic_stale"})
     assert is_holistic_subjective_issue(
         {"summary": "No holistic codebase review on record"}
     )

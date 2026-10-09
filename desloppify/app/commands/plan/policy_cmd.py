@@ -51,10 +51,12 @@ def _cmd_policy_list(_args: argparse.Namespace) -> None:
     for i, rule in enumerate(rules, 1):
         print(f"  {i}. {rule['text']}")
     print()
-    print(colorize(
-        f"  {len(rules)} rule(s). These are enforced during triage sense-check and review.",
-        "dim",
-    ))
+    print(
+        colorize(
+            f"  {len(rules)} rule(s). These are enforced during triage sense-check and review.",
+            "dim",
+        )
+    )
 
 
 def _cmd_policy_remove(args: argparse.Namespace) -> None:

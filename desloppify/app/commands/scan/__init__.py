@@ -11,4 +11,5 @@ def cmd_scan(args: argparse.Namespace) -> None:
 
     _cmd_scan(args)
 
+
 __all__ = ["cmd_scan"]

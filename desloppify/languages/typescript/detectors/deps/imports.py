@@ -99,9 +99,13 @@ def _clause_is_type_only(statement, clause_type: str, specifier_type: str) -> bo
     if clause is None:
         return False
     if clause_type == "import_clause":
-        if any(c.type in ("identifier", "namespace_import") for c in clause.named_children):
+        if any(
+            c.type in ("identifier", "namespace_import") for c in clause.named_children
+        ):
             return False
-        named = next((c for c in clause.named_children if c.type == "named_imports"), None)
+        named = next(
+            (c for c in clause.named_children if c.type == "named_imports"), None
+        )
         if named is None:
             return False
         clause = named
@@ -120,14 +124,20 @@ def _import_statement(node, out: list[ImportRef]) -> None:
             out.append(ImportRef(value, SIDE_EFFECT))
             return
         out.append(
-            ImportRef(value, STATIC, _clause_is_type_only(node, "import_clause", "import_specifier"))
+            ImportRef(
+                value,
+                STATIC,
+                _clause_is_type_only(node, "import_clause", "import_specifier"),
+            )
         )
         return
     require_clause = next(
         (c for c in node.named_children if c.type == "import_require_clause"), None
     )
     if require_clause is not None:
-        string = next((c for c in require_clause.named_children if c.type == "string"), None)
+        string = next(
+            (c for c in require_clause.named_children if c.type == "string"), None
+        )
         value = _string_value(string)
         if value is not None:
             out.append(ImportRef(value, STATIC, _has_type_keyword(node)))
@@ -139,7 +149,11 @@ def _export_statement(node, out: list[ImportRef]) -> None:
     if value is None:
         return
     out.append(
-        ImportRef(value, STATIC, _clause_is_type_only(node, "export_clause", "export_specifier"))
+        ImportRef(
+            value,
+            STATIC,
+            _clause_is_type_only(node, "export_clause", "export_specifier"),
+        )
     )
 
 
@@ -148,7 +162,9 @@ def _glob_patterns(arg) -> list[str]:
     if value is not None:
         return [value]
     if arg is not None and arg.type == "array":
-        return [v for v in (_string_value(c) for c in arg.named_children) if v is not None]
+        return [
+            v for v in (_string_value(c) for c in arg.named_children) if v is not None
+        ]
     return []
 
 
@@ -235,13 +251,35 @@ def extract_imports_treesitter(filepath: str) -> list[ImportRef] | None:
 _BLOCK_COMMENT_RE = re.compile(r"/\*.*?\*/", re.DOTALL)
 _LINE_COMMENT_RE = re.compile(r"(^|[^:\\])//(?!/).*$", re.MULTILINE)
 _FALLBACK_PATTERNS = (
-    (re.compile(r"""\bimport\s+type\s[^'"]*?\bfrom\s*['"]([^'"]+)['"]"""), STATIC, True),
-    (re.compile(r"""\bexport\s+type\s[^'"]*?\bfrom\s*['"]([^'"]+)['"]"""), STATIC, True),
-    (re.compile(r"""\b(?:import|export)\s(?!\s*type\s)[^'";]*?\bfrom\s*['"]([^'"]+)['"]"""), STATIC, False),
-    (re.compile(r"""^\s*import\s*['"]([^'"]+)['"]""", re.MULTILINE), SIDE_EFFECT, False),
+    (
+        re.compile(r"""\bimport\s+type\s[^'"]*?\bfrom\s*['"]([^'"]+)['"]"""),
+        STATIC,
+        True,
+    ),
+    (
+        re.compile(r"""\bexport\s+type\s[^'"]*?\bfrom\s*['"]([^'"]+)['"]"""),
+        STATIC,
+        True,
+    ),
+    (
+        re.compile(
+            r"""\b(?:import|export)\s(?!\s*type\s)[^'";]*?\bfrom\s*['"]([^'"]+)['"]"""
+        ),
+        STATIC,
+        False,
+    ),
+    (
+        re.compile(r"""^\s*import\s*['"]([^'"]+)['"]""", re.MULTILINE),
+        SIDE_EFFECT,
+        False,
+    ),
     (re.compile(r"""\bimport\s*\(\s*['"`]([^'"`$]+)['"`]\s*\)"""), DYNAMIC, False),
     (re.compile(r"""\brequire\s*\(\s*['"]([^'"]+)['"]\s*\)"""), REQUIRE, False),
-    (re.compile(r"""\brequire\.resolve\s*\(\s*['"]([^'"]+)['"]\s*\)"""), RESOLVE, False),
+    (
+        re.compile(r"""\brequire\.resolve\s*\(\s*['"]([^'"]+)['"]\s*\)"""),
+        RESOLVE,
+        False,
+    ),
 )
 
 
@@ -249,17 +287,23 @@ def extract_imports_regex(text: str) -> list[ImportRef]:
     """Best-effort extraction without a parser (comments removed first)."""
     refs = [
         ImportRef(m.group(1), REFERENCE)
-        for m in re.finditer(r"""^///\s*<reference\s+path\s*=\s*['"]([^'"]+)['"]""", text, re.MULTILINE)
+        for m in re.finditer(
+            r"""^///\s*<reference\s+path\s*=\s*['"]([^'"]+)['"]""", text, re.MULTILINE
+        )
     ]
     code = _LINE_COMMENT_RE.sub(r"\1", _BLOCK_COMMENT_RE.sub("", text))
     for pattern, kind, type_only in _FALLBACK_PATTERNS:
-        refs.extend(ImportRef(m.group(1), kind, type_only) for m in pattern.finditer(code))
+        refs.extend(
+            ImportRef(m.group(1), kind, type_only) for m in pattern.finditer(code)
+        )
     return refs
 
 
 # ── MDX ─────────────────────────────────────────────────────
 
-_MDX_FENCE_RE = re.compile(r"^ {0,3}(`{3,}|~{3,}).*?^ {0,3}\1[ \t]*$", re.MULTILINE | re.DOTALL)
+_MDX_FENCE_RE = re.compile(
+    r"^ {0,3}(`{3,}|~{3,}).*?^ {0,3}\1[ \t]*$", re.MULTILINE | re.DOTALL
+)
 # MDX ESM: ``import``/``export ... from`` at the start of a line, outside code.
 _MDX_ESM_RE = re.compile(
     r"""^(?:import|export)\s(?:(?!^\s*$)[^'"])*?\bfrom\s*['"]([^'"]+)['"]|^import\s*['"]([^'"]+)['"]""",
@@ -300,7 +344,9 @@ class ImportExtractor:
     def extract(self, filepath: str) -> list[ImportRef]:
         if filepath.endswith((".mdx", ".md")):
             try:
-                return extract_mdx_imports(Path(filepath).read_text(encoding="utf-8", errors="replace"))
+                return extract_mdx_imports(
+                    Path(filepath).read_text(encoding="utf-8", errors="replace")
+                )
             except OSError:
                 return []
         if is_sfc(filepath):
@@ -320,9 +366,15 @@ class ImportExtractor:
         component = read_sfc(filepath)
         if component is None:
             return []
-        refs = [ImportRef(block.src, SIDE_EFFECT) for block in component.blocks if block.src]
-        found = extract_imports_treesitter(filepath) if self._parser is not None else None
-        refs.extend(found if found is not None else extract_imports_regex(component.view))
+        refs = [
+            ImportRef(block.src, SIDE_EFFECT) for block in component.blocks if block.src
+        ]
+        found = (
+            extract_imports_treesitter(filepath) if self._parser is not None else None
+        )
+        refs.extend(
+            found if found is not None else extract_imports_regex(component.view)
+        )
         return refs
 
 

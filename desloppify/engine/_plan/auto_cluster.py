@@ -23,6 +23,7 @@ from desloppify.engine._state.schema import StateModel, utc_now
 # Repair
 # ---------------------------------------------------------------------------
 
+
 def _clear_missing_cluster_override(
     override: dict,
     clusters: dict,
@@ -106,7 +107,9 @@ def _repair_ghost_cluster_refs(plan: PlanModel, now: str) -> int:
     canonical = _canonical_cluster_membership(clusters)
 
     for issue_id, cluster_name in canonical.items():
-        repaired += _sync_override_to_canonical_cluster(issue_id, cluster_name, overrides, now)
+        repaired += _sync_override_to_canonical_cluster(
+            issue_id, cluster_name, overrides, now
+        )
 
     repaired += _clear_stale_override_cluster_refs(overrides, clusters, canonical, now)
 
@@ -137,15 +140,30 @@ def _sync_auto_clusters(
     active_auto_keys: set[str] = set()
     changes = 0
     changes += _sync_issue_clusters(
-        plan, issues, clusters, existing_by_key, active_auto_keys, now,
+        plan,
+        issues,
+        clusters,
+        existing_by_key,
+        active_auto_keys,
+        now,
     )
     changes += _sync_subjective_clusters(
-        plan, state, issues, clusters, existing_by_key, active_auto_keys, now,
+        plan,
+        state,
+        issues,
+        clusters,
+        existing_by_key,
+        active_auto_keys,
+        now,
         target_strict=target_strict,
         policy=policy,
     )
     changes += _prune_stale_clusters(
-        plan, issues, clusters, active_auto_keys, now,
+        plan,
+        issues,
+        clusters,
+        active_auto_keys,
+        now,
     )
     return changes
 
@@ -201,7 +219,11 @@ def _sync_active_auto_cluster_queue_membership(plan: PlanModel) -> int:
 
     # Append issue IDs from active auto-clusters.
     for cluster in plan.get("clusters", {}).values():
-        if not isinstance(cluster, dict) or not cluster.get("auto") or not cluster_is_active(cluster):
+        if (
+            not isinstance(cluster, dict)
+            or not cluster.get("auto")
+            or not cluster_is_active(cluster)
+        ):
             continue
         for issue_id in cluster.get("issue_ids", []):
             if (
@@ -232,7 +254,7 @@ def auto_cluster_issues(
     if is_mid_cycle(plan):
         return 0
 
-    issues = (state.get("work_items") or state.get("issues", {}))
+    issues = state.get("work_items") or state.get("issues", {})
     clusters = plan.get("clusters", {})
 
     now = utc_now()

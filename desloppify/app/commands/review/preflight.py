@@ -114,9 +114,7 @@ def _blocking_scored_dimensions(
         return scored_dims
     normalized = normalized_dimensions or set()
     return sorted(
-        dim
-        for dim in scored_dims
-        if _normalize_dimension_key(dim) in normalized
+        dim for dim in scored_dims if _normalize_dimension_key(dim) in normalized
     )
 
 

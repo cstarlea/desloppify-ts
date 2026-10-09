@@ -161,7 +161,9 @@ class TypeScriptConfig(LangConfig):
             zone_rules=TS_ZONE_RULES,
             setting_specs={
                 # Copied from the top-level ``presets`` key (see presets.py).
-                "presets": LangValueSpec(list, [], "Presets and frameworks the config turns on"),
+                "presets": LangValueSpec(
+                    list, [], "Presets and frameworks the config turns on"
+                ),
                 "layers": LangValueSpec(
                     list,
                     [],

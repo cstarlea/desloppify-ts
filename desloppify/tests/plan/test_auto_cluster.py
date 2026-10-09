@@ -36,8 +36,14 @@ from desloppify.engine._work_queue.ranking import item_sort_key
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _issue(fid: str, detector: str = "unused", tier: int = 1,
-             file: str = "test.py", detail: dict | None = None) -> dict:
+
+def _issue(
+    fid: str,
+    detector: str = "unused",
+    tier: int = 1,
+    file: str = "test.py",
+    detail: dict | None = None,
+) -> dict:
     return {
         "id": fid,
         "detector": detector,
@@ -61,8 +67,10 @@ def _state_with(*issues: dict) -> dict:
 # Grouping key tests
 # ---------------------------------------------------------------------------
 
+
 def test_grouping_key_auto_fix():
     from desloppify.base.registry import DETECTORS
+
     f = _issue("a", "unused")
     meta = DETECTORS.get("unused")
     key = grouping_key(f, meta)
@@ -71,6 +79,7 @@ def test_grouping_key_auto_fix():
 
 def test_grouping_key_review():
     from desloppify.base.registry import DETECTORS
+
     f = _issue("a", "review", detail={"dimension": "abstraction_fitness"})
     meta = DETECTORS.get("review")
     key = grouping_key(f, meta)
@@ -79,6 +88,7 @@ def test_grouping_key_review():
 
 def test_grouping_key_judgment_required_returns_none():
     from desloppify.base.registry import DETECTORS
+
     # needs_judgment=True detectors return None (flow through review, not auto-task)
     f = _issue("a", "dict_keys", detail={"kind": "phantom_read"})
     meta = DETECTORS.get("dict_keys")
@@ -103,12 +113,16 @@ def test_grouping_key_unknown_detector():
 # Cluster name from key
 # ---------------------------------------------------------------------------
 
+
 def test_cluster_name_auto():
     assert cluster_name_from_key("auto::unused") == "auto/unused"
 
 
 def test_cluster_name_typed():
-    assert cluster_name_from_key("typed::dict_keys::phantom_read") == "auto/dict_keys-phantom_read"
+    assert (
+        cluster_name_from_key("typed::dict_keys::phantom_read")
+        == "auto/dict_keys-phantom_read"
+    )
 
 
 def test_cluster_name_file():
@@ -116,12 +130,16 @@ def test_cluster_name_file():
 
 
 def test_cluster_name_review():
-    assert cluster_name_from_key("review::abstraction_fitness") == "auto/review-abstraction_fitness"
+    assert (
+        cluster_name_from_key("review::abstraction_fitness")
+        == "auto/review-abstraction_fitness"
+    )
 
 
 # ---------------------------------------------------------------------------
 # auto_cluster_issues — core behavior
 # ---------------------------------------------------------------------------
+
 
 def test_auto_cluster_creates_cluster_from_issues():
     plan = empty_plan()
@@ -304,6 +322,7 @@ def test_auto_cluster_no_tier_on_cluster():
 # Queue collapsing
 # ---------------------------------------------------------------------------
 
+
 def test_collapse_clusters_replaces_members():
     plan = empty_plan()
     plan["clusters"]["auto/unused"] = {
@@ -317,12 +336,30 @@ def test_collapse_clusters_replaces_members():
     }
 
     items = [
-        {"id": "u1", "kind": "issue", "tier": 1,
-         "detector": "unused", "confidence": "high", "detail": {}},
-        {"id": "u2", "kind": "issue", "tier": 1,
-         "detector": "unused", "confidence": "high", "detail": {}},
-        {"id": "other", "kind": "issue", "tier": 2,
-         "detector": "structural", "confidence": "medium", "detail": {}},
+        {
+            "id": "u1",
+            "kind": "issue",
+            "tier": 1,
+            "detector": "unused",
+            "confidence": "high",
+            "detail": {},
+        },
+        {
+            "id": "u2",
+            "kind": "issue",
+            "tier": 1,
+            "detector": "unused",
+            "confidence": "high",
+            "detail": {},
+        },
+        {
+            "id": "other",
+            "kind": "issue",
+            "tier": 2,
+            "detector": "structural",
+            "confidence": "medium",
+            "detail": {},
+        },
     ]
 
     result = _collapse_clusters(items, plan)
@@ -348,8 +385,14 @@ def test_collapse_clusters_skips_manual():
     }
 
     items = [
-        {"id": "u1", "kind": "issue", "tier": 1,
-         "detector": "unused", "confidence": "high", "detail": {}},
+        {
+            "id": "u1",
+            "kind": "issue",
+            "tier": 1,
+            "detector": "unused",
+            "confidence": "high",
+            "detail": {},
+        },
     ]
 
     result = _collapse_clusters(items, plan)
@@ -359,12 +402,17 @@ def test_collapse_clusters_skips_manual():
 
 def test_cluster_sort_key_before_issues():
     cluster_item = {
-        "kind": "cluster", "action_type": "auto_fix",
-        "member_count": 5, "id": "auto/unused",
+        "kind": "cluster",
+        "action_type": "auto_fix",
+        "member_count": 5,
+        "id": "auto/unused",
     }
     issue_item = {
-        "kind": "issue", "tier": 1,
-        "confidence": "high", "detector": "unused", "detail": {},
+        "kind": "issue",
+        "tier": 1,
+        "confidence": "high",
+        "detector": "unused",
+        "detail": {},
         "id": "some-issue",
     }
     assert item_sort_key(cluster_item) < item_sort_key(issue_item)
@@ -372,12 +420,16 @@ def test_cluster_sort_key_before_issues():
 
 def test_cluster_sort_auto_fix_before_refactor():
     auto_fix = {
-        "kind": "cluster", "action_type": "auto_fix",
-        "member_count": 3, "id": "auto/unused",
+        "kind": "cluster",
+        "action_type": "auto_fix",
+        "member_count": 3,
+        "id": "auto/unused",
     }
     refactor = {
-        "kind": "cluster", "action_type": "refactor",
-        "member_count": 10, "id": "auto/structural",
+        "kind": "cluster",
+        "action_type": "refactor",
+        "member_count": 10,
+        "id": "auto/structural",
     }
     assert item_sort_key(auto_fix) < item_sort_key(refactor)
 
@@ -385,6 +437,7 @@ def test_cluster_sort_auto_fix_before_refactor():
 # ---------------------------------------------------------------------------
 # create_cluster rejects auto/ prefix
 # ---------------------------------------------------------------------------
+
 
 def test_create_cluster_rejects_auto_prefix():
     plan = empty_plan()
@@ -399,6 +452,7 @@ def test_create_cluster_rejects_auto_prefix():
 # ---------------------------------------------------------------------------
 # ensure_plan_defaults normalizes new fields
 # ---------------------------------------------------------------------------
+
 
 def test_ensure_plan_defaults_adds_cluster_fields():
     plan = empty_plan()
@@ -435,6 +489,7 @@ def test_ensure_plan_defaults_backfills_legacy_autofix_cluster_semantics():
 # ---------------------------------------------------------------------------
 # Integration: build_work_queue with collapse
 # ---------------------------------------------------------------------------
+
 
 def test_build_work_queue_collapses_clusters():
     state = _state_with(
@@ -484,6 +539,7 @@ def test_build_work_queue_no_collapse_when_drilling():
 # _generate_action always returns something
 # ---------------------------------------------------------------------------
 
+
 def test_generate_action_always_returns_something():
     """Every detector/subtype combination must produce a non-None action."""
     from desloppify.base.registry import DETECTORS
@@ -509,20 +565,34 @@ def test_generate_action_strips_subtype_examples():
         strip_guidance_examples as _strip_guidance_examples,
     )
 
-    assert _strip_guidance_examples("fix code smells — dead useEffect, empty if chains") == "fix code smells"
-    assert _strip_guidance_examples("fix dict key mismatches — dead writes are likely dead code") == "fix dict key mismatches"
+    assert (
+        _strip_guidance_examples("fix code smells — dead useEffect, empty if chains")
+        == "fix code smells"
+    )
+    assert (
+        _strip_guidance_examples(
+            "fix dict key mismatches — dead writes are likely dead code"
+        )
+        == "fix dict key mismatches"
+    )
     # No dash → keep as-is
-    assert _strip_guidance_examples("review and fix each issue") == "review and fix each issue"
+    assert (
+        _strip_guidance_examples("review and fix each issue")
+        == "review and fix each issue"
+    )
 
 
 # ---------------------------------------------------------------------------
 # Manual cluster accepts action
 # ---------------------------------------------------------------------------
 
+
 def test_manual_cluster_accepts_action():
     plan = empty_plan()
     ensure_plan_defaults(plan)
-    cluster = create_cluster(plan, "my-task", description="Refactor auth", action="refactor auth flow")
+    cluster = create_cluster(
+        plan, "my-task", description="Refactor auth", action="refactor auth flow"
+    )
     assert cluster["action"] == "refactor auth flow"
     assert cluster["description"] == "Refactor auth"
 
@@ -530,6 +600,7 @@ def test_manual_cluster_accepts_action():
 # ---------------------------------------------------------------------------
 # Collapse fallback action
 # ---------------------------------------------------------------------------
+
 
 def test_collapse_fallback_action():
     """Collapsed clusters always have a primary_command, even if action is None."""
@@ -545,10 +616,22 @@ def test_collapse_fallback_action():
     }
 
     items = [
-        {"id": "t1", "kind": "issue", "tier": 1,
-         "detector": "test", "confidence": "high", "detail": {}},
-        {"id": "t2", "kind": "issue", "tier": 1,
-         "detector": "test", "confidence": "high", "detail": {}},
+        {
+            "id": "t1",
+            "kind": "issue",
+            "tier": 1,
+            "detector": "test",
+            "confidence": "high",
+            "detail": {},
+        },
+        {
+            "id": "t2",
+            "kind": "issue",
+            "tier": 1,
+            "detector": "test",
+            "confidence": "high",
+            "detail": {},
+        },
     ]
 
     result = _collapse_clusters(items, plan)
@@ -562,13 +645,20 @@ def test_collapse_fallback_action():
 # Narrative actions mention clusters
 # ---------------------------------------------------------------------------
 
+
 def test_narrative_actions_mention_clusters():
     """When clusters exist, narrative actions should reference them."""
     from desloppify.intelligence.narrative.action_engine import _annotate_with_clusters
 
     actions = [
-        {"detector": "unused", "count": 5, "command": "desloppify autofix unused-imports --dry-run",
-         "description": "5 unused issues", "type": "auto_fix", "impact": 3.0},
+        {
+            "detector": "unused",
+            "count": 5,
+            "command": "desloppify autofix unused-imports --dry-run",
+            "description": "5 unused issues",
+            "type": "auto_fix",
+            "impact": 3.0,
+        },
     ]
     clusters = {
         "auto/unused": {
@@ -591,8 +681,14 @@ def test_narrative_actions_no_clusters_unchanged():
     from desloppify.intelligence.narrative.action_engine import _annotate_with_clusters
 
     actions = [
-        {"detector": "unused", "count": 5, "command": "original-cmd",
-         "description": "original desc", "type": "auto_fix", "impact": 3.0},
+        {
+            "detector": "unused",
+            "count": 5,
+            "command": "original-cmd",
+            "description": "original desc",
+            "type": "auto_fix",
+            "impact": 3.0,
+        },
     ]
     _annotate_with_clusters(actions, None)
     assert actions[0]["command"] == "original-cmd"
@@ -602,6 +698,7 @@ def test_narrative_actions_no_clusters_unchanged():
 # ---------------------------------------------------------------------------
 # Initial review (unscored) cluster
 # ---------------------------------------------------------------------------
+
 
 def _unscored_state(*dim_keys: str) -> dict:
     """Build a state with unscored (placeholder) subjective dimensions."""
@@ -705,9 +802,9 @@ def test_stale_and_unscored_separate_clusters():
     """Unscored and stale dims create two disjoint clusters."""
     plan = empty_plan()
     plan["queue_order"] = [
-        "subjective::design_coherence",   # unscored
-        "subjective::error_consistency",   # stale
-        "subjective::convention_drift",    # stale
+        "subjective::design_coherence",  # unscored
+        "subjective::error_consistency",  # stale
+        "subjective::convention_drift",  # stale
     ]
     # Mixed state: design_coherence is unscored, the other two are stale
     state = _unscored_state("design_coherence")
@@ -741,6 +838,7 @@ def test_stale_and_unscored_separate_clusters():
 # _repair_ghost_cluster_refs
 # ---------------------------------------------------------------------------
 
+
 def test_repair_ghost_cluster_refs():
     """Overrides pointing to non-existent clusters should be cleared."""
     plan = empty_plan()
@@ -768,6 +866,7 @@ def test_repair_ghost_cluster_refs():
     }
 
     from desloppify.engine._state.schema import utc_now
+
     repaired = _repair_ghost_cluster_refs(plan, utc_now())
 
     assert repaired == 1
@@ -795,6 +894,7 @@ def test_repair_ghost_cluster_refs_no_ghosts():
     }
 
     from desloppify.engine._state.schema import utc_now
+
     repaired = _repair_ghost_cluster_refs(plan, utc_now())
     assert repaired == 0
 
@@ -840,6 +940,7 @@ def test_repair_missing_override_for_cluster_member():
     }
 
     from desloppify.engine._state.schema import utc_now
+
     repaired = _repair_ghost_cluster_refs(plan, utc_now())
 
     assert repaired == 1
@@ -876,6 +977,7 @@ def test_repair_override_points_wrong_cluster():
     }
 
     from desloppify.engine._state.schema import utc_now
+
     repaired = _repair_ghost_cluster_refs(plan, utc_now())
 
     assert repaired >= 1
@@ -908,6 +1010,7 @@ def test_repair_override_not_in_any_cluster():
     }
 
     from desloppify.engine._state.schema import utc_now
+
     repaired = _repair_ghost_cluster_refs(plan, utc_now())
 
     assert repaired == 1
@@ -943,6 +1046,7 @@ def test_repair_manual_cluster_wins_over_auto():
     }
 
     from desloppify.engine._state.schema import utc_now
+
     _repair_ghost_cluster_refs(plan, utc_now())
 
     # Manual cluster should take priority
@@ -952,6 +1056,7 @@ def test_repair_manual_cluster_wins_over_auto():
 # ---------------------------------------------------------------------------
 # Under-target regression tests (#186)
 # ---------------------------------------------------------------------------
+
 
 def _under_target_state(*dim_keys: str, score: float = 70.0) -> dict:
     """Build a state with scored, current (NOT stale), below-target dimensions.
@@ -990,10 +1095,10 @@ def test_stale_cluster_uses_actual_stale_ids():
     """Under-target (not stale) IDs must NOT appear in auto/stale-review."""
     plan = empty_plan()
     plan["queue_order"] = [
-        "subjective::design_coherence",    # under-target (current, below target)
-        "subjective::error_consistency",   # under-target
-        "subjective::convention_drift",    # actually stale
-        "subjective::naming_quality",      # actually stale
+        "subjective::design_coherence",  # under-target (current, below target)
+        "subjective::error_consistency",  # under-target
+        "subjective::convention_drift",  # actually stale
+        "subjective::naming_quality",  # actually stale
     ]
 
     # Build mixed state: two under-target + two stale
@@ -1140,6 +1245,7 @@ def test_under_target_lifecycle_with_sync_stale():
 # Judgment-required detectors don't auto-cluster
 # ---------------------------------------------------------------------------
 
+
 def test_judgment_required_issues_do_not_auto_cluster():
     """Issues from needs_judgment=True detectors (e.g. smells) must not auto-cluster."""
     plan = empty_plan()
@@ -1152,7 +1258,9 @@ def test_judgment_required_issues_do_not_auto_cluster():
     auto_cluster_issues(plan, state)
     # No auto-cluster should be created for smells
     for name in plan["clusters"]:
-        assert "smells" not in name, f"unexpected cluster {name} for judgment-required detector"
+        assert "smells" not in name, (
+            f"unexpected cluster {name} for judgment-required detector"
+        )
 
 
 def test_non_judgment_issues_still_auto_cluster():
@@ -1179,7 +1287,9 @@ def test_concerns_issues_still_auto_cluster():
     auto_cluster_issues(plan, state)
     # concerns should still cluster
     cluster_names = list(plan["clusters"].keys())
-    concerns_clusters = [n for n in cluster_names if "concerns" in n or "design_coherence" in n]
+    concerns_clusters = [
+        n for n in cluster_names if "concerns" in n or "design_coherence" in n
+    ]
     assert len(concerns_clusters) >= 1
 
 

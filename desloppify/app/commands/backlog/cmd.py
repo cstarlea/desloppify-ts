@@ -45,4 +45,9 @@ def cmd_backlog(args: argparse.Namespace) -> None:
     )
 
 
-__all__ = ["BACKLOG_QUEUE_VIEW", "QueueRenderDeps", "build_and_render_queue", "cmd_backlog"]
+__all__ = [
+    "BACKLOG_QUEUE_VIEW",
+    "QueueRenderDeps",
+    "build_and_render_queue",
+    "cmd_backlog",
+]

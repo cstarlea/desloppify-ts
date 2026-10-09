@@ -55,7 +55,12 @@ def test_build_signal_density_counts_distinct_detectors_and_limits() -> None:
     assert len(rows) == 20
     assert rows[0]["detector_count"] == 3
     assert rows[0]["issue_count"] == 3
-    assert {"file": "src/a.py", "detector_count": 2, "issue_count": 3, "detectors": ["security", "smells"]} in rows
+    assert {
+        "file": "src/a.py",
+        "detector_count": 2,
+        "issue_count": 3,
+        "detectors": ["security", "smells"],
+    } in rows
     assert all(row["file"] != "src/b.py" for row in rows)
 
 

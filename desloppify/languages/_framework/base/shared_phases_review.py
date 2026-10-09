@@ -57,7 +57,9 @@ _PREFETCH_SECURITY_KEY = "security_lang"
 _PREFETCH_EXECUTOR = concurrent.futures.ThreadPoolExecutor(max_workers=2)
 
 
-def _submit_with_context(fn: Callable[..., Any], *args: Any, **kwargs: Any) -> concurrent.futures.Future[Any]:
+def _submit_with_context(
+    fn: Callable[..., Any], *args: Any, **kwargs: Any
+) -> concurrent.futures.Future[Any]:
     """Submit work to the prefetch executor with the caller's ContextVars."""
     ctx = contextvars.copy_context()
     return _PREFETCH_EXECUTOR.submit(ctx.run, fn, *args, **kwargs)
@@ -100,7 +102,8 @@ def _get_prefetch_futures(
     if isinstance(payload, dict):
         # Filter to only valid str->Future entries; rebuild only when needed.
         bad_keys = [
-            k for k, v in payload.items()
+            k
+            for k, v in payload.items()
             if not isinstance(k, str) or not isinstance(v, concurrent.futures.Future)
         ]
         if bad_keys:
@@ -142,7 +145,9 @@ def _consume_prefetch_result(
     try:
         return future.result()
     except Exception:
-        logger.debug("prefetch %s failed, falling back to synchronous run", key, exc_info=True)
+        logger.debug(
+            "prefetch %s failed, falling back to synchronous run", key, exc_info=True
+        )
         return None
 
 
@@ -350,7 +355,9 @@ def _store_cached_security_result(
             "entries": [entry for entry in result.entries if isinstance(entry, dict)],
             "files_scanned": max(0, int(result.files_scanned)),
             "coverage": (
-                _coverage_to_dict(result.coverage) if result.coverage is not None else None
+                _coverage_to_dict(result.coverage)
+                if result.coverage is not None
+                else None
             ),
         }
     )
@@ -435,7 +442,9 @@ def clear_review_phase_prefetch(lang: object) -> None:
             pass
 
 
-def phase_dupes(path: Path, lang: LangRuntimeContract) -> tuple[list[Issue], dict[str, int]]:
+def phase_dupes(
+    path: Path, lang: LangRuntimeContract
+) -> tuple[list[Issue], dict[str, int]]:
     """Shared phase runner: detect duplicate functions via lang.extract_functions."""
     functions = _resolve_review_functions(path, lang)
 
@@ -521,7 +530,9 @@ def phase_boilerplate_duplication(
 
     if issues:
         log(f"         boilerplate duplication: {len(issues)} clusters")
-    distinct_files = len({loc["file"] for entry in entries for loc in entry["locations"]})
+    distinct_files = len(
+        {loc["file"] for entry in entries for loc in entry["locations"]}
+    )
     return issues, {"boilerplate_duplication": distinct_files}
 
 
@@ -639,7 +650,10 @@ def phase_test_coverage(
     results = _entries_to_issues("test_coverage", entries, default_name="")
     # The potential weighs each file by √LOC, so it isn't a file count.
     _log_phase_summary(
-        "test coverage", results, coverage.scored_files, f"production files, √LOC weight {potential}"
+        "test coverage",
+        results,
+        coverage.scored_files,
+        f"production files, √LOC weight {potential}",
     )
     measured = coverage.measured
     if measured.reports or measured.stale:
@@ -649,7 +663,9 @@ def phase_test_coverage(
             if measured.stale
             else ""
         )
-        log(f"         coverage report ({reports}): {len(measured.files)} files measured{stale}")
+        log(
+            f"         coverage report ({reports}): {len(measured.files)} files measured{stale}"
+        )
 
     return results, {"test_coverage": potential}
 
@@ -687,7 +703,11 @@ def phase_subjective_review(
         dimension_display_name,
     )
 
-    assessments = lang.subjective_assessments if isinstance(lang.subjective_assessments, dict) else {}
+    assessments = (
+        lang.subjective_assessments
+        if isinstance(lang.subjective_assessments, dict)
+        else {}
+    )
     default_dims = default_dimension_keys_for_lang(lang.name)
     potential = len(default_dims)
 
@@ -731,7 +751,9 @@ def phase_subjective_review(
     return results, {"subjective_review": potential}
 
 
-def phase_signature(path: Path, lang: LangRuntimeContract) -> tuple[list[Issue], dict[str, int]]:
+def phase_signature(
+    path: Path, lang: LangRuntimeContract
+) -> tuple[list[Issue], dict[str, int]]:
     """Shared phase runner: detect signature variance via lang.extract_functions."""
     from desloppify.engine.detectors.signature import detect_signature_variance
 

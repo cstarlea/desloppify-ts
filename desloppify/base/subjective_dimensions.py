@@ -49,7 +49,9 @@ def configure_subjective_dimension_providers(
     are not silently ignored.
     """
     if load_dimensions_payload_provider is not None:
-        PROVIDER_STATE.load_dimensions_payload_provider = load_dimensions_payload_provider
+        PROVIDER_STATE.load_dimensions_payload_provider = (
+            load_dimensions_payload_provider
+        )
     if load_dimensions_payload_for_lang_provider is not None:
         PROVIDER_STATE.load_dimensions_payload_for_lang_provider = (
             load_dimensions_payload_for_lang_provider
@@ -145,7 +147,9 @@ def _metadata_registry(lang_name: str | None) -> dict[str, dict[str, object]]:
 
 
 def get_dimension_metadata(
-    dimension_name: str, *, lang_name: str | None = None,
+    dimension_name: str,
+    *,
+    lang_name: str | None = None,
 ) -> dict[str, object]:
     """Return metadata for one dimension key (with sane defaults)."""
     dim = _normalize_dimension_name(dimension_name)

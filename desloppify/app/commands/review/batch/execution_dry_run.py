@@ -60,7 +60,11 @@ def maybe_handle_dry_run(
     print(colorize_fn(f"  Immutable packet: {immutable_packet_path}", "dim"))
     print(colorize_fn(f"  Blind packet: {prompt_packet_path}", "dim"))
     print(colorize_fn(f"  Prompts: {run_dir / 'prompts'}", "dim"))
-    print(colorize_fn(f"  Results: {run_dir / 'results'}  (write subagent output here)", "dim"))
+    print(
+        colorize_fn(
+            f"  Results: {run_dir / 'results'}  (write subagent output here)", "dim"
+        )
+    )
     print()
     print(
         colorize_fn(

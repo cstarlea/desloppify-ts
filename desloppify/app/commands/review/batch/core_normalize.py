@@ -45,17 +45,13 @@ def _validate_dimension_note(
     impact_scope = note_raw.get("impact_scope")
     fix_scope = note_raw.get("fix_scope")
     if not isinstance(evidence, list) or not evidence:
-        raise ValueError(
-            f"dimension_notes.{key}.evidence must be a non-empty array"
-        )
+        raise ValueError(f"dimension_notes.{key}.evidence must be a non-empty array")
     if not isinstance(impact_scope, str) or not impact_scope.strip():
         raise ValueError(
             f"dimension_notes.{key}.impact_scope must be a non-empty string"
         )
     if not isinstance(fix_scope, str) or not fix_scope.strip():
-        raise ValueError(
-            f"dimension_notes.{key}.fix_scope must be a non-empty string"
-        )
+        raise ValueError(f"dimension_notes.{key}.fix_scope must be a non-empty string")
 
     confidence_raw = str(note_raw.get("confidence", "medium")).strip().lower()
     confidence = (
@@ -87,8 +83,7 @@ def _normalize_abstraction_sub_axes(
             continue
         if isinstance(axis_value, bool) or not isinstance(axis_value, int | float):
             raise ValueError(
-                f"dimension_notes.abstraction_fitness.sub_axes.{axis} "
-                "must be numeric"
+                f"dimension_notes.abstraction_fitness.sub_axes.{axis} must be numeric"
             )
         normalized[axis] = round(
             max(0.0, min(100.0, float(axis_value))),
@@ -125,9 +120,7 @@ def _validate_dimension_judgment(
         log_fn=log_fn,
     )
     if require_complete and not dimension_character:
-        raise ValueError(
-            f"dimension_judgment.{key} must include dimension_character"
-        )
+        raise ValueError(f"dimension_judgment.{key} must include dimension_character")
 
     score_rationale = _normalize_dimension_judgment_text(
         key,
@@ -237,7 +230,9 @@ def _build_normalized_issue(
     )
 
 
-def _build_dismissed_concern_payload(issue: ReviewIssuePayload) -> DismissedConcernPayload:
+def _build_dismissed_concern_payload(
+    issue: ReviewIssuePayload,
+) -> DismissedConcernPayload:
     """Return a minimal dismissed-concern payload preserved for later import."""
     payload: DismissedConcernPayload = {
         "concern_verdict": "dismissed",
@@ -291,9 +286,7 @@ def _normalize_issues(
             errors.extend(issue_errors)
             continue
         if issue is None:
-            raise ValueError(
-                "batch issue payload missing after validation succeeded"
-            )
+            raise ValueError("batch issue payload missing after validation succeeded")
         if issue.get("concern_verdict") == "dismissed":
             dismissed_concerns.append(_build_dismissed_concern_payload(issue))
             continue
@@ -402,9 +395,7 @@ def _fill_trimmed_issue_budget(
 def _low_score_dimensions(assessments: dict[str, float]) -> set[str]:
     """Return assessed dimensions requiring explicit defect issues."""
     return {
-        dim
-        for dim, score in assessments.items()
-        if score < LOW_SCORE_ISSUE_THRESHOLD
+        dim for dim, score in assessments.items() if score < LOW_SCORE_ISSUE_THRESHOLD
     }
 
 
@@ -417,9 +408,7 @@ def _enforce_low_score_issues(
     required_dims = _low_score_dimensions(assessments)
     if not required_dims:
         return
-    issue_dims = {
-        issue.dimension.strip() for issue in issues
-    }
+    issue_dims = {issue.dimension.strip() for issue in issues}
     missing = sorted(dim for dim in required_dims if dim not in issue_dims)
     if not missing:
         return
@@ -568,7 +557,11 @@ def _normalize_context_header_list(
     raw_list = updates.get(key)
     if not isinstance(raw_list, list):
         return []
-    return [header.strip() for header in raw_list if isinstance(header, str) and header.strip()]
+    return [
+        header.strip()
+        for header in raw_list
+        if isinstance(header, str) and header.strip()
+    ]
 
 
 def _normalize_dimension_context_updates(

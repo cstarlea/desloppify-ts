@@ -163,8 +163,14 @@ class TestFixerHasApplicableIssues:
         assert _fixer_has_applicable_issues(state, "smells", "dead-useeffect") is False
 
     def test_smells_empty_issues_not_applicable(self, empty_state):
-        assert _fixer_has_applicable_issues(empty_state, "smells", "dead-useeffect") is False
-        assert _fixer_has_applicable_issues(empty_state, "smells", "empty-if-chain") is False
+        assert (
+            _fixer_has_applicable_issues(empty_state, "smells", "dead-useeffect")
+            is False
+        )
+        assert (
+            _fixer_has_applicable_issues(empty_state, "smells", "empty-if-chain")
+            is False
+        )
 
 
 class TestSmellsActionWithNoReact:
@@ -253,7 +259,10 @@ class TestComputeTools:
 
     def test_fixers_only_when_open(self):
         result = _compute_tools({"smells": 5}, {}, "typescript", {})
-        assert [f["name"] for f in result["fixers"]] == ["dead-useeffect", "empty-if-chain"]
+        assert [f["name"] for f in result["fixers"]] == [
+            "dead-useeffect",
+            "empty-if-chain",
+        ]
 
     def test_unsafe_fixers_not_offered(self):
         result = _compute_tools({"unused": 5, "logs": 2}, {}, "typescript", {})

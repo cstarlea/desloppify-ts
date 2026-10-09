@@ -124,7 +124,12 @@ def test_queue_contains_mechanical_and_synthetic_subjective_items():
     state = _state(
         [],
         dimension_scores={
-            "Naming quality": {"score": 94.0, "strict": 94.0, "failing": 2, "stale": True},
+            "Naming quality": {
+                "score": 94.0,
+                "strict": 94.0,
+                "failing": 2,
+                "stale": True,
+            },
             "Logic clarity": {"score": 100.0, "strict": 100.0, "failing": 0},
         },
     )
@@ -144,8 +149,12 @@ def test_subjective_items_do_not_starve_objective_queue_head():
     )
     state = _state(
         [
-            _issue("security::src/a.py::x", detector="security", tier=1, confidence="high"),
-            _issue("smells::src/a.py::y", detector="smells", tier=2, confidence="medium"),
+            _issue(
+                "security::src/a.py::x", detector="security", tier=1, confidence="high"
+            ),
+            _issue(
+                "smells::src/a.py::y", detector="smells", tier=2, confidence="medium"
+            ),
             review,
         ],
         dimension_scores={
@@ -166,7 +175,9 @@ def test_impact_sort_with_count_limit():
     confidence mechanical leads."""
     state = _state(
         [
-            _issue("security::src/a.py::x", detector="security", tier=1, confidence="high"),
+            _issue(
+                "security::src/a.py::x", detector="security", tier=1, confidence="high"
+            ),
         ],
         dimension_scores={
             "Naming quality": {"score": 80.0, "strict": 80.0, "failing": 5},
@@ -202,8 +213,18 @@ def test_subjective_items_respect_target_threshold():
     state = _state(
         [],
         dimension_scores={
-            "Naming quality": {"score": 94.0, "strict": 94.0, "failing": 2, "stale": True},
-            "AI generated debt": {"score": 96.0, "strict": 96.0, "failing": 1, "stale": True},
+            "Naming quality": {
+                "score": 94.0,
+                "strict": 94.0,
+                "failing": 2,
+                "stale": True,
+            },
+            "AI generated debt": {
+                "score": 96.0,
+                "strict": 96.0,
+                "failing": 1,
+                "stale": True,
+            },
         },
     )
 
@@ -293,7 +314,10 @@ def test_unassessed_subjective_item_points_to_holistic_refresh():
         item for item in queue["items"] if item["kind"] == "subjective_dimension"
     )
     assert subj["id"] == "subjective::high_level_elegance"
-    assert subj["primary_command"] == "desloppify review --prepare --dimensions high_level_elegance"
+    assert (
+        subj["primary_command"]
+        == "desloppify review --prepare --dimensions high_level_elegance"
+    )
 
 
 def test_subjective_review_issue_points_to_review_triage():
@@ -308,7 +332,10 @@ def test_subjective_review_issue_points_to_review_triage():
 
     queue = build_work_queue(state, count=None, include_subjective=False)
     item = queue["items"][0]
-    assert item["primary_command"] == "desloppify review --prepare --dimensions naming_quality"
+    assert (
+        item["primary_command"]
+        == "desloppify review --prepare --dimensions naming_quality"
+    )
 
 
 def test_subjective_review_issue_is_marked_subjective():
@@ -344,6 +371,7 @@ def test_queue_build_options_defaults():
     opts = QueueBuildOptions()
     assert opts.count == 1
     from desloppify.engine._work_queue.models import _SCAN_PATH_FROM_STATE
+
     assert opts.scan_path is _SCAN_PATH_FROM_STATE
     assert opts.scope is None
     assert opts.status == "open"
@@ -388,21 +416,30 @@ def test_subjective_threshold_clamped_to_valid_range():
     state = _state(
         [],
         dimension_scores={
-            "Naming quality": {"score": 50.0, "strict": 50.0, "failing": 1, "stale": True},
+            "Naming quality": {
+                "score": 50.0,
+                "strict": 50.0,
+                "failing": 1,
+                "stale": True,
+            },
         },
     )
     # threshold=-10 clamps to 0.0 -> score 50 >= 0 -> item excluded
     queue = build_work_queue(
         state, count=None, include_subjective=True, subjective_threshold=-10
     )
-    subj_items = [item for item in queue["items"] if item["kind"] == "subjective_dimension"]
+    subj_items = [
+        item for item in queue["items"] if item["kind"] == "subjective_dimension"
+    ]
     assert subj_items == []
 
     # threshold=200 clamps to 100.0 -> score 50 < 100 -> item included
     queue2 = build_work_queue(
         state, count=None, include_subjective=True, subjective_threshold=200
     )
-    subj_items2 = [item for item in queue2["items"] if item["kind"] == "subjective_dimension"]
+    subj_items2 = [
+        item for item in queue2["items"] if item["kind"] == "subjective_dimension"
+    ]
     assert len(subj_items2) >= 1
 
 
@@ -424,9 +461,7 @@ def test_count_limits_returned_items():
 
 
 def test_count_none_returns_all_items():
-    state = _state(
-        [_issue("a", tier=2), _issue("b", tier=3), _issue("c", tier=4)]
-    )
+    state = _state([_issue("a", tier=2), _issue("b", tier=3), _issue("c", tier=4)])
 
     queue = build_work_queue(state, count=None, include_subjective=False)
     assert len(queue["items"]) == 3
@@ -434,9 +469,7 @@ def test_count_none_returns_all_items():
 
 
 def test_default_count_is_1():
-    state = _state(
-        [_issue("a", tier=2), _issue("b", tier=3)]
-    )
+    state = _state([_issue("a", tier=2), _issue("b", tier=3)])
 
     queue = build_work_queue(state, include_subjective=False)
     assert len(queue["items"]) == 1
@@ -479,7 +512,9 @@ def test_status_filter_fixed():
         ]
     )
 
-    queue = build_work_queue(state, status="fixed", count=None, include_subjective=False)
+    queue = build_work_queue(
+        state, status="fixed", count=None, include_subjective=False
+    )
     assert all(item["status"] == "fixed" for item in queue["items"])
     assert len(queue["items"]) == 1
 
@@ -525,10 +560,10 @@ def test_chronic_mode_excludes_subjective_items():
         },
     )
 
-    queue = build_work_queue(
-        state, chronic=True, count=None, include_subjective=True
-    )
-    subj_items = [item for item in queue["items"] if item["kind"] == "subjective_dimension"]
+    queue = build_work_queue(state, chronic=True, count=None, include_subjective=True)
+    subj_items = [
+        item for item in queue["items"] if item["kind"] == "subjective_dimension"
+    ]
     assert subj_items == []
 
 
@@ -538,8 +573,7 @@ def test_chronic_mode_excludes_subjective_items():
 def test_stale_subjective_gated_when_objective_backlog_exists():
     """Stale subjective items are suppressed while objective backlog exists."""
     objective_issues = [
-        _issue(f"smells::src/{c}.py::x", detector="smells", tier=3)
-        for c in "abcd"
+        _issue(f"smells::src/{c}.py::x", detector="smells", tier=3) for c in "abcd"
     ]
     state = _state(
         objective_issues,
@@ -651,8 +685,7 @@ def test_unassessed_subjective_visible_with_objective_backlog():
     Objective work becomes visible only after initial reviews are done.
     """
     objective_issues = [
-        _issue(f"smells::src/{c}.py::x", detector="smells", tier=3)
-        for c in "abcd"
+        _issue(f"smells::src/{c}.py::x", detector="smells", tier=3) for c in "abcd"
     ]
     state = _state(
         objective_issues,
@@ -799,9 +832,7 @@ def test_high_confidence_always_passes():
 
 def test_detector_without_threshold_unaffected():
     """Detectors without standalone_threshold (e.g. unused) pass at any confidence."""
-    state = _state(
-        [_issue("unused::src/a.py::x", detector="unused", confidence="low")]
-    )
+    state = _state([_issue("unused::src/a.py::x", detector="unused", confidence="low")])
     queue = build_work_queue(state, count=None, include_subjective=False)
     ids = {item["id"] for item in queue["items"]}
     assert "unused::src/a.py::x" in ids
@@ -833,14 +864,18 @@ def test_evidence_only_items_dont_block_subjective():
     state = _state(
         issues,
         dimension_scores={
-            "Naming quality": {"score": 70.0, "strict": 70.0, "failing": 1, "stale": True},
+            "Naming quality": {
+                "score": 70.0,
+                "strict": 70.0,
+                "failing": 1,
+                "stale": True,
+            },
         },
     )
 
     queue = build_work_queue(state, count=None, include_subjective=True)
     subj_ids = [
-        item["id"] for item in queue["items"]
-        if item["kind"] == "subjective_dimension"
+        item["id"] for item in queue["items"] if item["kind"] == "subjective_dimension"
     ]
     # Evidence-only items filtered before lifecycle → no objective items remain
     # → subjective items surface
@@ -855,7 +890,12 @@ def test_low_impact_items_preserved_in_queue():
     state = _state(
         [_issue("unused::src/a.py::x", detector="unused", confidence="high")],
         dimension_scores={
-            "Code quality": {"score": 99.99, "strict": 99.99, "checks": 10000, "failing": 1},
+            "Code quality": {
+                "score": 99.99,
+                "strict": 99.99,
+                "checks": 10000,
+                "failing": 1,
+            },
         },
     )
     queue = build_work_queue(state, count=None, include_subjective=False)
@@ -868,31 +908,34 @@ def test_registry_standalone_threshold_count():
     from desloppify.base.registry import DETECTORS
 
     threshold_detectors = [
-        name for name, meta in DETECTORS.items()
+        name
+        for name, meta in DETECTORS.items()
         if meta.standalone_threshold == "medium"
     ]
-    assert sorted(threshold_detectors) == sorted([
-        "dict_keys",
-        "dupes",
-        "naming",
-        "nextjs",
-        "react_router",
-        "nestjs",
-        "express",
-        "hono",
-        "fastify",
-        "angular",
-        "sveltekit",
-        "nuxt",
-        "astro",
-        "patterns",
-        "props",
-        "react",
-        "rust_api_convention",
-        "rust_async_locking",
-        "rust_drop_safety",
-        "rust_error_boundary",
-        "rust_future_proofing",
-        "rust_thread_safety",
-        "smells",
-    ])
+    assert sorted(threshold_detectors) == sorted(
+        [
+            "dict_keys",
+            "dupes",
+            "naming",
+            "nextjs",
+            "react_router",
+            "nestjs",
+            "express",
+            "hono",
+            "fastify",
+            "angular",
+            "sveltekit",
+            "nuxt",
+            "astro",
+            "patterns",
+            "props",
+            "react",
+            "rust_api_convention",
+            "rust_async_locking",
+            "rust_drop_safety",
+            "rust_error_boundary",
+            "rust_future_proofing",
+            "rust_thread_safety",
+            "smells",
+        ]
+    )

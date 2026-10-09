@@ -43,18 +43,25 @@ def _only_run_scan_workflow_remaining(state: dict, plan: dict) -> bool:
     return len(items) == 1 and items[0].get("id") == WORKFLOW_RUN_SCAN_ID
 
 
-def _log_preflight(plan: dict | None, result: str, reason: str, queue_count: int) -> None:
+def _log_preflight(
+    plan: dict | None, result: str, reason: str, queue_count: int
+) -> None:
     """Best-effort append of scan_preflight progression event."""
     try:
         phase = current_lifecycle_phase(plan) if isinstance(plan, dict) else None
         append_progression_event(
             build_scan_preflight_event(
-                plan, result=result, reason=reason,
-                queue_count=queue_count, phase_before=phase,
+                plan,
+                result=result,
+                reason=reason,
+                queue_count=queue_count,
+                phase_before=phase,
             )
         )
     except Exception:
-        _logger.warning("Failed to append scan_preflight progression event", exc_info=True)
+        _logger.warning(
+            "Failed to append scan_preflight progression event", exc_info=True
+        )
 
 
 def scan_queue_preflight(args: object) -> None:
@@ -137,6 +144,7 @@ def scan_queue_preflight(args: object) -> None:
     # queue_order), those items may be stale (not in current state).
     # If the snapshot agrees the queue is empty, allow the scan.
     from desloppify.engine._work_queue.context import queue_context
+
     try:
         ctx = queue_context(state, plan=plan)
         if len(ctx.snapshot.execution_items) == 0:

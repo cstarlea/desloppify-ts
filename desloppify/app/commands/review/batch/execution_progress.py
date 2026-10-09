@@ -24,8 +24,16 @@ def _parse_heartbeat_details(
     raw_queued = details.get("queued_batches")
     raw_elapsed = details.get("elapsed_seconds")
 
-    active = [idx for idx in raw_active if isinstance(idx, int)] if isinstance(raw_active, list) else []
-    queued = [idx for idx in raw_queued if isinstance(idx, int)] if isinstance(raw_queued, list) else []
+    active = (
+        [idx for idx in raw_active if isinstance(idx, int)]
+        if isinstance(raw_active, list)
+        else []
+    )
+    queued = (
+        [idx for idx in raw_queued if isinstance(idx, int)]
+        if isinstance(raw_queued, list)
+        else []
+    )
 
     elapsed: dict[int, float] = {}
     if isinstance(raw_elapsed, dict):
@@ -176,7 +184,9 @@ def build_progress_reporter(
                     "dim",
                 )
             )
-            append_run_log(f"batch-queued batch={batch_index + 1} position={position}/{total_batches}")
+            append_run_log(
+                f"batch-queued batch={batch_index + 1} position={position}/{total_batches}"
+            )
             return
         if event == "start":
             state["status"] = "running"
@@ -187,10 +197,14 @@ def build_progress_reporter(
                     "dim",
                 )
             )
-            append_run_log(f"batch-start batch={batch_index + 1} position={position}/{total_batches}")
+            append_run_log(
+                f"batch-start batch={batch_index + 1} position={position}/{total_batches}"
+            )
             return
         if event == "done":
-            status = "done" if code == 0 else f"exited ({code}); pending payload recovery"
+            status = (
+                "done" if code == 0 else f"exited ({code}); pending payload recovery"
+            )
             tone = "dim" if code == 0 else "yellow"
             elapsed_seconds = details.get("elapsed_seconds")
             elapsed_suffix = ""

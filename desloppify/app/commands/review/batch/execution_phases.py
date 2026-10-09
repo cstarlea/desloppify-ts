@@ -174,7 +174,9 @@ def _prepare_packet_scope(
             colorize_fn=deps.colorize_fn,
             suggested_prepare_cmd=suggested_prepare_cmd,
         ),
-        dimension_prompts=raw_dim_prompts if isinstance(raw_dim_prompts, dict) else None,
+        dimension_prompts=raw_dim_prompts
+        if isinstance(raw_dim_prompts, dict)
+        else None,
     )
     selected_indexes = deps.selected_batch_indexes_fn(args, batch_count=len(batches))
     return PreparedPacketScope(
@@ -233,14 +235,16 @@ def _prepare_run_runtime(
     stall_warning_seconds: float,
     stall_kill_seconds: float,
 ) -> PreparedRunArtifacts:
-    run_dir, logs_dir, prompt_files, output_files, log_files = deps.prepare_run_artifacts_fn(
-        PrepareRunArtifactsRequest(
-            stamp=stamp,
-            selected_indexes=selected_indexes,
-            batches=batches,
-            packet_path=prompt_packet_path,
-            run_root=subagent_runs_dir,
-            repo_root=project_root,
+    run_dir, logs_dir, prompt_files, output_files, log_files = (
+        deps.prepare_run_artifacts_fn(
+            PrepareRunArtifactsRequest(
+                stamp=stamp,
+                selected_indexes=selected_indexes,
+                batches=batches,
+                packet_path=prompt_packet_path,
+                run_root=subagent_runs_dir,
+                repo_root=project_root,
+            )
         )
     )
     run_log_path = resolve_run_log_path(
@@ -272,7 +276,9 @@ def _prepare_run_runtime(
         worst_case_minutes=worst_case_minutes,
         selected_indexes=selected_indexes,
     )
-    batch_positions = {batch_idx: pos + 1 for pos, batch_idx in enumerate(selected_indexes)}
+    batch_positions = {
+        batch_idx: pos + 1 for pos, batch_idx in enumerate(selected_indexes)
+    }
     batch_status = build_initial_batch_status(
         selected_indexes=selected_indexes,
         batch_positions=batch_positions,
@@ -458,7 +464,9 @@ def prepare_batch_run(
     )
 
 
-def execute_batch_run(*, prepared: PreparedBatchRunContext, deps: BatchRunDeps) -> ExecutedBatchRunContext:
+def execute_batch_run(
+    *, prepared: PreparedBatchRunContext, deps: BatchRunDeps
+) -> ExecutedBatchRunContext:
     """Execute prepared tasks and return reconciliation outputs."""
     selected_indexes = prepared.selected_indexes
     tasks = build_batch_tasks(
@@ -495,22 +503,24 @@ def execute_batch_run(*, prepared: PreparedBatchRunContext, deps: BatchRunDeps) 
         prepared.append_run_log("run-interrupted reason=keyboard_interrupt")
         raise SystemExit(130) from None
 
-    batch_results, successful_indexes, failures, failure_set = collect_and_reconcile_results(
-        collect_batch_results_fn=deps.collect_batch_results_fn,
-        request=CollectBatchResultsRequest(
-            selected_indexes=selected_indexes,
-            failures=execution_failures,
-            output_files=prepared.output_files,
-            allowed_dims={
-                str(dim)
-                for dim in prepared.packet.get("dimensions", [])
-                if isinstance(dim, str)
-            },
-        ),
-        execution_failures=execution_failures,
-        batch_positions=prepared.batch_positions,
-        batch_status=prepared.batch_status,
-        colorize_fn=deps.colorize_fn,
+    batch_results, successful_indexes, failures, failure_set = (
+        collect_and_reconcile_results(
+            collect_batch_results_fn=deps.collect_batch_results_fn,
+            request=CollectBatchResultsRequest(
+                selected_indexes=selected_indexes,
+                failures=execution_failures,
+                output_files=prepared.output_files,
+                allowed_dims={
+                    str(dim)
+                    for dim in prepared.packet.get("dimensions", [])
+                    if isinstance(dim, str)
+                },
+            ),
+            execution_failures=execution_failures,
+            batch_positions=prepared.batch_positions,
+            batch_status=prepared.batch_status,
+            colorize_fn=deps.colorize_fn,
+        )
     )
     prepared.write_run_summary(
         successful_batches=[idx + 1 for idx in successful_indexes],

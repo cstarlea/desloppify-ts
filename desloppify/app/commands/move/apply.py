@@ -61,7 +61,9 @@ def check_rewrite_syntax(
     if dry_run:
         print(colorize("  ⚠ The import rewrites would break syntax in:", "yellow"))
         print(colorize(listing, "yellow"))
-        print(colorize("  A real run would abort without changing any files.", "yellow"))
+        print(
+            colorize("  A real run would abort without changing any files.", "yellow")
+        )
         return
     raise CommandError(
         "Move aborted: the import rewrites would break syntax in:\n"

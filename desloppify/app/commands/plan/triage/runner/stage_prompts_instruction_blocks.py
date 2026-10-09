@@ -437,9 +437,7 @@ confirmation if paths don't exist on disk.
 
 
 def _sense_check_instructions(mode: PromptMode = "self_record") -> str:
-    content_fix_block = (
-        'Fix with: `desloppify plan cluster update <name> --update-step N --detail "..." --effort <tag>`'
-    )
+    content_fix_block = 'Fix with: `desloppify plan cluster update <name> --update-step N --detail "..." --effort <tag>`'
     structure_fix_block = """\
 Fix with: `desloppify plan cluster update <name> --depends-on <other>`
 Fix with: `desloppify plan cluster update <name> --add-step "..." --detail "..." --effort trivial --issue-refs <hash>`
@@ -460,9 +458,7 @@ desloppify plan triage --stage sense-check --report "<findings summary>"
 ```
 """
     if mode == "output_only":
-        content_fix_block = (
-            "Report the exact step corrections that need to be made; the orchestrator will apply them."
-        )
+        content_fix_block = "Report the exact step corrections that need to be made; the orchestrator will apply them."
         structure_fix_block = (
             "Report the exact dependency additions or cascade steps that need to be made; "
             "the orchestrator will apply them.\n"

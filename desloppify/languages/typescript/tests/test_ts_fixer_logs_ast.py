@@ -22,7 +22,9 @@ needs_treesitter = pytest.mark.skipif(
 
 def _fix(source: str, *lines: int, path: str = "a.ts"):
     parsed = parse_text(source, path)
-    out, fixed, skipped = remove_debug_logs(parsed, [{"line": line, "tag": "T"} for line in lines])
+    out, fixed, skipped = remove_debug_logs(
+        parsed, [{"line": line, "tag": "T"} for line in lines]
+    )
     text = out.decode("utf-8")
     assert count_syntax_errors(text, path) == 0, text
     return text, [entry["line"] for entry in fixed], skipped
@@ -101,12 +103,25 @@ def test_jsx_handler_body():
     ("source", "line", "reason"),
     [
         pytest.param(
-            "if (debug) console.log('[T] a');\nelse go();\n", 1, "not_standalone", id="unbraced-if"
+            "if (debug) console.log('[T] a');\nelse go();\n",
+            1,
+            "not_standalone",
+            id="unbraced-if",
         ),
-        pytest.param("const f = () => console.log('[T] a');\n", 1, "not_standalone", id="arrow-body"),
-        pytest.param("x && console.log('[T] a');\n", 1, "not_standalone", id="in-expression"),
         pytest.param(
-            "let a = 1\nconsole.log('[T] a')\n(foo)()\n", 2, "not_standalone", id="called-result"
+            "const f = () => console.log('[T] a');\n",
+            1,
+            "not_standalone",
+            id="arrow-body",
+        ),
+        pytest.param(
+            "x && console.log('[T] a');\n", 1, "not_standalone", id="in-expression"
+        ),
+        pytest.param(
+            "let a = 1\nconsole.log('[T] a')\n(foo)()\n",
+            2,
+            "not_standalone",
+            id="called-result",
         ),
         pytest.param(
             "async function f() {\n  console.log('[T] saved', await save());\n}\n",
@@ -118,10 +133,16 @@ def test_jsx_handler_body():
         pytest.param("console.log('[T]', load());\n", 1, "side_effects", id="call"),
         pytest.param("console.log('[T]', ...args);\n", 1, "side_effects", id="spread"),
         pytest.param(
-            "const log = (m) => { console.log('[T]', m); };\n", 1, "logger_wrapper", id="wrapper"
+            "const log = (m) => { console.log('[T]', m); };\n",
+            1,
+            "logger_wrapper",
+            id="wrapper",
         ),
         pytest.param(
-            "let a = 1\nconsole.log('[T] a')\n;(foo)()\n", 2, "asi_hazard", id="no-semicolons"
+            "let a = 1\nconsole.log('[T] a')\n;(foo)()\n",
+            2,
+            "asi_hazard",
+            id="no-semicolons",
         ),
         pytest.param("console.log('not tagged');\n", 1, "not_found", id="untagged"),
     ],

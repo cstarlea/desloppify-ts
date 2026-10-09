@@ -24,7 +24,9 @@ def _det_unused(cat):
     def f(path):
         entries = unused_detector_mod.detect_unused(path, category=cat)[0]
         for entry in entries:
-            entry["issue_id"] = issue_id("unused", entry["file"], unused_issue_name(entry))
+            entry["issue_id"] = issue_id(
+                "unused", entry["file"], unused_issue_name(entry)
+            )
         return entries
 
     return f

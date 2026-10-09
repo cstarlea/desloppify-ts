@@ -321,10 +321,9 @@ def test_block_warns_when_plan_contains_stale_tracked_items():
 
 def test_plan_aware_queue_breakdown_basic():
     # Items list must match total since collapse is now caller-side
-    mock_items = (
-        [{"id": f"f{i}", "kind": "issue"} for i in range(49)]
-        + [{"id": "s1", "kind": "subjective_dimension"}]
-    )
+    mock_items = [{"id": f"f{i}", "kind": "issue"} for i in range(49)] + [
+        {"id": "s1", "kind": "subjective_dimension"}
+    ]
     mock_result = {
         "total": 50,
         "items": mock_items,
@@ -333,12 +332,15 @@ def test_plan_aware_queue_breakdown_basic():
         "queue_order": ["a", "b", "c"],
         "skipped": {"c": {"kind": "temporary"}},
     }
-    with patch(
-        "desloppify.app.commands.helpers.queue_progress.build_execution_queue",
-        return_value=mock_result,
-    ), patch(
-        "desloppify.app.commands.helpers.queue_progress.queue_context",
-        return_value=SimpleNamespace(snapshot=SimpleNamespace(phase="execute")),
+    with (
+        patch(
+            "desloppify.app.commands.helpers.queue_progress.build_execution_queue",
+            return_value=mock_result,
+        ),
+        patch(
+            "desloppify.app.commands.helpers.queue_progress.queue_context",
+            return_value=SimpleNamespace(snapshot=SimpleNamespace(phase="execute")),
+        ),
     ):
         breakdown = plan_aware_queue_breakdown({"issues": {}}, plan=plan)
     assert breakdown.queue_total == 50
@@ -415,12 +417,15 @@ def test_plan_aware_queue_breakdown_counts_only_live_queue_order_ids():
         all_postflight_workflow_items=(),
         all_postflight_triage_items=(),
     )
-    with patch(
-        "desloppify.app.commands.helpers.queue_progress.build_execution_queue",
-        return_value=mock_result,
-    ), patch(
-        "desloppify.app.commands.helpers.queue_progress.queue_context",
-        return_value=SimpleNamespace(snapshot=snapshot),
+    with (
+        patch(
+            "desloppify.app.commands.helpers.queue_progress.build_execution_queue",
+            return_value=mock_result,
+        ),
+        patch(
+            "desloppify.app.commands.helpers.queue_progress.queue_context",
+            return_value=SimpleNamespace(snapshot=snapshot),
+        ),
     ):
         breakdown = plan_aware_queue_breakdown({"issues": {}}, plan=plan)
     assert breakdown.plan_ordered == 1
@@ -446,12 +451,15 @@ def test_plan_aware_queue_breakdown_counts_execution_items_as_live():
         all_postflight_workflow_items=(),
         all_postflight_triage_items=(),
     )
-    with patch(
-        "desloppify.app.commands.helpers.queue_progress.build_execution_queue",
-        return_value=mock_result,
-    ), patch(
-        "desloppify.app.commands.helpers.queue_progress.queue_context",
-        return_value=SimpleNamespace(snapshot=snapshot),
+    with (
+        patch(
+            "desloppify.app.commands.helpers.queue_progress.build_execution_queue",
+            return_value=mock_result,
+        ),
+        patch(
+            "desloppify.app.commands.helpers.queue_progress.queue_context",
+            return_value=SimpleNamespace(snapshot=snapshot),
+        ),
     ):
         breakdown = plan_aware_queue_breakdown({"issues": {}}, plan=plan)
     assert breakdown.plan_ordered == 1

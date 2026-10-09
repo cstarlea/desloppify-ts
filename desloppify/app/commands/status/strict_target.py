@@ -37,15 +37,19 @@ def format_strict_target_progress(
         float(gap) if isinstance(gap, int | float) else round(target_f - current_f, 1)
     )
     if state == "below":
-        lines.append((
-            f"  Strict target: {target_f:.1f}/100 · currently {current_f:.1f}/100 ({gap_f:.1f} below target)",
-            "yellow",
-        ))
+        lines.append(
+            (
+                f"  Strict target: {target_f:.1f}/100 · currently {current_f:.1f}/100 ({gap_f:.1f} below target)",
+                "yellow",
+            )
+        )
     elif state == "above":
-        lines.append((
-            f"  Strict target: {target_f:.1f}/100 · currently {current_f:.1f}/100 ({abs(gap_f):.1f} above target)",
-            "green",
-        ))
+        lines.append(
+            (
+                f"  Strict target: {target_f:.1f}/100 · currently {current_f:.1f}/100 ({abs(gap_f):.1f} above target)",
+                "green",
+            )
+        )
     else:
         lines.append((f"  Strict target: {target_f:.1f}/100 · on target", "green"))
 

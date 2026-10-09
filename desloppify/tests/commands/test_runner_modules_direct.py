@@ -14,7 +14,14 @@ def test_wrap_cmd_c_collapses_arguments_into_single_string() -> None:
     wrap = codex_batch_mod._wrap_cmd_c
 
     # cmd /c with a path containing spaces — arguments are collapsed
-    cmd = ["cmd", "/c", "C:\\Program Files\\codex.cmd", "exec", "-C", "C:\\my project - Copy"]
+    cmd = [
+        "cmd",
+        "/c",
+        "C:\\Program Files\\codex.cmd",
+        "exec",
+        "-C",
+        "C:\\my project - Copy",
+    ]
     result = wrap(cmd)
     assert result[:2] == ["cmd", "/c"]
     assert len(result) == 3  # exactly three elements
@@ -33,7 +40,9 @@ def test_wrap_cmd_c_collapses_arguments_into_single_string() -> None:
     assert simple[2] == "codex exec -C repo"
 
 
-def test_codex_batch_command_on_windows_collapses_cmd_c(monkeypatch, tmp_path: Path) -> None:
+def test_codex_batch_command_on_windows_collapses_cmd_c(
+    monkeypatch, tmp_path: Path
+) -> None:
     """On Windows with a .cmd wrapper, paths with spaces must be quoted inside a single /c arg."""
     monkeypatch.setattr("sys.platform", "win32")
     monkeypatch.setattr(
@@ -97,7 +106,9 @@ def test_resolve_executable_skips_cmd_c_for_exe_on_windows(monkeypatch) -> None:
     assert result == ["/usr/local/bin/codex"]
 
 
-def test_codex_batch_command_exe_on_windows_no_cmd_c(monkeypatch, tmp_path: Path) -> None:
+def test_codex_batch_command_exe_on_windows_no_cmd_c(
+    monkeypatch, tmp_path: Path
+) -> None:
     """On Windows with a .exe binary, prompts with spaces must not be wrapped in cmd /c."""
     monkeypatch.setattr("sys.platform", "win32")
     monkeypatch.setattr("shutil.which", lambda _name: "C:\\Users\\me\\codex.exe")
@@ -115,7 +126,9 @@ def test_codex_batch_command_exe_on_windows_no_cmd_c(monkeypatch, tmp_path: Path
     assert cmd[-1] == "-"
 
 
-def test_codex_batch_command_uses_stdin_for_large_prompts(monkeypatch, tmp_path: Path) -> None:
+def test_codex_batch_command_uses_stdin_for_large_prompts(
+    monkeypatch, tmp_path: Path
+) -> None:
     monkeypatch.setattr("sys.platform", "darwin")
     monkeypatch.setattr("shutil.which", lambda _name: "/usr/local/bin/codex")
 
@@ -129,7 +142,9 @@ def test_codex_batch_command_uses_stdin_for_large_prompts(monkeypatch, tmp_path:
     assert "x" * 100 not in cmd
 
 
-def test_run_codex_batch_sends_stdin_when_command_uses_dash(monkeypatch, tmp_path: Path) -> None:
+def test_run_codex_batch_sends_stdin_when_command_uses_dash(
+    monkeypatch, tmp_path: Path
+) -> None:
     captured: dict[str, object] = {}
 
     def fake_run(cmd, **kwargs):
@@ -137,7 +152,9 @@ def test_run_codex_batch_sends_stdin_when_command_uses_dash(monkeypatch, tmp_pat
         captured["input"] = kwargs.get("input")
         return SimpleNamespace(returncode=0, stdout="", stderr="")
 
-    monkeypatch.setattr(codex_batch_mod, "handle_successful_attempt", lambda **_kwargs: 0)
+    monkeypatch.setattr(
+        codex_batch_mod, "handle_successful_attempt", lambda **_kwargs: 0
+    )
 
     code = codex_batch_mod.run_codex_batch(
         prompt="large review prompt",
@@ -148,7 +165,9 @@ def test_run_codex_batch_sends_stdin_when_command_uses_dash(monkeypatch, tmp_pat
             timeout_seconds=10,
             subprocess_run=fake_run,
             timeout_error=TimeoutError,
-            safe_write_text_fn=lambda path, text: path.write_text(text, encoding="utf-8"),
+            safe_write_text_fn=lambda path, text: path.write_text(
+                text, encoding="utf-8"
+            ),
             use_popen_runner=False,
             max_retries=0,
             retry_backoff_seconds=0,
@@ -164,7 +183,9 @@ def test_run_codex_batch_sends_stdin_when_command_uses_dash(monkeypatch, tmp_pat
     assert captured["input"] == "large review prompt"
 
 
-def test_codex_batch_command_uses_sanitized_reasoning_effort(monkeypatch, tmp_path: Path) -> None:
+def test_codex_batch_command_uses_sanitized_reasoning_effort(
+    monkeypatch, tmp_path: Path
+) -> None:
     monkeypatch.setenv("DESLOPPIFY_CODEX_REASONING_EFFORT", "HIGH")
 
     command = codex_batch_mod.codex_batch_command(
@@ -190,7 +211,9 @@ def test_codex_batch_command_uses_sanitized_reasoning_effort(monkeypatch, tmp_pa
     assert "model_reasoning_effort=low" in " ".join(command)
 
 
-def test_codex_batch_command_uses_sandbox_env_override(monkeypatch, tmp_path: Path) -> None:
+def test_codex_batch_command_uses_sandbox_env_override(
+    monkeypatch, tmp_path: Path
+) -> None:
     monkeypatch.setattr("sys.platform", "darwin")
     monkeypatch.setattr("shutil.which", lambda _name: "/usr/local/bin/codex")
     monkeypatch.setenv("DESLOPPIFY_CODEX_SANDBOX", "danger-full-access")
@@ -213,7 +236,9 @@ def test_codex_batch_command_uses_sandbox_env_override(monkeypatch, tmp_path: Pa
     assert command[command.index("-s") + 1] == "workspace-write"
 
 
-def test_run_codex_batch_retries_timeout_or_stall_until_success(monkeypatch, tmp_path: Path) -> None:
+def test_run_codex_batch_retries_timeout_or_stall_until_success(
+    monkeypatch, tmp_path: Path
+) -> None:
     attempts: list[int] = []
     sleeps: list[float] = []
     log_file = tmp_path / "batch.log"
@@ -234,17 +259,23 @@ def test_run_codex_batch_retries_timeout_or_stall_until_success(monkeypatch, tmp
         attempts.append(kwargs["attempt"])
         return (
             f"ATTEMPT {kwargs['attempt']}",
-            SimpleNamespace(stdout_text="stdout", stderr_text="stderr", exit_code=1, ok=False),
+            SimpleNamespace(
+                stdout_text="stdout", stderr_text="stderr", exit_code=1, ok=False
+            ),
         )
 
     monkeypatch.setattr(codex_batch_mod, "run_batch_attempt", fake_run_batch_attempt)
-    monkeypatch.setattr(codex_batch_mod, "handle_early_attempt_return", lambda _result: None)
+    monkeypatch.setattr(
+        codex_batch_mod, "handle_early_attempt_return", lambda _result: None
+    )
     monkeypatch.setattr(
         codex_batch_mod,
         "handle_timeout_or_stall",
         lambda **kwargs: 7 if kwargs["header"] == "ATTEMPT 1" else 0,
     )
-    monkeypatch.setattr(codex_batch_mod, "handle_successful_attempt", lambda **_kwargs: None)
+    monkeypatch.setattr(
+        codex_batch_mod, "handle_successful_attempt", lambda **_kwargs: None
+    )
     monkeypatch.setattr(codex_batch_mod, "handle_failed_attempt", lambda **_kwargs: 1)
 
     code = codex_batch_mod.run_codex_batch(
@@ -254,7 +285,9 @@ def test_run_codex_batch_retries_timeout_or_stall_until_success(monkeypatch, tmp
         log_file=log_file,
         deps=SimpleNamespace(
             sleep_fn=sleeps.append,
-            safe_write_text_fn=lambda path, text: path.write_text(text, encoding="utf-8"),
+            safe_write_text_fn=lambda path, text: path.write_text(
+                text, encoding="utf-8"
+            ),
         ),
         codex_batch_command_fn=lambda **_kwargs: ["codex", "exec"],
     )

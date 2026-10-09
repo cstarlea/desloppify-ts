@@ -13,6 +13,7 @@ from desloppify.engine.plan_triage import (
 # Helpers — realistic work-queue items
 # ---------------------------------------------------------------------------
 
+
 def _issue_item(
     *,
     id: str = "smells::src/util.py::long_fn",
@@ -127,6 +128,7 @@ def _subjective_item(
 def _strip_ansi(text: str) -> str:
     """Remove ANSI escape sequences for easier assertions."""
     import re
+
     return re.sub(r"\x1b\[[0-9;]*m", "", text)
 
 
@@ -146,6 +148,7 @@ def _commands_in_output(text: str) -> list[str]:
 # ---------------------------------------------------------------------------
 # _item_label
 # ---------------------------------------------------------------------------
+
 
 def test_item_label_single_item_no_queue_pos() -> None:
     item: dict = {"summary": "x"}
@@ -175,6 +178,7 @@ def test_item_label_multiple_items_no_queue_pos() -> None:
 # Single issue item rendering
 # ---------------------------------------------------------------------------
 
+
 def test_render_single_issue_item_basic(monkeypatch, capsys) -> None:
     """A single issue item prints confidence, separator, summary, file, and ID."""
     monkeypatch.setattr(render_mod, "read_code_snippet", lambda *a, **k: None)
@@ -187,7 +191,11 @@ def test_render_single_issue_item_basic(monkeypatch, capsys) -> None:
     )
 
     render_mod.render_terminal_items(
-        [item], {}, {}, group="item", explain=False,
+        [item],
+        {},
+        {},
+        group="item",
+        explain=False,
     )
     out = capsys.readouterr().out
     assert "Next item" in out
@@ -205,7 +213,11 @@ def test_render_single_issue_detail_string(monkeypatch, capsys) -> None:
 
     item = _issue_item(detail="Just a string suggestion")
     render_mod.render_terminal_items(
-        [item], {}, {}, group="item", explain=False,
+        [item],
+        {},
+        {},
+        group="item",
+        explain=False,
     )
     out = capsys.readouterr().out
     assert "Suggestion: Just a string suggestion" in out
@@ -218,7 +230,11 @@ def test_render_single_issue_with_plan_description(monkeypatch, capsys) -> None:
 
     item = _issue_item(plan_description="Merge into shared helper")
     render_mod.render_terminal_items(
-        [item], {}, {}, group="item", explain=False,
+        [item],
+        {},
+        {},
+        group="item",
+        explain=False,
     )
     out = capsys.readouterr().out
     assert "Merge into shared helper" in out
@@ -238,7 +254,11 @@ def test_render_single_issue_with_plan_cluster_and_steps(monkeypatch, capsys) ->
         },
     )
     render_mod.render_terminal_items(
-        [item], {}, {}, group="item", explain=False,
+        [item],
+        {},
+        {},
+        group="item",
+        explain=False,
     )
     out = capsys.readouterr().out
     assert "Cluster: import-cleanup" in out
@@ -248,8 +268,10 @@ def test_render_single_issue_with_plan_cluster_and_steps(monkeypatch, capsys) ->
     assert "2. Sort remaining" in out
 
 
-def test_render_relevant_steps_keep_their_cluster_step_number(monkeypatch, capsys) -> None:
-    """"Your step(s)" shows the 1-based step number used by ``--done-step N``."""
+def test_render_relevant_steps_keep_their_cluster_step_number(
+    monkeypatch, capsys
+) -> None:
+    """ "Your step(s)" shows the 1-based step number used by ``--done-step N``."""
     monkeypatch.setattr(render_mod, "read_code_snippet", lambda *a, **k: None)
     monkeypatch.setattr(render_mod, "colorize", lambda t, _s: t)
 
@@ -259,14 +281,22 @@ def test_render_relevant_steps_keep_their_cluster_step_number(monkeypatch, capsy
             "total_items": 2,
             "action_steps": [
                 {"title": "Remove unused imports", "issue_refs": ["other::x"]},
-                {"title": "Split long_fn", "detail": "Extract helpers.", "issue_refs": [
-                    "smells::src/util.py::long_fn",
-                ]},
+                {
+                    "title": "Split long_fn",
+                    "detail": "Extract helpers.",
+                    "issue_refs": [
+                        "smells::src/util.py::long_fn",
+                    ],
+                },
             ],
         },
     )
     render_mod.render_terminal_items(
-        [item], {}, {}, group="item", explain=False,
+        [item],
+        {},
+        {},
+        group="item",
+        explain=False,
     )
     out = capsys.readouterr().out
     assert "Your step(s):" in out
@@ -282,7 +312,11 @@ def test_render_single_issue_with_category_and_importers(monkeypatch, capsys) ->
 
     item = _issue_item(detail={"category": "complexity", "importers": 3})
     render_mod.render_terminal_items(
-        [item], {}, {}, group="item", explain=False,
+        [item],
+        {},
+        {},
+        group="item",
+        explain=False,
     )
     out = capsys.readouterr().out
     assert "Category: complexity" in out
@@ -292,6 +326,7 @@ def test_render_single_issue_with_category_and_importers(monkeypatch, capsys) ->
 # ---------------------------------------------------------------------------
 # Auto-fix type and batch hint
 # ---------------------------------------------------------------------------
+
 
 def test_render_auto_fix_type_label(monkeypatch, capsys) -> None:
     """An auto-fixable item shows the Type: Auto-fixable label."""
@@ -304,7 +339,11 @@ def test_render_auto_fix_type_label(monkeypatch, capsys) -> None:
         action_type="auto_fix",
     )
     render_mod.render_terminal_items(
-        [item], {}, {}, group="item", explain=False,
+        [item],
+        {},
+        {},
+        group="item",
+        explain=False,
     )
     out = capsys.readouterr().out
     assert "Type: Auto-fixable" in out
@@ -325,7 +364,11 @@ def test_render_auto_fix_batch_hint(monkeypatch, capsys) -> None:
         "unused_import::c.py::z": {"detector": "unused_import", "status": "open"},
     }
     render_mod.render_terminal_items(
-        [item], {}, issues_scoped, group="item", explain=False,
+        [item],
+        {},
+        issues_scoped,
+        group="item",
+        explain=False,
     )
     out = capsys.readouterr().out
     assert "Auto-fixable: 3 similar issues" in out
@@ -338,7 +381,11 @@ def test_render_review_type_label(monkeypatch, capsys) -> None:
 
     item = _issue_item(detector="review", summary="Review naming")
     render_mod.render_terminal_items(
-        [item], {}, {}, group="item", explain=False,
+        [item],
+        {},
+        {},
+        group="item",
+        explain=False,
     )
     out = capsys.readouterr().out
     assert "Design review" in out
@@ -347,6 +394,7 @@ def test_render_review_type_label(monkeypatch, capsys) -> None:
 # ---------------------------------------------------------------------------
 # Cluster item rendering
 # ---------------------------------------------------------------------------
+
 
 def test_render_cluster_item_output(monkeypatch, capsys) -> None:
     """Cluster items print type label, member count, summary, sample, and commands."""
@@ -358,7 +406,11 @@ def test_render_cluster_item_output(monkeypatch, capsys) -> None:
     ]
     item = _cluster_item(members=members, member_count=2)
     render_mod.render_terminal_items(
-        [item], {}, {}, group="item", explain=False,
+        [item],
+        {},
+        {},
+        group="item",
+        explain=False,
     )
     out = capsys.readouterr().out
     commands = _commands_in_output(out)
@@ -377,7 +429,11 @@ def test_render_optional_cluster_shows_skip(monkeypatch, capsys) -> None:
 
     item = _cluster_item(cluster_optional=True)
     render_mod.render_terminal_items(
-        [item], {}, {}, group="item", explain=False,
+        [item],
+        {},
+        {},
+        group="item",
+        explain=False,
     )
     out = capsys.readouterr().out
     commands = _commands_in_output(out)
@@ -389,6 +445,7 @@ def test_render_optional_cluster_shows_skip(monkeypatch, capsys) -> None:
 # ---------------------------------------------------------------------------
 # Workflow stage and action rendering
 # ---------------------------------------------------------------------------
+
 
 def test_render_workflow_stage_unblocked(monkeypatch, capsys) -> None:
     """An unblocked workflow stage shows the stage name and action."""
@@ -410,7 +467,11 @@ def test_render_workflow_stage_unblocked(monkeypatch, capsys) -> None:
         },
     )
     render_mod.render_terminal_items(
-        [item], {}, {}, group="item", explain=False,
+        [item],
+        {},
+        {},
+        group="item",
+        explain=False,
     )
     out = capsys.readouterr().out
     commands = _commands_in_output(out)
@@ -435,7 +496,11 @@ def test_render_workflow_stage_blocked(monkeypatch, capsys) -> None:
         blocked_by=["triage::observe"],
     )
     render_mod.render_terminal_items(
-        [item], {}, {}, group="item", explain=False,
+        [item],
+        {},
+        {},
+        group="item",
+        explain=False,
     )
     out = capsys.readouterr().out
     commands = _commands_in_output(out)
@@ -456,7 +521,11 @@ def test_render_workflow_stage_with_review_issues(monkeypatch, capsys) -> None:
 
     item = _workflow_stage_item(detail={"total_review_issues": 12})
     render_mod.render_terminal_items(
-        [item], {}, {}, group="item", explain=False,
+        [item],
+        {},
+        {},
+        group="item",
+        explain=False,
     )
     out = capsys.readouterr().out
     assert "12 review work items" in out
@@ -468,7 +537,11 @@ def test_render_workflow_action(monkeypatch, capsys) -> None:
 
     item = _workflow_action_item()
     render_mod.render_terminal_items(
-        [item], {}, {}, group="item", explain=False,
+        [item],
+        {},
+        {},
+        group="item",
+        explain=False,
     )
     out = capsys.readouterr().out
     commands = _commands_in_output(out)
@@ -481,6 +554,7 @@ def test_render_workflow_action(monkeypatch, capsys) -> None:
 # Subjective dimension rendering
 # ---------------------------------------------------------------------------
 
+
 def test_render_subjective_dimension(monkeypatch, capsys) -> None:
     """Subjective dimension items show dimension name, score, and re-review note."""
     monkeypatch.setattr(render_mod, "read_code_snippet", lambda *a, **k: None)
@@ -488,7 +562,11 @@ def test_render_subjective_dimension(monkeypatch, capsys) -> None:
 
     item = _subjective_item()
     render_mod.render_terminal_items(
-        [item], {}, {}, group="item", explain=False,
+        [item],
+        {},
+        {},
+        group="item",
+        explain=False,
     )
     out = capsys.readouterr().out
     assert "Dimension: readability" in out
@@ -503,7 +581,11 @@ def test_render_subjective_dimension_explain_mode(monkeypatch, capsys) -> None:
 
     item = _subjective_item(explain={"policy": "subjective items are deprioritized"})
     render_mod.render_terminal_items(
-        [item], {}, {}, group="item", explain=True,
+        [item],
+        {},
+        {},
+        group="item",
+        explain=True,
     )
     out = capsys.readouterr().out
     assert "subjective items are deprioritized" in out
@@ -512,6 +594,7 @@ def test_render_subjective_dimension_explain_mode(monkeypatch, capsys) -> None:
 # ---------------------------------------------------------------------------
 # Explain mode for regular items
 # ---------------------------------------------------------------------------
+
 
 def test_render_explain_mode_shows_ranking_info(monkeypatch, capsys) -> None:
     """Explain mode shows confidence, count, and ID in the explain line."""
@@ -524,7 +607,11 @@ def test_render_explain_mode_shows_ranking_info(monkeypatch, capsys) -> None:
         detail={"count": 5},
     )
     render_mod.render_terminal_items(
-        [item], {}, {}, group="item", explain=True,
+        [item],
+        {},
+        {},
+        group="item",
+        explain=True,
     )
     out = capsys.readouterr().out
     assert "explain:" in out
@@ -537,12 +624,14 @@ def test_render_explain_mode_shows_ranking_info(monkeypatch, capsys) -> None:
 # Grouped output
 # ---------------------------------------------------------------------------
 
+
 def test_render_grouped_output(monkeypatch, capsys) -> None:
     """Group mode delegates to render_grouped and prints grouped output."""
     monkeypatch.setattr(support_mod, "colorize", lambda t, _s: t)
     # Stub group_queue_items to return a simple grouping
     monkeypatch.setattr(
-        support_mod, "group_queue_items",
+        support_mod,
+        "group_queue_items",
         lambda items, group: {"smells": items},
     )
 
@@ -551,7 +640,11 @@ def test_render_grouped_output(monkeypatch, capsys) -> None:
         _issue_item(id="smells::b", summary="Issue B", confidence="low"),
     ]
     render_mod.render_terminal_items(
-        items, {}, {}, group="detector", explain=False,
+        items,
+        {},
+        {},
+        group="detector",
+        explain=False,
     )
     out = capsys.readouterr().out
     assert "smells (2)" in out
@@ -562,6 +655,7 @@ def test_render_grouped_output(monkeypatch, capsys) -> None:
 # ---------------------------------------------------------------------------
 # Cluster drill-in (compact rendering for follow-up items)
 # ---------------------------------------------------------------------------
+
 
 def test_cluster_drill_in_first_full_rest_compact(monkeypatch, capsys) -> None:
     """With active_cluster, first item is full, rest are compact one-liners."""
@@ -576,11 +670,24 @@ def test_cluster_drill_in_first_full_rest_compact(monkeypatch, capsys) -> None:
     ]
     plan = {
         "active_cluster": "import-cleanup",
-        "clusters": {"import-cleanup": {"issue_ids": ["smells::a.py::f1", "smells::b.py::f2", "smells::c.py::f3"]}},
+        "clusters": {
+            "import-cleanup": {
+                "issue_ids": [
+                    "smells::a.py::f1",
+                    "smells::b.py::f2",
+                    "smells::c.py::f3",
+                ]
+            }
+        },
     }
 
     render_mod.render_terminal_items(
-        items, {}, {}, group="item", explain=False, plan=plan,
+        items,
+        {},
+        {},
+        group="item",
+        explain=False,
+        plan=plan,
     )
     out = capsys.readouterr().out
 
@@ -600,6 +707,7 @@ def test_cluster_drill_in_first_full_rest_compact(monkeypatch, capsys) -> None:
 # Plan note
 # ---------------------------------------------------------------------------
 
+
 def test_render_plan_note_shown(monkeypatch, capsys) -> None:
     """A plan_note on an item is printed."""
     monkeypatch.setattr(render_mod, "read_code_snippet", lambda *a, **k: None)
@@ -607,7 +715,11 @@ def test_render_plan_note_shown(monkeypatch, capsys) -> None:
 
     item = _issue_item(plan_note="Handle edge case first")
     render_mod.render_terminal_items(
-        [item], {}, {}, group="item", explain=False,
+        [item],
+        {},
+        {},
+        group="item",
+        explain=False,
     )
     out = capsys.readouterr().out
     assert "Note: Handle edge case first" in out

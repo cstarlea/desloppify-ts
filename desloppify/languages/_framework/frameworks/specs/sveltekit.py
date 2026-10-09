@@ -22,7 +22,13 @@ SVELTEKIT_ENTRY_CONVENTIONS = EntryConventions(
     config_files=_SVELTE_CONFIG_FILES,
     extensions=SCRIPT_EXTENSIONS | {".svelte"},
     root_stems=frozenset(
-        {"hooks", "hooks.server", "hooks.client", "service-worker", "instrumentation.server"}
+        {
+            "hooks",
+            "hooks.server",
+            "hooks.client",
+            "service-worker",
+            "instrumentation.server",
+        }
     ),
     route_dir="routes",
     route_stem_prefix="+",
@@ -46,7 +52,9 @@ SVELTEKIT_SCANNERS: tuple[ScannerRule, ...] = (
             ),
             detail={"line": entry["line"], "module": entry["module"]},
         ),
-        log_message=lambda count: f"       sveltekit: {count} server-only imports in client modules",
+        log_message=lambda count: (
+            f"       sveltekit: {count} server-only imports in client modules"
+        ),
     ),
     ScannerRule(
         id="load_global_fetch",
@@ -66,7 +74,9 @@ SVELTEKIT_SCANNERS: tuple[ScannerRule, ...] = (
             ),
             detail={"line": entry["line"]},
         ),
-        log_message=lambda count: f"       sveltekit: {count} load functions use the global fetch",
+        log_message=lambda count: (
+            f"       sveltekit: {count} load functions use the global fetch"
+        ),
     ),
     ScannerRule(
         id="redirect_in_try",
@@ -83,7 +93,9 @@ SVELTEKIT_SCANNERS: tuple[ScannerRule, ...] = (
             ),
             detail={"line": entry["line"]},
         ),
-        log_message=lambda count: f"       sveltekit: {count} redirects caught by their own try",
+        log_message=lambda count: (
+            f"       sveltekit: {count} redirects caught by their own try"
+        ),
     ),
 )
 

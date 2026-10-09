@@ -71,9 +71,9 @@ def test_shared_plan_access_warns_once_across_resolve_helpers(capsys) -> None:
             patterns=["review::a"],
             status="fixed",
             plan_access=access,
-            )
-            is False
         )
+        is False
+    )
     err = capsys.readouterr().err
     assert err.count("Warning: resolve is running in degraded mode") == 1
 

@@ -22,10 +22,16 @@ def _single_expression(info) -> object | None:
         value = body
     else:
         stmts = statements(body)
-        if len(stmts) != 1 or stmts[0].type not in ("return_statement", "expression_statement"):
+        if len(stmts) != 1 or stmts[0].type not in (
+            "return_statement",
+            "expression_statement",
+        ):
             return None
         value = stmts[0].named_children[0] if stmts[0].named_children else None
-    while value is not None and value.type in ("await_expression", "parenthesized_expression"):
+    while value is not None and value.type in (
+        "await_expression",
+        "parenthesized_expression",
+    ):
         value = value.named_children[0] if value.named_children else None
     return value
 
@@ -48,7 +54,11 @@ def _forwarded_call_target(parsed: ParsedSource, definition: Definition) -> str 
     for arg in args.named_children:
         if arg.type == "comment":
             continue
-        if arg.type == "spread_element" and arg.named_children and arg.named_children[0].type == "identifier":
+        if (
+            arg.type == "spread_element"
+            and arg.named_children
+            and arg.named_children[0].type == "identifier"
+        ):
             actual.append(("...", parsed.text(arg.named_children[0])))
         elif arg.type == "identifier":
             actual.append(("", parsed.text(arg)))
@@ -96,7 +106,11 @@ def _delegate_member(parsed: ParsedSource, value) -> str | None:
             return None
         if obj.type == "this":
             # ``this.x`` alone is the class's own state, not a delegate.
-            return None if node is value else parsed.text(node.child_by_field_name("property"))
+            return (
+                None
+                if node is value
+                else parsed.text(node.child_by_field_name("property"))
+            )
         node = obj
     return None
 
@@ -116,7 +130,10 @@ def _find_delegation_heavy_classes(parsed: ParsedSource) -> list[dict]:
         for member in methods:
             body = member.node.child_by_field_name("body")  # type: ignore[attr-defined]
             stmts = statements(body) if body is not None else []
-            if len(stmts) != 1 or stmts[0].type not in ("return_statement", "expression_statement"):
+            if len(stmts) != 1 or stmts[0].type not in (
+                "return_statement",
+                "expression_statement",
+            ):
                 continue
             value = stmts[0].named_children[0] if stmts[0].named_children else None
             while value is not None and value.type == "await_expression":
@@ -144,9 +161,15 @@ def _find_delegation_heavy_classes(parsed: ParsedSource) -> list[dict]:
     return results
 
 
-def _find_facade_modules(content: str, parsed: ParsedSource | None, *, loc: int) -> dict | None:
+def _find_facade_modules(
+    content: str, parsed: ParsedSource | None, *, loc: int
+) -> dict | None:
     """A pure re-export module, as the ``facade`` detector defines one."""
-    found = reexport_sources(content, parsed) if "export" in content and "from" in content else None
+    found = (
+        reexport_sources(content, parsed)
+        if "export" in content and "from" in content
+        else None
+    )
     if not found:
         return None
     sources = list(dict.fromkeys(found))

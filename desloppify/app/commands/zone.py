@@ -130,7 +130,9 @@ def _zone_show(args: argparse.Namespace):
         for key in sorted(overrides):
             count = decided_by.get(key, 0)
             files_label = "file" if count == 1 else "files"
-            print(colorize(f"    {key} → {overrides[key]} ({count} {files_label})", "dim"))
+            print(
+                colorize(f"    {key} → {overrides[key]} ({count} {files_label})", "dim")
+            )
     print(colorize("  Override: desloppify zone set <file|dir|'glob'> <zone>", "dim"))
     print(colorize("  Clear:    desloppify zone clear <file|dir|'glob'>", "dim"))
     print_agent_plan(
@@ -181,7 +183,9 @@ def _zone_clear(args: argparse.Namespace):
         print(colorize(f"  No override found for {key}", "yellow"))
         covering = matching_override(key, overrides)
         if covering is not None:
-            print(colorize(f"  It is covered by {covering}; clear that instead.", "dim"))
+            print(
+                colorize(f"  It is covered by {covering}; clear that instead.", "dim")
+            )
         return
 
     before = dict(overrides)

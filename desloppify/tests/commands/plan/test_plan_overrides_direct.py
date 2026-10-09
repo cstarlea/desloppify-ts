@@ -435,19 +435,21 @@ def test_resolve_workflow_patterns_reconciles_when_create_plan_drains_queue(
     monkeypatch.setattr(
         resolve_workflow_mod,
         "reconcile_plan",
-        lambda _plan, _state, *, target_strict: seen.append(
-            (
-                "reconcile",
-                list(_plan.get("queue_order", [])),
-                target_strict,
-                _plan.get("refresh_state", {}).get("workflow_plan_just_resolved"),
+        lambda _plan, _state, *, target_strict: (
+            seen.append(
+                (
+                    "reconcile",
+                    list(_plan.get("queue_order", [])),
+                    target_strict,
+                    _plan.get("refresh_state", {}).get("workflow_plan_just_resolved"),
+                )
             )
-        )
-        or type(
-            "Result",
-            (),
-            {"lifecycle_phase_changed": False, "lifecycle_phase": "triage"},
-        )(),
+            or type(
+                "Result",
+                (),
+                {"lifecycle_phase_changed": False, "lifecycle_phase": "triage"},
+            )()
+        ),
     )
 
     args = argparse.Namespace(
@@ -675,10 +677,16 @@ def test_plan_promote_filters_resolved_cluster_members(monkeypatch, capsys) -> N
     saved: list[dict] = []
 
     monkeypatch.setattr(reorder_handlers_mod, "command_runtime", lambda _args: runtime)
-    monkeypatch.setattr(reorder_handlers_mod, "require_issue_inventory", lambda _state: True)
+    monkeypatch.setattr(
+        reorder_handlers_mod, "require_issue_inventory", lambda _state: True
+    )
     monkeypatch.setattr(reorder_handlers_mod, "load_plan", lambda: plan)
-    monkeypatch.setattr(reorder_handlers_mod, "save_plan", lambda plan_obj: saved.append(plan_obj))
-    monkeypatch.setattr(reorder_handlers_mod, "append_log_entry", lambda *_a, **_k: None)
+    monkeypatch.setattr(
+        reorder_handlers_mod, "save_plan", lambda plan_obj: saved.append(plan_obj)
+    )
+    monkeypatch.setattr(
+        reorder_handlers_mod, "append_log_entry", lambda *_a, **_k: None
+    )
 
     reorder_handlers_mod.cmd_plan_promote(
         argparse.Namespace(patterns=["cluster-a"], position="top", target=None)
@@ -691,7 +699,9 @@ def test_plan_promote_filters_resolved_cluster_members(monkeypatch, capsys) -> N
     assert saved == [plan]
 
 
-def test_plan_promote_noops_when_cluster_has_no_actionable_members(monkeypatch, capsys) -> None:
+def test_plan_promote_noops_when_cluster_has_no_actionable_members(
+    monkeypatch, capsys
+) -> None:
     plan = {"queue_order": [], "clusters": {"cluster-a": {"issue_ids": ["fixed::a"]}}}
     runtime = SimpleNamespace(
         state={"issues": {"fixed::a": {"id": "fixed::a", "status": "fixed"}}}
@@ -699,9 +709,13 @@ def test_plan_promote_noops_when_cluster_has_no_actionable_members(monkeypatch, 
     saved: list[dict] = []
 
     monkeypatch.setattr(reorder_handlers_mod, "command_runtime", lambda _args: runtime)
-    monkeypatch.setattr(reorder_handlers_mod, "require_issue_inventory", lambda _state: True)
+    monkeypatch.setattr(
+        reorder_handlers_mod, "require_issue_inventory", lambda _state: True
+    )
     monkeypatch.setattr(reorder_handlers_mod, "load_plan", lambda: plan)
-    monkeypatch.setattr(reorder_handlers_mod, "save_plan", lambda plan_obj: saved.append(plan_obj))
+    monkeypatch.setattr(
+        reorder_handlers_mod, "save_plan", lambda plan_obj: saved.append(plan_obj)
+    )
 
     reorder_handlers_mod.cmd_plan_promote(
         argparse.Namespace(patterns=["cluster-a"], position="top", target=None)
@@ -848,14 +862,14 @@ def test_cmd_plan_skip_reconciles_with_fresh_state_after_invalidation(
     monkeypatch.setattr(
         override_skip_mod,
         "reconcile_plan",
-        lambda _plan, _state, *, target_strict: seen.append(
-            ("reconcile", _state, target_strict)
-        )
-        or type(
-            "Result",
-            (),
-            {"lifecycle_phase_changed": True, "lifecycle_phase": "execute"},
-        )(),
+        lambda _plan, _state, *, target_strict: (
+            seen.append(("reconcile", _state, target_strict))
+            or type(
+                "Result",
+                (),
+                {"lifecycle_phase_changed": True, "lifecycle_phase": "execute"},
+            )()
+        ),
     )
     monkeypatch.setattr(
         override_skip_mod, "save_plan_state_transactional", lambda **_k: None
@@ -926,14 +940,14 @@ def test_cmd_plan_unskip_reconciles_with_reopened_state(monkeypatch) -> None:
     monkeypatch.setattr(
         override_skip_mod,
         "reconcile_plan",
-        lambda _plan, _state, *, target_strict: seen.append(
-            ("reconcile", _state, target_strict)
-        )
-        or type(
-            "Result",
-            (),
-            {"lifecycle_phase_changed": True, "lifecycle_phase": "execute"},
-        )(),
+        lambda _plan, _state, *, target_strict: (
+            seen.append(("reconcile", _state, target_strict))
+            or type(
+                "Result",
+                (),
+                {"lifecycle_phase_changed": True, "lifecycle_phase": "execute"},
+            )()
+        ),
     )
     monkeypatch.setattr(
         override_skip_mod, "save_plan_state_transactional", lambda **_k: None
@@ -990,14 +1004,14 @@ def test_cmd_plan_backlog_reconciles_after_invalidation(monkeypatch) -> None:
     monkeypatch.setattr(
         override_skip_mod,
         "reconcile_plan",
-        lambda _plan, _state, *, target_strict: seen.append(
-            ("reconcile", _state, target_strict)
-        )
-        or type(
-            "Result",
-            (),
-            {"lifecycle_phase_changed": True, "lifecycle_phase": "execute"},
-        )(),
+        lambda _plan, _state, *, target_strict: (
+            seen.append(("reconcile", _state, target_strict))
+            or type(
+                "Result",
+                (),
+                {"lifecycle_phase_changed": True, "lifecycle_phase": "execute"},
+            )()
+        ),
     )
     monkeypatch.setattr(
         override_skip_mod, "save_plan_state_transactional", lambda **_k: None
@@ -1046,14 +1060,14 @@ def test_cmd_plan_reopen_reconciles_after_invalidation(monkeypatch) -> None:
     monkeypatch.setattr(
         override_misc_mod,
         "reconcile_plan",
-        lambda _plan, _state, *, target_strict: seen.append(
-            ("reconcile", _state, target_strict)
-        )
-        or type(
-            "Result",
-            (),
-            {"lifecycle_phase_changed": True, "lifecycle_phase": "execute"},
-        )(),
+        lambda _plan, _state, *, target_strict: (
+            seen.append(("reconcile", _state, target_strict))
+            or type(
+                "Result",
+                (),
+                {"lifecycle_phase_changed": True, "lifecycle_phase": "execute"},
+            )()
+        ),
     )
     monkeypatch.setattr(
         override_misc_mod, "save_plan_state_transactional", lambda **_k: None

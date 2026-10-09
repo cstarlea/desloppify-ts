@@ -47,10 +47,7 @@ def test_subjective_rerun_command_builds_dimension_and_holistic_variants():
         [],
         max_items=5,
     )
-    assert (
-        command_holistic
-        == "`desloppify review --prepare --force-review-rerun`"
-    )
+    assert command_holistic == "`desloppify review --prepare --force-review-rerun`"
 
 
 def test_subjective_rerun_command_prefers_open_review_queue_when_issues_exist():
@@ -120,7 +117,9 @@ def test_show_subjective_paths_prioritizes_integrity_gap(monkeypatch, capsys):
     assert "show subjective" in out
 
 
-def test_show_subjective_paths_prints_out_of_scope_subjective_breakdown(monkeypatch, capsys):
+def test_show_subjective_paths_prints_out_of_scope_subjective_breakdown(
+    monkeypatch, capsys
+):
     monkeypatch.setattr(
         scan_reporting_dimensions_mod,
         "scorecard_dimension_rows",

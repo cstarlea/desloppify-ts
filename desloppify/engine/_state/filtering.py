@@ -100,7 +100,7 @@ _FINGERPRINT_EXCLUDED_DETAIL_KEYS = {
 def _issue_name(issue_id: str, file: str, detector: str) -> str:
     prefix = f"{detector}::{file}::"
     if issue_id.startswith(prefix):
-        return issue_id[len(prefix):]
+        return issue_id[len(prefix) :]
     parts = issue_id.split("::")
     return parts[-1] if len(parts) > 2 else ""
 
@@ -192,7 +192,9 @@ def matched_ignore_pattern(
         if "::" in pattern:
             if issue_id.startswith(pattern):
                 return pattern
-            if fingerprint and fingerprint in _metadata_fingerprints(pattern, ignore_metadata):
+            if fingerprint and fingerprint in _metadata_fingerprints(
+                pattern, ignore_metadata
+            ):
                 return pattern
             continue
 
@@ -282,7 +284,7 @@ def make_issue(
     return issue
 
 
-_HEX8_RE = re.compile(r'^[0-9a-f]{8}$')
+_HEX8_RE = re.compile(r"^[0-9a-f]{8}$")
 
 
 def _matches_issue_path(issue: dict[str, str], pattern: str) -> bool:

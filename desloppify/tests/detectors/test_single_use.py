@@ -63,9 +63,13 @@ class TestDetectSingleUseAbstractions:
         target.write_text("\n".join(f"line_{i} = {i}" for i in range(50)))
 
         graph = {
-            str(target): _make_graph_entry({str(tmp_path / "tests" / "test_helper.py")}),
+            str(target): _make_graph_entry(
+                {str(tmp_path / "tests" / "test_helper.py")}
+            ),
         }
-        entries, total = detect_single_use_abstractions(tmp_path, graph, barrel_names=set())
+        entries, total = detect_single_use_abstractions(
+            tmp_path, graph, barrel_names=set()
+        )
         assert entries == []
         assert total == 0
 

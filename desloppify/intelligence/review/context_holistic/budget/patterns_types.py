@@ -28,12 +28,22 @@ def _find_dict_any_annotations(parsed_files: dict[str, ParsedSource]) -> list[di
             name = member.child_by_field_name("name")
             if annotation is None or name is None or not _has_dict_any(annotation):
                 continue
-            results.append(_entry(parsed, rpath, _container_name(parsed, member), parsed.text(name), annotation))
+            results.append(
+                _entry(
+                    parsed,
+                    rpath,
+                    _container_name(parsed, member),
+                    parsed.text(name),
+                    annotation,
+                )
+            )
     results.sort(key=lambda item: (item["file"], item["line"]))
     return results
 
 
-def _entry(parsed: ParsedSource, rpath: str, symbol: str, slot: str, annotation) -> dict:
+def _entry(
+    parsed: ParsedSource, rpath: str, symbol: str, slot: str, annotation
+) -> dict:
     return {
         "file": rpath,
         "line": parsed.line(annotation),
@@ -60,7 +70,10 @@ def _container_name(parsed: ParsedSource, node) -> str:
 
 
 def _has_dict_any(annotation) -> bool:
-    return any(_is_dict_any(node) for node in descendants(annotation, ("generic_type", "object_type")))
+    return any(
+        _is_dict_any(node)
+        for node in descendants(annotation, ("generic_type", "object_type"))
+    )
 
 
 def _is_dict_any(node) -> bool:
@@ -74,13 +87,20 @@ def _is_dict_any(node) -> bool:
         return len(values) == 2 and _is_any(values[1])
     members = [child for child in node.named_children if child.type != "comment"]
     return bool(members) and all(
-        member.type == "index_signature" and _is_any(_index_value(member)) for member in members
+        member.type == "index_signature" and _is_any(_index_value(member))
+        for member in members
     )
 
 
 def _index_value(signature):
-    annotation = next((c for c in signature.named_children if c.type == "type_annotation"), None)
-    return annotation.named_children[0] if annotation is not None and annotation.named_children else None
+    annotation = next(
+        (c for c in signature.named_children if c.type == "type_annotation"), None
+    )
+    return (
+        annotation.named_children[0]
+        if annotation is not None and annotation.named_children
+        else None
+    )
 
 
 def _is_any(node) -> bool:

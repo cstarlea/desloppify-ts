@@ -144,7 +144,9 @@ def test_remove_unused_vars(source, targets, expected):
 @pytest.mark.parametrize(
     ("source", "target", "expected"),
     [
-        pytest.param("const { a } = o;\nuse(1);\n", ("a", 1, 7), "use(1);\n", id="lone-shorthand"),
+        pytest.param(
+            "const { a } = o;\nuse(1);\n", ("a", 1, 7), "use(1);\n", id="lone-shorthand"
+        ),
         pytest.param(
             "const {\n  a,\n} = o;\nuse(1);\n", ("a", 1, 7), "use(1);\n", id="multiline"
         ),
@@ -160,7 +162,9 @@ def test_remove_unused_vars(source, targets, expected):
             "const { a: x } = p;\nuse(x);\n",
             id="same-name-as-key-elsewhere",
         ),
-        pytest.param("const [a] = arr;\nuse(1);\n", ("a", 1, 7), "use(1);\n", id="array"),
+        pytest.param(
+            "const [a] = arr;\nuse(1);\n", ("a", 1, 7), "use(1);\n", id="array"
+        ),
     ],
 )
 def test_lone_pattern_element_reported_at_pattern(source, target, expected):
@@ -179,9 +183,17 @@ def test_lone_pattern_element_reported_at_pattern(source, target, expected):
             id="getter-initializer",
         ),
         pytest.param(
-            "const { a } = f();\n", ("a", 1, 7), "would_empty_pattern", id="call-initializer"
+            "const { a } = f();\n",
+            ("a", 1, 7),
+            "would_empty_pattern",
+            id="call-initializer",
         ),
-        pytest.param("const h = ({ p }) => 1;\nh({});\n", ("p", 1, 12), "function_param", id="param"),
+        pytest.param(
+            "const h = ({ p }) => 1;\nh({});\n",
+            ("p", 1, 12),
+            "function_param",
+            id="param",
+        ),
         pytest.param("const { a } = o;\n", ("zzz", 1, 7), "not_found", id="other-name"),
     ],
 )
@@ -194,15 +206,25 @@ def test_pattern_position_skips(source, target, reason):
 @pytest.mark.parametrize(
     ("source", "target", "reason"),
     [
-        pytest.param("const a = f(), b = 2;\nuse(b);\n", ("a", 1, 7), "side_effects", id="call"),
+        pytest.param(
+            "const a = f(), b = 2;\nuse(b);\n", ("a", 1, 7), "side_effects", id="call"
+        ),
         pytest.param("const v = obj.prop;\n", ("v", 1, 7), "side_effects", id="getter"),
         pytest.param(
-            "const { a, e = g() } = o;\nuse(a);\n", ("e", 1, 12), "side_effects", id="default-call"
+            "const { a, e = g() } = o;\nuse(a);\n",
+            ("e", 1, 12),
+            "side_effects",
+            id="default-call",
         ),
         pytest.param(
-            "const { [k()]: v, w } = o;\nuse(w);\n", ("v", 1, 16), "side_effects", id="computed-key"
+            "const { [k()]: v, w } = o;\nuse(w);\n",
+            ("v", 1, 16),
+            "side_effects",
+            id="computed-key",
         ),
-        pytest.param("let x = 1;\nx = 2;\n", ("x", 1, 5), "written_elsewhere", id="written-later"),
+        pytest.param(
+            "let x = 1;\nx = 2;\n", ("x", 1, 5), "written_elsewhere", id="written-later"
+        ),
         pytest.param(
             "function f(): void;\nfunction f(x?: number) {}\n",
             ("f", 2, 10),
@@ -210,22 +232,46 @@ def test_pattern_position_skips(source, target, reason):
             id="overloads",
         ),
         pytest.param(
-            "const { a, ...r } = o;\nuse(r);\n", ("a", 1, 9), "rest_element", id="rest-sibling"
+            "const { a, ...r } = o;\nuse(r);\n",
+            ("a", 1, 9),
+            "rest_element",
+            id="rest-sibling",
         ),
         pytest.param(
-            "const [a, b] = f();\nuse(b);\n", ("a", 1, 8), "array_destructuring", id="array"
+            "const [a, b] = f();\nuse(b);\n",
+            ("a", 1, 8),
+            "array_destructuring",
+            id="array",
         ),
-        pytest.param("function g(x) { return 1 }\n", ("x", 1, 12), "function_param", id="param"),
         pytest.param(
-            "const h = ({ p }) => 1;\nh({});\n", ("p", 1, 14), "function_param", id="pattern-param"
+            "function g(x) { return 1 }\n", ("x", 1, 12), "function_param", id="param"
         ),
-        pytest.param("function h<T>() {}\nh();\n", ("T", 1, 12), "type_parameter", id="type-param"),
         pytest.param(
-            "for (let i = 0, j = 0; i < 1; i++) {}\n", ("j", 1, 17), "loop_variable", id="for-header"
+            "const h = ({ p }) => 1;\nh({});\n",
+            ("p", 1, 14),
+            "function_param",
+            id="pattern-param",
         ),
-        pytest.param("if (c) var v = 1;\n", ("v", 1, 12), "other", id="unbraced-if-body"),
         pytest.param(
-            "let a = 1\ntype T = string\n(foo)()\n", ("T", 2, 6), "asi_hazard", id="no-semicolons"
+            "function h<T>() {}\nh();\n",
+            ("T", 1, 12),
+            "type_parameter",
+            id="type-param",
+        ),
+        pytest.param(
+            "for (let i = 0, j = 0; i < 1; i++) {}\n",
+            ("j", 1, 17),
+            "loop_variable",
+            id="for-header",
+        ),
+        pytest.param(
+            "if (c) var v = 1;\n", ("v", 1, 12), "other", id="unbraced-if-body"
+        ),
+        pytest.param(
+            "let a = 1\ntype T = string\n(foo)()\n",
+            ("T", 2, 6),
+            "asi_hazard",
+            id="no-semicolons",
         ),
         pytest.param("const a = 1;\n", ("zzz", 1, 7), "not_found", id="stale"),
     ],
@@ -240,16 +286,27 @@ def test_skips_what_could_change_behaviour(source, target, reason):
 @needs_treesitter
 def test_fix_unused_vars_writes_and_reports(tmp_path):
     ts_file = tmp_path / "a.tsx"
-    ts_file.write_text("const a = 1, b = f();\nexport const C = () => <div>{b}</div>;\n")
+    ts_file.write_text(
+        "const a = 1, b = f();\nexport const C = () => <div>{b}</div>;\n"
+    )
 
     result = fix_unused_vars(
         [
-            {"file": str(ts_file), "name": "a", "line": 1, "col": 7, "issue_id": "u::a.tsx::a:1"},
+            {
+                "file": str(ts_file),
+                "name": "a",
+                "line": 1,
+                "col": 7,
+                "issue_id": "u::a.tsx::a:1",
+            },
             {"file": str(ts_file), "name": "b", "line": 1, "col": 14},
         ]
     )
 
-    assert ts_file.read_text() == "const b = f();\nexport const C = () => <div>{b}</div>;\n"
+    assert (
+        ts_file.read_text()
+        == "const b = f();\nexport const C = () => <div>{b}</div>;\n"
+    )
     [entry] = result.entries
     assert entry["fixed_issue_ids"] == ["u::a.tsx::a:1"]
     assert result.skip_reasons == {"side_effects": 1}

@@ -16,7 +16,9 @@ def coerce_positive_int(value: object, *, default: int, minimum: int = 1) -> int
     return parsed if parsed >= minimum else default
 
 
-def coerce_positive_float(value: object, *, default: float, minimum: float = 0.1) -> float:
+def coerce_positive_float(
+    value: object, *, default: float, minimum: float = 0.1
+) -> float:
     """Parse positive float CLI/config inputs with a safe default."""
     if value is None:
         return default

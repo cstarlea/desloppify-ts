@@ -216,7 +216,9 @@ def test_prepare_holistic_review_optional_issue_history_payload():
     )
 
     assert "historical_review_issues" in with_history
-    assert with_history["historical_review_issues"]["summary"]["total_review_issues"] == 1
+    assert (
+        with_history["historical_review_issues"]["summary"]["total_review_issues"] == 1
+    )
     assert "historical_review_issues" not in without_history
 
 

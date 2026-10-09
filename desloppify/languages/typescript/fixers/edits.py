@@ -21,7 +21,9 @@ def apply_edits(source: bytes, edits: list[tuple[int, int]]) -> bytes:
     return source
 
 
-def apply_replacements(source: bytes, replacements: list[tuple[int, int, bytes]]) -> bytes:
+def apply_replacements(
+    source: bytes, replacements: list[tuple[int, int, bytes]]
+) -> bytes:
     """Replace each ``source[start:end]`` with its bytes. Ranges must not overlap."""
     for start, end, text in sorted(replacements, reverse=True):
         source = source[:start] + text + source[end:]

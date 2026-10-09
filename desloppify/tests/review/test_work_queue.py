@@ -12,4 +12,6 @@ for _name in dir(_cases):
     if hasattr(_obj, "__module__"):
         _obj.__module__ = __name__
 
-__all__ = [name for name in globals() if name.startswith("Test") or name.startswith("test_")]
+__all__ = [
+    name for name in globals() if name.startswith("Test") or name.startswith("test_")
+]

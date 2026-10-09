@@ -100,7 +100,9 @@ def _line_security_issues(
             )
         )
 
-    secret = source.search(public_secret, index, "uncommented") if public_secret else None
+    secret = (
+        source.search(public_secret, index, "uncommented") if public_secret else None
+    )
     if secret is not None:
         is_dev_file = "/dev/" in normalized_path or "dev." in Path(filepath).name
         if not (is_dev_file and has_dev_guard):

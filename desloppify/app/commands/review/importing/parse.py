@@ -102,7 +102,9 @@ def _normalize_import_payload_shape(
     normalized_reviewed_files = _coerce_reviewed_files(payload, errors=errors)
     review_scope = _coerce_optional_object(payload, key="review_scope", errors=errors)
     provenance = _coerce_optional_object(payload, key="provenance", errors=errors)
-    dimension_notes = _coerce_optional_object(payload, key="dimension_notes", errors=errors)
+    dimension_notes = _coerce_optional_object(
+        payload, key="dimension_notes", errors=errors
+    )
 
     policy = payload.get(ASSESSMENT_POLICY_KEY)
     normalized_policy = (
@@ -200,11 +202,7 @@ def _validate_holistic_issues_schema(
             allow_dismissed=True,
         )
         for message in entry_errors:
-            if (
-                "is not allowed" in message
-                and lang_name
-                and "dimension '" in message
-            ):
+            if "is not allowed" in message and lang_name and "dimension '" in message:
                 message = message.replace(
                     "is not allowed",
                     f"is not valid for language '{lang_name}'",
@@ -330,7 +328,9 @@ def _validate_feedback_requirements(
     override_attest: str | None,
 ) -> list[str]:
     """Validate feedback and low-score issue requirements."""
-    missing_feedback, missing_low_score_issues = _validate_assessment_feedback(issues_data)
+    missing_feedback, missing_low_score_issues = _validate_assessment_feedback(
+        issues_data
+    )
     if missing_low_score_issues:
         if override_enabled:
             if not isinstance(override_attest, str) or not override_attest.strip():
@@ -394,7 +394,9 @@ def _parse_and_validate_import(
     if normalized_root is None:
         return None, ["issues payload root normalization returned no data"]
 
-    normalized_issues_data, shape_errors = _normalize_import_payload_shape(normalized_root)
+    normalized_issues_data, shape_errors = _normalize_import_payload_shape(
+        normalized_root
+    )
     if shape_errors:
         return None, shape_errors
     if normalized_issues_data is None:

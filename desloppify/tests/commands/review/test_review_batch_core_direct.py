@@ -205,7 +205,9 @@ def test_merge_batch_results_merges_same_identifier_issues():
     assert set(issue["evidence"]) == {"branch A uses OR", "branch B uses AND"}
 
 
-def test_merge_batch_results_preserves_dismissed_concerns_without_counting_them() -> None:
+def test_merge_batch_results_preserves_dismissed_concerns_without_counting_them() -> (
+    None
+):
     merged = _merge(
         [
             {
@@ -270,7 +272,9 @@ def test_normalize_batch_result_rejects_low_score_without_same_dimension_issue()
             max_batch_issues=max_batch_issues_for_dimension_count(1),
             abstraction_sub_axes=_ABSTRACTION_SUB_AXES,
         )
-    assert "low-score dimensions must include at least one explicit issue" in str(exc.value)
+    assert "low-score dimensions must include at least one explicit issue" in str(
+        exc.value
+    )
 
 
 def test_normalize_batch_result_accepts_low_score_with_same_dimension_issue():
@@ -334,7 +338,9 @@ def test_normalize_batch_result_accepts_dismissed_concern_entries() -> None:
             },
             "dimension_judgment": {
                 "logic_clarity": {
-                    "strengths": ["the reviewer checked the signal and explained the outcome"],
+                    "strengths": [
+                        "the reviewer checked the signal and explained the outcome"
+                    ],
                     "dimension_character": "Most concerns are real, but some detector signals are intentionally acceptable seams.",
                     "score_rationale": (
                         "The code remains understandable, and the review includes explicit adjudication "
@@ -545,55 +551,60 @@ def test_normalize_batch_result_accepts_legacy_unreported_risk_key():
 
 
 def test_normalize_batch_result_normalizes_context_updates() -> None:
-    _assessments, _issues, _notes, _judgment, _quality, context_updates = normalize_batch_result(
-        {
-            "assessments": {"logic_clarity": 72},
-            "dimension_notes": {
-                "logic_clarity": {
-                    "evidence": ["context update normalization"],
-                    "impact_scope": "module",
-                    "fix_scope": "single_edit",
-                }
-            },
-            "dimension_judgment": {
-                "logic_clarity": {
-                    "strengths": ["keeps valid updates"],
-                    "dimension_character": "context updates are accepted when structured",
-                    "score_rationale": (
-                        "The payload should preserve valid additions and header-based mutations "
-                        "while dropping malformed entries."
-                    ),
-                }
-            },
-            "issues": [
-                {
-                    "dimension": "logic_clarity",
-                    "identifier": "context_update_path",
-                    "summary": "Normalize context updates",
-                    "related_files": ["src/a.ts"],
-                    "evidence": ["context_updates payload included"],
-                    "suggestion": "keep only valid context update entries",
-                    "confidence": "medium",
-                    "impact_scope": "module",
-                    "fix_scope": "single_edit",
-                }
-            ],
-            "context_updates": {
-                "logic_clarity": {
-                    "add": [
-                        {"header": "  Useful header  ", "description": "  Useful description  "},
-                        {"header": "", "description": "ignored"},
-                    ],
-                    "remove": [" stale header ", "", 123],
-                    "settle": ["confirmed"],
-                    "unsettle": [" revisit "],
+    _assessments, _issues, _notes, _judgment, _quality, context_updates = (
+        normalize_batch_result(
+            {
+                "assessments": {"logic_clarity": 72},
+                "dimension_notes": {
+                    "logic_clarity": {
+                        "evidence": ["context update normalization"],
+                        "impact_scope": "module",
+                        "fix_scope": "single_edit",
+                    }
                 },
-                "unknown_dim": {"add": [{"header": "skip", "description": "skip"}]},
+                "dimension_judgment": {
+                    "logic_clarity": {
+                        "strengths": ["keeps valid updates"],
+                        "dimension_character": "context updates are accepted when structured",
+                        "score_rationale": (
+                            "The payload should preserve valid additions and header-based mutations "
+                            "while dropping malformed entries."
+                        ),
+                    }
+                },
+                "issues": [
+                    {
+                        "dimension": "logic_clarity",
+                        "identifier": "context_update_path",
+                        "summary": "Normalize context updates",
+                        "related_files": ["src/a.ts"],
+                        "evidence": ["context_updates payload included"],
+                        "suggestion": "keep only valid context update entries",
+                        "confidence": "medium",
+                        "impact_scope": "module",
+                        "fix_scope": "single_edit",
+                    }
+                ],
+                "context_updates": {
+                    "logic_clarity": {
+                        "add": [
+                            {
+                                "header": "  Useful header  ",
+                                "description": "  Useful description  ",
+                            },
+                            {"header": "", "description": "ignored"},
+                        ],
+                        "remove": [" stale header ", "", 123],
+                        "settle": ["confirmed"],
+                        "unsettle": [" revisit "],
+                    },
+                    "unknown_dim": {"add": [{"header": "skip", "description": "skip"}]},
+                },
             },
-        },
-        allowed_dims={"logic_clarity"},
-        max_batch_issues=max_batch_issues_for_dimension_count(1),
-        abstraction_sub_axes=_ABSTRACTION_SUB_AXES,
+            allowed_dims={"logic_clarity"},
+            max_batch_issues=max_batch_issues_for_dimension_count(1),
+            abstraction_sub_axes=_ABSTRACTION_SUB_AXES,
+        )
     )
 
     assert context_updates == {

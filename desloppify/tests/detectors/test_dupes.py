@@ -252,7 +252,9 @@ class TestDetectDuplicates:
 
         class _NoMatcher:
             def __init__(self, *_args, **_kwargs):
-                raise AssertionError("near matcher should not run for unchanged cached pairs")
+                raise AssertionError(
+                    "near matcher should not run for unchanged cached pairs"
+                )
 
         monkeypatch.setattr(
             "desloppify.engine.detectors.dupes.difflib.SequenceMatcher",

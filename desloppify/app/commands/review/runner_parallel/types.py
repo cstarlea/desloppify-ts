@@ -45,7 +45,9 @@ class BatchResult:
     batch_index: int
     assessments: dict[str, float]
     dimension_notes: dict[str, BatchDimensionNotePayload]
-    dimension_judgment: dict[str, BatchDimensionJudgmentPayload] = field(default_factory=dict)
+    dimension_judgment: dict[str, BatchDimensionJudgmentPayload] = field(
+        default_factory=dict
+    )
     issues: list[BatchIssuePayload] = field(default_factory=list)
     quality: BatchQualityPayload = field(default_factory=dict)
     context_updates: dict[str, dict[str, object]] = field(default_factory=dict)

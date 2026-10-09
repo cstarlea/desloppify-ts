@@ -28,7 +28,9 @@ logger = logging.getLogger(__name__)
 _proc_runtime = subprocess
 
 # Every diagnostic tsc emits for noUnusedLocals / noUnusedParameters.
-UNUSED_CODES = frozenset({"TS6133", "TS6138", "TS6192", "TS6196", "TS6198", "TS6199", "TS6205"})
+UNUSED_CODES = frozenset(
+    {"TS6133", "TS6138", "TS6192", "TS6196", "TS6198", "TS6199", "TS6205"}
+)
 _DIAGNOSTIC_RE = re.compile(r"^(?:(.+)\((\d+),(\d+)\): )?error (TS\d+): (.*)$")
 _TS_DIAGNOSTIC_RE = re.compile(r"error TS(\d+):")
 # TS5xxx are compiler-option/config errors; TS18003 is "no inputs were found".
@@ -188,8 +190,10 @@ def run_tsc(
     run = TscRun(project_root=project_root, tsconfig=tsconfig_path)
     runs[key] = run
     try:
-        result = run_tsc_check(project_root, tsconfig_path, limits) if limits else run_tsc_check(
-            project_root, tsconfig_path
+        result = (
+            run_tsc_check(project_root, tsconfig_path, limits)
+            if limits
+            else run_tsc_check(project_root, tsconfig_path)
         )
     except _proc_runtime.TimeoutExpired as exc:
         run.failure, run.error = "timeout", str(exc)
@@ -205,11 +209,15 @@ def run_tsc(
     if failure is not None and "heap out of memory" in result.stderr:
         failure = "memory"
     if failure is not None:
-        logger.debug("tsc produced no usable output (%s): %s", failure, result.stderr[-500:])
+        logger.debug(
+            "tsc produced no usable output (%s): %s", failure, result.stderr[-500:]
+        )
         run.failure = failure
         return run
     run.output_lines = result.stdout.splitlines() + result.stderr.splitlines()
-    run.config_errors = [line for line in run.output_lines if _TS_CONFIG_ERROR_RE.search(line)]
+    run.config_errors = [
+        line for line in run.output_lines if _TS_CONFIG_ERROR_RE.search(line)
+    ]
     run.diagnostics, run.files = parse_tsc_output(run.output_lines)
     return run
 

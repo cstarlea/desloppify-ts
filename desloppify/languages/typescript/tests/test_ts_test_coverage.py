@@ -22,7 +22,8 @@ from desloppify.languages.typescript.test_coverage import (
 )
 
 needs_treesitter = pytest.mark.skipif(
-    not ImportExtractor().uses_treesitter, reason="needs tree-sitter with the tsx grammar"
+    not ImportExtractor().uses_treesitter,
+    reason="needs tree-sitter with the tsx grammar",
 )
 
 
@@ -42,7 +43,8 @@ def _touch(root: Path, name: str, content: str = "") -> str:
 
 
 @pytest.mark.skipif(
-    not ImportExtractor().uses_treesitter, reason="needs tree-sitter with the tsx grammar"
+    not ImportExtractor().uses_treesitter,
+    reason="needs tree-sitter with the tsx grammar",
 )
 def test_import_specs_skip_comments_strings_and_mocks():
     content = (
@@ -86,19 +88,41 @@ def test_closest_same_named_file_wins(tmp_path):
 def _chain_project(root: Path) -> dict[str, str]:
     """pkg/index -> export * -> api -> export { } from -> inner/index -> import-then-export -> impl."""
     return {
-        "index": _touch(root, "src/index.ts", "export * from './api';\nexport * from './other';\n"),
-        "api": _touch(root, "src/api.ts", "export { parse } from './inner';\nexport type { Shape } from './shape';\n"),
-        "inner": _touch(root, "src/inner/index.ts", "import { parse as p } from './impl';\nexport { p as parse };\n"),
-        "impl": _touch(root, "src/inner/impl.ts", "export function parse(s: string) {\n  return s.trim();\n}\n"),
-        "shape": _touch(root, "src/shape.ts", "export const Shape = {};\nexport type Shape = {};\n"),
-        "other": _touch(root, "src/other.ts", "export function other() {\n  return 1;\n}\n"),
+        "index": _touch(
+            root, "src/index.ts", "export * from './api';\nexport * from './other';\n"
+        ),
+        "api": _touch(
+            root,
+            "src/api.ts",
+            "export { parse } from './inner';\nexport type { Shape } from './shape';\n",
+        ),
+        "inner": _touch(
+            root,
+            "src/inner/index.ts",
+            "import { parse as p } from './impl';\nexport { p as parse };\n",
+        ),
+        "impl": _touch(
+            root,
+            "src/inner/impl.ts",
+            "export function parse(s: string) {\n  return s.trim();\n}\n",
+        ),
+        "shape": _touch(
+            root, "src/shape.ts", "export const Shape = {};\nexport type Shape = {};\n"
+        ),
+        "other": _touch(
+            root, "src/other.ts", "export function other() {\n  return 1;\n}\n"
+        ),
     }
 
 
 @needs_treesitter
 def test_imported_name_is_credited_to_its_definition_through_any_depth(tmp_path):
     files = _chain_project(tmp_path)
-    test = _touch(tmp_path, "test/parse.test.ts", "import { parse } from '../src';\nparse(' a ');\n")
+    test = _touch(
+        tmp_path,
+        "test/parse.test.ts",
+        "import { parse } from '../src';\nparse(' a ');\n",
+    )
     production = set(files.values())
     assert imported_definitions(test, production) == {files["impl"]}
     assert files["impl"] in import_based_mapping({}, {test}, production, "typescript")
@@ -107,16 +131,25 @@ def test_imported_name_is_credited_to_its_definition_through_any_depth(tmp_path)
 @needs_treesitter
 def test_barrel_siblings_of_an_imported_name_are_not_credited(tmp_path, monkeypatch):
     files = _chain_project(tmp_path)
-    test = _touch(tmp_path, "test/parse.test.ts", "import { parse } from '../src';\nparse(' a ');\n")
+    test = _touch(
+        tmp_path,
+        "test/parse.test.ts",
+        "import { parse } from '../src';\nparse(' a ');\n",
+    )
     production = set(files.values())
-    graph = {test: {"imports": {files["index"]}}, files["index"]: {"imports": {files["api"], files["other"]}}}
+    graph = {
+        test: {"imports": {files["index"]}},
+        files["index"]: {"imports": {files["api"], files["other"]}},
+    }
     tested = import_based_mapping(graph, {test}, production, "typescript")
     assert files["impl"] in tested
     assert files["other"] not in tested
 
     # Without tree-sitter the name-blind barrel and facade hops remain the fallback.
     monkeypatch.setattr(ts_coverage_mod, "follows_reexport_names", lambda: False)
-    assert files["other"] in import_based_mapping(graph, {test}, production, "typescript")
+    assert files["other"] in import_based_mapping(
+        graph, {test}, production, "typescript"
+    )
 
 
 @needs_treesitter
@@ -133,29 +166,54 @@ def test_type_only_imports_and_exports_are_not_followed(tmp_path):
 @needs_treesitter
 def test_namespace_import_follows_the_members_used(tmp_path):
     files = {
-        "index": _touch(tmp_path, "src/index.ts", "export * as core from './core';\nexport * from './schemas';\n"),
+        "index": _touch(
+            tmp_path,
+            "src/index.ts",
+            "export * as core from './core';\nexport * from './schemas';\n",
+        ),
         "core": _touch(tmp_path, "src/core.ts", "export * from './checks';\n"),
-        "checks": _touch(tmp_path, "src/checks.ts", "export function minLength() {\n  return 1;\n}\n"),
-        "schemas": _touch(tmp_path, "src/schemas.ts", "export function string() {\n  return 1;\n}\n"),
-        "unused": _touch(tmp_path, "src/unused.ts", "export function unused() {\n  return 1;\n}\n"),
+        "checks": _touch(
+            tmp_path, "src/checks.ts", "export function minLength() {\n  return 1;\n}\n"
+        ),
+        "schemas": _touch(
+            tmp_path, "src/schemas.ts", "export function string() {\n  return 1;\n}\n"
+        ),
+        "unused": _touch(
+            tmp_path, "src/unused.ts", "export function unused() {\n  return 1;\n}\n"
+        ),
     }
     test = _touch(
         tmp_path,
         "test/z.test.ts",
         "import * as z from '../src';\nz.string();\nz.core.minLength().toString();\n",
     )
-    assert imported_definitions(test, set(files.values())) == {files["schemas"], files["checks"]}
+    assert imported_definitions(test, set(files.values())) == {
+        files["schemas"],
+        files["checks"],
+    }
 
 
 @needs_treesitter
 def test_anonymous_default_export_is_a_definition(tmp_path):
     files = {
-        "index": _touch(tmp_path, "src/index.ts", "export * as locales from './locales';\n"),
-        "locales": _touch(tmp_path, "src/locales.ts", "export { default as ka } from './ka';\nexport { default as ro } from './ro';\n"),
-        "ka": _touch(tmp_path, "src/ka.ts", "export default function () {\n  return 1;\n}\n"),
+        "index": _touch(
+            tmp_path, "src/index.ts", "export * as locales from './locales';\n"
+        ),
+        "locales": _touch(
+            tmp_path,
+            "src/locales.ts",
+            "export { default as ka } from './ka';\nexport { default as ro } from './ro';\n",
+        ),
+        "ka": _touch(
+            tmp_path, "src/ka.ts", "export default function () {\n  return 1;\n}\n"
+        ),
         "ro": _touch(tmp_path, "src/ro.ts", "export default { ro: true };\n"),
     }
-    test = _touch(tmp_path, "test/ka.test.ts", "import * as z from '../src';\nz.locales.ka();\nz.locales.ro;\n")
+    test = _touch(
+        tmp_path,
+        "test/ka.test.ts",
+        "import * as z from '../src';\nz.locales.ka();\nz.locales.ro;\n",
+    )
     assert imported_definitions(test, set(files.values())) == {files["ka"], files["ro"]}
 
 

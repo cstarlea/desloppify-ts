@@ -51,7 +51,9 @@ def require_batches(
         ),
         file=sys.stderr,
     )
-    raise PacketValidationError("Error: packet has no investigation_batches.", exit_code=1)
+    raise PacketValidationError(
+        "Error: packet has no investigation_batches.", exit_code=1
+    )
 
 
 def print_review_quality(quality: object, *, colorize_fn) -> None:
@@ -60,9 +62,7 @@ def print_review_quality(quality: object, *, colorize_fn) -> None:
         return
     coverage = quality.get("dimension_coverage")
     density = quality.get("evidence_density")
-    high_missing_issue_note = quality.get(
-        REVIEW_QUALITY_HIGH_SCORE_MISSING_ISSUES_KEY
-    )
+    high_missing_issue_note = quality.get(REVIEW_QUALITY_HIGH_SCORE_MISSING_ISSUES_KEY)
     if not isinstance(high_missing_issue_note, int | float):
         high_missing_issue_note = quality.get(
             LEGACY_REVIEW_QUALITY_HIGH_SCORE_MISSING_ISSUES_KEY

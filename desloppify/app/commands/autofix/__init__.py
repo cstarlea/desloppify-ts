@@ -11,4 +11,5 @@ def cmd_autofix(args: argparse.Namespace) -> None:
 
     _cmd_autofix(args)
 
+
 __all__ = ["cmd_autofix"]

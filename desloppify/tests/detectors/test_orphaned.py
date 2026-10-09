@@ -560,7 +560,9 @@ class TestDetectNextjsProject:
 
 
 def test_entry_conventions_match_framework_detection():
-    assert set(NEXTJS_ENTRY_CONVENTIONS.config_files) == set(NEXTJS_SPEC.detection.config_files)
+    assert set(NEXTJS_ENTRY_CONVENTIONS.config_files) == set(
+        NEXTJS_SPEC.detection.config_files
+    )
 
 
 def test_nextjs_spec_declares_its_entry_conventions():
@@ -655,7 +657,9 @@ class TestIsNextjsConventionEntry:
 
 
 def _with_nextjs(**options) -> OrphanedDetectionOptions:
-    return OrphanedDetectionOptions(entry_conventions=(NEXTJS_ENTRY_CONVENTIONS,), **options)
+    return OrphanedDetectionOptions(
+        entry_conventions=(NEXTJS_ENTRY_CONVENTIONS,), **options
+    )
 
 
 class TestNextjsIntegration:
@@ -776,7 +780,9 @@ class TestDetectReactRouterProject:
         assert _detect_react_router_project(tmp_path) is True
 
     def test_unrelated_project(self, tmp_path):
-        (tmp_path / "package.json").write_text('{"dependencies": {"express": "^4.0.0"}}')
+        (tmp_path / "package.json").write_text(
+            '{"dependencies": {"express": "^4.0.0"}}'
+        )
         assert _detect_react_router_project(tmp_path) is False
 
     def test_no_package_json(self, tmp_path):

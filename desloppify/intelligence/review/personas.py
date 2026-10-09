@@ -49,7 +49,9 @@ def resolve_persona(name: str) -> Persona | None:
     normalized = name.strip().lower()
     if not normalized:
         return None
-    return next((persona for persona in PERSONAS if persona.name.lower() == normalized), None)
+    return next(
+        (persona for persona in PERSONAS if persona.name.lower() == normalized), None
+    )
 
 
 def render_persona_block(persona: Persona | None) -> str:

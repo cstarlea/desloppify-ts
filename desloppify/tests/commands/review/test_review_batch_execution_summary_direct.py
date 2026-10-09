@@ -8,7 +8,9 @@ import desloppify.app.commands.review.batch.execution_summary as summary_mod
 from desloppify.app.commands.review.batches_runtime import BatchRunSummaryConfig
 
 
-def test_build_run_summary_writer_binds_summary_metadata(tmp_path: Path, monkeypatch) -> None:
+def test_build_run_summary_writer_binds_summary_metadata(
+    tmp_path: Path, monkeypatch
+) -> None:
     captured: dict = {}
 
     def _write_run_summary_impl(**kwargs):

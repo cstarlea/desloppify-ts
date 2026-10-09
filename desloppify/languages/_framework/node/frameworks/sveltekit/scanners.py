@@ -38,7 +38,9 @@ _FETCH_BINDING_RE = re.compile(
 )
 _RELATIVE_URL_RE = re.compile(r"""\s*['"`]/(?!/)""")
 
-_KIT_IMPORT_RE = re.compile(r"""\bimport\s*\{(?P<names>[^}]*)\}\s*from\s*['"]@sveltejs/kit['"]""")
+_KIT_IMPORT_RE = re.compile(
+    r"""\bimport\s*\{(?P<names>[^}]*)\}\s*from\s*['"]@sveltejs/kit['"]"""
+)
 _TRY_RE = re.compile(r"\btry\s*\{")
 _CATCH_RE = re.compile(r"\s*catch\b\s*(?:\([^)]*\))?\s*\{")
 _RETHROWS_RE = re.compile(r"\bthrow\b|\bisRedirect\s*\(")
@@ -54,11 +56,17 @@ def _is_client_module(source: SourceFile) -> bool:
 
 
 def _server_only(source: SourceFile, module: str) -> bool:
-    if module in _SERVER_MODULES or module == "$lib/server" or module.startswith("$lib/server/"):
+    if (
+        module in _SERVER_MODULES
+        or module == "$lib/server"
+        or module.startswith("$lib/server/")
+    ):
         return True
     if not module.startswith("."):
         return False
-    target = posixpath.normpath(posixpath.join(posixpath.dirname(source.path.replace("\\", "/")), module))
+    target = posixpath.normpath(
+        posixpath.join(posixpath.dirname(source.path.replace("\\", "/")), module)
+    )
     return "/lib/server/" in f"/{target}/" or bool(_SERVER_FILE_RE.search(target))
 
 
@@ -80,7 +88,13 @@ def scan_server_imports_in_client(path: Path) -> tuple[list[dict], int]:
         for ref in imports(source):
             if ref.type_only or not _server_only(source, ref.module):
                 continue
-            entries.append({"file": source.path, "line": source.line(ref.offset), "module": ref.module})
+            entries.append(
+                {
+                    "file": source.path,
+                    "line": source.line(ref.offset),
+                    "module": ref.module,
+                }
+            )
     return entries, scanned
 
 
@@ -121,7 +135,9 @@ def scan_load_global_fetch(path: Path) -> tuple[list[dict], int]:
             if _FETCH_BINDING_RE.search(source.code, start, end):
                 continue
             for match in _GLOBAL_FETCH_RE.finditer(source.code, start, end):
-                if not universal and not _RELATIVE_URL_RE.match(source.text, match.end()):
+                if not universal and not _RELATIVE_URL_RE.match(
+                    source.text, match.end()
+                ):
                     continue
                 entries.append(
                     {
@@ -140,7 +156,9 @@ def _imported_names(text: str, wanted: str) -> set[str]:
         for part in match.group("names").split(","):
             pieces = part.split()
             if pieces and pieces[0] == wanted:
-                names.add(pieces[-1] if len(pieces) == 3 and pieces[1] == "as" else wanted)
+                names.add(
+                    pieces[-1] if len(pieces) == 3 and pieces[1] == "as" else wanted
+                )
     return names
 
 
@@ -160,7 +178,9 @@ def scan_redirects_in_try(path: Path) -> tuple[list[dict], int]:
         if not names:
             continue
         scanned += 1
-        call_re = re.compile(rf"(?<![\w$.])(?:{'|'.join(map(re.escape, sorted(names)))})\s*\(")
+        call_re = re.compile(
+            rf"(?<![\w$.])(?:{'|'.join(map(re.escape, sorted(names)))})\s*\("
+        )
         code = source.code
         for match in _TRY_RE.finditer(code):
             try_open = match.end() - 1
@@ -177,4 +197,8 @@ def scan_redirects_in_try(path: Path) -> tuple[list[dict], int]:
     return entries, scanned
 
 
-__all__ = ["scan_load_global_fetch", "scan_redirects_in_try", "scan_server_imports_in_client"]
+__all__ = [
+    "scan_load_global_fetch",
+    "scan_redirects_in_try",
+    "scan_server_imports_in_client",
+]

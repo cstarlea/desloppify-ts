@@ -44,7 +44,7 @@ def render_empty_remediation_plan(state: StateModel) -> str:
 def _collect_holistic_issues(
     state: StateModel,
 ) -> list[tuple[str, Issue]]:
-    issues = (state.get("work_items") or state.get("issues", {}))
+    issues = state.get("work_items") or state.get("issues", {})
     return [
         (issue_id, issue)
         for issue_id, issue in issues.items()
@@ -62,10 +62,7 @@ def _review_potential(state: StateModel) -> int:
 
 
 def _entry_weight(confidence: str) -> float:
-    return (
-        CONFIDENCE_WEIGHTS.get(confidence, 0.3)
-        * HOLISTIC_MULTIPLIER
-    )
+    return CONFIDENCE_WEIGHTS.get(confidence, 0.3) * HOLISTIC_MULTIPLIER
 
 
 def _build_entries(
@@ -127,17 +124,13 @@ def _render_usage(lines: list[str]) -> None:
     append("3. After fixing, run the `resolve` command shown for that issue")
     append("4. Run `desloppify scan` to update automated issues and score")
     append("5. To re-evaluate holistic issues, re-run the full cycle:")
-    append(
-        "   `desloppify review --prepare --path <src>`"
-    )
+    append("   `desloppify review --prepare --path <src>`")
     append("   Then have an agent investigate and import — previously addressed")
     append("   issues auto-resolve if not re-reported.\n")
     append("---\n")
 
 
-def _render_entry(
-    lines: list[str], entry: dict[str, Any], idx: int
-) -> None:
+def _render_entry(lines: list[str], entry: dict[str, Any], idx: int) -> None:
     append = lines.append
     impact_label = (
         "+++" if entry["weight"] >= 8 else "++" if entry["weight"] >= 5 else "+"

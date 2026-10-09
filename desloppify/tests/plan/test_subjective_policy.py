@@ -11,8 +11,10 @@ from desloppify.engine._plan.policy.subjective import (
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _issue(fid: str, detector: str = "unused", status: str = "open",
-             suppressed: bool = False) -> dict:
+
+def _issue(
+    fid: str, detector: str = "unused", status: str = "open", suppressed: bool = False
+) -> dict:
     f: dict = {"id": fid, "detector": detector, "status": status}
     if suppressed:
         f["suppressed"] = True
@@ -31,7 +33,10 @@ def _unscored_state(*dim_keys: str) -> dict:
     assessments: dict = {}
     for dk in dim_keys:
         dim_scores[dk] = {
-            "score": 0, "strict": 0, "checks": 1, "failing": 0,
+            "score": 0,
+            "strict": 0,
+            "checks": 1,
+            "failing": 0,
             "detectors": {
                 "subjective_assessment": {"dimension_key": dk, "placeholder": True},
             },
@@ -50,7 +55,10 @@ def _stale_state(*dim_keys: str, score: float = 50.0) -> dict:
     assessments: dict = {}
     for dk in dim_keys:
         dim_scores[dk] = {
-            "score": score, "strict": score, "checks": 1, "failing": 0,
+            "score": score,
+            "strict": score,
+            "checks": 1,
+            "failing": 0,
             "detectors": {
                 "subjective_assessment": {"dimension_key": dk, "placeholder": False},
             },
@@ -73,7 +81,10 @@ def _under_target_state(*dim_keys: str, score: float = 70.0) -> dict:
     assessments: dict = {}
     for dk in dim_keys:
         dim_scores[dk] = {
-            "score": score, "strict": score, "checks": 1, "failing": 0,
+            "score": score,
+            "strict": score,
+            "checks": 1,
+            "failing": 0,
             "detectors": {
                 "subjective_assessment": {"dimension_key": dk, "placeholder": False},
             },
@@ -90,6 +101,7 @@ def _under_target_state(*dim_keys: str, score: float = 70.0) -> dict:
 # ---------------------------------------------------------------------------
 # Factory: basic counting
 # ---------------------------------------------------------------------------
+
 
 def test_empty_state_has_no_backlog():
     policy = compute_subjective_visibility({})
@@ -156,6 +168,7 @@ def test_non_objective_detectors_excluded():
 # Factory: subjective ID sets
 # ---------------------------------------------------------------------------
 
+
 def test_unscored_ids_populated():
     state = _unscored_state("design_coherence", "error_consistency")
     policy = compute_subjective_visibility(state)
@@ -179,6 +192,7 @@ def test_under_target_ids_populated():
 # should_inject_to_plan / should_evict_from_plan
 # ---------------------------------------------------------------------------
 
+
 def test_inject_unscored_always():
     policy = SubjectiveVisibility(
         has_objective_backlog=True,
@@ -193,16 +207,20 @@ def test_inject_unscored_always():
 
 def test_inject_stale_only_when_drained():
     with_backlog = SubjectiveVisibility(
-        has_objective_backlog=True, objective_count=3,
-        unscored_ids=frozenset(), stale_ids=frozenset({"subjective::bar"}),
+        has_objective_backlog=True,
+        objective_count=3,
+        unscored_ids=frozenset(),
+        stale_ids=frozenset({"subjective::bar"}),
         under_target_ids=frozenset(),
     )
     assert with_backlog.should_inject_to_plan("subjective::bar") is False
     assert with_backlog.should_evict_from_plan("subjective::bar") is True
 
     without_backlog = SubjectiveVisibility(
-        has_objective_backlog=False, objective_count=0,
-        unscored_ids=frozenset(), stale_ids=frozenset({"subjective::bar"}),
+        has_objective_backlog=False,
+        objective_count=0,
+        unscored_ids=frozenset(),
+        stale_ids=frozenset({"subjective::bar"}),
         under_target_ids=frozenset(),
     )
     assert without_backlog.should_inject_to_plan("subjective::bar") is True
@@ -211,16 +229,20 @@ def test_inject_stale_only_when_drained():
 
 def test_inject_under_target_only_when_drained():
     with_backlog = SubjectiveVisibility(
-        has_objective_backlog=True, objective_count=3,
-        unscored_ids=frozenset(), stale_ids=frozenset(),
+        has_objective_backlog=True,
+        objective_count=3,
+        unscored_ids=frozenset(),
+        stale_ids=frozenset(),
         under_target_ids=frozenset({"subjective::baz"}),
     )
     assert with_backlog.should_inject_to_plan("subjective::baz") is False
     assert with_backlog.should_evict_from_plan("subjective::baz") is True
 
     without_backlog = SubjectiveVisibility(
-        has_objective_backlog=False, objective_count=0,
-        unscored_ids=frozenset(), stale_ids=frozenset(),
+        has_objective_backlog=False,
+        objective_count=0,
+        unscored_ids=frozenset(),
+        stale_ids=frozenset(),
         under_target_ids=frozenset({"subjective::baz"}),
     )
     assert without_backlog.should_inject_to_plan("subjective::baz") is True
@@ -229,8 +251,10 @@ def test_inject_under_target_only_when_drained():
 
 def test_unknown_id_never_injected_or_evicted():
     policy = SubjectiveVisibility(
-        has_objective_backlog=True, objective_count=3,
-        unscored_ids=frozenset(), stale_ids=frozenset(),
+        has_objective_backlog=True,
+        objective_count=3,
+        unscored_ids=frozenset(),
+        stale_ids=frozenset(),
         under_target_ids=frozenset(),
     )
     assert policy.should_inject_to_plan("subjective::unknown") is False
@@ -241,17 +265,22 @@ def test_unknown_id_never_injected_or_evicted():
 # backlog_blocks_rerun
 # ---------------------------------------------------------------------------
 
+
 def test_backlog_blocks_rerun():
     with_backlog = SubjectiveVisibility(
-        has_objective_backlog=True, objective_count=3,
-        unscored_ids=frozenset(), stale_ids=frozenset(),
+        has_objective_backlog=True,
+        objective_count=3,
+        unscored_ids=frozenset(),
+        stale_ids=frozenset(),
         under_target_ids=frozenset(),
     )
     assert with_backlog.backlog_blocks_rerun is True
 
     without_backlog = SubjectiveVisibility(
-        has_objective_backlog=False, objective_count=0,
-        unscored_ids=frozenset(), stale_ids=frozenset(),
+        has_objective_backlog=False,
+        objective_count=0,
+        unscored_ids=frozenset(),
+        stale_ids=frozenset(),
         under_target_ids=frozenset(),
     )
     assert without_backlog.backlog_blocks_rerun is False
@@ -260,6 +289,7 @@ def test_backlog_blocks_rerun():
 # ---------------------------------------------------------------------------
 # sync_dimensions does not re-export subjective policy internals
 # ---------------------------------------------------------------------------
+
 
 def test_non_objective_detectors_not_reexported_from_sync_dimensions():
     import desloppify.engine._plan.sync.dimensions as sync_mod
@@ -271,11 +301,15 @@ def test_non_objective_detectors_not_reexported_from_sync_dimensions():
 # Frozen dataclass
 # ---------------------------------------------------------------------------
 
+
 def test_policy_is_frozen():
     import dataclasses
+
     policy = SubjectiveVisibility(
-        has_objective_backlog=False, objective_count=0,
-        unscored_ids=frozenset(), stale_ids=frozenset(),
+        has_objective_backlog=False,
+        objective_count=0,
+        unscored_ids=frozenset(),
+        stale_ids=frozenset(),
         under_target_ids=frozenset(),
     )
     assert dataclasses.is_dataclass(policy)

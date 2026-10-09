@@ -13,7 +13,9 @@ from desloppify.languages.typescript.syntax.tree import ParsedSource, parsed_fil
 _FUNCTION_VALUES = frozenset({"arrow_function", "function_expression", "function"})
 
 
-def extract_ts_classes(path: Path, files: Iterable[str] | None = None) -> list[ClassInfo]:
+def extract_ts_classes(
+    path: Path, files: Iterable[str] | None = None
+) -> list[ClassInfo]:
     """Named classes with their god-class metrics; empty without tree-sitter."""
     results: list[ClassInfo] = []
     for filepath in files if files is not None else find_ts_and_js_files(path):
@@ -68,7 +70,11 @@ def _class_metrics(parsed: ParsedSource, info) -> dict[str, int]:
     # Method decorators sit in the class body before their method; field decorators
     # (ORM columns, validators, Angular inputs) declare a shape, so they don't count.
     decorators += _count(body, "decorator") if body is not None else 0
-    return {"methods": methods, "constructor_deps": dependencies, "decorators": decorators}
+    return {
+        "methods": methods,
+        "constructor_deps": dependencies,
+        "decorators": decorators,
+    }
 
 
 def _class_decorators(node) -> int:

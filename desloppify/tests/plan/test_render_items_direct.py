@@ -41,7 +41,9 @@ def test_plan_item_sections_renders_subjective_and_regular_items(monkeypatch) ->
             "confidence": "low",
         },
     ]
-    monkeypatch.setattr(render_mod, "build_work_queue", lambda _state, options: {"items": items})
+    monkeypatch.setattr(
+        render_mod, "build_work_queue", lambda _state, options: {"items": items}
+    )
 
     lines = render_mod.plan_item_sections({"dummy": {}}, state={"issues": {}})
     text = "\n".join(lines)
@@ -54,7 +56,9 @@ def test_plan_item_sections_renders_subjective_and_regular_items(monkeypatch) ->
     assert "[high] Untested module" in text
 
 
-def test_plan_item_sections_clamps_subjective_threshold_before_queue_build(monkeypatch) -> None:
+def test_plan_item_sections_clamps_subjective_threshold_before_queue_build(
+    monkeypatch,
+) -> None:
     captured = {}
 
     def fake_build_work_queue(_state, options):

@@ -80,9 +80,7 @@ def scoped_manual_clusters_with_issues(
     if scope is None:
         return names
     return [
-        name
-        for name in names
-        if set(cluster_issue_ids(clusters.get(name, {}))) & scope
+        name for name in names if set(cluster_issue_ids(clusters.get(name, {}))) & scope
     ]
 
 
@@ -159,24 +157,28 @@ def unclustered_review_issues(plan: dict, state: dict | None = None) -> list[str
         # defects are covered by cluster-level backlog decisions, not
         # per-item ledger entries.
         review_ids = [
-            fid for fid, finding in (state.get("work_items") or state.get("issues", {})).items()
-            if finding.get("status") == "open"
-            and is_review_work_item(finding)
+            fid
+            for fid, finding in (
+                state.get("work_items") or state.get("issues", {})
+            ).items()
+            if finding.get("status") == "open" and is_review_work_item(finding)
         ]
-        frozen_ids = (plan.get("epic_triage_meta", {}) or {}).get("active_triage_issue_ids")
+        frozen_ids = (plan.get("epic_triage_meta", {}) or {}).get(
+            "active_triage_issue_ids"
+        )
         if isinstance(frozen_ids, list) and frozen_ids:
             frozen_id_set = live_active_triage_issue_ids(plan, state)
             review_ids = [fid for fid in review_ids if fid in frozen_id_set]
     else:
         review_ids = [
-            fid for fid in plan.get("queue_order", [])
+            fid
+            for fid in plan.get("queue_order", [])
             if not is_synthetic_id(fid)
             and (fid.startswith("review::") or fid.startswith("concerns::"))
         ]
 
     return [
-        fid for fid in review_ids
-        if fid not in clustered_ids and fid not in skipped_ids
+        fid for fid in review_ids if fid not in clustered_ids and fid not in skipped_ids
     ]
 
 

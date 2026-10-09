@@ -100,9 +100,7 @@ def _mark_stale_on_mechanical_change(
         # Safety fallback for newly added "marks_dims_stale" detectors that
         # have not declared fine-grained dimension mappings yet.
         affected_dims.update(
-            dim
-            for dim in assessments
-            if isinstance(dim, str) and dim.strip()
+            dim for dim in assessments if isinstance(dim, str) and dim.strip()
         )
 
     if not affected_dims:
@@ -169,7 +167,9 @@ def merge_scan(
     potentials = resolved_options.potentials
     if disabled:
         # A disabled detector is out of scoring: no issues, no potential.
-        current_issues = [i for i in current_issues if i.get("detector") not in disabled]
+        current_issues = [
+            i for i in current_issues if i.get("detector") not in disabled
+        ]
         if potentials is not None:
             potentials = {k: v for k, v in potentials.items() if k not in disabled}
 
@@ -202,15 +202,20 @@ def merge_scan(
         if resolved_options.ignore_metadata is not None
         else state.get("config", {}).get("ignore_metadata", {})
     )
-    current_ids, new_count, reopened_count, current_by_detector, ignored_count, upsert_changed = (
-        upsert_issues(
-            existing,
-            current_issues,
-            ignore_patterns,
-            now,
-            lang=resolved_options.lang,
-            ignore_metadata=ignore_metadata,
-        )
+    (
+        current_ids,
+        new_count,
+        reopened_count,
+        current_by_detector,
+        ignored_count,
+        upsert_changed,
+    ) = upsert_issues(
+        existing,
+        current_issues,
+        ignore_patterns,
+        now,
+        lang=resolved_options.lang,
+        ignore_metadata=ignore_metadata,
     )
 
     raw_issues = len(current_issues)

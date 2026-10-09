@@ -10,6 +10,7 @@ from desloppify.engine._plan.schema import empty_plan, ensure_plan_defaults
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _plan_with_queue(*ids: str) -> dict:
     plan = empty_plan()
     plan["queue_order"] = list(ids)
@@ -34,6 +35,7 @@ def _state_with_issues(*ids: str, status: str = "open") -> dict:
 # ---------------------------------------------------------------------------
 # _supersede_id clears override cluster ref
 # ---------------------------------------------------------------------------
+
 
 def test_supersede_clears_override_cluster_ref():
     """When a issue is superseded, its override cluster ref should be cleared."""
@@ -114,6 +116,7 @@ def test_reconcile_clears_focus_when_focused_cluster_becomes_empty():
 # ---------------------------------------------------------------------------
 # Reconcile logs execution
 # ---------------------------------------------------------------------------
+
 
 def test_reconcile_logs_execution_entry():
     """Reconciliation should append a log entry when changes are made."""
@@ -221,7 +224,10 @@ def test_reconcile_supersedes_skips_of_auto_resolved_issues():
             "skipped_at_scan": 1,
             "review_after": 1 if kind == "temporary" else None,
         }
-        state["issues"][fid] = {**_state_with_issues(fid)["issues"][fid], "status": status}
+        state["issues"][fid] = {
+            **_state_with_issues(fid)["issues"][fid],
+            "status": status,
+        }
     state["issues"]["wontfix_gone"]["resolution_attestation"] = {"scan_verified": True}
     # deferred_kept is due to resurface (scan_count 5 >= 1 + 1).
 
@@ -264,9 +270,15 @@ def test_reconcile_keeps_wontfix_and_false_positive_skips_of_queued_or_clustered
     create_cluster(plan, "c")
     add_to_cluster(plan, "c", ["w", "f", "x"])
     state = _state_with_issues("x")
-    for fid, kind, status in (("w", "permanent", "wontfix"), ("f", "false_positive", "false_positive")):
+    for fid, kind, status in (
+        ("w", "permanent", "wontfix"),
+        ("f", "false_positive", "false_positive"),
+    ):
         plan["skipped"][fid] = {"issue_id": fid, "kind": kind, "skipped_at_scan": 1}
-        state["issues"][fid] = {**_state_with_issues(fid)["issues"][fid], "status": status}
+        state["issues"][fid] = {
+            **_state_with_issues(fid)["issues"][fid],
+            "status": status,
+        }
 
     result = reconcile_plan_after_scan(plan, state)
 
@@ -286,7 +298,11 @@ def test_reconcile_forgets_superseded_entry_of_decided_skip():
     """An old superseded entry must not keep stripping a wontfix skip."""
     plan = empty_plan()
     ensure_plan_defaults(plan)
-    plan["superseded"]["w"] = {"original_id": "w", "status": "superseded", "superseded_at": "2026-10-01T00:00:00+00:00"}
+    plan["superseded"]["w"] = {
+        "original_id": "w",
+        "status": "superseded",
+        "superseded_at": "2026-10-01T00:00:00+00:00",
+    }
     plan["skipped"]["w"] = {"issue_id": "w", "kind": "permanent", "skipped_at_scan": 5}
     state = _state_with_issues("w", status="wontfix")
 
@@ -299,6 +315,7 @@ def test_reconcile_forgets_superseded_entry_of_decided_skip():
 # ---------------------------------------------------------------------------
 # Active clusters completed when all items resolved
 # ---------------------------------------------------------------------------
+
 
 def test_reconcile_marks_active_cluster_done_when_all_items_resolved():
     """An active cluster whose items are all fixed/wontfix should become done."""
@@ -328,8 +345,13 @@ def test_reconcile_leaves_active_cluster_when_items_still_open():
     # "a" is fixed but "b" is still open
     state = _state_with_issues("b")
     state["issues"]["a"] = {
-        "id": "a", "status": "fixed", "detector": "test",
-        "file": "test.py", "tier": 1, "confidence": "high", "summary": "Issue a",
+        "id": "a",
+        "status": "fixed",
+        "detector": "test",
+        "file": "test.py",
+        "tier": 1,
+        "confidence": "high",
+        "summary": "Issue a",
     }
 
     result = reconcile_plan_after_scan(plan, state)

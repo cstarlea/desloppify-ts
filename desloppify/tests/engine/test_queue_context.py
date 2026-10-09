@@ -15,6 +15,7 @@ from desloppify.engine._work_queue.context import (
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _minimal_state(**overrides) -> dict:
     state: dict = {"issues": {}, "scan_count": 5}
     state.update(overrides)
@@ -44,6 +45,7 @@ def _issue(fid: str, detector: str = "unused", file: str = "src/a.ts") -> dict:
 # ---------------------------------------------------------------------------
 # Factory: plan resolution
 # ---------------------------------------------------------------------------
+
 
 class TestQueueContextPlanResolution:
     def test_explicit_plan_used_as_is(self):
@@ -113,6 +115,7 @@ class TestQueueContextPlanResolution:
 # Factory: target_strict resolution
 # ---------------------------------------------------------------------------
 
+
 class TestQueueContextTargetStrict:
     def test_explicit_target_strict(self):
         """Explicit target_strict wins over config."""
@@ -148,6 +151,7 @@ class TestQueueContextTargetStrict:
 # Factory: policy resolution
 # ---------------------------------------------------------------------------
 
+
 class TestQueueContextPolicy:
     def test_snapshot_respects_resolved_plan(self):
         """Snapshot uses the resolved plan and target_strict."""
@@ -181,6 +185,7 @@ class TestQueueContextPolicy:
 # Immutability
 # ---------------------------------------------------------------------------
 
+
 class TestQueueContextImmutability:
     def test_frozen(self):
         """QueueContext is frozen — attributes cannot be changed."""
@@ -194,6 +199,7 @@ class TestQueueContextImmutability:
 # ---------------------------------------------------------------------------
 # Integration: context flows through build_work_queue
 # ---------------------------------------------------------------------------
+
 
 class TestQueueContextIntegration:
     def test_build_work_queue_uses_context_plan(self):

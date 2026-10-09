@@ -51,9 +51,7 @@ def file_excerpt(filepath: str, max_lines: int = 30) -> str | None:
     return "".join(lines[:max_lines]) + f"\n... ({len(lines) - max_lines} more lines)"
 
 
-def dep_graph_lookup(
-    graph: dict[str, dict[str, Any]], filepath: str
-) -> dict[str, Any]:
+def dep_graph_lookup(graph: dict[str, dict[str, Any]], filepath: str) -> dict[str, Any]:
     """Look up a file in the dep graph, trying absolute and relative keys."""
     resolved = resolve_path(filepath)
     entry = graph.get(resolved)
@@ -126,6 +124,7 @@ def build_review_context(
 
 def serialize_context(ctx: ReviewContext) -> dict[str, Any]:
     """Convert ReviewContext to a JSON-serializable dict."""
+
     def _section_dict(value: Any) -> dict[str, Any]:
         if isinstance(value, Mapping):
             return dict(value)
@@ -140,10 +139,7 @@ def serialize_context(ctx: ReviewContext) -> dict[str, Any]:
         "import_graph_summary": _section_dict(ctx.import_graph_summary),
         "zone_distribution": _section_dict(ctx.zone_distribution),
         "existing_issues": _section_dict(ctx.existing_issues),
-        "codebase_stats": {
-            key: int(codebase_stats.get(key, 0))
-            for key in metrics
-        },
+        "codebase_stats": {key: int(codebase_stats.get(key, 0)) for key in metrics},
         "sibling_conventions": _section_dict(ctx.sibling_conventions),
     }
     if ctx.ai_debt_signals:

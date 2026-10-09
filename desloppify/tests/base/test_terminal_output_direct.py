@@ -8,4 +8,3 @@ def test_no_color_flag_reads_environment_live(monkeypatch) -> None:
     assert bool(terminal.NO_COLOR) is False
     monkeypatch.setenv("NO_COLOR", "1")
     assert bool(terminal.NO_COLOR) is True
-

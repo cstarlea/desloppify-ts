@@ -9,11 +9,13 @@ from desloppify.engine._plan.schema import empty_plan
 # append_log_entry basics
 # ---------------------------------------------------------------------------
 
+
 class TestAppendLogEntry:
     def test_appends_entry(self):
         plan = empty_plan()
-        append_log_entry(plan, "sync_unscored", actor="system",
-                         detail={"changes": True})
+        append_log_entry(
+            plan, "sync_unscored", actor="system", detail={"changes": True}
+        )
         log = plan.get("execution_log", [])
         assert len(log) == 1
         assert log[0]["action"] == "sync_unscored"
@@ -22,19 +24,15 @@ class TestAppendLogEntry:
 
     def test_auto_cluster_logged(self):
         plan = empty_plan()
-        append_log_entry(plan, "auto_cluster", actor="system",
-                         detail={"changes": True})
+        append_log_entry(plan, "auto_cluster", actor="system", detail={"changes": True})
         actions = [e["action"] for e in plan.get("execution_log", [])]
         assert "auto_cluster" in actions
 
     def test_sync_operations_logged(self):
         plan = empty_plan()
-        append_log_entry(plan, "sync_stale", actor="system",
-                         detail={"changes": True})
-        append_log_entry(plan, "sync_triage", actor="system",
-                         detail={"injected": True})
-        append_log_entry(plan, "seed_start_scores", actor="system",
-                         detail={})
+        append_log_entry(plan, "sync_stale", actor="system", detail={"changes": True})
+        append_log_entry(plan, "sync_triage", actor="system", detail={"injected": True})
+        append_log_entry(plan, "seed_start_scores", actor="system", detail={})
         actions = [e["action"] for e in plan.get("execution_log", [])]
         assert "sync_stale" in actions
         assert "sync_triage" in actions
@@ -49,7 +47,6 @@ class TestAppendLogEntry:
     def test_multiple_entries_accumulate(self):
         plan = empty_plan()
         for action in ["sync_unscored", "sync_stale", "auto_cluster"]:
-            append_log_entry(plan, action, actor="system",
-                             detail={"changes": True})
+            append_log_entry(plan, action, actor="system", detail={"changes": True})
         log = plan.get("execution_log", [])
         assert len(log) == 3

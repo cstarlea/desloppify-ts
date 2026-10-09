@@ -27,11 +27,7 @@ class TriageStartDecision:
 def _has_unfinished_stage_records(plan: PlanModel) -> bool:
     """True when stage reports exist but are still unconfirmed."""
     meta = plan.get("epic_triage_meta", {})
-    triage_stages = (
-        meta.get("triage_stages", {})
-        if isinstance(meta, dict)
-        else {}
-    )
+    triage_stages = meta.get("triage_stages", {}) if isinstance(meta, dict) else {}
     return bool(recorded_unconfirmed_triage_stage_names(triage_stages))
 
 

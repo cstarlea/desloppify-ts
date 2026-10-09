@@ -38,7 +38,14 @@ SFC_SUFFIXES = (".vue", ".svelte", ".astro")
 # way of counting lines agrees between the view and the file.
 _LINE_BREAKS = frozenset("\n\r\v\f\x1c\x1d\x1e\x85  ")
 
-_TS_LANGS = {"ts": "ts", "typescript": "ts", "tsx": "tsx", "js": "js", "javascript": "js", "jsx": "jsx"}
+_TS_LANGS = {
+    "ts": "ts",
+    "typescript": "ts",
+    "tsx": "tsx",
+    "js": "js",
+    "javascript": "js",
+    "jsx": "jsx",
+}
 _SCRIPT_TYPES = {
     "module": None,
     "text/javascript": "js",
@@ -163,7 +170,12 @@ def _parse_tag(text: str, i: int) -> tuple[dict[str, str | None], int, bool]:
             i = _skip_braces(text, i)
             continue
         start = i
-        while i < n and not text[i].isspace() and text[i] not in "=>" and not text.startswith("/>", i):
+        while (
+            i < n
+            and not text[i].isspace()
+            and text[i] not in "=>"
+            and not text.startswith("/>", i)
+        ):
             if text[i] in "\"'":  # stray quote: treat as part of the name
                 i = _skip_quoted(text, i)
                 continue
@@ -251,7 +263,9 @@ def _script_lang(attrs: dict[str, str | None], default: str) -> str | None:
 def _script_kind(attrs: dict[str, str | None], suffix: str) -> str:
     if suffix == ".vue" and "setup" in attrs:
         return "setup"
-    if suffix == ".svelte" and ("module" in attrs or (attrs.get("context") or "").lower() == "module"):
+    if suffix == ".svelte" and (
+        "module" in attrs or (attrs.get("context") or "").lower() == "module"
+    ):
         return "module"
     if suffix == ".astro":
         return "client"
@@ -316,7 +330,9 @@ def script_blocks(text: str, suffix: str) -> tuple[ScriptBlock, ...]:
             continue
         if self_closing:
             i = after
-        elif name in _RAW_TEXT_ELEMENTS or (suffix == ".svelte" and name == "svelte:head"):
+        elif name in _RAW_TEXT_ELEMENTS or (
+            suffix == ".svelte" and name == "svelte:head"
+        ):
             close = _find_close(text, name, after)
             i = n if close is None else close[1]
         elif suffix == ".vue":
@@ -347,7 +363,9 @@ def _blank(chunk: str) -> str:
     return "".join(ch if ch in _LINE_BREAKS else " " for ch in chunk)
 
 
-def apply_view_change(component: SfcCode, new_view: str, path: str | Path) -> str | None:
+def apply_view_change(
+    component: SfcCode, new_view: str, path: str | Path
+) -> str | None:
     """The component's text with an edit of its code view carried over.
 
     A fixer edits the view; each changed span (narrowed to the characters

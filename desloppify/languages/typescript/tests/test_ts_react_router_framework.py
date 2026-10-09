@@ -61,7 +61,10 @@ def test_detected_from_the_dev_package(tmp_path: Path):
 def test_not_detected_for_a_library_mode_spa(tmp_path: Path):
     # react-router alone is the routing library; framework mode needs the dev package.
     _write(tmp_path, "package.json", '{"dependencies": {"react-router": "^7.1.0"}}')
-    assert "react_router" not in detect_ecosystem_frameworks(tmp_path, None, "node").present
+    assert (
+        "react_router"
+        not in detect_ecosystem_frameworks(tmp_path, None, "node").present
+    )
 
 
 def test_detected_for_remix_v2(tmp_path: Path):
@@ -89,8 +92,14 @@ export default [
 
 def test_route_config_names_every_module(tmp_path: Path):
     _write(tmp_path, "app/routes.ts", _ROUTES)
-    for name in ("app/home.tsx", "app/layouts/main.tsx", "app/pages/about.tsx",
-                 "app/pages/pathless.tsx", "shared/admin.tsx", "app/pages/legacy.tsx"):
+    for name in (
+        "app/home.tsx",
+        "app/layouts/main.tsx",
+        "app/pages/about.tsx",
+        "app/pages/pathless.tsx",
+        "shared/admin.tsx",
+        "app/pages/legacy.tsx",
+    ):
         _write(tmp_path, name, "export default function X() { return null }\n")
 
     assert declared_route_modules(tmp_path) == {
@@ -104,9 +113,15 @@ def test_route_config_names_every_module(tmp_path: Path):
 
 
 def test_route_config_honours_app_directory(tmp_path: Path):
-    _write(tmp_path, "react-router.config.ts", 'export default { appDirectory: "src" }\n')
+    _write(
+        tmp_path, "react-router.config.ts", 'export default { appDirectory: "src" }\n'
+    )
     _write(tmp_path, "src/routes.ts", 'export default [index("pages/home.tsx")]\n')
-    _write(tmp_path, "src/pages/home.tsx", "export default function Home() { return null }\n")
+    _write(
+        tmp_path,
+        "src/pages/home.tsx",
+        "export default function Home() { return null }\n",
+    )
 
     config = route_config(tmp_path)
     assert config.config_file == "src/routes.ts"
@@ -128,7 +143,9 @@ def test_missing_route_module_is_reported(tmp_path: Path):
 
 
 def test_no_route_config_no_findings(tmp_path: Path):
-    _write(tmp_path, "app/routes/home.tsx", "export default function X() { return null }\n")
+    _write(
+        tmp_path, "app/routes/home.tsx", "export default function X() { return null }\n"
+    )
     assert scan_route_config_missing_modules(tmp_path) == ([], 0)
 
 
@@ -154,7 +171,11 @@ def test_remix_import_in_v7_app(tmp_path: Path):
 
 def test_remix_imports_fine_in_remix_v2(tmp_path: Path):
     _write(tmp_path, "package.json", '{"dependencies": {"@remix-run/react": "^2.0.0"}}')
-    _write(tmp_path, "app/routes/home.tsx", 'import { useLoaderData } from "@remix-run/react";\n')
+    _write(
+        tmp_path,
+        "app/routes/home.tsx",
+        'import { useLoaderData } from "@remix-run/react";\n',
+    )
     assert scan_remix_imports_in_react_router_v7(tmp_path) == ([], 0)
 
 
@@ -201,22 +222,42 @@ def test_data_hook_with_loader(tmp_path: Path, export: str):
 
 def test_data_hook_outside_route_modules_is_fine(tmp_path: Path):
     # A component reads the data of the route that renders it.
-    _write(tmp_path, "app/routes/notes/editor.tsx", "export function E() { return useLoaderData() }\n")
-    _write(tmp_path, "app/components/user.tsx", "export function U() { return useLoaderData() }\n")
+    _write(
+        tmp_path,
+        "app/routes/notes/editor.tsx",
+        "export function E() { return useLoaderData() }\n",
+    )
+    _write(
+        tmp_path,
+        "app/components/user.tsx",
+        "export function U() { return useLoaderData() }\n",
+    )
     _write(tmp_path, "app/routes/home.test.tsx", "test('x', () => useLoaderData())\n")
     assert scan_data_hooks_without_export(tmp_path)[0] == []
 
 
 def test_data_hook_in_root_and_folder_route_modules(tmp_path: Path):
-    _write(tmp_path, "app/root.tsx", "export default function App() { return useLoaderData() }\n")
-    _write(tmp_path, "app/routes/notes/route.tsx", "export default function N() { return useLoaderData() }\n")
+    _write(
+        tmp_path,
+        "app/root.tsx",
+        "export default function App() { return useLoaderData() }\n",
+    )
+    _write(
+        tmp_path,
+        "app/routes/notes/route.tsx",
+        "export default function N() { return useLoaderData() }\n",
+    )
     files = {e["file"] for e in scan_data_hooks_without_export(tmp_path)[0]}
     assert files == {"app/root.tsx", "app/routes/notes/route.tsx"}
 
 
 def test_data_hook_in_a_configured_route_module(tmp_path: Path):
     _write(tmp_path, "app/routes.ts", 'export default [index("pages/home.tsx")]\n')
-    _write(tmp_path, "app/pages/home.tsx", "export default function H() { return useLoaderData() }\n")
+    _write(
+        tmp_path,
+        "app/pages/home.tsx",
+        "export default function H() { return useLoaderData() }\n",
+    )
     files = {e["file"] for e in scan_data_hooks_without_export(tmp_path)[0]}
     assert files == {"app/pages/home.tsx"}
 
@@ -226,7 +267,11 @@ def test_data_hook_in_a_configured_route_module(tmp_path: Path):
 
 def test_route_config_modules_are_not_orphans(tmp_path: Path):
     _write(tmp_path, "package.json", _V7)
-    _write(tmp_path, "app/routes.ts", 'export default [index("pages/home.tsx")]\n' + "//\n" * 12)
+    _write(
+        tmp_path,
+        "app/routes.ts",
+        'export default [index("pages/home.tsx")]\n' + "//\n" * 12,
+    )
     body = "export default function X() { return null }\n" + "// pad\n" * 12
     home = _write(tmp_path, "app/pages/home.tsx", body)
     rsc = _write(tmp_path, "app/entry.rsc.tsx", body)
@@ -240,7 +285,9 @@ def test_route_config_modules_are_not_orphans(tmp_path: Path):
         tmp_path,
         graph,
         [".ts", ".tsx"],
-        options=OrphanedDetectionOptions(entry_conventions=(REACT_ROUTER_ENTRY_CONVENTIONS,)),
+        options=OrphanedDetectionOptions(
+            entry_conventions=(REACT_ROUTER_ENTRY_CONVENTIONS,)
+        ),
     )
     assert [e["file"] for e in entries] == [str(orphan)]
 
@@ -259,10 +306,14 @@ def test_react_router_smells_phase(tmp_path: Path):
     _write(tmp_path, "app/root.tsx", 'import { Outlet } from "@remix-run/react";\n')
 
     phase = next(
-        p for p in TypeScriptConfig().phases if p.label == "React Router framework smells"
+        p
+        for p in TypeScriptConfig().phases
+        if p.label == "React Router framework smells"
     )
     issues, potentials = phase.run(tmp_path, _FakeLang())
     ids = {issue["id"] for issue in issues}
-    assert "react_router::app/routes.ts::route_module_missing::routes/missing.tsx" in ids
+    assert (
+        "react_router::app/routes.ts::route_module_missing::routes/missing.tsx" in ids
+    )
     assert "react_router::app/root.tsx::remix_import_in_v7::@remix-run/react" in ids
     assert potentials.get("react_router", 0) >= 1

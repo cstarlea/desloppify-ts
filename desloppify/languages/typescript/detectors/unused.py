@@ -117,26 +117,38 @@ def detect_unused_result(
     base_tsconfig = find_nearest_tsconfig(path)
     if base_tsconfig is None:
         entries, total = _detect_unused_fallback(path, category)
-        return entries, total, _reduced(
-            "No tsconfig.json found; used source-based unused heuristic",
-            reason="no_tsconfig",
-            confidence=0.5,
+        return (
+            entries,
+            total,
+            _reduced(
+                "No tsconfig.json found; used source-based unused heuristic",
+                reason="no_tsconfig",
+                confidence=0.5,
+            ),
         )
 
     run = tsc_mod.run_tsc(get_project_root(), base_tsconfig, cache=cache)
     if run.failure == "tsc_missing":
         entries, total = _detect_unused_fallback(path, category)
-        return entries, total, _reduced(
-            f"tsc unavailable ({run.error}); used source-based unused heuristic",
-            reason="tsc_missing",
-            confidence=0.5,
+        return (
+            entries,
+            total,
+            _reduced(
+                f"tsc unavailable ({run.error}); used source-based unused heuristic",
+                reason="tsc_missing",
+                confidence=0.5,
+            ),
         )
     if run.failure is not None:
         entries, total = _detect_unused_fallback(path, category)
-        return entries, total, _reduced(
-            f"tsc did not run correctly ({run.failure}); used source-based unused heuristic",
-            reason=run.failure,
-            confidence=0.5,
+        return (
+            entries,
+            total,
+            _reduced(
+                f"tsc did not run correctly ({run.failure}); used source-based unused heuristic",
+                reason=run.failure,
+                confidence=0.5,
+            ),
         )
 
     output_lines = run.output_lines
@@ -149,7 +161,10 @@ def detect_unused_result(
         )
     elif (components := tsc_mod.unchecked_components_note(path)) is not None:
         coverage = _reduced(
-            components, reason="components", confidence=0.7, remediation=tsc_mod.COMPONENTS_REMEDIATION
+            components,
+            reason="components",
+            confidence=0.7,
+            remediation=tsc_mod.COMPONENTS_REMEDIATION,
         )
 
     entries = []
@@ -183,7 +198,11 @@ def detect_unused(path: Path, category: str = "all") -> tuple[list[dict], int]:
 
 def _read_source(filepath: str) -> str | None:
     try:
-        p = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
+        p = (
+            Path(filepath)
+            if Path(filepath).is_absolute()
+            else get_project_root() / filepath
+        )
         return p.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError) as exc:
         logger.debug("Unable to read %s for unused categorization: %s", filepath, exc)
@@ -211,7 +230,11 @@ def _categorize_entries(entries: list[dict]) -> None:
             elif names is not None:
                 category = _syntax_category(names, entry)
             if category is None:
-                category = _categorize_line(lines, entry["line"]) if lines is not None else "vars"
+                category = (
+                    _categorize_line(lines, entry["line"])
+                    if lines is not None
+                    else "vars"
+                )
             entry["category"] = category
 
 
@@ -225,7 +248,11 @@ def _syntax_category(names: NameIndex, entry: dict) -> str | None:
         pattern = pattern_at(names.parsed, line, col)
         if pattern is None:
             return None
-        return "params" if is_parameter(pattern) or _in_catch_parameter(pattern) else "vars"
+        return (
+            "params"
+            if is_parameter(pattern) or _in_catch_parameter(pattern)
+            else "vars"
+        )
     if parameter_owner(node) is not None:
         return "params"
     parent = node.parent
@@ -238,10 +265,16 @@ def _syntax_category(names: NameIndex, entry: dict) -> str | None:
 
 def _in_catch_parameter(node) -> bool:
     child, parent = node, node.parent
-    while parent is not None and parent.type in ("object_pattern", "array_pattern", "pair_pattern"):
+    while parent is not None and parent.type in (
+        "object_pattern",
+        "array_pattern",
+        "pair_pattern",
+    ):
         child, parent = parent, parent.parent
-    return parent is not None and parent.type == "catch_clause" and same(
-        parent.child_by_field_name("parameter"), child
+    return (
+        parent is not None
+        and parent.type == "catch_clause"
+        and same(parent.child_by_field_name("parameter"), child)
     )
 
 
@@ -254,7 +287,11 @@ def _categorize_unused(filepath: str, lineno: int) -> str:
 def _categorize_line(lines: list[str], lineno: int) -> str:
     if lineno <= len(lines):
         src_line = lines[lineno - 1].strip()
-        if src_line.startswith("import ") or "from '" in src_line or 'from "' in src_line:
+        if (
+            src_line.startswith("import ")
+            or "from '" in src_line
+            or 'from "' in src_line
+        ):
             return "imports"
         if src_line.startswith(
             (
@@ -277,7 +314,9 @@ def _categorize_line(lines: list[str], lineno: int) -> str:
             if prev.startswith("import "):
                 return "imports"
             if not prev or (
-                not prev.startswith("{") and not prev.startswith(",") and "," not in prev
+                not prev.startswith("{")
+                and not prev.startswith(",")
+                and "," not in prev
             ):
                 break
     # Anything not provably part of an import (parameters, destructured
@@ -296,7 +335,9 @@ def cmd_unused(args: argparse.Namespace) -> None:
             file=sys.stderr,
         )
     else:
-        print(colorize("Running tsc... (this may take a moment)", "dim"), file=sys.stderr)
+        print(
+            colorize("Running tsc... (this may take a moment)", "dim"), file=sys.stderr
+        )
 
     entries, _ = detect_unused(path, args.category)
     if args.json:

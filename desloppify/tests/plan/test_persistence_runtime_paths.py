@@ -55,7 +55,9 @@ def test_resolve_plan_load_status_marks_backup_recovery_degraded(tmp_path, capsy
     assert "recovered from backup" in capsys.readouterr().err
 
 
-def test_resolve_plan_load_status_marks_fresh_start_when_recovery_fails(tmp_path, capsys):
+def test_resolve_plan_load_status_marks_fresh_start_when_recovery_fails(
+    tmp_path, capsys
+):
     plan_file = tmp_path / "plan.json"
     plan_file.write_text("{not json", encoding="utf-8")
 
@@ -79,9 +81,12 @@ def test_resolve_plan_load_status_migrates_legacy_lifecycle_in_memory_only(tmp_p
 
     assert status.plan is not None
     assert status.plan["refresh_state"]["lifecycle_phase"] == "plan"
-    assert json.loads(plan_file.read_text(encoding="utf-8"))["refresh_state"][
-        "lifecycle_phase"
-    ] == "workflow"
+    assert (
+        json.loads(plan_file.read_text(encoding="utf-8"))["refresh_state"][
+            "lifecycle_phase"
+        ]
+        == "workflow"
+    )
 
 
 def test_resolve_plan_load_status_preserves_legacy_uncommitted_findings(tmp_path):

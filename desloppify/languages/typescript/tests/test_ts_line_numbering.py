@@ -63,7 +63,9 @@ def test_other_splitlines_breaks_do_not(char):
 
 
 @pytest.mark.skipif(not HAS_TREESITTER, reason="needs tree-sitter")
-@pytest.mark.parametrize("char", [*BREAKS.values(), *NOT_BREAKS.values()], ids=[*BREAKS, *NOT_BREAKS])
+@pytest.mark.parametrize(
+    "char", [*BREAKS.values(), *NOT_BREAKS.values()], ids=[*BREAKS, *NOT_BREAKS]
+)
 def test_tree_lines_match_tsc_positions(char):
     in_string = "" if char in ("\r", "\r\n", "\n") else char
     source = f"const s = 'x'; /* a{char}b */ const t = 'y{in_string}z';\nf();\n"
@@ -87,7 +89,9 @@ def _file(char: str) -> str:
     )
 
 
-@pytest.mark.parametrize("char", [*BREAKS.values(), *NOT_BREAKS.values()], ids=[*BREAKS, *NOT_BREAKS])
+@pytest.mark.parametrize(
+    "char", [*BREAKS.values(), *NOT_BREAKS.values()], ids=[*BREAKS, *NOT_BREAKS]
+)
 def test_detectors_report_tsc_lines(tmp_path, mode, char):
     content = _file(char)
     (tmp_path / "a.ts").write_bytes(content.encode())

@@ -63,9 +63,7 @@ def test_strategy_engine_compute_strategy_populates_hint_and_lanes():
             "command": "",
         }
     ]
-    strategy = compute_strategy(
-        issues, {"unused": 1}, actions, "first_scan", "python"
-    )
+    strategy = compute_strategy(issues, {"unused": 1}, actions, "first_scan", "python")
     assert "hint" in strategy
     assert "lanes" in strategy
     assert actions[0]["lane"] is not None

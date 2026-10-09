@@ -31,7 +31,12 @@ class ScanOrchestrator:
         tuple[list[dict[str, Any]], dict[str, object], dict[str, object] | None],
     ] = run_scan_generation
     merge_scan_results_fn: Callable[
-        [ScanRuntime, list[dict[str, Any]], dict[str, object], dict[str, object] | None],
+        [
+            ScanRuntime,
+            list[dict[str, Any]],
+            dict[str, object],
+            dict[str, object] | None,
+        ],
         ScanMergeResult,
     ] = merge_scan_results
     resolve_noise_snapshot_fn: Callable[

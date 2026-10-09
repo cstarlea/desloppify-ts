@@ -182,6 +182,7 @@ Every review issue in the active triage run must end up either in a manual clust
 Valid values: trivial, small, medium, large. Set on steps via --effort flag.
 """
 
+
 def triage_prompt_preamble(mode: PromptMode) -> str:
     """Return the shared prompt preamble for the requested runner mode."""
     if mode == "output_only":

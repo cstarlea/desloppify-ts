@@ -30,12 +30,16 @@ _FUNCTION_KINDS = {
 # Overload signatures and abstract methods: a function without a body.
 # ``method_signature`` also appears in interfaces and object types, where it
 # isn't a function, so it only counts inside a class body.
-_SIGNATURE_TYPES = frozenset({"function_signature", "method_signature", "abstract_method_signature"})
+_SIGNATURE_TYPES = frozenset(
+    {"function_signature", "method_signature", "abstract_method_signature"}
+)
 _GENERATOR_TYPES = frozenset({"generator_function_declaration", "generator_function"})
 _CLASS_TYPES = frozenset({"class_declaration", "abstract_class_declaration", "class"})
 _MODULES = frozenset({"module", "internal_module"})
 # Statements that can wrap a module or namespace declaration.
-_MODULE_HOLDERS = frozenset({"ambient_declaration", "expression_statement", "export_statement"})
+_MODULE_HOLDERS = frozenset(
+    {"ambient_declaration", "expression_statement", "export_statement"}
+)
 _MODIFIERS = frozenset({"accessibility_modifier", "override_modifier", "decorator"})
 _JSX_ELEMENTS = frozenset({"jsx_element", "jsx_self_closing_element"})
 
@@ -51,7 +55,9 @@ class Span:
 
 
 def span(parsed: ParsedSource, node) -> Span:
-    return Span(node.start_byte, node.end_byte, parsed.line(node), parsed.end_line(node))
+    return Span(
+        node.start_byte, node.end_byte, parsed.line(node), parsed.end_line(node)
+    )
 
 
 def descendants(root, types: Collection[str] | None = None) -> Iterator:
@@ -97,7 +103,11 @@ def module_statements(parsed: ParsedSource) -> Iterator:
 
 def _module_body(node):
     if node.type in _MODULE_HOLDERS:
-        inner = [c for c in node.named_children if c.type in _MODULES or c.type == "statement_block"]
+        inner = [
+            c
+            for c in node.named_children
+            if c.type in _MODULES or c.type == "statement_block"
+        ]
         if len(inner) != 1:
             return None
         node = inner[0]
@@ -175,17 +185,23 @@ def function_info(parsed: ParsedSource, node) -> FunctionInfo | None:
     return _function_info(parsed, node, None)
 
 
-def _function_info(parsed: ParsedSource, node, exports: dict[str, bool] | None) -> FunctionInfo | None:
+def _function_info(
+    parsed: ParsedSource, node, exports: dict[str, bool] | None
+) -> FunctionInfo | None:
     kind = _FUNCTION_KINDS.get(node.type)
     if kind is None:
         if node.type not in _SIGNATURE_TYPES:
             return None
-        if node.type == "method_signature" and (node.parent is None or node.parent.type != "class_body"):
+        if node.type == "method_signature" and (
+            node.parent is None or node.parent.type != "class_body"
+        ):
             return None
         kind = "signature"
     tokens = _leading_tokens(node)
     name_node = node.child_by_field_name("name")
-    name = parsed.text(name_node) if name_node is not None else _bound_name(parsed, node)
+    name = (
+        parsed.text(name_node) if name_node is not None else _bound_name(parsed, node)
+    )
     body = node.child_by_field_name("body")
     exported, default = _export_status(parsed, node, name, exports)
     return FunctionInfo(
@@ -241,13 +257,27 @@ def definitions(parsed: ParsedSource) -> list[Definition]:
         parent = node.parent  # type: ignore[attr-defined]
         if parent is None:
             continue
-        if parent.type == "export_statement" and info.name is None and info.kind in ("expression", "arrow"):
-            found.append(Definition("default", parent.start_byte, parsed.line(parent), info))
+        if (
+            parent.type == "export_statement"
+            and info.name is None
+            and info.kind in ("expression", "arrow")
+        ):
+            found.append(
+                Definition("default", parent.start_byte, parsed.line(parent), info)
+            )
             continue
         member = _object_member(parsed, node)
         if member is not None:
             name, holder = member
-            found.append(Definition(name, holder.start_byte, parsed.line(holder), info, object_member=True))
+            found.append(
+                Definition(
+                    name,
+                    holder.start_byte,
+                    parsed.line(holder),
+                    info,
+                    object_member=True,
+                )
+            )
             continue
         if info.name is None:
             continue
@@ -256,28 +286,46 @@ def definitions(parsed: ParsedSource) -> list[Definition]:
             holder = parent if parent.type == "public_field_definition" else node
         elif parent.type == "variable_declarator" and _is_field(parent, "value", node):
             name, holder = _bound_name(parsed, node) or info.name, parent.parent
-        elif parent.type == "assignment_expression" and _is_field(parent, "right", node):
+        elif parent.type == "assignment_expression" and _is_field(
+            parent, "right", node
+        ):
             name, holder = _bound_name(parsed, node) or info.name, parent
-        elif info.kind in ("declaration", "expression") and node.child_by_field_name("name") is not None:  # type: ignore[attr-defined]
+        elif (
+            info.kind in ("declaration", "expression")
+            and node.child_by_field_name("name") is not None
+        ):  # type: ignore[attr-defined]
             name, holder = info.name, node
         else:
             continue
         if holder.parent is not None and holder.parent.type == "export_statement":
             holder = holder.parent
-        first = next((c for c in holder.children if c.type not in ("decorator", "comment")), holder)
+        first = next(
+            (c for c in holder.children if c.type not in ("decorator", "comment")),
+            holder,
+        )
         found.append(Definition(name, first.start_byte, parsed.line(first), info))
     return found
 
 
-_OBJECT_WRAPPERS = frozenset({"parenthesized_expression", "as_expression", "satisfies_expression"})
+_OBJECT_WRAPPERS = frozenset(
+    {"parenthesized_expression", "as_expression", "satisfies_expression"}
+)
 
 
 def _object_member(parsed: ParsedSource, node) -> tuple[str, object] | None:
     """(path name, holder) for a method or a pair-valued function in an object literal."""
     parent = node.parent
-    if node.type == "method_definition" and parent is not None and parent.type == "object":
+    if (
+        node.type == "method_definition"
+        and parent is not None
+        and parent.type == "object"
+    ):
         key, holder = node.child_by_field_name("name"), node
-    elif parent is not None and parent.type == "pair" and _is_field(parent, "value", node):
+    elif (
+        parent is not None
+        and parent.type == "pair"
+        and _is_field(parent, "value", node)
+    ):
         key, holder = parent.child_by_field_name("key"), parent
     else:
         return None
@@ -382,12 +430,18 @@ def _bound_name(parsed: ParsedSource, node) -> str | None:
         return None
     if target is None:
         return None
-    return string_value(parsed, target) if target.type == "string" else parsed.text(target)
+    return (
+        string_value(parsed, target) if target.type == "string" else parsed.text(target)
+    )
 
 
 def _is_field(parent, name: str, node) -> bool:
     child = parent.child_by_field_name(name)
-    return child is not None and child.start_byte == node.start_byte and child.end_byte == node.end_byte
+    return (
+        child is not None
+        and child.start_byte == node.start_byte
+        and child.end_byte == node.end_byte
+    )
 
 
 def _owner_name(parsed: ParsedSource, node) -> str | None:
@@ -411,7 +465,11 @@ def _export_status(
     """
     holder = node
     parent = node.parent
-    if parent is not None and parent.type == "variable_declarator" and _is_field(parent, "value", node):
+    if (
+        parent is not None
+        and parent.type == "variable_declarator"
+        and _is_field(parent, "value", node)
+    ):
         holder = parent.parent  # lexical_declaration / variable_declaration
     container = holder.parent if holder is not None else None
     if container is not None and container.type == "ambient_declaration":
@@ -434,12 +492,17 @@ def _local_exports(parsed: ParsedSource) -> dict[str, bool]:
     """Top-level names exported by ``export { a }`` or ``export default a``, mapped to is-default."""
     names: dict[str, bool] = {}
     for node in parsed.root.named_children:
-        if node.type != "export_statement" or node.child_by_field_name("source") is not None:
+        if (
+            node.type != "export_statement"
+            or node.child_by_field_name("source") is not None
+        ):
             continue
         info = export_info(parsed, node)
         for binding in info.bindings if info.kind in ("named", "default") else ():
             if binding.name is not None:
-                names[binding.name] = names.get(binding.name, False) or binding.exported == "default"
+                names[binding.name] = (
+                    names.get(binding.name, False) or binding.exported == "default"
+                )
     return names
 
 
@@ -487,26 +550,39 @@ class ClassInfo:
 
     @property
     def methods(self) -> tuple[ClassMember, ...]:
-        return tuple(m for m in self.members if m.kind in ("constructor", "method", "getter", "setter"))
+        return tuple(
+            m
+            for m in self.members
+            if m.kind in ("constructor", "method", "getter", "setter")
+        )
 
 
 def classes(parsed: ParsedSource) -> list[ClassInfo]:
     """Every class in the file, nested and anonymous ones included, in source order."""
     exports = _local_exports(parsed)
-    return [_class_info(parsed, node, exports) for node in descendants(parsed.root, _CLASS_TYPES)]
+    return [
+        _class_info(parsed, node, exports)
+        for node in descendants(parsed.root, _CLASS_TYPES)
+    ]
 
 
 def _class_info(parsed: ParsedSource, node, exports: dict[str, bool]) -> ClassInfo:
     name_node = node.child_by_field_name("name")
-    name = parsed.text(name_node) if name_node is not None else _bound_name(parsed, node)
+    name = (
+        parsed.text(name_node) if name_node is not None else _bound_name(parsed, node)
+    )
     extends: str | None = None
     implements: list[str] = []
-    heritage = next((c for c in node.named_children if c.type == "class_heritage"), None)
+    heritage = next(
+        (c for c in node.named_children if c.type == "class_heritage"), None
+    )
     for clause in heritage.named_children if heritage is not None else ():
         if clause.type == "extends_clause":
             value = clause.child_by_field_name("value")
             if value is not None:
-                extends = parsed.source[value.start_byte : clause.end_byte].decode("utf-8", "replace")
+                extends = parsed.source[value.start_byte : clause.end_byte].decode(
+                    "utf-8", "replace"
+                )
         elif clause.type == "implements_clause":
             implements.extend(parsed.text(t) for t in clause.named_children)
     body = node.child_by_field_name("body")
@@ -607,7 +683,10 @@ def imports(parsed: ParsedSource) -> list[ImportInfo]:
     """Import statements at module level (``declare module`` bodies included)."""
     found = []
     for node in module_statements(parsed):
-        if node.type == "import_statement" and (info := import_info(parsed, node)) is not None:
+        if (
+            node.type == "import_statement"
+            and (info := import_info(parsed, node)) is not None
+        ):
             found.append(info)
     return found
 
@@ -615,7 +694,9 @@ def imports(parsed: ParsedSource) -> list[ImportInfo]:
 def import_info(parsed: ParsedSource, node) -> ImportInfo | None:
     """The ``ImportInfo`` for an ``import_statement``; None for ``import x = A.B`` aliases."""
     source = node.child_by_field_name("source")
-    require = next((c for c in node.named_children if c.type == "import_require_clause"), None)
+    require = next(
+        (c for c in node.named_children if c.type == "import_require_clause"), None
+    )
     if require is not None:
         source = require.child_by_field_name("source")
     if source is None:
@@ -623,24 +704,42 @@ def import_info(parsed: ParsedSource, node) -> ImportInfo | None:
     clause = next((c for c in node.named_children if c.type == "import_clause"), None)
     bindings: list[ImportBinding] = []
     if require is not None:
-        local = next((c for c in require.named_children if c.type == "identifier"), None)
+        local = next(
+            (c for c in require.named_children if c.type == "identifier"), None
+        )
         if local is not None:
             bindings.append(ImportBinding("=", parsed.text(local), False))
     for part in clause.named_children if clause is not None else ():
         if part.type == "identifier":
             bindings.append(ImportBinding("default", parsed.text(part), False))
         elif part.type == "namespace_import":
-            bindings.extend(ImportBinding("*", parsed.text(i), False) for i in part.named_children)
+            bindings.extend(
+                ImportBinding("*", parsed.text(i), False) for i in part.named_children
+            )
         elif part.type == "named_imports":
             for spec in part.named_children:
-                name = spec.child_by_field_name("name") if spec.type == "import_specifier" else None
+                name = (
+                    spec.child_by_field_name("name")
+                    if spec.type == "import_specifier"
+                    else None
+                )
                 if name is None:
                     continue
                 local = spec.child_by_field_name("alias") or name
                 bindings.append(
-                    ImportBinding(_name_text(parsed, name), parsed.text(local), _has_token(spec, "type"))
+                    ImportBinding(
+                        _name_text(parsed, name),
+                        parsed.text(local),
+                        _has_token(spec, "type"),
+                    )
                 )
-    kind = "require" if require is not None else "static" if clause is not None else "side_effect"
+    kind = (
+        "require"
+        if require is not None
+        else "static"
+        if clause is not None
+        else "side_effect"
+    )
     return ImportInfo(
         source=string_value(parsed, source),
         kind=kind,
@@ -701,7 +800,11 @@ class ExportInfo:
 
 def exports(parsed: ParsedSource) -> list[ExportInfo]:
     """Export statements at module level (``declare module`` bodies included)."""
-    return [export_info(parsed, n) for n in module_statements(parsed) if n.type == "export_statement"]
+    return [
+        export_info(parsed, n)
+        for n in module_statements(parsed)
+        if n.type == "export_statement"
+    ]
 
 
 def export_info(parsed: ParsedSource, node) -> ExportInfo:
@@ -710,14 +813,20 @@ def export_info(parsed: ParsedSource, node) -> ExportInfo:
     declaration = node.child_by_field_name("declaration")
     value = node.child_by_field_name("value")
     clause = next((c for c in node.named_children if c.type == "export_clause"), None)
-    namespace = next((c for c in node.named_children if c.type == "namespace_export"), None)
+    namespace = next(
+        (c for c in node.named_children if c.type == "namespace_export"), None
+    )
     is_default = _has_token(node, "default")
     type_only = _has_token(node, "type") or _is_type_star(node)
     bindings: list[ExportBinding] = []
     star = False
     if clause is not None:
         for spec in clause.named_children:
-            name = spec.child_by_field_name("name") if spec.type == "export_specifier" else None
+            name = (
+                spec.child_by_field_name("name")
+                if spec.type == "export_specifier"
+                else None
+            )
             if name is None:
                 continue
             alias = spec.child_by_field_name("alias")
@@ -734,13 +843,17 @@ def export_info(parsed: ParsedSource, node) -> ExportInfo:
         if namespace is not None:
             alias = namespace.named_children[-1] if namespace.named_children else None
             if alias is not None:
-                bindings.append(ExportBinding("*", _name_text(parsed, alias), type_only))
+                bindings.append(
+                    ExportBinding("*", _name_text(parsed, alias), type_only)
+                )
     elif clause is not None:
         kind = "named"
     elif declaration is not None:
         kind = "declaration"
         for declared in _declared_names(parsed, declaration):
-            bindings.append(ExportBinding(declared, "default" if is_default else declared, False))
+            bindings.append(
+                ExportBinding(declared, "default" if is_default else declared, False)
+            )
     elif value is not None:
         kind = "default"
         if value.type == "identifier":
@@ -763,7 +876,9 @@ def export_info(parsed: ParsedSource, node) -> ExportInfo:
 
 
 def _is_type_star(node) -> bool:
-    return any(child.type == "ERROR" and _is_type_error(child) for child in node.children)
+    return any(
+        child.type == "ERROR" and _is_type_error(child) for child in node.children
+    )
 
 
 def _is_type_error(node) -> bool:
@@ -788,7 +903,9 @@ def _declared_names(parsed: ParsedSource, declaration) -> list[str]:
         for declarator in declaration.named_children:
             if declarator.type == "variable_declarator":
                 bound = binding_names(declarator.child_by_field_name("name"))
-                names.extend(parsed.text(n) for n in sorted(bound, key=lambda n: n.start_byte))
+                names.extend(
+                    parsed.text(n) for n in sorted(bound, key=lambda n: n.start_byte)
+                )
         return names
     name = declaration.child_by_field_name("name")
     if name is None and declaration.type == "ambient_declaration":
@@ -838,7 +955,11 @@ def jsx_elements(parsed: ParsedSource) -> list[JsxElement]:
     """Every JSX element and fragment, nested ones included, in source order."""
     found = []
     for node in descendants(parsed.root, _JSX_ELEMENTS):
-        tag = node if node.type == "jsx_self_closing_element" else node.child_by_field_name("open_tag")
+        tag = (
+            node
+            if node.type == "jsx_self_closing_element"
+            else node.child_by_field_name("open_tag")
+        )
         if tag is None:
             continue
         name = tag.child_by_field_name("name")
@@ -846,7 +967,10 @@ def jsx_elements(parsed: ParsedSource) -> list[JsxElement]:
             JsxElement(
                 name=parsed.text(name) if name is not None else "",
                 self_closing=node.type == "jsx_self_closing_element",
-                attributes=tuple(_jsx_attribute(parsed, a) for a in tag.children_by_field_name("attribute")),
+                attributes=tuple(
+                    _jsx_attribute(parsed, a)
+                    for a in tag.children_by_field_name("attribute")
+                ),
                 span=span(parsed, node),
                 node=node,
             )
@@ -856,12 +980,23 @@ def jsx_elements(parsed: ParsedSource) -> list[JsxElement]:
 
 def _jsx_attribute(parsed: ParsedSource, node) -> JsxAttribute:
     if node.type != "jsx_attribute":  # ``{...props}``
-        spread = next((c for c in node.named_children if c.type == "spread_element"), None)
-        target = spread.named_children[0] if spread is not None and spread.named_children else node
+        spread = next(
+            (c for c in node.named_children if c.type == "spread_element"), None
+        )
+        target = (
+            spread.named_children[0]
+            if spread is not None and spread.named_children
+            else node
+        )
         return JsxAttribute(None, parsed.text(target), True, node)
     named = node.named_children
     value = named[1] if len(named) > 1 else None
-    return JsxAttribute(parsed.text(named[0]), parsed.text(value) if value is not None else None, False, node)
+    return JsxAttribute(
+        parsed.text(named[0]),
+        parsed.text(value) if value is not None else None,
+        False,
+        node,
+    )
 
 
 # ── Calls ───────────────────────────────────────────────────
@@ -882,7 +1017,9 @@ class CallInfo:
         return self.span.start_line
 
 
-def calls(parsed: ParsedSource, callees: Collection[str] | None = None) -> list[CallInfo]:
+def calls(
+    parsed: ParsedSource, callees: Collection[str] | None = None
+) -> list[CallInfo]:
     """Every call expression in source order, optionally only those whose callee text is in ``callees``."""
     found = []
     for node in descendants(parsed.root, ("call_expression",)):
@@ -893,7 +1030,11 @@ def calls(parsed: ParsedSource, callees: Collection[str] | None = None) -> list[
         if callees is not None and callee not in callees:
             continue
         args = node.child_by_field_name("arguments")
-        values = () if args is None else tuple(a for a in args.named_children if a.type != "comment")
+        values = (
+            ()
+            if args is None
+            else tuple(a for a in args.named_children if a.type != "comment")
+        )
         found.append(CallInfo(callee, values, span(parsed, node), node))
     return found
 
@@ -927,14 +1068,24 @@ class TypeDeclaration:
 def type_declarations(parsed: ParsedSource) -> list[TypeDeclaration]:
     """Every interface and type alias, nested ones included, in source order."""
     found = []
-    for node in descendants(parsed.root, ("interface_declaration", "type_alias_declaration")):
+    for node in descendants(
+        parsed.root, ("interface_declaration", "type_alias_declaration")
+    ):
         name = node.child_by_field_name("name")
-        value = node.child_by_field_name("body" if node.type == "interface_declaration" else "value")
+        value = node.child_by_field_name(
+            "body" if node.type == "interface_declaration" else "value"
+        )
         if name is None or value is None:
             continue
         params = node.child_by_field_name("type_parameters")
-        heritage = next((c for c in node.named_children if c.type == "extends_type_clause"), None)
-        holder = node.parent if node.parent is not None and node.parent.type == "export_statement" else node
+        heritage = next(
+            (c for c in node.named_children if c.type == "extends_type_clause"), None
+        )
+        holder = (
+            node.parent
+            if node.parent is not None and node.parent.type == "export_statement"
+            else node
+        )
         found.append(
             TypeDeclaration(
                 name=parsed.text(name),

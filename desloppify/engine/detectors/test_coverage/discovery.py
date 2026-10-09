@@ -58,7 +58,9 @@ def _discover_scorable_and_tests(
     """Return (production_files, test_files, scorable_files, potential)."""
     _to_rel = _root_relative_fn()
     all_files = zone_map.all_files()
-    production_files = set(zone_map.include_only(all_files, Zone.PRODUCTION, Zone.SCRIPT))
+    production_files = set(
+        zone_map.include_only(all_files, Zone.PRODUCTION, Zone.SCRIPT)
+    )
     test_files = set(zone_map.include_only(all_files, Zone.TEST))
 
     if extra_test_files:

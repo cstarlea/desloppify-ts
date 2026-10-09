@@ -47,7 +47,9 @@ def grep_files(
     compiled = re.compile(pattern, flags)
     results: list[tuple[str, int, str]] = []
     for filepath in file_list:
-        abs_path = filepath if os.path.isabs(filepath) else str(get_project_root() / filepath)
+        abs_path = (
+            filepath if os.path.isabs(filepath) else str(get_project_root() / filepath)
+        )
         content = _read_file_text(abs_path)
         if content is None:
             _record_unreadable_file(
@@ -82,7 +84,9 @@ def grep_files_containing(
 
     name_to_files: dict[str, set[str]] = {}
     for filepath in file_list:
-        abs_path = filepath if os.path.isabs(filepath) else str(get_project_root() / filepath)
+        abs_path = (
+            filepath if os.path.isabs(filepath) else str(get_project_root() / filepath)
+        )
         content = _read_file_text(abs_path)
         if content is None:
             _record_unreadable_file(
@@ -111,7 +115,9 @@ def grep_count_files(
         pat = re.compile(re.escape(name))
     matching: list[str] = []
     for filepath in file_list:
-        abs_path = filepath if os.path.isabs(filepath) else str(get_project_root() / filepath)
+        abs_path = (
+            filepath if os.path.isabs(filepath) else str(get_project_root() / filepath)
+        )
         content = _read_file_text(abs_path)
         if content is None:
             _record_unreadable_file(

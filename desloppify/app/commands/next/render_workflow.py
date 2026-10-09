@@ -100,7 +100,9 @@ def _print_blocked_stage_actions(
 
 
 def _print_runner_commands(detail: dict, *, colorize_fn) -> None:
-    _print_command_list("  Runners:", detail.get("runner_commands", []), colorize_fn=colorize_fn)
+    _print_command_list(
+        "  Runners:", detail.get("runner_commands", []), colorize_fn=colorize_fn
+    )
     manual_fallback = detail.get("manual_fallback", "")
     if manual_fallback:
         print(colorize_fn(f"  Manual fallback: {manual_fallback}", "dim"))

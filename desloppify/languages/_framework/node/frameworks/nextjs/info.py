@@ -42,7 +42,9 @@ def nextjs_info_from_evidence(
         package_root=package_root,
         package_json_relpath=package_json_relpath,
         app_roots=tuple(p for p in marker_dirs if p.endswith("/app") or p == "app"),
-        pages_roots=tuple(p for p in marker_dirs if p.endswith("/pages") or p == "pages"),
+        pages_roots=tuple(
+            p for p in marker_dirs if p.endswith("/pages") or p == "pages"
+        ),
     )
 
 

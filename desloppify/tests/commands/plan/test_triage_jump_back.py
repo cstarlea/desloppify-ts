@@ -13,6 +13,7 @@ from desloppify.engine._plan.schema import empty_plan
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _state_with_issues(*ids: str, dimension: str = "naming") -> dict:
     issues = {}
     for fid in ids:
@@ -107,13 +108,17 @@ def _fake_services(plan, state, save_plan_fn=None):
         command_runtime=lambda args: _fake_runtime(state),
         load_plan=lambda *a, **kw: plan,
         save_plan=save_plan_fn or (lambda p, *a, **kw: None),
-        collect_triage_input=lambda p, s: type("TI", (), {
-            "open_issues": s.get("issues", {}),
-            "resolved_issues": {},
-            "new_since_last": [],
-            "resolved_since_last": [],
-            "existing_clusters": {},
-        })(),
+        collect_triage_input=lambda p, s: type(
+            "TI",
+            (),
+            {
+                "open_issues": s.get("issues", {}),
+                "resolved_issues": {},
+                "new_since_last": [],
+                "resolved_since_last": [],
+                "existing_clusters": {},
+            },
+        )(),
         detect_recurring_patterns=lambda _a, _b: {},
         append_log_entry=lambda *a, **kw: None,
         extract_issue_citations=lambda text, ids: set(),
@@ -124,7 +129,8 @@ def _fake_services(plan, state, save_plan_fn=None):
 def _patch_triage(monkeypatch, plan, state, save_plan_fn=None):
     """Apply standard triage monkeypatches."""
     monkeypatch.setattr(
-        triage_mod, "default_triage_services",
+        triage_mod,
+        "default_triage_services",
         lambda: _fake_services(plan, state, save_plan_fn),
     )
     monkeypatch.setattr(triage_mod, "require_issue_inventory", lambda s: True)
@@ -134,11 +140,15 @@ def _patch_triage(monkeypatch, plan, state, save_plan_fn=None):
 # Tests: jump-back reflect with new report
 # ---------------------------------------------------------------------------
 
+
 class TestJumpBackReflect:
-    def test_rerun_reflect_with_new_report_clears_organize_confirmation(self, monkeypatch, capsys):
+    def test_rerun_reflect_with_new_report_clears_organize_confirmation(
+        self, monkeypatch, capsys
+    ):
         """Re-running reflect with --report clears organize's confirmed_at."""
         plan = _plan_with_enriched_clusters(
-            ["observe", "reflect", "organize"], confirmed=True,
+            ["observe", "reflect", "organize"],
+            confirmed=True,
         )
         state = _state_with_issues("r1", "r2", "r3", "r4", "r5")
 
@@ -177,10 +187,14 @@ class TestJumpBackReflect:
         out = capsys.readouterr().out
         assert "preserved" in out.lower()
 
-    def test_rerun_reflect_without_report_preserves_own_confirmation(self, monkeypatch, capsys):
+    def test_rerun_reflect_without_report_preserves_own_confirmation(
+        self, monkeypatch, capsys
+    ):
         """Reuse mode preserves reflect's own confirmed_at (data unchanged)."""
         plan = _plan_with_stages("observe", "reflect", confirmed=True)
-        original_confirmed = plan["epic_triage_meta"]["triage_stages"]["reflect"]["confirmed_at"]
+        original_confirmed = plan["epic_triage_meta"]["triage_stages"]["reflect"][
+            "confirmed_at"
+        ]
         state = _state_with_issues("r1", "r2", "r3", "r4", "r5")
 
         _patch_triage(monkeypatch, plan, state)
@@ -196,11 +210,13 @@ class TestJumpBackReflect:
 # Tests: jump-back observe cascades to reflect and organize
 # ---------------------------------------------------------------------------
 
+
 class TestJumpBackObserve:
     def test_rerun_observe_cascades_to_reflect_and_organize(self, monkeypatch, capsys):
         """Jumping back to observe with new report clears reflect + organize confirmations."""
         plan = _plan_with_enriched_clusters(
-            ["observe", "reflect", "organize"], confirmed=True,
+            ["observe", "reflect", "organize"],
+            confirmed=True,
         )
         state = _state_with_issues("r1", "r2", "r3", "r4", "r5")
 
@@ -226,11 +242,13 @@ class TestJumpBackObserve:
 # Tests: jump-back then fold-confirm forward
 # ---------------------------------------------------------------------------
 
+
 class TestJumpBackThenFoldConfirm:
     def test_jump_back_then_fold_confirm_forward(self, monkeypatch, capsys):
         """Jump back to reflect (reuse), then --stage organize with --attestation fold-confirms."""
         plan = _plan_with_enriched_clusters(
-            ["observe", "reflect", "organize"], confirmed=True,
+            ["observe", "reflect", "organize"],
+            confirmed=True,
         )
         state = _state_with_issues("r1", "r2", "r3", "r4", "r5")
 
@@ -272,11 +290,13 @@ class TestJumpBackThenFoldConfirm:
 # Tests: complete shows jump-back guidance
 # ---------------------------------------------------------------------------
 
+
 class TestCompleteJumpBackGuidance:
     def test_complete_shows_jump_back_guidance(self, monkeypatch, capsys):
         """The --complete summary includes guidance on revising earlier stages."""
         plan = _plan_with_enriched_clusters(
-            ["observe", "reflect", "organize", "enrich", "sense-check"], confirmed=True,
+            ["observe", "reflect", "organize", "enrich", "sense-check"],
+            confirmed=True,
         )
         state = _state_with_issues("r1", "r2", "r3", "r4", "r5")
 
@@ -301,8 +321,11 @@ class TestCompleteJumpBackGuidance:
 # Tests: rerun stage without prior data still requires report
 # ---------------------------------------------------------------------------
 
+
 class TestRerunWithoutPriorData:
-    def test_rerun_stage_without_prior_data_still_requires_report(self, monkeypatch, capsys):
+    def test_rerun_stage_without_prior_data_still_requires_report(
+        self, monkeypatch, capsys
+    ):
         """When stage has no existing data and no --report, error as before."""
         plan = _plan_with_stages("observe", confirmed=True)
         # No reflect stage data exists
@@ -324,11 +347,13 @@ class TestRerunWithoutPriorData:
 # Tests: stage progress shows needs confirm after cascade-clear
 # ---------------------------------------------------------------------------
 
+
 class TestStageProgressShowsNeedsConfirm:
     def test_stage_progress_shows_needs_confirm(self, monkeypatch, capsys):
         """After cascade-clear, stage progress shows 'needs confirm' for unconfirmed stages."""
         plan = _plan_with_enriched_clusters(
-            ["observe", "reflect", "organize"], confirmed=True,
+            ["observe", "reflect", "organize"],
+            confirmed=True,
         )
         state = _state_with_issues("r1", "r2", "r3", "r4", "r5")
 

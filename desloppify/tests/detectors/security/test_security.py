@@ -508,7 +508,6 @@ class TestTsEvalInjection:
         finally:
             os.unlink(path)
 
-
     def test_unrelated_eval_methods_and_doc_comments_are_ignored(self):
         content = (
             "const title = await page.$eval('h1', el => el.textContent);\n"
@@ -556,7 +555,9 @@ class TestTsDangerousHtml:
         path = _write_temp_file(content, suffix=".ts")
         try:
             entries, _ = _detect_ts_security([path], None)
-            assert not [e for e in entries if e["detail"]["kind"] == "innerHTML_assignment"]
+            assert not [
+                e for e in entries if e["detail"]["kind"] == "innerHTML_assignment"
+            ]
         finally:
             os.unlink(path)
 
@@ -569,7 +570,9 @@ class TestTsDevCredentials:
         source.parent.mkdir(parents=True, exist_ok=True)
         source.write_text(code)
         result = detect_ts_security([str(source)], None, settings)
-        return [e for e in result.entries if e["detail"]["kind"] == "dev_credentials_env"]
+        return [
+            e for e in result.entries if e["detail"]["kind"] == "dev_credentials_env"
+        ]
 
     def test_vite_secret(self, tmp_path):
         creds = self._creds(
@@ -592,14 +595,19 @@ class TestTsDevCredentials:
     )
     def test_framework_public_prefixes(self, tmp_path, dependency, name):
         creds = self._creds(
-            tmp_path, {"dependencies": {dependency: "*"}}, f"const v = process.env.{name};"
+            tmp_path,
+            {"dependencies": {dependency: "*"}},
+            f"const v = process.env.{name};",
         )
         assert len(creds) == 1
 
     def test_prefix_only_counts_where_its_framework_is(self, tmp_path):
         """VITE_ means nothing to a Next.js app, and neither means anything to a library."""
         code = "const a = process.env.VITE_TOKEN;\nconst b = process.env.NEXT_PUBLIC_TOKEN;\n"
-        assert [c["detail"]["line"] for c in self._creds(tmp_path, {"dependencies": {"next": "*"}}, code)] == [2]
+        assert [
+            c["detail"]["line"]
+            for c in self._creds(tmp_path, {"dependencies": {"next": "*"}}, code)
+        ] == [2]
         assert self._creds(tmp_path, {"name": "lib"}, code) == []
 
     def test_configured_prefix_and_publishable_names(self, tmp_path):
@@ -608,7 +616,9 @@ class TestTsDevCredentials:
             "const b = process.env.REACT_APP_PUBLISHABLE_KEY;\n"
             "const c = process.env.GITHUB_PUBLIC_TOKEN;\n"
         )
-        creds = self._creds(tmp_path, {"name": "app"}, code, {"public_env_prefixes": ["REACT_APP_"]})
+        creds = self._creds(
+            tmp_path, {"name": "app"}, code, {"public_env_prefixes": ["REACT_APP_"]}
+        )
         assert [c["detail"]["line"] for c in creds] == [1]
 
 
@@ -719,5 +729,3 @@ class TestTsOpenRedirect:
             assert len(redirects) >= 1
         finally:
             os.unlink(path)
-
-

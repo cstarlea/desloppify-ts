@@ -76,10 +76,18 @@ def test_plan_cmd_routes_through_capability_packages() -> None:
     root = _repo_root()
     cmd_path = root / "app" / "commands" / "plan" / "cmd.py"
     text = cmd_path.read_text(encoding="utf-8")
-    assert "from desloppify.app.commands.plan.cluster import cmd_cluster_dispatch" in text
-    assert "from desloppify.app.commands.plan.commit_log import cmd_commit_log_dispatch" in text
+    assert (
+        "from desloppify.app.commands.plan.cluster import cmd_cluster_dispatch" in text
+    )
+    assert (
+        "from desloppify.app.commands.plan.commit_log import cmd_commit_log_dispatch"
+        in text
+    )
     assert "from desloppify.app.commands.plan.override import (" in text
-    assert "from desloppify.app.commands.plan.triage.command import cmd_plan_triage" in text
+    assert (
+        "from desloppify.app.commands.plan.triage.command import cmd_plan_triage"
+        in text
+    )
 
 
 def test_development_philosophy_documents_passthrough_shim_exception() -> None:

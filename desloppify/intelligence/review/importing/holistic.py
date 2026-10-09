@@ -140,7 +140,9 @@ def import_holistic_issues(
     existing_review = potentials.get("review", 0)
     potentials["review"] = max(existing_review, HOLISTIC_POTENTIAL)
 
-    concern_count = sum(1 for issue in review_issues if issue.get("detector") == "concerns")
+    concern_count = sum(
+        1 for issue in review_issues if issue.get("detector") == "concerns"
+    )
     if concern_count:
         potentials["concerns"] = max(potentials.get("concerns", 0), concern_count)
 

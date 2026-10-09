@@ -136,7 +136,11 @@ def _scan_count(state: StateModel) -> int:
 def _carried_since(prev_data: dict, scan_count: int) -> int:
     """Return the first scan *prev_data* was carried in (this one if it wasn't)."""
     since = prev_data.get("carried_forward_since_scan")
-    if prev_data.get("carried_forward") and isinstance(since, int) and since <= scan_count:
+    if (
+        prev_data.get("carried_forward")
+        and isinstance(since, int)
+        and since <= scan_count
+    ):
         return since
     return scan_count
 
@@ -191,7 +195,11 @@ def _materialize_dimension_scores(
         since = _carried_since(prev_data, scan_count)
         if scan_count - since >= CARRIED_FORWARD_MAX_SCANS:
             continue
-        carried = {**prev_data, "carried_forward": True, "carried_forward_since_scan": since}
+        carried = {
+            **prev_data,
+            "carried_forward": True,
+            "carried_forward_since_scan": since,
+        }
         carried.setdefault("score", 0.0)
         carried.setdefault("strict", carried.get("score", 0.0))
         carried.setdefault(
@@ -261,7 +269,9 @@ def recompute_stats(
 ) -> None:
     """Recompute stats and canonical health scores from issues."""
     ensure_state_defaults(state)
-    issues = path_scoped_issues(state.get("work_items") or state.get("issues", {}), scan_path)
+    issues = path_scoped_issues(
+        state.get("work_items") or state.get("issues", {}), scan_path
+    )
     counters, tier_stats = _count_issues(issues)
     wontfix_debt, wontfix_debt_by_tier = _count_wontfix_debt(issues)
     state["stats"] = {

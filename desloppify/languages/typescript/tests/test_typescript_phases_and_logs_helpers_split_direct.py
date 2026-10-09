@@ -63,7 +63,11 @@ def test_phases_basic_cover_logs_unused_exports_and_deprecated(monkeypatch) -> N
         "detect_unused_result",
         lambda _path, **_kwargs: ([{"file": "src/a.ts"}], 7, None),
     )
-    monkeypatch.setattr(phases_basic_mod, "make_unused_issues", lambda entries, _log: [{"entries": entries}])
+    monkeypatch.setattr(
+        phases_basic_mod,
+        "make_unused_issues",
+        lambda entries, _log: [{"entries": entries}],
+    )
     issues, potentials = phases_basic_mod.phase_unused(Path("."), lang)
     assert len(issues) == 1
     assert potentials == {"unused": 7}
@@ -86,13 +90,40 @@ def test_phases_basic_cover_logs_unused_exports_and_deprecated(monkeypatch) -> N
         "detect_deprecated_result",
         lambda _path: SimpleNamespace(
             entries=[
-                {"kind": "property", "file": "src/a.ts", "symbol": "x", "importers": 0, "line": 1},
-                {"kind": "function", "file": "src/a.ts", "symbol": "oldA", "importers": 0, "line": 2,
-                 "exported": False, "same_file_uses": 0},
-                {"kind": "function", "file": "src/b.ts", "symbol": "oldB", "importers": 2, "line": 5,
-                 "exported": True, "same_file_uses": 0},
-                {"kind": "function", "file": "src/c.ts", "symbol": "publicApi", "importers": 0, "line": 9,
-                 "exported": True, "same_file_uses": 0},
+                {
+                    "kind": "property",
+                    "file": "src/a.ts",
+                    "symbol": "x",
+                    "importers": 0,
+                    "line": 1,
+                },
+                {
+                    "kind": "function",
+                    "file": "src/a.ts",
+                    "symbol": "oldA",
+                    "importers": 0,
+                    "line": 2,
+                    "exported": False,
+                    "same_file_uses": 0,
+                },
+                {
+                    "kind": "function",
+                    "file": "src/b.ts",
+                    "symbol": "oldB",
+                    "importers": 2,
+                    "line": 5,
+                    "exported": True,
+                    "same_file_uses": 0,
+                },
+                {
+                    "kind": "function",
+                    "file": "src/c.ts",
+                    "symbol": "publicApi",
+                    "importers": 0,
+                    "line": 9,
+                    "exported": True,
+                    "same_file_uses": 0,
+                },
             ],
             population_size=6,
         ),
@@ -126,7 +157,11 @@ def test_phase_smells_aggregates_smells_and_react_issues(monkeypatch) -> None:
             9,
         ),
     )
-    monkeypatch.setattr(phases_smells_mod, "make_smell_issues", lambda entries, _log: [{"detector": "smells", "entries": entries}])
+    monkeypatch.setattr(
+        phases_smells_mod,
+        "make_smell_issues",
+        lambda entries, _log: [{"detector": "smells", "entries": entries}],
+    )
     monkeypatch.setattr(
         phases_smells_mod.react_state_sync_mod,
         "detect_state_sync",
@@ -135,12 +170,18 @@ def test_phase_smells_aggregates_smells_and_react_issues(monkeypatch) -> None:
     monkeypatch.setattr(
         phases_smells_mod.react_context_mod,
         "detect_context_nesting",
-        lambda _path: ([{"file": "src/a.tsx", "depth": 5, "providers": ["P1", "P2"]}], 2),
+        lambda _path: (
+            [{"file": "src/a.tsx", "depth": 5, "providers": ["P1", "P2"]}],
+            2,
+        ),
     )
     monkeypatch.setattr(
         phases_smells_mod.react_hook_bloat_mod,
         "detect_hook_return_bloat",
-        lambda _path: ([{"file": "src/a.tsx", "hook": "useFoo", "field_count": 8, "line": 10}], 1),
+        lambda _path: (
+            [{"file": "src/a.tsx", "hook": "useFoo", "field_count": 8, "line": 10}],
+            1,
+        ),
     )
     monkeypatch.setattr(
         phases_smells_mod.react_hook_bloat_mod,
@@ -165,7 +206,9 @@ def test_phase_smells_aggregates_smells_and_react_issues(monkeypatch) -> None:
     assert potentials == {"smells": 9, "react": 4}
 
 
-def test_phase_structural_and_subdetectors_cover_threshold_and_passthrough_paths(monkeypatch) -> None:
+def test_phase_structural_and_subdetectors_cover_threshold_and_passthrough_paths(
+    monkeypatch,
+) -> None:
     lang = SimpleNamespace(
         file_finder=lambda _path: ["src/a.ts"],
         large_threshold=200,
@@ -175,38 +218,84 @@ def test_phase_structural_and_subdetectors_cover_threshold_and_passthrough_paths
         zone_map=None,
     )
 
-    monkeypatch.setattr(phases_structural_mod.large_detector_mod, "detect_large_files", lambda _path, **_kwargs: ([{"file": "src/large.ts", "loc": 350}], 8))
-    monkeypatch.setattr(phases_structural_mod.complexity_detector_mod, "detect_complexity", lambda _path, **_kwargs: ([{"file": "src/complex.ts", "score": 22, "signals": ["TODOs"]}], 1))
+    monkeypatch.setattr(
+        phases_structural_mod.large_detector_mod,
+        "detect_large_files",
+        lambda _path, **_kwargs: ([{"file": "src/large.ts", "loc": 350}], 8),
+    )
+    monkeypatch.setattr(
+        phases_structural_mod.complexity_detector_mod,
+        "detect_complexity",
+        lambda _path, **_kwargs: (
+            [{"file": "src/complex.ts", "score": 22, "signals": ["TODOs"]}],
+            1,
+        ),
+    )
     monkeypatch.setattr(
         phases_structural_mod.gods_detector_mod,
         "detect_gods",
         lambda _components, _rules, min_reasons=2: (
-            [{"file": "src/view.tsx", "name": "View", "line": 1, "detail": {"hook_total": 12}, "reasons": ["hooks", "states"]}],
+            [
+                {
+                    "file": "src/view.tsx",
+                    "name": "View",
+                    "line": 1,
+                    "detail": {"hook_total": 12},
+                    "reasons": ["hooks", "states"],
+                }
+            ],
             min_reasons,
         ),
     )
     monkeypatch.setattr(
         phases_structural_mod.concerns_detector_mod,
         "detect_mixed_concerns",
-        lambda _path, _clients=(): ([{"file": "src/service.ts", "concerns": ["io", "db", "auth"]}], 1),
+        lambda _path, _clients=(): (
+            [{"file": "src/service.ts", "concerns": ["io", "db", "auth"]}],
+            1,
+        ),
     )
     monkeypatch.setattr(
         phases_structural_mod,
         "merge_structural_signals",
-        lambda structural, _log: [{"detector": "structural", "files": sorted(structural.keys())}],
+        lambda structural, _log: [
+            {"detector": "structural", "files": sorted(structural.keys())}
+        ],
     )
     monkeypatch.setattr(
         phases_structural_mod.flat_dirs_detector_mod,
         "detect_flat_dirs",
-        lambda _path, **_kwargs: ([{"directory": "src", "file_count": 30, "child_dir_count": 1, "combined_score": 31}], 3),
+        lambda _path, **_kwargs: (
+            [
+                {
+                    "directory": "src",
+                    "file_count": 30,
+                    "child_dir_count": 1,
+                    "combined_score": 31,
+                }
+            ],
+            3,
+        ),
     )
     monkeypatch.setattr(
         phases_structural_mod.props_detector_mod,
         "detect_prop_interface_bloat",
         lambda _path, threshold: (
             [
-                {"file": "src/view.tsx", "interface": "HugeProps", "prop_count": 55, "line": 4, "kind": "props"},
-                {"file": "src/view.tsx", "interface": "SmallProps", "prop_count": 18, "line": 30, "kind": "props"},
+                {
+                    "file": "src/view.tsx",
+                    "interface": "HugeProps",
+                    "prop_count": 55,
+                    "line": 4,
+                    "kind": "props",
+                },
+                {
+                    "file": "src/view.tsx",
+                    "interface": "SmallProps",
+                    "prop_count": 18,
+                    "line": 30,
+                    "kind": "props",
+                },
             ],
             threshold,
         ),
@@ -274,20 +363,50 @@ def test_phases_coupling_helpers_and_orchestration(monkeypatch) -> None:
         phases_coupling_mod.single_use_detector_mod,
         "detect_single_use_abstractions",
         lambda _path, _graph, **_kwargs: (
-            [{"file": "src/shared/dedupe.ts", "loc": 20, "sole_importer": "src/tools/t.ts"}],
+            [
+                {
+                    "file": "src/shared/dedupe.ts",
+                    "loc": 20,
+                    "sole_importer": "src/tools/t.ts",
+                }
+            ],
             4,
         ),
     )
-    monkeypatch.setattr(phases_coupling_mod, "filter_entries", lambda _zones, entries, _detector, file_key="file": entries)
-    monkeypatch.setattr(phases_coupling_mod, "make_single_use_issues", lambda entries, _get_area, **_kwargs: [{"kind": "single", "entries": entries}])
+    monkeypatch.setattr(
+        phases_coupling_mod,
+        "filter_entries",
+        lambda _zones, entries, _detector, file_key="file": entries,
+    )
+    monkeypatch.setattr(
+        phases_coupling_mod,
+        "make_single_use_issues",
+        lambda entries, _get_area, **_kwargs: [{"kind": "single", "entries": entries}],
+    )
 
     monkeypatch.setattr(
         phases_coupling_mod.coupling_detector_mod,
         "detect_layer_violations",
         lambda *_args, **_kwargs: (
             [
-                {"file": "src/shared/a.ts", "target": "src/tools/t.ts", "kind": "upward", "layer": "shared", "target_layer": "tools", "slice": "t", "direction": "shared→tools"},
-                {"file": "src/tools/a/x.ts", "target": "src/tools/b/y.ts", "kind": "cross_slice", "layer": "tools", "source_slice": "a", "target_slice": "b", "direction": "a→b"},
+                {
+                    "file": "src/shared/a.ts",
+                    "target": "src/tools/t.ts",
+                    "kind": "upward",
+                    "layer": "shared",
+                    "target_layer": "tools",
+                    "slice": "t",
+                    "direction": "shared→tools",
+                },
+                {
+                    "file": "src/tools/a/x.ts",
+                    "target": "src/tools/b/y.ts",
+                    "kind": "cross_slice",
+                    "layer": "tools",
+                    "source_slice": "a",
+                    "target_slice": "b",
+                    "direction": "a→b",
+                },
             ],
             SimpleNamespace(eligible_edges=11),
         ),
@@ -313,23 +432,55 @@ def test_phases_coupling_helpers_and_orchestration(monkeypatch) -> None:
             3,
         ),
     )
-    monkeypatch.setattr(phases_coupling_mod.graph_detector_mod, "detect_cycles", lambda _graph: ([{"length": 2, "files": ["src/shared/a.ts", "src/tools/t.ts"]}], 0))
+    monkeypatch.setattr(
+        phases_coupling_mod.graph_detector_mod,
+        "detect_cycles",
+        lambda _graph: (
+            [{"length": 2, "files": ["src/shared/a.ts", "src/tools/t.ts"]}],
+            0,
+        ),
+    )
     monkeypatch.setattr(
         phases_coupling_mod.orphaned_detector_mod,
         "detect_orphaned_files",
         lambda *_args, **_kwargs: ([{"file": "src/orphan.ts", "loc": 11}], 10),
     )
-    monkeypatch.setattr(phases_coupling_mod, "make_cycle_issues", lambda entries, _log: [{"kind": "cycle", "entries": entries}])
-    monkeypatch.setattr(phases_coupling_mod, "make_orphaned_issues", lambda entries, _log: [{"kind": "orphaned", "entries": entries}])
+    monkeypatch.setattr(
+        phases_coupling_mod,
+        "make_cycle_issues",
+        lambda entries, _log: [{"kind": "cycle", "entries": entries}],
+    )
+    monkeypatch.setattr(
+        phases_coupling_mod,
+        "make_orphaned_issues",
+        lambda entries, _log: [{"kind": "orphaned", "entries": entries}],
+    )
 
-    monkeypatch.setattr(phases_coupling_mod.facade_detector_mod, "detect_reexport_facades", lambda _graph: ([{"file": "src/shared/facade.ts", "loc": 5}], 1))
-    monkeypatch.setattr(phases_coupling_mod, "make_facade_issues", lambda entries, _log: [{"kind": "facade", "entries": entries}])
+    monkeypatch.setattr(
+        phases_coupling_mod.facade_detector_mod,
+        "detect_reexport_facades",
+        lambda _graph: ([{"file": "src/shared/facade.ts", "loc": 5}], 1),
+    )
+    monkeypatch.setattr(
+        phases_coupling_mod,
+        "make_facade_issues",
+        lambda entries, _log: [{"kind": "facade", "entries": entries}],
+    )
 
     monkeypatch.setattr(
         phases_coupling_mod.patterns_detector_mod,
         "detect_pattern_anomalies",
         lambda _path, _families: SimpleNamespace(
-            entries=[{"area": "shared", "family": "factory", "patterns_used": ["x", "y"], "pattern_count": 2, "review": "mixed patterns", "confidence": "low"}],
+            entries=[
+                {
+                    "area": "shared",
+                    "family": "factory",
+                    "patterns_used": ["x", "y"],
+                    "pattern_count": 2,
+                    "review": "mixed patterns",
+                    "confidence": "low",
+                }
+            ],
             population_size=3,
         ),
     )
@@ -337,15 +488,33 @@ def test_phases_coupling_helpers_and_orchestration(monkeypatch) -> None:
         phases_coupling_mod.naming_detector_mod,
         "detect_naming_inconsistencies",
         lambda _path, **_kwargs: (
-            [{"directory": "src/shared", "minority": "snake", "minority_count": 1, "majority": "kebab", "majority_count": 3, "total_files": 4, "outliers": ["a_b.ts"]}],
+            [
+                {
+                    "directory": "src/shared",
+                    "minority": "snake",
+                    "minority_count": 1,
+                    "majority": "kebab",
+                    "majority_count": 3,
+                    "total_files": 4,
+                    "outliers": ["a_b.ts"],
+                }
+            ],
             2,
         ),
     )
 
-    monkeypatch.setattr(phases_coupling_mod.deps_detector_mod, "build_dep_graph", lambda _path: graph)
+    monkeypatch.setattr(
+        phases_coupling_mod.deps_detector_mod, "build_dep_graph", lambda _path: graph
+    )
 
     boundary_issues, total_shared = phases_coupling_mod.make_boundary_issues(
-        [{"file": "src/shared/dedupe.ts", "loc": 20, "sole_importer": "src/tools/t.ts"}],
+        [
+            {
+                "file": "src/shared/dedupe.ts",
+                "loc": 20,
+                "sole_importer": "src/tools/t.ts",
+            }
+        ],
         Path("."),
         graph,
         lang,

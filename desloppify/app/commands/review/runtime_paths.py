@@ -19,7 +19,9 @@ EXTERNAL_SESSION_ROOT: Path | None = None
 
 def runtime_project_root(*, project_root_override: Path | None = None) -> Path:
     """Resolve project root with optional test override hook."""
-    override = project_root_override if project_root_override is not None else PROJECT_ROOT
+    override = (
+        project_root_override if project_root_override is not None else PROJECT_ROOT
+    )
     if isinstance(override, Path):
         return override
     return get_project_root()
@@ -31,10 +33,18 @@ def review_packet_dir(
     review_packet_dir_override: Path | None = None,
 ) -> Path:
     """Resolve `.desloppify/review_packets` with optional override."""
-    override = review_packet_dir_override if review_packet_dir_override is not None else REVIEW_PACKET_DIR
+    override = (
+        review_packet_dir_override
+        if review_packet_dir_override is not None
+        else REVIEW_PACKET_DIR
+    )
     if isinstance(override, Path):
         return override
-    return runtime_project_root(project_root_override=project_root_override) / ".desloppify" / "review_packets"
+    return (
+        runtime_project_root(project_root_override=project_root_override)
+        / ".desloppify"
+        / "review_packets"
+    )
 
 
 def blind_packet_path(
@@ -50,7 +60,11 @@ def blind_packet_path(
     if isinstance(stamp, str) and stamp.strip():
         packet_dir = review_packet_dir(project_root_override=project_root_override)
         return packet_dir / f"review_packet_blind_{stamp.strip()}.json"
-    return runtime_project_root(project_root_override=project_root_override) / ".desloppify" / "review_packet_blind.json"
+    return (
+        runtime_project_root(project_root_override=project_root_override)
+        / ".desloppify"
+        / "review_packet_blind.json"
+    )
 
 
 def subagent_runs_dir(
@@ -59,10 +73,19 @@ def subagent_runs_dir(
     subagent_runs_dir_override: Path | None = None,
 ) -> Path:
     """Resolve subagent run artifact directory with optional override."""
-    override = subagent_runs_dir_override if subagent_runs_dir_override is not None else SUBAGENT_RUNS_DIR
+    override = (
+        subagent_runs_dir_override
+        if subagent_runs_dir_override is not None
+        else SUBAGENT_RUNS_DIR
+    )
     if isinstance(override, Path):
         return override
-    return runtime_project_root(project_root_override=project_root_override) / ".desloppify" / "subagents" / "runs"
+    return (
+        runtime_project_root(project_root_override=project_root_override)
+        / ".desloppify"
+        / "subagents"
+        / "runs"
+    )
 
 
 def external_session_root(
@@ -71,10 +94,18 @@ def external_session_root(
     external_session_root_override: Path | None = None,
 ) -> Path:
     """Resolve external review session root with optional override."""
-    override = external_session_root_override if external_session_root_override is not None else EXTERNAL_SESSION_ROOT
+    override = (
+        external_session_root_override
+        if external_session_root_override is not None
+        else EXTERNAL_SESSION_ROOT
+    )
     if isinstance(override, Path):
         return override
-    return runtime_project_root(project_root_override=project_root_override) / ".desloppify" / "external_review_sessions"
+    return (
+        runtime_project_root(project_root_override=project_root_override)
+        / ".desloppify"
+        / "external_review_sessions"
+    )
 
 
 __all__ = [

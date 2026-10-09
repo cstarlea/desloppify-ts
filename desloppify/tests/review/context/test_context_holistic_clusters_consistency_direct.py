@@ -14,7 +14,11 @@ def test_build_duplicate_clusters_handles_defaults_and_fallback_files() -> None:
             {
                 "file": "src/a.py",
                 "summary": "dup block",
-                "detail": {"kind": "dupes", "name": "helper", "files": ["src/a.py", "src/b.py"]},
+                "detail": {
+                    "kind": "dupes",
+                    "name": "helper",
+                    "files": ["src/a.py", "src/b.py"],
+                },
             }
         ],
         "boilerplate_duplication": [
@@ -35,9 +39,18 @@ def test_build_duplicate_clusters_handles_defaults_and_fallback_files() -> None:
 def test_build_naming_drift_groups_by_directory_and_counts_outliers() -> None:
     by_detector = {
         "naming": [
-            {"file": "src/app/foo_bar.py", "detail": {"expected_convention": "snake_case"}},
-            {"file": "src/app/FooBar.py", "detail": {"expected_convention": "snake_case"}},
-            {"file": "src/lib/BadName.py", "detail": {"expected_convention": "snake_case"}},
+            {
+                "file": "src/app/foo_bar.py",
+                "detail": {"expected_convention": "snake_case"},
+            },
+            {
+                "file": "src/app/FooBar.py",
+                "detail": {"expected_convention": "snake_case"},
+            },
+            {
+                "file": "src/lib/BadName.py",
+                "detail": {"expected_convention": "snake_case"},
+            },
         ]
     }
 

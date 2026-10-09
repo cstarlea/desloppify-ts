@@ -26,7 +26,9 @@ def posix_resolution(monkeypatch):
 
 
 @pytest.mark.usefixtures("posix_resolution")
-def test_rovodev_batch_command_includes_acli_rovodev_run_invocation(monkeypatch) -> None:
+def test_rovodev_batch_command_includes_acli_rovodev_run_invocation(
+    monkeypatch,
+) -> None:
     """The default command line invokes ``acli rovodev run`` with ``--yolo``."""
     monkeypatch.delenv("DESLOPPIFY_ROVODEV_NO_YOLO", raising=False)
     monkeypatch.delenv("DESLOPPIFY_ROVODEV_OUTPUT_SCHEMA", raising=False)
@@ -126,15 +128,16 @@ def test_run_rovodev_batch_recovers_timeout_from_stdout_payload(tmp_path: Path) 
     output_file = tmp_path / "out.json"
     payload = {"assessments": {"logic_clarity": 88}, "issues": []}
     stdout_text = (
-        "I am evaluating logic_clarity now.\n"
-        f"Final reply:\n{json.dumps(payload)}\n"
+        f"I am evaluating logic_clarity now.\nFinal reply:\n{json.dumps(payload)}\n"
     )
 
     with patch(
         "desloppify.app.commands.review.runner_rovodev._run_batch_attempt",
         return_value=(
             "ATTEMPT 1/1",
-            _ExecutionResult(code=1, stdout_text=stdout_text, stderr_text="", timed_out=True),
+            _ExecutionResult(
+                code=1, stdout_text=stdout_text, stderr_text="", timed_out=True
+            ),
         ),
     ):
         code = runner_rovodev_mod.run_rovodev_batch(
@@ -156,7 +159,9 @@ def test_run_rovodev_batch_recovers_timeout_from_stdout_payload(tmp_path: Path) 
     assert "Recovered timed-out batch from JSON output file" in log_file.read_text()
 
 
-def test_run_rovodev_batch_restores_valid_output_after_retry_failure(tmp_path: Path) -> None:
+def test_run_rovodev_batch_restores_valid_output_after_retry_failure(
+    tmp_path: Path,
+) -> None:
     """A successful first-attempt payload is preserved across a fatal retry."""
     output_file = tmp_path / "batch-1.raw.txt"
     log_file = tmp_path / "batch-1.log"
@@ -176,7 +181,9 @@ def test_run_rovodev_batch_restores_valid_output_after_retry_failure(tmp_path: P
             ),
             (
                 "ATTEMPT 2/2",
-                _ExecutionResult(code=1, stdout_text="", stderr_text="fatal auth error"),
+                _ExecutionResult(
+                    code=1, stdout_text="", stderr_text="fatal auth error"
+                ),
             ),
         ],
     ):
@@ -226,9 +233,7 @@ def test_runner_parser_accepts_rovodev_choice() -> None:
     from desloppify.cli import create_parser
 
     parser = create_parser()
-    args = parser.parse_args(
-        ["review", "--run-batches", "--runner", "rovodev"]
-    )
+    args = parser.parse_args(["review", "--run-batches", "--runner", "rovodev"])
     assert args.runner == "rovodev"
 
 

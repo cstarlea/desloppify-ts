@@ -33,11 +33,24 @@ from desloppify.languages.typescript.syntax.tree import (
 # ── Constants and interpolation ─────────────────────────────
 
 _CONSTANT_NAME_RE = re.compile(r"^[A-Z][A-Z0-9_]*$")
-_LITERAL_TYPES = frozenset({"string", "number", "true", "false", "null", "undefined", "regex"})
-_FUNCTION_TYPES = frozenset({"function_declaration", "function_expression", "function", "arrow_function"})
+_LITERAL_TYPES = frozenset(
+    {"string", "number", "true", "false", "null", "undefined", "regex"}
+)
+_FUNCTION_TYPES = frozenset(
+    {"function_declaration", "function_expression", "function", "arrow_function"}
+)
 # ``ids.map(() => '?').join(',')``: a list of placeholders, not a value.
 _NUMERIC_TYPES = frozenset({"number", "bigint", "boolean"})
-_NUMERIC_CALLS = frozenset({"Number", "parseInt", "parseFloat", "BigInt", "Number.parseInt", "Number.parseFloat"})
+_NUMERIC_CALLS = frozenset(
+    {
+        "Number",
+        "parseInt",
+        "parseFloat",
+        "BigInt",
+        "Number.parseInt",
+        "Number.parseFloat",
+    }
+)
 _PLACEHOLDER_LITERAL_RE = re.compile(r"""['"`]\s*(?:\?|\$\d*|:\w+)\s*['"`]""")
 
 
@@ -48,7 +61,9 @@ class _Scope:
     parsed: ParsedSource
     path: Path | None = None
     declarations: dict[str, list] = field(default_factory=dict)  # name -> declarators
-    top_functions: dict[str, object] = field(default_factory=dict)  # name -> function node
+    top_functions: dict[str, object] = field(
+        default_factory=dict
+    )  # name -> function node
     imported: dict[str, str] = field(default_factory=dict)  # local name -> module
 
     @classmethod
@@ -59,7 +74,11 @@ class _Scope:
             if name is not None and name.type == "identifier":
                 scope.declarations.setdefault(parsed.text(name), []).append(node)
         for statement in parsed.root.named_children:
-            target = statement.child_by_field_name("declaration") if statement.type == "export_statement" else statement
+            target = (
+                statement.child_by_field_name("declaration")
+                if statement.type == "export_statement"
+                else statement
+            )
             if target is None:
                 continue
             if target.type == "function_declaration":
@@ -70,7 +89,11 @@ class _Scope:
                 for declarator in target.named_children:
                     name = declarator.child_by_field_name("name")
                     value = _function_value(declarator.child_by_field_name("value"))
-                    if name is not None and name.type == "identifier" and value is not None:
+                    if (
+                        name is not None
+                        and name.type == "identifier"
+                        and value is not None
+                    ):
                         scope.top_functions[parsed.text(name)] = value
         for info in q.imports(parsed):
             for binding in info.bindings:
@@ -84,7 +107,9 @@ class _Scope:
             if declarator.start_byte > use.start_byte:
                 continue
             holder = _enclosing_function(declarator)
-            if holder is not None and not (holder.start_byte <= use.start_byte < holder.end_byte):
+            if holder is not None and not (
+                holder.start_byte <= use.start_byte < holder.end_byte
+            ):
                 continue
             if best is None or declarator.start_byte > best.start_byte:
                 best = declarator
@@ -92,7 +117,11 @@ class _Scope:
 
 
 def _function_value(node):
-    while node is not None and node.type in ("parenthesized_expression", "as_expression", "satisfies_expression"):
+    while node is not None and node.type in (
+        "parenthesized_expression",
+        "as_expression",
+        "satisfies_expression",
+    ):
         node = node.named_children[0] if node.named_children else None
     return node if node is not None and node.type in _FUNCTION_TYPES else None
 
@@ -130,17 +159,24 @@ def _is_constant(scope: _Scope, node, depth: int = 0) -> bool:
         return True
     if kind == "template_string":
         return all(
-            _is_constant(scope, sub.named_children[0] if sub.named_children else None, depth + 1)
+            _is_constant(
+                scope, sub.named_children[0] if sub.named_children else None, depth + 1
+            )
             for sub in node.named_children
             if sub.type == "template_substitution"
         )
     if kind == "binary_expression":
-        left, right = node.child_by_field_name("left"), node.child_by_field_name("right")
-        return _is_constant(scope, left, depth + 1) and _is_constant(scope, right, depth + 1)
-    if kind == "ternary_expression":
-        return _is_constant(scope, node.child_by_field_name("consequence"), depth + 1) and _is_constant(
-            scope, node.child_by_field_name("alternative"), depth + 1
+        left, right = (
+            node.child_by_field_name("left"),
+            node.child_by_field_name("right"),
         )
+        return _is_constant(scope, left, depth + 1) and _is_constant(
+            scope, right, depth + 1
+        )
+    if kind == "ternary_expression":
+        return _is_constant(
+            scope, node.child_by_field_name("consequence"), depth + 1
+        ) and _is_constant(scope, node.child_by_field_name("alternative"), depth + 1)
     if kind == "identifier":
         name = parsed.text(node)
         if _CONSTANT_NAME_RE.match(name):
@@ -159,8 +195,12 @@ def _is_constant(scope: _Scope, node, depth: int = 0) -> bool:
     if kind == "member_expression":
         if parsed.text(node.child_by_field_name("property") or node) == "length":
             return True
-        return any(_CONSTANT_NAME_RE.match(part) for part in parsed.text(node).split(".")[:1]) or bool(
-            _CONSTANT_NAME_RE.match(parsed.text(node.child_by_field_name("property") or node))
+        return any(
+            _CONSTANT_NAME_RE.match(part) for part in parsed.text(node).split(".")[:1]
+        ) or bool(
+            _CONSTANT_NAME_RE.match(
+                parsed.text(node.child_by_field_name("property") or node)
+            )
         )
     return False
 
@@ -172,10 +212,18 @@ def _parameter_type(scope: _Scope, name: str, use) -> str | None:
         params = holder.child_by_field_name("parameters")
         for param in params.named_children if params is not None else ():
             pattern = param.child_by_field_name("pattern")
-            if pattern is None or pattern.type != "identifier" or scope.parsed.text(pattern) != name:
+            if (
+                pattern is None
+                or pattern.type != "identifier"
+                or scope.parsed.text(pattern) != name
+            ):
                 continue
             annotation = param.child_by_field_name("type")
-            return scope.parsed.text(annotation).lstrip(":").strip() if annotation is not None else None
+            return (
+                scope.parsed.text(annotation).lstrip(":").strip()
+                if annotation is not None
+                else None
+            )
         holder = _enclosing_function(holder)
     return None
 
@@ -187,7 +235,9 @@ def _interpolated(scope: _Scope, node, depth: int = 0):
     if node is None or depth > 3:
         return None
     if node.type == "template_string":
-        has_sub = any(sub.type == "template_substitution" for sub in node.named_children)
+        has_sub = any(
+            sub.type == "template_substitution" for sub in node.named_children
+        )
         return node if has_sub and not _is_constant(scope, node) else None
     if node.type == "binary_expression" and _operator(scope, node) == "+":
         return node if _has_string(node) and not _is_constant(scope, node) else None
@@ -255,7 +305,9 @@ _UNSAFE_SQL_METHODS = frozenset(
 )
 # ``<receiver>.<method>`` pairs that take raw SQL (drizzle/Kysely ``sql.raw``,
 # ``Prisma.raw``, ``knex.raw``, postgres.js ``sql.unsafe``).
-_UNSAFE_SQL_CALLS = frozenset({("sql", "raw"), ("Prisma", "raw"), ("knex", "raw"), ("sql", "unsafe")})
+_UNSAFE_SQL_CALLS = frozenset(
+    {("sql", "raw"), ("Prisma", "raw"), ("knex", "raw"), ("sql", "unsafe")}
+)
 # Generic method names that run SQL on a database client; the string must look
 # like a statement before they count.
 _SQL_TEXT_METHODS = {
@@ -291,7 +343,11 @@ def _sql_argument(scope: _Scope, args: list):
             if pair.type != "pair":
                 continue
             key = pair.child_by_field_name("key")
-            if key is not None and scope.parsed.text(key).strip("'\"") in ("text", "sql", "query"):
+            if key is not None and scope.parsed.text(key).strip("'\"") in (
+                "text",
+                "sql",
+                "query",
+            ):
                 return pair.child_by_field_name("value")
         return None
     return args[0]
@@ -309,7 +365,9 @@ def _sql_sink(parts: list[str]) -> tuple[str, bool] | None:
     return None
 
 
-def _sql_issues(scope: _Scope, filepath: str, lines: list[str], namer: _Namer) -> list[dict]:
+def _sql_issues(
+    scope: _Scope, filepath: str, lines: list[str], namer: _Namer
+) -> list[dict]:
     issues = []
     for info in q.calls(scope.parsed):
         args_node = info.node.child_by_field_name("arguments")
@@ -370,10 +428,15 @@ def _is_child_process_require(scope: _Scope, node) -> bool:
     if function is None or scope.parsed.text(function) != "require" or args is None:
         return False
     values = [a for a in args.named_children if a.type == "string"]
-    return bool(values) and q.string_value(scope.parsed, values[0]) in _CHILD_PROCESS_MODULES
+    return (
+        bool(values)
+        and q.string_value(scope.parsed, values[0]) in _CHILD_PROCESS_MODULES
+    )
 
 
-def _process_bindings(scope: _Scope, *, follow_imports: bool = True) -> _ProcessBindings:
+def _process_bindings(
+    scope: _Scope, *, follow_imports: bool = True
+) -> _ProcessBindings:
     parsed = scope.parsed
     found = _ProcessBindings()
 
@@ -401,7 +464,11 @@ def _process_bindings(scope: _Scope, *, follow_imports: bool = True) -> _Process
         for declarator in declarators:
             value = declarator.child_by_field_name("value")
             name = declarator.child_by_field_name("name")
-            if value is None or name is None or not _is_child_process_require(scope, value):
+            if (
+                value is None
+                or name is None
+                or not _is_child_process_require(scope, value)
+            ):
                 continue
             if name.type == "identifier":
                 found.modules.add(parsed.text(name))
@@ -409,13 +476,18 @@ def _process_bindings(scope: _Scope, *, follow_imports: bool = True) -> _Process
         declarator = pattern.parent
         if declarator is None or declarator.type != "variable_declarator":
             continue
-        if not _is_child_process_require(scope, declarator.child_by_field_name("value")):
+        if not _is_child_process_require(
+            scope, declarator.child_by_field_name("value")
+        ):
             continue
         for prop in pattern.named_children:
             if prop.type == "shorthand_property_identifier_pattern":
                 bind(parsed.text(prop), parsed.text(prop))
             elif prop.type == "pair_pattern":
-                key, value = prop.child_by_field_name("key"), prop.child_by_field_name("value")
+                key, value = (
+                    prop.child_by_field_name("key"),
+                    prop.child_by_field_name("value"),
+                )
                 if key is not None and value is not None and value.type == "identifier":
                     bind(parsed.text(value), parsed.text(key))
     # ``const run = promisify(exec)`` keeps exec's shell semantics.
@@ -423,13 +495,24 @@ def _process_bindings(scope: _Scope, *, follow_imports: bool = True) -> _Process
         for declarator in declarators:
             value = _unwrap(declarator.child_by_field_name("value"))
             name = declarator.child_by_field_name("name")
-            if value is None or name is None or name.type != "identifier" or value.type != "call_expression":
+            if (
+                value is None
+                or name is None
+                or name.type != "identifier"
+                or value.type != "call_expression"
+            ):
                 continue
             function = value.child_by_field_name("function")
             args = value.child_by_field_name("arguments")
-            if function is None or args is None or scope.parsed.text(function).split(".")[-1] != "promisify":
+            if (
+                function is None
+                or args is None
+                or scope.parsed.text(function).split(".")[-1] != "promisify"
+            ):
                 continue
-            target = _process_function(scope, found, args.named_children[0] if args.named_children else None)
+            target = _process_function(
+                scope, found, args.named_children[0] if args.named_children else None
+            )
             if target in _SHELL_FUNCTIONS:
                 found.shell[parsed.text(name)] = target
     return found
@@ -440,7 +523,11 @@ _LOCAL_SUFFIXES = (".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".mjs", ".cjs")
 
 def _resolve_local_module(base: Path, source: str) -> Path | None:
     target = (base.parent / source).resolve()
-    stem = target.with_suffix("") if target.suffix in (".js", ".mjs", ".cjs", ".jsx") else target
+    stem = (
+        target.with_suffix("")
+        if target.suffix in (".js", ".mjs", ".cjs", ".jsx")
+        else target
+    )
     for candidate in (
         target,
         *(stem.with_name(stem.name + suffix) for suffix in _LOCAL_SUFFIXES),
@@ -493,9 +580,9 @@ def _process_function(scope: _Scope, found: _ProcessBindings, node) -> str | Non
         method = scope.parsed.text(prop)
         if method not in _SHELL_FUNCTIONS | _SPAWN_FUNCTIONS:
             return None
-        if (obj.type == "identifier" and scope.parsed.text(obj) in found.modules) or _is_child_process_require(
-            scope, obj
-        ):
+        if (
+            obj.type == "identifier" and scope.parsed.text(obj) in found.modules
+        ) or _is_child_process_require(scope, obj):
             return method
     return None
 
@@ -509,14 +596,23 @@ def _shell_option(scope: _Scope, args: list) -> bool:
         for pair in arg.named_children:
             if pair.type != "pair":
                 continue
-            key, value = pair.child_by_field_name("key"), pair.child_by_field_name("value")
-            if key is not None and scope.parsed.text(key) == "shell" and value is not None:
+            key, value = (
+                pair.child_by_field_name("key"),
+                pair.child_by_field_name("value"),
+            )
+            if (
+                key is not None
+                and scope.parsed.text(key) == "shell"
+                and value is not None
+            ):
                 if value.type == "true" or value.type == "string":
                     return True
     return False
 
 
-def _shell_issues(scope: _Scope, filepath: str, lines: list[str], namer: _Namer) -> list[dict]:
+def _shell_issues(
+    scope: _Scope, filepath: str, lines: list[str], namer: _Namer
+) -> list[dict]:
     found = _process_bindings(scope)
     if not (found.shell or found.spawn or found.modules):
         return []
@@ -641,7 +737,9 @@ def _directives(parsed: ParsedSource, block) -> set[str]:
     return found
 
 
-def _resolve_export_value(scope: _Scope, value, depth: int = 0) -> tuple[object | None, object | None] | None:
+def _resolve_export_value(
+    scope: _Scope, value, depth: int = 0
+) -> tuple[object | None, object | None] | None:
     """``(function, wrapper_call)`` behind an exported value, or None when it
     isn't a function written here (a re-export, an import). A builder chain
     ending in a callback (``procedure.mutation(async () => …)``) is a wrapper call."""
@@ -655,10 +753,16 @@ def _resolve_export_value(scope: _Scope, value, depth: int = 0) -> tuple[object 
         if target is not None:
             return target, None
         init = scope.initializer(scope.parsed.text(value), value)
-        return _resolve_export_value(scope, init, depth + 1) if init is not None else None
+        return (
+            _resolve_export_value(scope, init, depth + 1) if init is not None else None
+        )
     if value.type == "call_expression":
         args = value.child_by_field_name("arguments")
-        inner = [a for a in (args.named_children if args is not None else ()) if _function_value(a) is not None]
+        inner = [
+            a
+            for a in (args.named_children if args is not None else ())
+            if _function_value(a) is not None
+        ]
         if len(inner) == 1:
             return _function_value(inner[0]), value
     return None
@@ -678,10 +782,16 @@ def _candidates(scope: _Scope, normalized_path: str) -> list[_Candidate]:
             return
         function, wrapper = resolved
         body = function.child_by_field_name("body")
-        inline_server = body is not None and body.type == "statement_block" and "use server" in _directives(parsed, body)
+        inline_server = (
+            body is not None
+            and body.type == "statement_block"
+            and "use server" in _directives(parsed, body)
+        )
         if is_route and not module_server:
             if exported in _MUTATING_METHODS:
-                found.append(_Candidate("route_handler", exported, function, wrapper, line))
+                found.append(
+                    _Candidate("route_handler", exported, function, wrapper, line)
+                )
         elif module_server or inline_server:
             found.append(_Candidate("server_action", exported, function, wrapper, line))
 
@@ -695,12 +805,20 @@ def _candidates(scope: _Scope, normalized_path: str) -> list[_Candidate]:
                 continue
             if declaration.type == "function_declaration":
                 name = declaration.child_by_field_name("name")
-                consider("default" if info.is_default else parsed.text(name), declaration, line)
+                consider(
+                    "default" if info.is_default else parsed.text(name),
+                    declaration,
+                    line,
+                )
             elif declaration.type in ("lexical_declaration", "variable_declaration"):
                 for declarator in declaration.named_children:
                     name = declarator.child_by_field_name("name")
                     if name is not None and name.type == "identifier":
-                        consider(parsed.text(name), declarator.child_by_field_name("value"), line)
+                        consider(
+                            parsed.text(name),
+                            declarator.child_by_field_name("value"),
+                            line,
+                        )
         elif info.kind == "named":
             for binding in info.bindings:
                 if binding.type_only or binding.name is None:
@@ -723,7 +841,9 @@ def _is_auth_name(name: str, auth_names: frozenset[str]) -> bool:
     return name.lower() in auth_names or bool(_AUTH_NAME_RE.match(name))
 
 
-def _has_auth(scope: _Scope, node, auth_names: frozenset[str], seen: set[int], depth: int = 0) -> bool:
+def _has_auth(
+    scope: _Scope, node, auth_names: frozenset[str], seen: set[int], depth: int = 0
+) -> bool:
     """A call to an auth/session function, or a secret check, anywhere in ``node``;
     same-file helpers it calls are followed."""
     if node is None or depth > 3 or node.id in seen:
@@ -733,24 +853,38 @@ def _has_auth(scope: _Scope, node, auth_names: frozenset[str], seen: set[int], d
         return True
     for call in q.descendants(node, ("call_expression",)):
         parts = _callee_parts(scope, call)
-        if any(_is_auth_name(re.sub(r"\(.*", "", part), auth_names) for part in parts if part):
+        if any(
+            _is_auth_name(re.sub(r"\(.*", "", part), auth_names)
+            for part in parts
+            if part
+        ):
             return True
         if len(parts) == 1:
             helper = scope.top_functions.get(parts[0])
-            if helper is not None and _has_auth(scope, helper, auth_names, seen, depth + 1):
+            if helper is not None and _has_auth(
+                scope, helper, auth_names, seen, depth + 1
+            ):
                 return True
     return False
 
 
 def _is_name(scope: _Scope, node, name: str) -> bool:
     node = _unwrap(node)
-    return node is not None and node.type == "identifier" and scope.parsed.text(node) == name
+    return (
+        node is not None
+        and node.type == "identifier"
+        and scope.parsed.text(node) == name
+    )
 
 
 def _delegates_request(scope: _Scope, function) -> bool:
     """A handler that hands its request to another function, which may check it."""
     params = function.child_by_field_name("parameters")
-    first = params.named_children[0] if params is not None and params.named_children else None
+    first = (
+        params.named_children[0]
+        if params is not None and params.named_children
+        else None
+    )
     pattern = first.child_by_field_name("pattern") if first is not None else None
     if pattern is None or pattern.type != "identifier":
         return False
@@ -766,15 +900,23 @@ def _delegates_request(scope: _Scope, function) -> bool:
             if _is_name(scope, arg, request):
                 return True
             if arg.type == "object" and any(
-                (p.type == "shorthand_property_identifier" and scope.parsed.text(p) == request)
-                or (p.type == "pair" and _is_name(scope, p.child_by_field_name("value"), request))
+                (
+                    p.type == "shorthand_property_identifier"
+                    and scope.parsed.text(p) == request
+                )
+                or (
+                    p.type == "pair"
+                    and _is_name(scope, p.child_by_field_name("value"), request)
+                )
                 for p in arg.named_children
             ):
                 return True
     return False
 
 
-def _wrapper_status(scope: _Scope, wrapper, auth_names: frozenset[str], seen: set[int]) -> str:
+def _wrapper_status(
+    scope: _Scope, wrapper, auth_names: frozenset[str], seen: set[int]
+) -> str:
     """``auth`` when the wrapper checks auth, ``unknown`` when it can't be seen, else ``none``."""
     parts = _callee_parts(scope, wrapper)
     if any(_is_auth_name(part, auth_names) for part in parts):
@@ -827,7 +969,9 @@ class _AppAuthContext:
                     parsed = parsed_file(path)
                     if parsed is None:
                         try:
-                            parsed = parse_text(path.read_text(encoding="utf-8", errors="replace"), path)
+                            parsed = parse_text(
+                                path.read_text(encoding="utf-8", errors="replace"), path
+                            )
                         except OSError:
                             parsed = None
                     if parsed is None:
@@ -835,7 +979,9 @@ class _AppAuthContext:
                     scope = _Scope.build(parsed)
                     if any(_is_auth_package(src) for src in scope.imported.values()):
                         return True
-                    reexported = (b.name or "" for e in q.exports(parsed) for b in e.bindings)
+                    reexported = (
+                        b.name or "" for e in q.exports(parsed) for b in e.bindings
+                    )
                     if any(_is_auth_name(name, self.auth_names) for name in reexported):
                         return True
                     if _has_auth(scope, parsed.root, self.auth_names, set()):
@@ -859,11 +1005,17 @@ def _auth_issues(
     issues = []
     for candidate in candidates:
         seen: set[int] = set()
-        if candidate.wrapper is not None and _wrapper_status(scope, candidate.wrapper, app.auth_names, seen) != "none":
+        if (
+            candidate.wrapper is not None
+            and _wrapper_status(scope, candidate.wrapper, app.auth_names, seen)
+            != "none"
+        ):
             continue
         if _has_auth(scope, candidate.function, app.auth_names, seen):
             continue
-        if candidate.kind == "route_handler" and _delegates_request(scope, candidate.function):
+        if candidate.kind == "route_handler" and _delegates_request(
+            scope, candidate.function
+        ):
             continue
         confidence = "low" if middleware_auth else "medium"
         if candidate.kind == "server_action":
@@ -953,15 +1105,21 @@ def _entry(
     return entry
 
 
-def auth_function_names(configured: Iterable[str] | None) -> tuple[frozenset[str], bool]:
+def auth_function_names(
+    configured: Iterable[str] | None,
+) -> tuple[frozenset[str], bool]:
     """The auth-function names to recognise (lower-cased) and whether any were configured."""
     extra = [str(name).strip() for name in (configured or ()) if str(name).strip()]
-    return frozenset(name.lower() for name in (*DEFAULT_AUTH_FUNCTIONS, *extra)), bool(extra)
+    return frozenset(name.lower() for name in (*DEFAULT_AUTH_FUNCTIONS, *extra)), bool(
+        extra
+    )
 
 
 def make_app_context(settings: Mapping[str, object] | None) -> _AppAuthContext:
     configured = (settings or {}).get("auth_functions")
-    names, has_configured = auth_function_names(configured if isinstance(configured, list) else None)
+    names, has_configured = auth_function_names(
+        configured if isinstance(configured, list) else None
+    )
     return _AppAuthContext(names, has_configured)
 
 

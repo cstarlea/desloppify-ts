@@ -147,15 +147,11 @@ def augment_with_stale_wontfix_issues(
     decay_scans: int,
 ) -> tuple[list[dict[str, Any]], int]:
     """Append re-triage issues for stale or worsening wontfix debt."""
-    existing = (state.get("work_items") or state.get("issues", {}))
+    existing = state.get("work_items") or state.get("issues", {})
     if not isinstance(existing, dict):
         return issues, 0
 
-    current_by_id = {
-        issue.get("id"): issue
-        for issue in issues
-        if issue.get("id")
-    }
+    current_by_id = {issue.get("id"): issue for issue in issues if issue.get("id")}
     augmented = list(issues)
     monitored = 0
 
@@ -175,7 +171,9 @@ def augment_with_stale_wontfix_issues(
 
         monitored += 1
         scan_count = int(state.get("scan_count", 0) or 0)
-        since_scan = scan_count - int(previous.get("wontfix_scan_count", scan_count) or 0)
+        since_scan = scan_count - int(
+            previous.get("wontfix_scan_count", scan_count) or 0
+        )
         since_scan = max(since_scan, 0)
 
         reasons, drift = _wontfix_staleness_reasons(

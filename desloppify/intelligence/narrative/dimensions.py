@@ -14,7 +14,9 @@ from desloppify.intelligence.narrative._constants import STRUCTURAL_MERGE
 from desloppify.state_io import StateModel
 
 
-def _analyze_dimensions(dim_scores: dict, history: list[dict], state: StateModel) -> dict:
+def _analyze_dimensions(
+    dim_scores: dict, history: list[dict], state: StateModel
+) -> dict:
     """Compute per-dimension structured analysis."""
     if not dim_scores:
         return {}
@@ -75,8 +77,7 @@ def _biggest_gap_dimensions(dim_scores: dict, state: StateModel) -> list[dict]:
             wontfix_count = sum(
                 1
                 for f in scoped.values()
-                if is_wontfix_debt(f)
-                and _issue_in_dimension(f, name, dim_scores)
+                if is_wontfix_debt(f) and _issue_in_dimension(f, name, dim_scores)
             )
             biggest_gap.append(
                 {
@@ -104,7 +105,9 @@ def _stagnant_dimensions(dim_scores: dict, history: list[dict]) -> list[dict]:
         stagnant.append(
             {
                 "name": name,
-                "strict": round(dim_scores[name].get("strict", dim_scores[name]["score"]), 1),
+                "strict": round(
+                    dim_scores[name].get("strict", dim_scores[name]["score"]), 1
+                ),
                 "stuck_scans": len(scores),
             }
         )

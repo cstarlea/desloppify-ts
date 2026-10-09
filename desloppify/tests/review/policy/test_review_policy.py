@@ -66,9 +66,7 @@ def test_build_dimension_policy_allow_custom_from_cli():
 
 
 def test_build_dimension_policy_allow_custom_from_config():
-    policy = build_dimension_policy(
-        config={"review_allow_custom_dimensions": True}
-    )
+    policy = build_dimension_policy(config={"review_allow_custom_dimensions": True})
     assert policy.allow_custom is True
 
 

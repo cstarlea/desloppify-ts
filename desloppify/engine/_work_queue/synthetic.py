@@ -56,6 +56,7 @@ from desloppify.intelligence.integrity import (
 # Dimension key normalization
 # ---------------------------------------------------------------------------
 
+
 def _canonical_subjective_dimension_key(display_name: str) -> str:
     """Map a display label (e.g. 'Mid elegance') to its canonical dimension key."""
     cleaned = display_name.replace(" (subjective)", "").strip()
@@ -83,6 +84,7 @@ def _subjective_dimension_aliases(display_name: str) -> set[str]:
 # ---------------------------------------------------------------------------
 # Subjective strict scores
 # ---------------------------------------------------------------------------
+
 
 def subjective_strict_scores(state: StateModel | dict[str, Any]) -> dict[str, float]:
     dim_scores = state.get("dimension_scores", {}) or {}
@@ -115,6 +117,7 @@ def subjective_strict_scores(state: StateModel | dict[str, Any]) -> dict[str, fl
 # Synthetic item builders
 # ---------------------------------------------------------------------------
 
+
 def build_triage_stage_items(plan: dict, state: dict) -> list[WorkQueueItem]:
     """Build synthetic work items for each ``triage::*`` stage ID in the queue.
 
@@ -126,11 +129,7 @@ def build_triage_stage_items(plan: dict, state: dict) -> list[WorkQueueItem]:
     meta = plan.get("epic_triage_meta", {})
     confirmed = confirmed_triage_stage_names(meta)
     recorded_unconfirmed = recorded_unconfirmed_triage_stage_names(meta)
-    present_names = {
-        name
-        for name, sid in TRIAGE_STAGE_SPECS
-        if sid in present_ids
-    }
+    present_names = {name for name, sid in TRIAGE_STAGE_SPECS if sid in present_ids}
     present_names.update(recorded_unconfirmed)
     triage_snapshot = build_triage_snapshot(plan, state)
     recovery_needed = (
@@ -145,11 +144,9 @@ def build_triage_stage_items(plan: dict, state: dict) -> list[WorkQueueItem]:
     if not present_names:
         return []
 
-    issues = (state.get("work_items") or state.get("issues", {}))
+    issues = state.get("work_items") or state.get("issues", {})
     open_review_count = sum(
-        1 for f in issues.values()
-        if f.get("status") == "open"
-        and is_triage_finding(f)
+        1 for f in issues.values() if f.get("status") == "open" and is_triage_finding(f)
     )
 
     label_map = dict(TRIAGE_STAGE_LABELS)
@@ -163,7 +160,9 @@ def build_triage_stage_items(plan: dict, state: dict) -> list[WorkQueueItem]:
         # Compute blocked_by: dependency stages that are still in the queue
         deps = TRIAGE_STAGE_DEPENDENCIES.get(name, set())
         blocked_by = sorted(
-            f"triage::{dep}" for dep in deps if dep in present_names and dep not in confirmed
+            f"triage::{dep}"
+            for dep in deps
+            if dep in present_names and dep not in confirmed
         )
 
         only_stages = None if name == "commit" else name
@@ -183,7 +182,9 @@ def build_triage_stage_items(plan: dict, state: dict) -> list[WorkQueueItem]:
                 "stage_label": label_map.get(name, name),
                 "runner_commands": [
                     {"label": label, "command": command}
-                    for label, command in triage_runner_commands(only_stages=only_stages)
+                    for label, command in triage_runner_commands(
+                        only_stages=only_stages
+                    )
                 ],
                 "manual_fallback": triage_manual_stage_command(name),
             },
@@ -212,10 +213,7 @@ def build_subjective_items(
     if not subjective_entries:
         return []
     unassessed_dims = {
-        str(name).strip()
-        for name in unassessed_subjective_dimensions(
-            dim_scores
-        )
+        str(name).strip() for name in unassessed_subjective_dimensions(dim_scores)
     }
 
     # Review issues are keyed by raw dimension name (snake_case).

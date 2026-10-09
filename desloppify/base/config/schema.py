@@ -38,9 +38,7 @@ CONFIG_SCHEMA: dict[str, ConfigKey] = {
     "generate_scorecard": ConfigKey(
         bool, True, "Generate scorecard image after each scan"
     ),
-    "badge_path": ConfigKey(
-        str, "scorecard.png", "Output path for scorecard image"
-    ),
+    "badge_path": ConfigKey(str, "scorecard.png", "Output path for scorecard image"),
     "exclude": ConfigKey(list, [], "Path patterns to exclude from scanning"),
     "ignore": ConfigKey(list, [], "Issue patterns to suppress"),
     "disabled": ConfigKey(
@@ -54,7 +52,9 @@ CONFIG_SCHEMA: dict[str, ConfigKey] = {
         "Layout presets (feature-sliced, bulletproof-react) and frameworks to turn on; "
         "frameworks are also detected from package.json",
     ),
-    "ignore_metadata": ConfigKey(dict, {}, "Ignore metadata {pattern: {note, added_at}}"),
+    "ignore_metadata": ConfigKey(
+        dict, {}, "Ignore metadata {pattern: {note, added_at}}"
+    ),
     "zone_overrides": ConfigKey(
         dict, {}, "Manual zone overrides {rel_path or glob: zone_name}"
     ),

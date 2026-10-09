@@ -53,7 +53,11 @@ def module_exports(path: str, *, types: bool = False) -> ModuleExports | None:
             continue
         for binding in info.bindings:
             if types or not binding.type_only:
-                name = NAMESPACE if binding.imported in (NAMESPACE, "=") else binding.imported
+                name = (
+                    NAMESPACE
+                    if binding.imported in (NAMESPACE, "=")
+                    else binding.imported
+                )
                 imported[binding.local] = (info.source, name)
 
     summary = ModuleExports()
@@ -65,7 +69,10 @@ def module_exports(path: str, *, types: bool = False) -> ModuleExports | None:
                 summary.stars.append(info.source or "")
             for binding in info.bindings:
                 if (types or not binding.type_only) and binding.name is not None:
-                    summary.forwarded[binding.exported] = (info.source or "", binding.name)
+                    summary.forwarded[binding.exported] = (
+                        info.source or "",
+                        binding.name,
+                    )
             continue
         for binding in info.bindings:
             if binding.type_only and not types:
@@ -75,7 +82,11 @@ def module_exports(path: str, *, types: bool = False) -> ModuleExports | None:
             else:
                 summary.local.add(binding.exported)
         # ``export default function () {}`` and ``export default {...}`` bind no name.
-        if info.is_default and not info.bindings and info.kind in ("declaration", "default"):
+        if (
+            info.is_default
+            and not info.bindings
+            and info.kind in ("declaration", "default")
+        ):
             summary.local.add("default")
     _CACHE[(path, types)] = (parsed.source, summary)
     return summary
@@ -92,7 +103,9 @@ def definition_files(path: str, names: tuple[str, ...], resolve) -> set[str]:
     return _definitions(path, names, resolve, set(), 0)
 
 
-def _definitions(path: str, names: tuple[str, ...], resolve, seen: set, hops: int) -> set[str]:
+def _definitions(
+    path: str, names: tuple[str, ...], resolve, seen: set, hops: int
+) -> set[str]:
     if not names:
         return {path}
     key = (path, names)
@@ -130,4 +143,10 @@ def clear_cache() -> None:
     _CACHE.clear()
 
 
-__all__ = ["ModuleExports", "NAMESPACE", "clear_cache", "definition_files", "module_exports"]
+__all__ = [
+    "ModuleExports",
+    "NAMESPACE",
+    "clear_cache",
+    "definition_files",
+    "module_exports",
+]

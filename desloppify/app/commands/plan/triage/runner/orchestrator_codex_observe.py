@@ -34,7 +34,9 @@ def _merge_observe_outputs(
         content = ""
         if output_file.exists():
             try:
-                content = output_file.read_text(encoding="utf-8", errors="replace").strip()
+                content = output_file.read_text(
+                    encoding="utf-8", errors="replace"
+                ).strip()
             except OSError:
                 content = "(batch output missing)"
         if not content:
@@ -98,7 +100,9 @@ def run_observe(
             dimension_group=dims,
             issues_subset=issues_subset,
             repo_root=repo_root,
-            strategist_guidance=_strategist_guidance_for_batch(strategist_briefing, dims),
+            strategist_guidance=_strategist_guidance_for_batch(
+                strategist_briefing, dims
+            ),
         )
         prompt_file = prompts_dir / f"observe_batch_{i}.md"
         safe_write_text(prompt_file, prompt)
@@ -119,7 +123,11 @@ def run_observe(
             )
 
         dim_list = ", ".join(dims)
-        print(colorize(f"    Batch {i + 1}: {len(issues_subset)} issues ({dim_list})", "dim"))
+        print(
+            colorize(
+                f"    Batch {i + 1}: {len(issues_subset)} issues ({dim_list})", "dim"
+            )
+        )
         _log(f"observe-batch batch={i + 1} issues={len(issues_subset)} dims={dim_list}")
 
     if dry_run:
@@ -132,7 +140,12 @@ def run_observe(
         elapsed_map = details.get("elapsed_seconds", {})
         if active:
             parts = [f"#{i + 1}:{int(elapsed_map.get(i, 0))}s" for i in active[:6]]
-            print(colorize(f"    Observe heartbeat: {len(active)}/{total} active ({', '.join(parts)})", "dim"))
+            print(
+                colorize(
+                    f"    Observe heartbeat: {len(active)}/{total} active ({', '.join(parts)})",
+                    "dim",
+                )
+            )
 
     def _batch_label(idx: int) -> str:
         return f"batch {idx + 1}/{total}"
@@ -147,7 +160,9 @@ def run_observe(
     )
 
     if failures:
-        print(colorize(f"  Observe: {len(failures)} batch(es) failed: {failures}", "red"))
+        print(
+            colorize(f"  Observe: {len(failures)} batch(es) failed: {failures}", "red")
+        )
         for idx in failures:
             log_file = logs_dir / f"observe_batch_{idx}.log"
             print(colorize(f"    Check log: {log_file}", "dim"))
@@ -158,7 +173,11 @@ def run_observe(
         )
 
     merged = _merge_observe_outputs(batch_meta)
-    print(colorize(f"  Observe: merged {total} batch outputs ({len(merged)} chars).", "green"))
+    print(
+        colorize(
+            f"  Observe: merged {total} batch outputs ({len(merged)} chars).", "green"
+        )
+    )
     _log(f"observe-parallel-done merged_chars={len(merged)}")
     return TriageStageRunResult(
         exit_code=0,

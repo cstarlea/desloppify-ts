@@ -39,7 +39,11 @@ def workspace(tmp_path, monkeypatch):
     a value that is an exception is raised instead.
     """
     _write(tmp_path, "tsconfig.json", "{}\n")
-    _write(tmp_path, "package.json", '{"workspaces": ["packages/*"], "dependencies": {"x": "1"}}\n')
+    _write(
+        tmp_path,
+        "package.json",
+        '{"workspaces": ["packages/*"], "dependencies": {"x": "1"}}\n',
+    )
     (tmp_path / "node_modules").mkdir()
     _write(tmp_path, "src/root.ts")
     for name in ("a", "b"):
@@ -62,7 +66,9 @@ def workspace(tmp_path, monkeypatch):
             raise output
         stdout, files = output
         listed = "".join(f"{tmp_path / name}\n" for name in files)
-        return SimpleNamespace(stdout=listed + stdout, stderr="", returncode=2 if stdout else 0)
+        return SimpleNamespace(
+            stdout=listed + stdout, stderr="", returncode=2 if stdout else 0
+        )
 
     monkeypatch.setattr(tsc_mod, "run_tsc_check", run)
     with runtime_scope(RuntimeContext(project_root=tmp_path)):
@@ -70,7 +76,10 @@ def workspace(tmp_path, monkeypatch):
 
 
 def _ids(result, root: Path) -> list[tuple[str, str, int]]:
-    return [(Path(e["file"]).relative_to(root).as_posix(), e["code"], e["line"]) for e in result.entries]
+    return [
+        (Path(e["file"]).relative_to(root).as_posix(), e["code"], e["line"])
+        for e in result.entries
+    ]
 
 
 def test_each_package_is_checked_with_its_own_tsconfig(workspace):
@@ -91,17 +100,23 @@ def test_each_package_is_checked_with_its_own_tsconfig(workspace):
         ("packages/a/src/index.ts", "TS2322", 2),
         ("src/root.ts", "TS2304", 1),
     ]
-    assert sorted(Path(f).relative_to(root).as_posix() for f in result.checked_files) == [
+    assert sorted(
+        Path(f).relative_to(root).as_posix() for f in result.checked_files
+    ) == [
         "packages/a/src/index.ts",
         "packages/b/src/index.ts",
         "src/root.ts",
     ]
-    assert [(p.tsconfig.relative_to(root).as_posix(), p.skipped) for p in result.packages] == [
+    assert [
+        (p.tsconfig.relative_to(root).as_posix(), p.skipped) for p in result.packages
+    ] == [
         ("packages/a/tsconfig.json", None),
         ("packages/b/tsconfig.json", None),
     ]
     assert result.coverage is None
-    assert calls.count("tsconfig.json") == 2  # once per detect call: the base run is unchanged
+    assert (
+        calls.count("tsconfig.json") == 2
+    )  # once per detect call: the base run is unchanged
 
 
 def test_solution_config_runs_its_references_and_dedupes(workspace):
@@ -115,14 +130,20 @@ def test_solution_config_runs_its_references_and_dedupes(workspace):
     error = "packages/b/src/index.ts(3,1): error TS2304: Cannot find name 'q'.\n"
     for name in ("web", "node"):
         _write(root, f"packages/b/tsconfig.{name}.json", "{}\n")
-        outputs[f"packages/b/tsconfig.{name}.json"] = (error, ("packages/b/src/index.ts",))
+        outputs[f"packages/b/tsconfig.{name}.json"] = (
+            error,
+            ("packages/b/src/index.ts",),
+        )
 
     result = detect_type_errors_result(root, cache={}, monorepo=Budget(60, 1024))
 
     assert [i for i in _ids(result, root) if i[0].startswith("packages/b")] == [
         ("packages/b/src/index.ts", "TS2304", 3)
     ]
-    assert "packages/b/tsconfig.web.json" in calls and "packages/b/tsconfig.node.json" in calls
+    assert (
+        "packages/b/tsconfig.web.json" in calls
+        and "packages/b/tsconfig.node.json" in calls
+    )
     assert "packages/b/tsconfig.json" not in calls
 
 
@@ -172,7 +193,9 @@ def test_package_importing_an_unbuilt_workspace_package_is_skipped(workspace):
         ("workspace_unbuilt", ("@w/a",)),
     ]
     assert not any(i[0].startswith("packages/b") for i in _ids(result, root))
-    assert "imports workspace packages that aren't built (@w/a)" in result.coverage.summary
+    assert (
+        "imports workspace packages that aren't built (@w/a)" in result.coverage.summary
+    )
 
 
 def _lang(option: str = "", **settings) -> SimpleNamespace:
@@ -182,7 +205,9 @@ def _lang(option: str = "", **settings) -> SimpleNamespace:
         detector_coverage={},
         coverage_warnings=[],
         runtime_setting=lambda key, default=None: settings.get(key, default),
-        runtime_option=lambda key, default=None: option if key == "monorepo_mode" else default,
+        runtime_option=lambda key, default=None: (
+            option if key == "monorepo_mode" else default
+        ),
     )
 
 
@@ -193,7 +218,9 @@ def test_mode_comes_from_the_option_then_the_setting():
     assert monorepo_mode(_lang("packages")) == "packages"
     assert monorepo_mode(_lang("everything")) == "off"
     assert monorepo_budget(_lang()) is None
-    budget = monorepo_budget(_lang("packages", monorepo_budget_seconds=30, monorepo_max_memory_mb=512))
+    budget = monorepo_budget(
+        _lang("packages", monorepo_budget_seconds=30, monorepo_max_memory_mb=512)
+    )
     assert budget is not None and (budget.seconds, budget.max_memory_mb) == (30, 512)
 
 
@@ -210,7 +237,10 @@ def test_phase_logs_packages_and_keeps_base_ids(workspace, capsys):
         "type_error::src/root.ts::TS2304::1",
     ]
     assert potentials == {"type_error": 2}
-    assert "monorepo mode: 2 of 2 package tsconfigs type-checked" in capsys.readouterr().err
+    assert (
+        "monorepo mode: 2 of 2 package tsconfigs type-checked"
+        in capsys.readouterr().err
+    )
 
 
 def test_budget_limits_each_run_to_what_is_left():
@@ -224,12 +254,18 @@ def test_budget_limits_each_run_to_what_is_left():
 def test_run_bounded_kills_a_process_over_the_memory_limit(tmp_path):
     hog = "import time; b = bytearray(300 * 2**20); b[::4096] = b'x' * len(b[::4096]); time.sleep(10)"
     with pytest.raises(MemoryLimitExceeded):
-        run_bounded([sys.executable, "-c", hog], cwd=tmp_path, limits=RunLimits(20, 100))
+        run_bounded(
+            [sys.executable, "-c", hog], cwd=tmp_path, limits=RunLimits(20, 100)
+        )
 
 
 def test_run_bounded_times_out_and_passes_output(tmp_path):
     with pytest.raises(subprocess.TimeoutExpired):
-        run_bounded([sys.executable, "-c", "import time; time.sleep(10)"], cwd=tmp_path, limits=RunLimits(0.5, 1024))
+        run_bounded(
+            [sys.executable, "-c", "import time; time.sleep(10)"],
+            cwd=tmp_path,
+            limits=RunLimits(0.5, 1024),
+        )
     done = run_bounded(
         [sys.executable, "-c", "import os; print(os.environ['NODE_OPTIONS'])"],
         cwd=tmp_path,

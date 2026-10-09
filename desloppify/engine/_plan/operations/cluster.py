@@ -160,8 +160,7 @@ def remove_from_cluster(
             if not isinstance(refs, list):
                 continue
             filtered_refs = [
-                ref for ref in refs
-                if isinstance(ref, str) and ref not in removed_ids
+                ref for ref in refs if isinstance(ref, str) and ref not in removed_ids
             ]
             if filtered_refs != refs:
                 step["issue_refs"] = filtered_refs

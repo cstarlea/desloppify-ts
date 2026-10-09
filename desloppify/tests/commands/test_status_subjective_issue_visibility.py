@@ -23,7 +23,9 @@ def _subjective_dim(score: float, strict: float, dimension_key: str) -> dict:
 
 def test_status_renders_open_issue_count_for_subjective_dimension(monkeypatch, capsys):
     monkeypatch.setattr(status_render, "colorize", lambda text, _style: text)
-    monkeypatch.setattr(render_dims_mod, "dimension_bar", lambda *_args, **_kwargs: "BAR")
+    monkeypatch.setattr(
+        render_dims_mod, "dimension_bar", lambda *_args, **_kwargs: "BAR"
+    )
 
     state = {
         "issues": {
@@ -44,9 +46,13 @@ def test_status_renders_open_issue_count_for_subjective_dimension(monkeypatch, c
     assert "[open issues: 1]" in out
 
 
-def test_status_renders_zero_open_issue_hint_for_low_subjective_score(monkeypatch, capsys):
+def test_status_renders_zero_open_issue_hint_for_low_subjective_score(
+    monkeypatch, capsys
+):
     monkeypatch.setattr(status_render, "colorize", lambda text, _style: text)
-    monkeypatch.setattr(render_dims_mod, "dimension_bar", lambda *_args, **_kwargs: "BAR")
+    monkeypatch.setattr(
+        render_dims_mod, "dimension_bar", lambda *_args, **_kwargs: "BAR"
+    )
 
     state = {"issues": {}}
     dim_scores = {

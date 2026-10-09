@@ -71,9 +71,17 @@ def _detect_type_safety(ctx, smell_counts: dict[str, list[dict]]) -> None:
         return
     unchecked_index = _unchecked_index_access(ctx.filepath)
     for smell_id, node in _type_safety_nodes(parsed):
-        if smell_id in skip or (unchecked_index and smell_id == "non_null_assert" and _is_index_access(node)):
+        if smell_id in skip or (
+            unchecked_index and smell_id == "non_null_assert" and _is_index_access(node)
+        ):
             continue
-        _emit(smell_counts, smell_id, ctx, parsed.line(node), parsed.line_text(node).strip()[:100])
+        _emit(
+            smell_counts,
+            smell_id,
+            ctx,
+            parsed.line(node),
+            parsed.line_text(node).strip()[:100],
+        )
 
 
 def _is_test_file(filepath: str) -> bool:
@@ -109,7 +117,11 @@ def _type_safety_nodes(parsed: ParsedSource):
             yield "non_null_assert", node
         elif kind in _CASTS:
             inner = _cast_operand(node)
-            if inner is not None and inner.type in _CASTS and _is_predefined(parsed, _cast_type(inner), "unknown"):
+            if (
+                inner is not None
+                and inner.type in _CASTS
+                and _is_predefined(parsed, _cast_type(inner), "unknown")
+            ):
                 yield "double_cast", node
         elif kind == "predefined_type":
             if parsed.text(node) == "any":
@@ -136,14 +148,28 @@ def _cast_type(node):
 def _cast_operand(node):
     """The expression being cast, parentheses removed."""
     named = node.named_children
-    operand = named[0] if node.type == "as_expression" else named[-1] if len(named) > 1 else None
-    while operand is not None and operand.type == "parenthesized_expression" and operand.named_children:
+    operand = (
+        named[0]
+        if node.type == "as_expression"
+        else named[-1]
+        if len(named) > 1
+        else None
+    )
+    while (
+        operand is not None
+        and operand.type == "parenthesized_expression"
+        and operand.named_children
+    ):
         operand = operand.named_children[0]
     return operand
 
 
 def _is_predefined(parsed: ParsedSource, node, name: str) -> bool:
-    return node is not None and node.type == "predefined_type" and parsed.text(node) == name
+    return (
+        node is not None
+        and node.type == "predefined_type"
+        and parsed.text(node) == name
+    )
 
 
 def _any_kind(node) -> str | None:
@@ -159,7 +185,11 @@ def _any_kind(node) -> str | None:
         return None
     if parent.type == "as_expression" and _same(_cast_type(parent), target):
         return "as_any_cast"
-    if parent.type == "type_arguments" and parent.parent is not None and parent.parent.type == "type_assertion":
+    if (
+        parent.type == "type_arguments"
+        and parent.parent is not None
+        and parent.parent.type == "type_assertion"
+    ):
         return "as_any_cast"
     return "any_type"
 

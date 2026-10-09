@@ -142,9 +142,7 @@ def test_unclustered_review_issues_falls_back_to_queue_scan() -> None:
             "concerns::skipped",
             "structural::ignored",
         ],
-        "clusters": {
-            "manual": {"auto": False, "issue_ids": ["review::clustered"]}
-        },
+        "clusters": {"manual": {"auto": False, "issue_ids": ["review::clustered"]}},
         "skipped": {
             "review::skipped": {"kind": "permanent"},
             "concerns::skipped": {"kind": "false_positive"},
@@ -190,10 +188,12 @@ def test_inject_triage_stages_keeps_workflow_prefix_ahead_of_triage() -> None:
         "workflow::communicate-score",
         "workflow::create-plan",
     ]
-    assert plan["queue_order"][2: 2 + len(TRIAGE_STAGE_IDS)] == list(TRIAGE_STAGE_IDS)
+    assert plan["queue_order"][2 : 2 + len(TRIAGE_STAGE_IDS)] == list(TRIAGE_STAGE_IDS)
 
 
-def test_validate_stage_report_length_accepts_short_report_for_small_issue_count(capsys) -> None:
+def test_validate_stage_report_length_accepts_short_report_for_small_issue_count(
+    capsys,
+) -> None:
     ok = flow_stage_helpers_mod.validate_stage_report_length(
         report="x" * 50,
         issue_count=3,

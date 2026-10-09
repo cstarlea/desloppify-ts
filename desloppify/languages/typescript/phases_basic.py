@@ -26,7 +26,9 @@ from desloppify.languages.typescript.monorepo import monorepo_budget
 from desloppify.state_io import Issue
 
 
-def phase_logs(path: Path, lang: LangRuntimeContract) -> tuple[list[Issue], dict[str, int]]:
+def phase_logs(
+    path: Path, lang: LangRuntimeContract
+) -> tuple[list[Issue], dict[str, int]]:
     log_result = logs_detector_mod.detect_logs(path)
     log_entries = log_result.entries
     total_files = log_result.population_size
@@ -54,7 +56,9 @@ def phase_logs(path: Path, lang: LangRuntimeContract) -> tuple[list[Issue], dict
     return results, {"logs": adjust_potential(lang.zone_map, total_files)}
 
 
-def phase_unused(path: Path, lang: LangRuntimeContract) -> tuple[list[Issue], dict[str, int]]:
+def phase_unused(
+    path: Path, lang: LangRuntimeContract
+) -> tuple[list[Issue], dict[str, int]]:
     entries, total_files, coverage = unused_detector_mod.detect_unused_result(
         path, cache=lang.runtime_cache
     )
@@ -82,7 +86,11 @@ def phase_type_errors(
         )
 
     def zone(filepath: str) -> Zone:
-        return lang.zone_map.get(rel(filepath)) if lang.zone_map is not None else Zone.PRODUCTION
+        return (
+            lang.zone_map.get(rel(filepath))
+            if lang.zone_map is not None
+            else Zone.PRODUCTION
+        )
 
     results = []
     for entry in result.entries:
@@ -106,12 +114,18 @@ def phase_type_errors(
                 },
             )
         )
-    potential = sum(zone(filepath) not in EXCLUDED_ZONES for filepath in result.checked_files)
-    log(f"         {len(result.entries)} errors → {len(results)} issues ({potential} files scored)")
+    potential = sum(
+        zone(filepath) not in EXCLUDED_ZONES for filepath in result.checked_files
+    )
+    log(
+        f"         {len(result.entries)} errors → {len(results)} issues ({potential} files scored)"
+    )
     return results, {"type_error": potential}
 
 
-def phase_lint(path: Path, lang: LangRuntimeContract) -> tuple[list[Issue], dict[str, int]]:
+def phase_lint(
+    path: Path, lang: LangRuntimeContract
+) -> tuple[list[Issue], dict[str, int]]:
     result = lint_detector_mod.detect_lint_result(
         path,
         type_aware_max_files=lang.runtime_setting(
@@ -122,20 +136,28 @@ def phase_lint(path: Path, lang: LangRuntimeContract) -> tuple[list[Issue], dict
     record_reduced_coverage(lang, result.coverage)
     if result.packages:
         linted = sum(package.skipped is None for package in result.packages)
-        log(f"         monorepo mode: {linted} of {len(result.packages)} packages linted")
+        log(
+            f"         monorepo mode: {linted} of {len(result.packages)} packages linted"
+        )
     if result.checked_files is None:
         if result.coverage is not None:
             log("         skipped (the project's linter did not run)")
         return [], {}
 
     def zone(filepath: str) -> Zone:
-        return lang.zone_map.get(rel(filepath)) if lang.zone_map is not None else Zone.PRODUCTION
+        return (
+            lang.zone_map.get(rel(filepath))
+            if lang.zone_map is not None
+            else Zone.PRODUCTION
+        )
 
     results = []
     for entry in result.entries:
         if zone(entry["file"]) in (Zone.GENERATED, Zone.VENDOR):
             continue
-        first_line = entry["message"].splitlines()[0] if entry["message"] else entry["rule"]
+        first_line = (
+            entry["message"].splitlines()[0] if entry["message"] else entry["rule"]
+        )
         results.append(
             make_issue(
                 "lint",
@@ -155,8 +177,12 @@ def phase_lint(path: Path, lang: LangRuntimeContract) -> tuple[list[Issue], dict
                 },
             )
         )
-    potential = sum(zone(filepath) not in EXCLUDED_ZONES for filepath in result.checked_files)
-    log(f"         {len(result.entries)} findings → {len(results)} issues ({potential} files scored)")
+    potential = sum(
+        zone(filepath) not in EXCLUDED_ZONES for filepath in result.checked_files
+    )
+    log(
+        f"         {len(result.entries)} findings → {len(results)} issues ({potential} files scored)"
+    )
     potentials = {"lint": potential}
     if "eslint" in result.linters:
         # The retired next_lint detector ran ESLint too; this resolves its open issues.
@@ -192,9 +218,11 @@ _EXPORT_SUMMARIES = {
 }
 
 
-def phase_exports(path: Path, lang: LangRuntimeContract) -> tuple[list[Issue], dict[str, int]]:
-    export_entries, total_exports, coverage = exports_detector_mod.detect_dead_exports_result(
-        path, cache=lang.runtime_cache
+def phase_exports(
+    path: Path, lang: LangRuntimeContract
+) -> tuple[list[Issue], dict[str, int]]:
+    export_entries, total_exports, coverage = (
+        exports_detector_mod.detect_dead_exports_result(path, cache=lang.runtime_cache)
     )
     record_reduced_coverage(lang, coverage)
     results = []
@@ -211,7 +239,9 @@ def phase_exports(path: Path, lang: LangRuntimeContract) -> tuple[list[Issue], d
                 entry["name"],
                 tier=3 if kind == "duplicate" else 2,
                 confidence="medium" if kind == "duplicate" else "high",
-                summary=summary.format(name=entry["name"], names=", ".join(entry.get("names", ()))),
+                summary=summary.format(
+                    name=entry["name"], names=", ".join(entry.get("names", ()))
+                ),
                 detail=detail,
             )
         )
@@ -223,7 +253,10 @@ _DEPENDENCY_ISSUES = {
     "unused": (2, "Unused dependency: {name}"),
     "unused_dev": (3, "Unused devDependency: {name}"),
     "unlisted": (2, "Unlisted dependency: {name} is imported but not declared"),
-    "unlisted_binary": (3, "Unlisted binary: {name} is run by a script but not declared"),
+    "unlisted_binary": (
+        3,
+        "Unlisted binary: {name} is run by a script but not declared",
+    ),
 }
 
 
@@ -240,7 +273,11 @@ def phase_dependencies(
     results = []
     for entry in result.entries:
         tier, summary = _DEPENDENCY_ISSUES[entry["kind"]]
-        detail: dict = {"kind": entry["kind"], "package": entry["name"], "line": entry["line"]}
+        detail: dict = {
+            "kind": entry["kind"],
+            "package": entry["name"],
+            "line": entry["line"],
+        }
         if entry.get("importers"):
             detail["importers"] = entry["importers"]
             summary += f" ({entry['importers'][0]})"

@@ -59,17 +59,38 @@ def _parse_briefing(report: str) -> dict | None:
     missing = [
         field
         for field in _REQUIRED_STRING_FIELDS
-        if not isinstance(briefing.get(field), str) or not briefing.get(field, "").strip()
+        if not isinstance(briefing.get(field), str)
+        or not briefing.get(field, "").strip()
     ]
     if missing:
-        print(colorize(f"  Strategize report missing required fields: {', '.join(missing)}", "red"))
+        print(
+            colorize(
+                f"  Strategize report missing required fields: {', '.join(missing)}",
+                "red",
+            )
+        )
         return None
     focus_dimensions = briefing.get("focus_dimensions")
     if not isinstance(focus_dimensions, list) or not focus_dimensions:
-        print(colorize("  Strategize report must include at least one focus_dimensions entry.", "red"))
+        print(
+            colorize(
+                "  Strategize report must include at least one focus_dimensions entry.",
+                "red",
+            )
+        )
         return None
-    if briefing.get("score_trend") not in {"improving", "stable", "declining", "recovering"}:
-        print(colorize("  score_trend must be improving, stable, declining, or recovering.", "red"))
+    if briefing.get("score_trend") not in {
+        "improving",
+        "stable",
+        "declining",
+        "recovering",
+    }:
+        print(
+            colorize(
+                "  score_trend must be improving, stable, declining, or recovering.",
+                "red",
+            )
+        )
         return None
     if briefing.get("debt_trend") not in {"growing", "stable", "shrinking"}:
         print(colorize("  debt_trend must be growing, stable, or shrinking.", "red"))
@@ -98,15 +119,25 @@ def _append_progression_event(
                     "debt_trend": briefing.get("debt_trend", "stable"),
                     "focus_dimensions": _focus_dimension_names(briefing),
                     "anti_pattern_count": len(briefing.get("anti_patterns", []) or []),
-                    "rework_warning_count": len(briefing.get("rework_warnings", []) or []),
+                    "rework_warning_count": len(
+                        briefing.get("rework_warnings", []) or []
+                    ),
                 },
             }
         )
     except (OSError, ValueError, TypeError):
-        _logger.warning("Failed to append strategist_complete progression event", exc_info=True)
+        _logger.warning(
+            "Failed to append strategist_complete progression event", exc_info=True
+        )
 
 
-_STRATEGIC_ISSUE_REQUIRED_FIELDS = ("identifier", "summary", "priority", "recommendation", "dimensions_affected")
+_STRATEGIC_ISSUE_REQUIRED_FIELDS = (
+    "identifier",
+    "summary",
+    "priority",
+    "recommendation",
+    "dimensions_affected",
+)
 _STRATEGIC_ISSUE_PRIORITIES = {"critical", "high", "medium"}
 _PRIORITY_TO_TIER = {"critical": 1, "high": 2, "medium": 3}
 
@@ -117,26 +148,45 @@ def _parse_strategic_issues(briefing: dict) -> list[dict]:
     if not raw:
         return []
     if not isinstance(raw, list):
-        print(colorize("  WARNING: strategic_issues must be a list; ignoring.", "yellow"))
+        print(
+            colorize("  WARNING: strategic_issues must be a list; ignoring.", "yellow")
+        )
         return []
     valid: list[dict] = []
     for idx, entry in enumerate(raw):
         if not isinstance(entry, dict):
-            print(colorize(f"  WARNING: strategic_issues[{idx}] is not an object; skipping.", "yellow"))
+            print(
+                colorize(
+                    f"  WARNING: strategic_issues[{idx}] is not an object; skipping.",
+                    "yellow",
+                )
+            )
             continue
         missing = [f for f in _STRATEGIC_ISSUE_REQUIRED_FIELDS if not entry.get(f)]
         if missing:
-            print(colorize(f"  WARNING: strategic_issues[{idx}] missing {', '.join(missing)}; skipping.", "yellow"))
+            print(
+                colorize(
+                    f"  WARNING: strategic_issues[{idx}] missing {', '.join(missing)}; skipping.",
+                    "yellow",
+                )
+            )
             continue
         if entry["priority"] not in _STRATEGIC_ISSUE_PRIORITIES:
-            print(colorize(
-                f"  WARNING: strategic_issues[{idx}] priority '{entry['priority']}' invalid "
-                f"(must be critical|high|medium); skipping.",
-                "yellow",
-            ))
+            print(
+                colorize(
+                    f"  WARNING: strategic_issues[{idx}] priority '{entry['priority']}' invalid "
+                    f"(must be critical|high|medium); skipping.",
+                    "yellow",
+                )
+            )
             continue
         if not isinstance(entry["dimensions_affected"], list):
-            print(colorize(f"  WARNING: strategic_issues[{idx}] dimensions_affected must be a list; skipping.", "yellow"))
+            print(
+                colorize(
+                    f"  WARNING: strategic_issues[{idx}] dimensions_affected must be a list; skipping.",
+                    "yellow",
+                )
+            )
             continue
         valid.append(entry)
     return valid
@@ -170,7 +220,9 @@ def _create_strategic_work_items(
             "recommendation": entry["recommendation"],
             "dimensions_affected": entry["dimensions_affected"],
             "detail": {
-                "dimension": entry["dimensions_affected"][0] if entry["dimensions_affected"] else "unknown",
+                "dimension": entry["dimensions_affected"][0]
+                if entry["dimensions_affected"]
+                else "unknown",
                 "recommendation": entry["recommendation"],
                 "source": "strategist",
             },
@@ -187,6 +239,7 @@ def _create_strategic_work_items(
         from desloppify.engine._plan.constants import (
             normalize_queue_workflow_and_triage_prefix,
         )
+
         normalize_queue_workflow_and_triage_prefix(queue_order)
 
 
@@ -228,7 +281,9 @@ def cmd_stage_strategize(
         return
 
     progression_events = load_progression()
-    strategist_input = collect_strategist_input(state, plan, progression_events=progression_events)
+    strategist_input = collect_strategist_input(
+        state, plan, progression_events=progression_events
+    )
     briefing = _parse_briefing(report)
     if briefing is None:
         return
@@ -237,21 +292,25 @@ def cmd_stage_strategize(
     computed_score_trend = strategist_input.score_trajectory.trend
     briefing_score_trend = briefing.get("score_trend", "stable")
     if briefing_score_trend != computed_score_trend:
-        print(colorize(
-            f"  WARNING: Briefing score_trend '{briefing_score_trend}' disagrees with "
-            f"computed trend '{computed_score_trend}'. Overriding with computed value.",
-            "yellow",
-        ))
+        print(
+            colorize(
+                f"  WARNING: Briefing score_trend '{briefing_score_trend}' disagrees with "
+                f"computed trend '{computed_score_trend}'. Overriding with computed value.",
+                "yellow",
+            )
+        )
         briefing["score_trend"] = computed_score_trend
 
     computed_debt_trend = strategist_input.debt_trajectory.trend
     briefing_debt_trend = briefing.get("debt_trend", "stable")
     if briefing_debt_trend != computed_debt_trend:
-        print(colorize(
-            f"  WARNING: Briefing debt_trend '{briefing_debt_trend}' disagrees with "
-            f"computed trend '{computed_debt_trend}'. Overriding with computed value.",
-            "yellow",
-        ))
+        print(
+            colorize(
+                f"  WARNING: Briefing debt_trend '{briefing_debt_trend}' disagrees with "
+                f"computed trend '{computed_debt_trend}'. Overriding with computed value.",
+                "yellow",
+            )
+        )
         briefing["debt_trend"] = computed_debt_trend
 
     # --- Fix 3b: Parse and validate strategic_issues ---
@@ -288,6 +347,7 @@ def cmd_stage_strategize(
             from desloppify.app.commands.helpers.state_persistence import (
                 save_state_or_exit,
             )
+
             save_state_or_exit(state, runtime.state_path)
 
     resolved_services.save_plan(plan)
@@ -309,10 +369,20 @@ def cmd_stage_strategize(
     if strategic_issues:
         print(colorize(f"  Strategic issues created: {len(strategic_issues)}", "green"))
         for si in strategic_issues:
-            print(colorize(f"    strategy::{si['identifier']} [{si['priority']}] — {si['summary']}", "dim"))
+            print(
+                colorize(
+                    f"    strategy::{si['identifier']} [{si['priority']}] — {si['summary']}",
+                    "dim",
+                )
+            )
     if strategist_input.rework_loops and not anti_patterns:
         dims = ", ".join(loop.dimension for loop in strategist_input.rework_loops[:3])
-        print(colorize(f"  Warning: data shows rework loops ({dims}) but briefing has no anti_patterns.", "yellow"))
+        print(
+            colorize(
+                f"  Warning: data shows rework loops ({dims}) but briefing has no anti_patterns.",
+                "yellow",
+            )
+        )
 
 
 __all__ = ["cmd_stage_strategize"]

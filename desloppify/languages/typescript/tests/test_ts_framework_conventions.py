@@ -42,10 +42,13 @@ def _orphans(root: Path) -> list[str]:
         graph,
         extensions=[".ts", ".js"],
         options=OrphanedDetectionOptions(
-            entry_files=auto_import_entries(root), entry_conventions=framework_entry_conventions()
+            entry_files=auto_import_entries(root),
+            entry_conventions=framework_entry_conventions(),
         ),
     )
-    return sorted(Path(e["file"]).relative_to(root.resolve()).as_posix() for e in entries)
+    return sorted(
+        Path(e["file"]).relative_to(root.resolve()).as_posix() for e in entries
+    )
 
 
 def test_specs_are_registered_with_their_conventions():
@@ -93,24 +96,45 @@ def test_nuxt_aliases_and_virtual_modules(tmp_path, set_project_root):
     clear_resolver_cache()
     resolver = ModuleResolver(tmp_path, tmp_path)
     importer = str(tmp_path / "app/pages/index.ts")
-    assert resolver.resolve("~/utils/format", importer) == str((tmp_path / "app/utils/format.ts").resolve())
-    assert resolver.resolve("@/utils/format", importer) == str((tmp_path / "app/utils/format.ts").resolve())
-    assert resolver.resolve("~~/server/utils/db", importer) == str((tmp_path / "server/utils/db.ts").resolve())
-    assert resolver.resolve("#shared/types", importer) == str((tmp_path / "shared/types.ts").resolve())
+    assert resolver.resolve("~/utils/format", importer) == str(
+        (tmp_path / "app/utils/format.ts").resolve()
+    )
+    assert resolver.resolve("@/utils/format", importer) == str(
+        (tmp_path / "app/utils/format.ts").resolve()
+    )
+    assert resolver.resolve("~~/server/utils/db", importer) == str(
+        (tmp_path / "server/utils/db.ts").resolve()
+    )
+    assert resolver.resolve("#shared/types", importer) == str(
+        (tmp_path / "shared/types.ts").resolve()
+    )
     assert resolver.is_external("#imports", importer)
     assert not resolver.is_external("~/utils/missing", importer)
 
 
 def test_sveltekit_aliases_and_virtual_modules(tmp_path, set_project_root):
-    _write(tmp_path, {"svelte.config.js": "export default {}\n", "src/lib/api.ts": _FILLER, "src/lib/index.ts": _FILLER})
+    _write(
+        tmp_path,
+        {
+            "svelte.config.js": "export default {}\n",
+            "src/lib/api.ts": _FILLER,
+            "src/lib/index.ts": _FILLER,
+        },
+    )
     clear_resolver_cache()
     resolver = ModuleResolver(tmp_path, tmp_path)
     importer = str(tmp_path / "src/routes/+page.ts")
-    assert resolver.resolve("$lib/api", importer) == str((tmp_path / "src/lib/api.ts").resolve())
-    assert resolver.resolve("$lib", importer) == str((tmp_path / "src/lib/index.ts").resolve())
+    assert resolver.resolve("$lib/api", importer) == str(
+        (tmp_path / "src/lib/api.ts").resolve()
+    )
+    assert resolver.resolve("$lib", importer) == str(
+        (tmp_path / "src/lib/index.ts").resolve()
+    )
     assert resolver.is_external("$app/navigation", importer)
     assert resolver.is_external("$env/static/private", importer)
-    assert not resolver.is_external("$app/navigation", str(tmp_path.parent / "elsewhere.ts"))
+    assert not resolver.is_external(
+        "$app/navigation", str(tmp_path.parent / "elsewhere.ts")
+    )
 
 
 def test_nuxt_conventions(tmp_path, set_project_root):
@@ -123,7 +147,8 @@ def test_nuxt_conventions(tmp_path, set_project_root):
             "app/composables/useThing.ts": _FILLER,
             "app/plugins/scroll.client.ts": _FILLER,
             "app/middleware/auth.ts": _FILLER,
-            "app/pages/index.ts": "import { LIST } from '~/constants/lists'\nexport default LIST\n" + _FILLER,
+            "app/pages/index.ts": "import { LIST } from '~/constants/lists'\nexport default LIST\n"
+            + _FILLER,
             "app/constants/lists.ts": _FILLER,
             "server/api/hello.ts": _FILLER,
             "shared/utils/slug.ts": _FILLER,
@@ -139,7 +164,8 @@ def test_sveltekit_conventions(tmp_path, set_project_root):
         {
             "package.json": '{"devDependencies": {"@sveltejs/kit": "^2.0.0"}}',
             "svelte.config.js": "export default {}\n",
-            "src/routes/+page.server.ts": "import { api } from '$lib/api'\nexport const load = api\n" + _FILLER,
+            "src/routes/+page.server.ts": "import { api } from '$lib/api'\nexport const load = api\n"
+            + _FILLER,
             "src/routes/blog/[slug]/+page.ts": _FILLER,
             "src/routes/api/health/+server.ts": _FILLER,
             "src/hooks.server.ts": _FILLER,

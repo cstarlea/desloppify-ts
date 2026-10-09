@@ -58,7 +58,9 @@ class DependencyResult:
     coverage: DetectorCoverageStatus | None
 
 
-def _reduced(summary: str, *, reason: str, confidence: float, remediation: str) -> DetectorCoverageStatus:
+def _reduced(
+    summary: str, *, reason: str, confidence: float, remediation: str
+) -> DetectorCoverageStatus:
     return DetectorCoverageStatus(
         detector="dependencies",
         status="reduced",
@@ -137,7 +139,9 @@ def _imported_packages(files: list[str]) -> dict[str, set[str]]:
     return found
 
 
-def _still_imported(name: str, manifest_dir: Path, imported: dict[str, set[str]]) -> bool:
+def _still_imported(
+    name: str, manifest_dir: Path, imported: dict[str, set[str]]
+) -> bool:
     targets = {name, _types_target(name)} if name.startswith("@types/") else {name}
     return any(
         in_scan_path(Path(importer), manifest_dir)
@@ -187,7 +191,9 @@ def _unlisted_entries(
     """One entry per (manifest, package) imported without being declared."""
     grouped: dict[tuple[Path, str], list[tuple[Path, int]]] = {}
     for filepath, item in run.items("unlisted"):
-        if not (isinstance(item, dict) and item.get("name")) or not in_scan_path(filepath, path):
+        if not (isinstance(item, dict) and item.get("name")) or not in_scan_path(
+            filepath, path
+        ):
             continue
         if _zone(zone_map, filepath) in (Zone.GENERATED, Zone.VENDOR):
             continue
@@ -195,12 +201,15 @@ def _unlisted_entries(
         if manifest is None or manifest.resolve() not in manifests:
             continue
         line = item.get("line") if isinstance(item.get("line"), int) else 0
-        grouped.setdefault((manifest.resolve(), item["name"]), []).append((filepath, line))
+        grouped.setdefault((manifest.resolve(), item["name"]), []).append(
+            (filepath, line)
+        )
     entries = []
     for (manifest, name), importers in sorted(grouped.items()):
         importers.sort()
         runtime = any(
-            _zone(zone_map, filepath) in (Zone.PRODUCTION, Zone.SCRIPT) for filepath, _ in importers
+            _zone(zone_map, filepath) in (Zone.PRODUCTION, Zone.SCRIPT)
+            for filepath, _ in importers
         )
         entries.append(
             {
@@ -288,7 +297,9 @@ def detect_dependencies(
     unlisted = _unlisted_entries(run, path, manifests, zone_map)
     entries.extend(unlisted)
 
-    population = sum(len(names) for m, names in declared.items() if m not in uninstalled)
+    population = sum(
+        len(names) for m, names in declared.items() if m not in uninstalled
+    )
     population += len(unlisted)
     coverage = None
     if uninstalled:
@@ -304,4 +315,9 @@ def detect_dependencies(
     return DependencyResult(entries, population, coverage)
 
 
-__all__ = ["DependencyResult", "declared_dependencies", "detect_dependencies", "package_name"]
+__all__ = [
+    "DependencyResult",
+    "declared_dependencies",
+    "detect_dependencies",
+    "package_name",
+]

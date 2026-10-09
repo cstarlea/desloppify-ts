@@ -18,7 +18,9 @@ from desloppify.tests.review.shared_review_fixtures import _as_review_payload
 
 class TestImportReviewIssues:
     def test_import_valid_issues(self, empty_state, sample_issues_data):
-        diff = import_review_issues(_as_review_payload(sample_issues_data), empty_state, "typescript")
+        diff = import_review_issues(
+            _as_review_payload(sample_issues_data), empty_state, "typescript"
+        )
         assert diff["new"] == 3
         # Check issues were added to state
         issues = empty_state["work_items"]
@@ -88,7 +90,8 @@ class TestImportReviewIssues:
         assert len(cache) >= 1  # At least one file cached
 
     def test_import_merges_with_state(self, state_with_issues, sample_issues_data):
-        diff = import_review_issues(_as_review_payload(sample_issues_data), state_with_issues, "typescript"
+        diff = import_review_issues(
+            _as_review_payload(sample_issues_data), state_with_issues, "typescript"
         )
         # Original issues should still be there
         assert "unused::src/foo.ts::bar" in state_with_issues["issues"]
@@ -98,7 +101,9 @@ class TestImportReviewIssues:
         self, empty_state, sample_issues_data
     ):
         empty_state["potentials"] = {"typescript": {"unused": 10, "smells": 25}}
-        import_review_issues(_as_review_payload(sample_issues_data), empty_state, "typescript")
+        import_review_issues(
+            _as_review_payload(sample_issues_data), empty_state, "typescript"
+        )
 
         pots = empty_state["potentials"]["typescript"]
         assert pots["unused"] == 10
@@ -107,7 +112,9 @@ class TestImportReviewIssues:
 
     def test_import_preserves_wontfix_issues(self, empty_state, sample_issues_data):
         # First import
-        import_review_issues(_as_review_payload(sample_issues_data), empty_state, "typescript")
+        import_review_issues(
+            _as_review_payload(sample_issues_data), empty_state, "typescript"
+        )
         # Mark one as wontfix
         for f in empty_state["work_items"].values():
             if "naming_quality" in f["id"]:
@@ -115,7 +122,9 @@ class TestImportReviewIssues:
                 f["note"] = "intentionally generic"
                 break
         # Second import with same issues
-        import_review_issues(_as_review_payload(sample_issues_data), empty_state, "typescript")
+        import_review_issues(
+            _as_review_payload(sample_issues_data), empty_state, "typescript"
+        )
         # Wontfix should NOT be auto-resolved (it's still in current issues)
         assert any(f["status"] == "wontfix" for f in empty_state["work_items"].values())
         # The issue still exists
@@ -124,17 +133,23 @@ class TestImportReviewIssues:
         )
 
     def test_import_sets_lang(self, empty_state, sample_issues_data):
-        import_review_issues(_as_review_payload(sample_issues_data), empty_state, "python")
+        import_review_issues(
+            _as_review_payload(sample_issues_data), empty_state, "python"
+        )
         for f in empty_state["work_items"].values():
             assert f["lang"] == "python"
 
     def test_import_sets_tier_3(self, empty_state, sample_issues_data):
-        import_review_issues(_as_review_payload(sample_issues_data), empty_state, "typescript")
+        import_review_issues(
+            _as_review_payload(sample_issues_data), empty_state, "typescript"
+        )
         for f in empty_state["work_items"].values():
             assert f["tier"] == 3
 
     def test_import_stores_detail(self, empty_state, sample_issues_data):
-        import_review_issues(_as_review_payload(sample_issues_data), empty_state, "typescript")
+        import_review_issues(
+            _as_review_payload(sample_issues_data), empty_state, "typescript"
+        )
         for f in empty_state["work_items"].values():
             assert "dimension" in f["detail"]
             assert "suggestion" in f["detail"]
@@ -191,7 +206,9 @@ class TestImportReviewIssues:
 
 class TestScoringIntegration:
     def test_review_issues_appear_in_scoring(self, empty_state, sample_issues_data):
-        import_review_issues(_as_review_payload(sample_issues_data), empty_state, "typescript")
+        import_review_issues(
+            _as_review_payload(sample_issues_data), empty_state, "typescript"
+        )
 
         # Assessment scores drive dimension scores directly.
         # Review issues are tracked but don't affect the score.
@@ -212,7 +229,9 @@ class TestScoringIntegration:
         self, empty_state, sample_issues_data
     ):
         # Import review issues
-        import_review_issues(_as_review_payload(sample_issues_data), empty_state, "typescript")
+        import_review_issues(
+            _as_review_payload(sample_issues_data), empty_state, "typescript"
+        )
         review_ids = {
             f["id"]
             for f in empty_state["work_items"].values()

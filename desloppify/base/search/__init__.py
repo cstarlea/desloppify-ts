@@ -1,2 +1,1 @@
 """Search-oriented core utilities."""
-

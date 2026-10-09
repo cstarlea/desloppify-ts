@@ -47,7 +47,9 @@ def scan_fastify_async_with_done(path: Path) -> tuple[list[dict], int]:
         scanned += 1
         for function in _async_functions(source):
             if len(function.params) >= 2 and function.params[-1] == "done":
-                entries.append({"file": source.path, "line": source.line(function.start)})
+                entries.append(
+                    {"file": source.path, "line": source.line(function.start)}
+                )
     return entries, scanned
 
 
@@ -56,7 +58,11 @@ def autoload_dirs(package_root: Path) -> frozenset[str]:
     root = package_root.resolve()
     found: set[str] = set()
     for filepath in find_ts_and_js_files(package_root):
-        full = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
+        full = (
+            Path(filepath)
+            if Path(filepath).is_absolute()
+            else get_project_root() / filepath
+        )
         if "node_modules" in full.parts:
             continue
         try:
@@ -66,7 +72,11 @@ def autoload_dirs(package_root: Path) -> frozenset[str]:
         if not _AUTOLOAD_IMPORT_RE.search(text):
             continue
         for match in _AUTOLOAD_DIR_RE.finditer(text):
-            parts = [p for part in _PART_RE.findall(match.group("parts")) for p in part.split("/")]
+            parts = [
+                p
+                for part in _PART_RE.findall(match.group("parts"))
+                for p in part.split("/")
+            ]
             directory = full.resolve().parent.joinpath(*parts)
             try:
                 found.add(directory.relative_to(root).as_posix() + "/")

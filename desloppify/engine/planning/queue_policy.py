@@ -16,7 +16,9 @@ from desloppify.engine._work_queue.core import (
 )
 
 
-def _subjective_threshold(state: StateModel, *, default: float = DEFAULT_TARGET_STRICT_SCORE) -> float:
+def _subjective_threshold(
+    state: StateModel, *, default: float = DEFAULT_TARGET_STRICT_SCORE
+) -> float:
     config = state.get("config", {})
     raw_target = default
     if isinstance(config, dict):

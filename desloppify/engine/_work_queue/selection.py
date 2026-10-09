@@ -67,19 +67,21 @@ def filter_snapshot_items(
     filtered = items
     if not opts.include_subjective:
         has_objective_issue = any(
-            item.get("kind") in {"issue", "cluster"}
-            and not is_review_work_item(item)
+            item.get("kind") in {"issue", "cluster"} and not is_review_work_item(item)
             for item in filtered
         )
         filtered = [
-            item for item in filtered
+            item
+            for item in filtered
             if item.get("kind") != "subjective_dimension"
             and not (has_objective_issue and is_review_work_item(item))
         ]
     if opts.scope:
         filtered = [
-            item for item in filtered
-            if item.get("kind") != "subjective_dimension" or scope_matches(item, opts.scope)
+            item
+            for item in filtered
+            if item.get("kind") != "subjective_dimension"
+            or scope_matches(item, opts.scope)
         ]
     return filtered
 

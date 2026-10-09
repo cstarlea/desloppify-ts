@@ -96,7 +96,9 @@ class ReviewContext:
             setattr(
                 self,
                 section,
-                _coerce_section(section=section, value=getattr(self, section), strict=strict),
+                _coerce_section(
+                    section=section, value=getattr(self, section), strict=strict
+                ),
             )
 
     @classmethod
@@ -131,7 +133,9 @@ class HolisticContext:
     api_surface: SectionPayload = field(
         default_factory=lambda: _empty_section("api_surface")
     )
-    structure: SectionPayload = field(default_factory=lambda: _empty_section("structure"))
+    structure: SectionPayload = field(
+        default_factory=lambda: _empty_section("structure")
+    )
     codebase_stats: SectionPayload = field(
         default_factory=lambda: _empty_section("codebase_stats")
     )
@@ -173,7 +177,9 @@ class HolisticContext:
             setattr(
                 self,
                 section,
-                _coerce_section(section=section, value=getattr(self, section), strict=strict),
+                _coerce_section(
+                    section=section, value=getattr(self, section), strict=strict
+                ),
             )
 
     @classmethod
@@ -186,7 +192,9 @@ class HolisticContext:
         return cls(**{section: raw.get(section) for section in cls._SECTION_NAMES})
 
     def to_dict(self) -> dict[str, object]:
-        return {section: dict(getattr(self, section)) for section in self._SECTION_NAMES}
+        return {
+            section: dict(getattr(self, section)) for section in self._SECTION_NAMES
+        }
 
 
 __all__ = [

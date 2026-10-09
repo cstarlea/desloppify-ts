@@ -35,7 +35,9 @@ def _resolve_position(
         return len(order)
 
     if position in {"before", "after"} and target:
-        return _resolve_relative_position(order, moving, position=position, target=target)
+        return _resolve_relative_position(
+            order, moving, position=position, target=target
+        )
 
     if position in {"up", "down"} and offset is not None:
         return _resolve_offset_position(

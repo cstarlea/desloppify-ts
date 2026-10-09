@@ -32,7 +32,9 @@ def test_load_state_file_payload_rejects_non_dict_payloads(tmp_path: Path) -> No
     assert migration_mod._load_state_file_payload(path) is None
 
 
-def test_migrate_from_state_files_merges_and_strips_state_config(tmp_path: Path) -> None:
+def test_migrate_from_state_files_merges_and_strips_state_config(
+    tmp_path: Path,
+) -> None:
     config_path = tmp_path / "config.json"
     state_file = tmp_path / "state-python.json"
     state_file.write_text(
@@ -68,7 +70,9 @@ def test_migrate_from_state_files_merges_and_strips_state_config(tmp_path: Path)
     assert "config" not in rewritten
 
 
-def test_migrate_from_state_files_returns_empty_when_state_dir_missing(tmp_path: Path) -> None:
+def test_migrate_from_state_files_returns_empty_when_state_dir_missing(
+    tmp_path: Path,
+) -> None:
     config_path = tmp_path / "missing-dir" / "config.json"
 
     assert migration_mod._migrate_from_state_files(config_path) == {}

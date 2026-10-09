@@ -63,13 +63,23 @@ def confirm_strategize(
 
     if "strategize" not in stages:
         print(colorize("  Cannot confirm: strategize stage not recorded.", "red"))
-        print(colorize('  Run: desloppify plan triage --stage strategize --report "{...}"', "dim"))
+        print(
+            colorize(
+                '  Run: desloppify plan triage --stage strategize --report "{...}"',
+                "dim",
+            )
+        )
         return
 
     strat = stages["strategize"]
     # Allow re-confirmation even if already auto-confirmed
-    if strat.get("confirmed_at") and strat.get("confirmed_text", "") != "auto-confirmed":
-        print(colorize("  Strategize stage already confirmed with attestation.", "green"))
+    if (
+        strat.get("confirmed_at")
+        and strat.get("confirmed_text", "") != "auto-confirmed"
+    ):
+        print(
+            colorize("  Strategize stage already confirmed with attestation.", "green")
+        )
         return
 
     briefing = plan.get("epic_triage_meta", {}).get("strategist_briefing", {})
@@ -105,7 +115,7 @@ def confirm_strategize(
         return
     print_user_message(
         "Hey -- strategize is confirmed with attestation. Run "
-        "`desloppify plan triage --stage observe --report \"...\"` next."
+        '`desloppify plan triage --stage observe --report "..."` next.'
     )
 
 

@@ -8,7 +8,9 @@ import desloppify.app.commands.resolve.messages as messages_mod
 from desloppify.app.commands.resolve.living_plan import ClusterContext
 
 
-def _args(*, status: str = "fixed", patterns: list[str] | None = None) -> argparse.Namespace:
+def _args(
+    *, status: str = "fixed", patterns: list[str] | None = None
+) -> argparse.Namespace:
     return argparse.Namespace(status=status, patterns=patterns or ["smells::*"])
 
 
@@ -24,7 +26,9 @@ def test_print_no_match_warning_uses_open_vs_resolved_label(capsys) -> None:
 
 def test_print_fixed_next_user_message_handles_cluster_states(monkeypatch) -> None:
     messages: list[str] = []
-    monkeypatch.setattr(messages_mod, "print_user_message", lambda msg: messages.append(msg))
+    monkeypatch.setattr(
+        messages_mod, "print_user_message", lambda msg: messages.append(msg)
+    )
 
     args = _args(status="fixed")
     messages_mod.print_fixed_next_user_message(
@@ -67,9 +71,13 @@ def test_print_fixed_next_user_message_handles_cluster_states(monkeypatch) -> No
     assert "on to the next one" in messages[-1]
 
 
-def test_print_fixed_next_user_message_noop_when_not_fixed_or_not_next(monkeypatch) -> None:
+def test_print_fixed_next_user_message_noop_when_not_fixed_or_not_next(
+    monkeypatch,
+) -> None:
     calls: list[str] = []
-    monkeypatch.setattr(messages_mod, "print_user_message", lambda msg: calls.append(msg))
+    monkeypatch.setattr(
+        messages_mod, "print_user_message", lambda msg: calls.append(msg)
+    )
 
     messages_mod.print_fixed_next_user_message(
         args=_args(status="open"),

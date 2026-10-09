@@ -94,9 +94,7 @@ def append_log_entry(
         plan["execution_log"] = log[-cap:]
 
 
-def describe_issue(
-    plan: PlanModel, issue_id: str, description: str | None
-) -> None:
+def describe_issue(plan: PlanModel, issue_id: str, description: str | None) -> None:
     """Set or clear an augmented description on a issue."""
     ensure_plan_defaults(plan)
     now = utc_now()
@@ -107,9 +105,7 @@ def describe_issue(
     overrides[issue_id]["updated_at"] = now
 
 
-def annotate_issue(
-    plan: PlanModel, issue_id: str, note: str | None
-) -> None:
+def annotate_issue(plan: PlanModel, issue_id: str, note: str | None) -> None:
     """Set or clear a note on a issue."""
     ensure_plan_defaults(plan)
     now = utc_now()

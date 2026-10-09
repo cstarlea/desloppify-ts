@@ -28,7 +28,13 @@ def test_parse_joins_message_chains_and_collects_listed_files():
     diagnostics, files = parse_tsc_output(lines)
 
     assert diagnostics == [
-        TscDiagnostic("src/a.ts", 3, 7, "TS2322", "Type 'string' is not assignable to type 'number'."),
+        TscDiagnostic(
+            "src/a.ts",
+            3,
+            7,
+            "TS2322",
+            "Type 'string' is not assignable to type 'number'.",
+        ),
         TscDiagnostic(
             "src/b.ts",
             1,
@@ -51,7 +57,9 @@ def test_parse_joins_message_chains_and_collects_listed_files():
 
 def test_path_with_parentheses_parses():
     diagnostics, _ = parse_tsc_output(
-        ["app/(shop)/page.tsx(2,5): error TS2339: Property 'x' does not exist on type 'Y'."]
+        [
+            "app/(shop)/page.tsx(2,5): error TS2339: Property 'x' does not exist on type 'Y'."
+        ]
     )
     assert diagnostics[0].file == "app/(shop)/page.tsx"
     assert (diagnostics[0].line, diagnostics[0].col) == (2, 5)

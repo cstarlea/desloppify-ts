@@ -59,11 +59,8 @@ from .runtime_paths import (
     runtime_project_root as _runtime_project_root,
 )
 
-EXTERNAL_ATTEST_TEXT = (
-    "I validated this review was completed without awareness of overall score and is unbiased."
-)
+EXTERNAL_ATTEST_TEXT = "I validated this review was completed without awareness of overall score and is unbiased."
 _EXTERNAL_SUPPORTED_RUNNERS = {"claude"}
-
 
 
 def _utc_now() -> datetime:
@@ -168,7 +165,9 @@ def _prepare_packet_snapshot(
     return packet, packet_path, blind_path
 
 
-def _build_template_payload(packet: dict[str, Any], *, session_id: str, token: str) -> dict[str, Any]:
+def _build_template_payload(
+    packet: dict[str, Any], *, session_id: str, token: str
+) -> dict[str, Any]:
     dimensions = [
         dim
         for dim in packet.get("dimensions", [])
@@ -229,10 +228,7 @@ def _build_claude_launch_prompt(
         combined_cap += ctx.issues_cap
         dimension_contexts = batch.get("dimension_contexts")
 
-        section = (
-            f"--- Batch {i + 1}: {ctx.name} ---\n"
-            f"Rationale: {ctx.rationale}\n"
-        )
+        section = f"--- Batch {i + 1}: {ctx.name} ---\nRationale: {ctx.rationale}\n"
         section += render_dimension_prompts_block(
             ctx.dimensions,
             ctx.dimension_prompts or dim_prompts,
@@ -332,7 +328,9 @@ def _build_claude_launch_prompt(
     )
 
 
-def do_external_start(args, state, lang, *, config: dict[str, Any] | None = None) -> None:
+def do_external_start(
+    args, state, lang, *, config: dict[str, Any] | None = None
+) -> None:
     """Start an external review session with CLI-issued provenance context."""
     config = config or {}
     runner = str(getattr(args, "external_runner", "claude")).strip().lower()
@@ -362,7 +360,9 @@ def do_external_start(args, state, lang, *, config: dict[str, Any] | None = None
     session_dir = _session_dir(session_id)
     session_dir.mkdir(parents=True, exist_ok=True)
 
-    template_payload = _build_template_payload(packet, session_id=session_id, token=token)
+    template_payload = _build_template_payload(
+        packet, session_id=session_id, token=token
+    )
     template_path = session_dir / "review_result.template.json"
     instructions_path = session_dir / "reviewer_instructions.md"
     launch_prompt_path = session_dir / "claude_launch_prompt.md"
@@ -536,7 +536,10 @@ def do_external_submit(
     _ensure_session_open(session)
     _ensure_session_not_expired(session)
 
-    if str(session.get("runner", "")).strip().lower() not in _EXTERNAL_SUPPORTED_RUNNERS:
+    if (
+        str(session.get("runner", "")).strip().lower()
+        not in _EXTERNAL_SUPPORTED_RUNNERS
+    ):
         raise CommandError(
             "Error: only Claude external sessions currently support durable score submit.",
         )
@@ -593,7 +596,9 @@ def do_external_submit(
             ),
         )
         if code != 0:
-            raise CommandError(f"External review exited with code {code}", exit_code=code)
+            raise CommandError(
+                f"External review exited with code {code}", exit_code=code
+            )
 
 
 __all__ = ["do_external_start", "do_external_submit", "EXTERNAL_ATTEST_TEXT"]

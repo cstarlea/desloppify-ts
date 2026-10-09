@@ -85,16 +85,12 @@ class TestReviewIssuesExcludedFromScoring:
         review_open["detail"] = {"holistic": True, "dimension": "naming_quality"}
         potentials = {"unused": 100, "review": 10}
 
-        open_result = compute_score_bundle(
-            _issues_dict(review_open), potentials
-        )
+        open_result = compute_score_bundle(_issues_dict(review_open), potentials)
 
         review_fixed = _issue("review", status="fixed", confidence="high", file=".")
         review_fixed["detail"] = {"holistic": True, "dimension": "naming_quality"}
 
-        fixed_result = compute_score_bundle(
-            _issues_dict(review_fixed), potentials
-        )
+        fixed_result = compute_score_bundle(_issues_dict(review_fixed), potentials)
 
         assert open_result.overall_score == fixed_result.overall_score
         assert open_result.strict_score == fixed_result.strict_score
@@ -169,9 +165,7 @@ class TestReviewIssuesExcludedFromScoring:
                     },
                 }
             },
-            "subjective_assessments": {
-                "naming_quality": {"score": 75.0}
-            },
+            "subjective_assessments": {"naming_quality": {"score": 75.0}},
         }
 
         entries = scorecard_dimension_entries(state)

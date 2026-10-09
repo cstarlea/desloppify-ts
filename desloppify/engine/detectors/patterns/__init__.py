@@ -1,2 +1,1 @@
 """Detector pattern libraries."""
-

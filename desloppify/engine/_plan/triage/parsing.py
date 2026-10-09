@@ -11,6 +11,7 @@ from .prompt import ContradictionNote, DismissedIssue, TriageResult
 ISSUE_ID_RE = re.compile(r"[a-z_]+::[a-f0-9]{8,}")
 BRACKET_SHORT_ID_RE = re.compile(r"\[([a-z0-9_]{6,16})\]")
 
+
 def _literal_issue_citations(text: str, valid_ids: set[str]) -> set[str]:
     return {valid_id for valid_id in valid_ids if valid_id in text}
 
@@ -114,7 +115,11 @@ def _normalize_direction(raw_epic: dict) -> str:
 def _valid_epic_issue_ids(raw_ids: object, valid_ids: set[str]) -> list[str]:
     if not isinstance(raw_ids, list):
         return []
-    return [issue_id for issue_id in raw_ids if isinstance(issue_id, str) and issue_id in valid_ids]
+    return [
+        issue_id
+        for issue_id in raw_ids
+        if isinstance(issue_id, str) and issue_id in valid_ids
+    ]
 
 
 def _parse_epic(raw_epic: object, valid_ids: set[str]) -> dict | None:
@@ -139,13 +144,17 @@ def _parse_epic(raw_epic: object, valid_ids: set[str]) -> dict | None:
     }
 
 
-def _parse_dismissed_issue(raw_dismissal: object, valid_ids: set[str]) -> DismissedIssue | None:
+def _parse_dismissed_issue(
+    raw_dismissal: object, valid_ids: set[str]
+) -> DismissedIssue | None:
     if not isinstance(raw_dismissal, dict):
         return None
     issue_id = str(raw_dismissal.get("issue_id", ""))
     if issue_id not in valid_ids:
         return None
-    return DismissedIssue(issue_id=issue_id, reason=str(raw_dismissal.get("reason", "")))
+    return DismissedIssue(
+        issue_id=issue_id, reason=str(raw_dismissal.get("reason", ""))
+    )
 
 
 def _parse_contradiction_note(raw_note: object) -> ContradictionNote | None:
@@ -193,5 +202,6 @@ def parse_triage_result(raw: dict, valid_ids: set[str]) -> TriageResult:
         contradiction_notes=contradiction_notes,
         priority_rationale=priority_rationale,
     )
+
 
 __all__ = ["ISSUE_ID_RE", "extract_issue_citations", "parse_triage_result"]

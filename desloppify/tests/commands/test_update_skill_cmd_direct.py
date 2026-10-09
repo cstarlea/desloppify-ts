@@ -8,14 +8,11 @@ from pathlib import Path
 import desloppify.app.commands.update_skill.cmd as update_skill_cmd_mod
 
 
-def test_update_skill_helper_functions_cover_frontmatter_resolution_and_replace() -> None:
+def test_update_skill_helper_functions_cover_frontmatter_resolution_and_replace() -> (
+    None
+):
     content = (
-        "<!-- desloppify-begin -->\n"
-        "<!-- version -->\n"
-        "---\n"
-        "name: skill\n"
-        "---\n"
-        "body\n"
+        "<!-- desloppify-begin -->\n<!-- version -->\n---\nname: skill\n---\nbody\n"
     )
     reordered = update_skill_cmd_mod._ensure_frontmatter_first(content)
     assert reordered.startswith("---\nname: skill\n---\n")
@@ -83,7 +80,9 @@ def test_update_installed_skill_handles_bundled_read_and_shared_file_write(
     monkeypatch.setattr(
         update_skill_cmd_mod,
         "safe_write_text",
-        lambda path, text: writes.append((path, text)) or path.write_text(text, encoding="utf-8"),
+        lambda path, text: (
+            writes.append((path, text)) or path.write_text(text, encoding="utf-8")
+        ),
     )
     monkeypatch.setattr(update_skill_cmd_mod, "colorize", lambda text, _style: text)
 
@@ -96,8 +95,12 @@ def test_update_installed_skill_handles_bundled_read_and_shared_file_write(
     assert "Updated .agents/skills/desloppify/SKILL.md" in out
 
 
-def test_cmd_update_skill_handles_missing_and_unknown_interfaces(monkeypatch, capsys) -> None:
-    monkeypatch.setattr(update_skill_cmd_mod, "resolve_interface", lambda _explicit=None: None)
+def test_cmd_update_skill_handles_missing_and_unknown_interfaces(
+    monkeypatch, capsys
+) -> None:
+    monkeypatch.setattr(
+        update_skill_cmd_mod, "resolve_interface", lambda _explicit=None: None
+    )
     monkeypatch.setattr(update_skill_cmd_mod, "colorize", lambda text, _style: text)
     update_skill_cmd_mod.cmd_update_skill(argparse.Namespace(interface=None))
     out = capsys.readouterr().out

@@ -73,9 +73,7 @@ class TestShouldSkipIssue:
         """Detectors in TEST skip_detectors are skipped for test files."""
         assert should_skip_issue(zone_map, "tests/test_app.py", "dupes") is True
         assert should_skip_issue(zone_map, "tests/test_app.py", "coupling") is True
-        assert (
-            should_skip_issue(zone_map, "tests/test_app.py", "test_coverage") is True
-        )
+        assert should_skip_issue(zone_map, "tests/test_app.py", "test_coverage") is True
         assert should_skip_issue(zone_map, "tests/test_app.py", "security") is True
 
     def test_allow_in_test_zone(self, zone_map):

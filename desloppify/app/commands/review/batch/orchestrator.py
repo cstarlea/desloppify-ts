@@ -103,6 +103,7 @@ def _select_batch_runner(runner: str):
         return run_rovodev_batch
     return run_codex_batch
 
+
 _PREPARED_PACKET_CONTRACT_KEY = "prepared_packet_contract"
 ABSTRACTION_SUB_AXES = (
     "abstraction_leverage",
@@ -129,7 +130,9 @@ def _batch_live_log_interval_seconds(heartbeat_seconds: float) -> float:
     return max(1.0, min(heartbeat_seconds, 10.0))
 
 
-def _build_batch_run_deps(*, args, policy, project_root: Path) -> review_batches_mod.BatchRunDeps:
+def _build_batch_run_deps(
+    *, args, policy, project_root: Path
+) -> review_batches_mod.BatchRunDeps:
     """Build the dependency bundle used by prepare/execute/import phases."""
     from desloppify.engine.plan_state import load_policy_result, render_policy_block
 
@@ -310,7 +313,9 @@ def _load_or_prepare_packet(
     if packet_override:
         packet_path = Path(packet_override)
         if not packet_path.exists():
-            raise PacketValidationError(f"packet not found: {packet_override}", exit_code=1)
+            raise PacketValidationError(
+                f"packet not found: {packet_override}", exit_code=1
+            )
         try:
             packet = json.loads(packet_path.read_text())
         except (OSError, json.JSONDecodeError) as exc:
@@ -330,7 +335,9 @@ def _load_or_prepare_packet(
     # Validate explicit dimensions against the language's scored dimensions.
     if dims:
         lang_obj = lang
-        lang_name = getattr(lang_obj, "name", None) or str(getattr(lang_obj, "lang", ""))
+        lang_name = getattr(lang_obj, "name", None) or str(
+            getattr(lang_obj, "lang", "")
+        )
         if lang_name:
             valid_dims = set(scored_dimensions_for_lang(lang_name))
             if valid_dims:
@@ -435,6 +442,7 @@ def do_run_batches(args, state, lang, state_file, config: dict | None = None) ->
         deps=batch_deps,
     )
 
+
 def _validate_run_dir(run_dir: Path) -> tuple[dict, Path, str]:
     """Validate run directory, load summary, and return (summary, blind_packet_path, immutable_packet_path).
 
@@ -458,12 +466,16 @@ def _validate_run_dir(run_dir: Path) -> tuple[dict, Path, str]:
     if not selected:
         raise CommandError("no selected batches in run summary.", exit_code=1)
     if not blind_packet_path.exists():
-        raise PacketValidationError(f"blind packet not found: {blind_packet_path}", exit_code=1)
+        raise PacketValidationError(
+            f"blind packet not found: {blind_packet_path}", exit_code=1
+        )
 
     try:
         packet = json.loads(Path(immutable_packet_path).read_text())
     except (OSError, json.JSONDecodeError) as exc:
-        raise PacketValidationError(f"Error reading immutable packet: {exc}", exit_code=1) from exc
+        raise PacketValidationError(
+            f"Error reading immutable packet: {exc}", exit_code=1
+        ) from exc
 
     summary["_packet"] = packet
     return summary, blind_packet_path, immutable_packet_path
@@ -500,8 +512,7 @@ def do_import_run(
     results_dir = run_dir / "results"
     selected_indexes = [idx - 1 for idx in selected]  # convert 1-based to 0-based
     output_files = {
-        idx: results_dir / f"batch-{idx + 1}.raw.txt"
-        for idx in selected_indexes
+        idx: results_dir / f"batch-{idx + 1}.raw.txt" for idx in selected_indexes
     }
 
     missing = [idx + 1 for idx in selected_indexes if not output_files[idx].exists()]
@@ -521,7 +532,9 @@ def do_import_run(
             raise CommandError(hint, exit_code=1)
         elif allow_partial:
             missing_set = {idx - 1 for idx in missing}
-            selected_indexes = [idx for idx in selected_indexes if idx not in missing_set]
+            selected_indexes = [
+                idx for idx in selected_indexes if idx not in missing_set
+            ]
             output_files = {idx: output_files[idx] for idx in selected_indexes}
         else:
             hint = (
@@ -549,9 +562,16 @@ def do_import_run(
     if not batch_results:
         raise CommandError("no valid batch results could be parsed.", exit_code=1)
 
-    print(colorize(f"  Parsed {len(batch_results)} batch results from {run_dir}", "bold"))
+    print(
+        colorize(f"  Parsed {len(batch_results)} batch results from {run_dir}", "bold")
+    )
     if failures:
-        print(colorize(f"  Warning: {len(failures)} batches failed to parse: {[f + 1 for f in failures]}", "yellow"))
+        print(
+            colorize(
+                f"  Warning: {len(failures)} batches failed to parse: {[f + 1 for f in failures]}",
+                "yellow",
+            )
+        )
 
     successful_indexes = [idx for idx in selected_indexes if idx not in set(failures)]
 
@@ -560,7 +580,9 @@ def do_import_run(
     raw_dim_prompts = packet.get("dimension_prompts")
     batches = explode_to_single_dimension(
         raw_batches if isinstance(raw_batches, list) else [],
-        dimension_prompts=raw_dim_prompts if isinstance(raw_dim_prompts, dict) else None,
+        dimension_prompts=raw_dim_prompts
+        if isinstance(raw_dim_prompts, dict)
+        else None,
     )
     packet_dimensions = normalize_dimension_list(packet.get("dimensions", []))
     lang_name = getattr(lang, "name", None) or str(getattr(lang, "lang", ""))

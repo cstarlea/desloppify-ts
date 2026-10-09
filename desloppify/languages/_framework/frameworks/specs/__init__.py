@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 # TypeScript and JavaScript module extensions, for entry conventions.
-SCRIPT_EXTENSIONS = frozenset({".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".mjs", ".cjs"})
+SCRIPT_EXTENSIONS = frozenset(
+    {".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".mjs", ".cjs"}
+)
 
 
 def config_names(stem: str) -> tuple[str, ...]:

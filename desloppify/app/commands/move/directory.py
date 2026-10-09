@@ -69,9 +69,7 @@ def run_directory_move(args, source_abs: str, resolve_path_fn) -> None:
         warn_fn=lambda msg: print(colorize(f"  ⚠ {msg}", "yellow")),
     )
     internal_changes = build_internal_directory_changes(plan)
-    check_rewrite_syntax(
-        {**internal_changes, **plan.external_changes}, dry_run=dry_run
-    )
+    check_rewrite_syntax({**internal_changes, **plan.external_changes}, dry_run=dry_run)
     if dry_run:
         print(colorize("  Dry run — no files modified.", "yellow"))
         return

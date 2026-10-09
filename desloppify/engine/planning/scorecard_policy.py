@@ -98,9 +98,15 @@ def _compose_scorecard_dimensions(subjective_order: tuple[str, ...]) -> tuple[st
 
 
 _SCORECARD_DIMENSIONS_BY_LANG: dict[str, tuple[str, ...]] = {
-    "python": _compose_scorecard_dimensions(SUBJECTIVE_SCORECARD_ORDER_BY_LANG["python"]),
-    "typescript": _compose_scorecard_dimensions(SUBJECTIVE_SCORECARD_ORDER_BY_LANG["typescript"]),
-    "csharp": _compose_scorecard_dimensions(SUBJECTIVE_SCORECARD_ORDER_BY_LANG["csharp"]),
+    "python": _compose_scorecard_dimensions(
+        SUBJECTIVE_SCORECARD_ORDER_BY_LANG["python"]
+    ),
+    "typescript": _compose_scorecard_dimensions(
+        SUBJECTIVE_SCORECARD_ORDER_BY_LANG["typescript"]
+    ),
+    "csharp": _compose_scorecard_dimensions(
+        SUBJECTIVE_SCORECARD_ORDER_BY_LANG["csharp"]
+    ),
 }
 
 

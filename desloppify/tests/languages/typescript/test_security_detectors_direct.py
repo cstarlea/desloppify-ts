@@ -13,7 +13,14 @@ def _kinds(entries: list[dict[str, object]]) -> set[str]:
     return {str(item.get("detail", {}).get("kind", "")) for item in entries}
 
 
-def _line_issues(lines: list[str], line_num: int, filepath: str, normalized_path: str, *, has_dev_guard: bool = False):
+def _line_issues(
+    lines: list[str],
+    line_num: int,
+    filepath: str,
+    normalized_path: str,
+    *,
+    has_dev_guard: bool = False,
+):
     return line_checks_mod._line_security_issues(
         filepath=filepath,
         normalized_path=normalized_path,
@@ -52,12 +59,18 @@ def test_file_checks_cover_edge_auth_json_parse_and_rls_detection() -> None:
     )
     edge_source = SourceText(edge_content)
 
-    assert file_checks_mod._looks_like_edge_handler("/src/functions/handler.ts", edge_content)
-    assert not file_checks_mod._looks_like_edge_handler("/src/web/handler.ts", edge_content)
+    assert file_checks_mod._looks_like_edge_handler(
+        "/src/functions/handler.ts", edge_content
+    )
+    assert not file_checks_mod._looks_like_edge_handler(
+        "/src/web/handler.ts", edge_content
+    )
     assert file_checks_mod._extract_handler_body(edge_source) is not None
     assert not file_checks_mod._handler_has_auth_check(edge_source)
     assert file_checks_mod._handler_has_auth_check(SourceText("requireAuth(user)"))
-    assert not file_checks_mod._handler_has_auth_check(SourceText("// requireAuth(user)"))
+    assert not file_checks_mod._handler_has_auth_check(
+        SourceText("// requireAuth(user)")
+    )
 
     json_lines = [
         "async function parse() {",
@@ -75,7 +88,9 @@ def test_file_checks_cover_edge_auth_json_parse_and_rls_detection() -> None:
     assert file_checks_mod._is_in_try_scope(json_lines, 7) is False
 
     json_entries: list[dict[str, object]] = []
-    file_checks_mod._check_json_parse_unguarded("src/parse.ts", SourceText("\n".join(json_lines)), json_entries)
+    file_checks_mod._check_json_parse_unguarded(
+        "src/parse.ts", SourceText("\n".join(json_lines)), json_entries
+    )
     assert _kinds(json_entries) == {"json_parse_unguarded"}
     assert json_entries[0]["detail"]["line"] == 7
 
@@ -92,7 +107,9 @@ def test_line_checks_report_expected_security_kinds() -> None:
         "const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY",
         "const client = createClient(url, serviceRole)",
     ]
-    service_role_issues = _line_issues(service_role_lines, 2, "src/client.ts", "/src/client.ts")
+    service_role_issues = _line_issues(
+        service_role_lines, 2, "src/client.ts", "/src/client.ts"
+    )
     assert "service_role_on_client" in _kinds(service_role_issues)
 
     eval_line = "const fn = new Function('a', body)"
@@ -107,11 +124,19 @@ def test_line_checks_report_expected_security_kinds() -> None:
     dev_cred_issues = _line_issues([dev_cred_line], 1, "src/app.ts", "/src/app.ts")
     assert "dev_credentials_env" in _kinds(dev_cred_issues)
 
-    guarded_dev_issues = _line_issues([dev_cred_line], 1, "src/dev.client.ts", "/src/dev/client.ts", has_dev_guard=True)
+    guarded_dev_issues = _line_issues(
+        [dev_cred_line],
+        1,
+        "src/dev.client.ts",
+        "/src/dev/client.ts",
+        has_dev_guard=True,
+    )
     assert guarded_dev_issues == []
 
     redirect_line = "window.location = data.nextUrl"
-    redirect_issues = _line_issues([redirect_line], 1, "src/redirect.ts", "/src/redirect.ts")
+    redirect_issues = _line_issues(
+        [redirect_line], 1, "src/redirect.ts", "/src/redirect.ts"
+    )
     assert "open_redirect" in _kinds(redirect_issues)
 
     jwt_lines = [

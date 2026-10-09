@@ -42,7 +42,9 @@ class StageHandler:
     """Per-stage execution/record hooks for the codex triage pipeline."""
 
     run_parallel: Callable[[StageRunContext], TriageStageRunResult] | None = None
-    record_report: Callable[[str, argparse.Namespace, TriageServices], None] | None = None
+    record_report: Callable[[str, argparse.Namespace, TriageServices], None] | None = (
+        None
+    )
     prompt_mode: PromptMode = "output_only"
 
 
@@ -166,7 +168,9 @@ class StageExecutionDependencies:
     build_stage_prompt: Callable[..., str]
     run_triage_stage: Callable[..., TriageStageRunResult]
     read_stage_output: Callable[[Path], str]
-    analyze_reflect_issue_accounting: Callable[..., tuple[set[str], list[str], list[str]]]
+    analyze_reflect_issue_accounting: Callable[
+        ..., tuple[set[str], list[str], list[str]]
+    ]
     validate_reflect_issue_accounting: Callable[
         ...,
         tuple[bool, set[str], list[str], list[str]],
@@ -237,11 +241,17 @@ def preflight_stage(
         return True, None
     stages = plan.get("epic_triage_meta", {}).get("triage_stages", {})
     reflect_report = str(stages.get("reflect", {}).get("report", ""))
-    accounting_ok, _cited, missing_ids, duplicate_ids = validate_reflect_issue_accounting(
-        report=reflect_report,
-        valid_ids=set(
-            getattr(triage_input, "review_issues", getattr(triage_input, "open_issues", {})).keys()
-        ),
+    accounting_ok, _cited, missing_ids, duplicate_ids = (
+        validate_reflect_issue_accounting(
+            report=reflect_report,
+            valid_ids=set(
+                getattr(
+                    triage_input,
+                    "review_issues",
+                    getattr(triage_input, "open_issues", {}),
+                ).keys()
+            ),
+        )
     )
     if not accounting_ok:
         reason_parts: list[str] = []
@@ -263,7 +273,8 @@ def preflight_stage(
 
     # Output-only organize paths may rely on pre-applied plan mutations.
     ledger_mismatches = validate_organize_against_reflect_ledger(
-        plan=dict(plan), stages=stages,
+        plan=dict(plan),
+        stages=stages,
     )
     if ledger_mismatches:
         mismatch_types = set()
@@ -290,13 +301,17 @@ def build_reflect_repair_prompt(
 ) -> str:
     """Build a targeted retry prompt for a reflect report that failed accounting."""
     valid_ids = set(
-        getattr(triage_input, "review_issues", getattr(triage_input, "open_issues", {})).keys()
+        getattr(
+            triage_input, "review_issues", getattr(triage_input, "open_issues", {})
+        ).keys()
     )
     missing_tokens = (
-        ", ".join(display_reflect_issue_tokens(missing_ids, valid_ids=valid_ids)) or "none"
+        ", ".join(display_reflect_issue_tokens(missing_ids, valid_ids=valid_ids))
+        or "none"
     )
     duplicate_tokens = (
-        ", ".join(display_reflect_issue_tokens(duplicate_ids, valid_ids=valid_ids)) or "none"
+        ", ".join(display_reflect_issue_tokens(duplicate_ids, valid_ids=valid_ids))
+        or "none"
     )
     base_prompt = build_stage_prompt_fn(
         "reflect",
@@ -347,13 +362,17 @@ def repair_reflect_report_if_needed(
     _cited, missing_ids, duplicate_ids = dependencies.analyze_reflect_issue_accounting(
         report=report,
         valid_ids=set(
-            getattr(triage_input, "review_issues", getattr(triage_input, "open_issues", {})).keys()
+            getattr(
+                triage_input, "review_issues", getattr(triage_input, "open_issues", {})
+            ).keys()
         ),
     )
     if not missing_ids and not duplicate_ids:
         return report, None
 
-    print(colorize("  Reflect: repairing missing/duplicate token accounting...", "yellow"))
+    print(
+        colorize("  Reflect: repairing missing/duplicate token accounting...", "yellow")
+    )
     append_run_log(
         "stage-reflect-repair-start "
         f"missing={len(missing_ids)} duplicates={len(duplicate_ids)}"
@@ -389,11 +408,17 @@ def repair_reflect_report_if_needed(
     if not repaired_report:
         return None, "reflect_repair_empty_output"
 
-    _cited, missing_after, duplicates_after = dependencies.analyze_reflect_issue_accounting(
-        report=repaired_report,
-        valid_ids=set(
-            getattr(triage_input, "review_issues", getattr(triage_input, "open_issues", {})).keys()
-        ),
+    _cited, missing_after, duplicates_after = (
+        dependencies.analyze_reflect_issue_accounting(
+            report=repaired_report,
+            valid_ids=set(
+                getattr(
+                    triage_input,
+                    "review_issues",
+                    getattr(triage_input, "open_issues", {}),
+                ).keys()
+            ),
+        )
     )
     if missing_after or duplicates_after:
         return None, "reflect_repair_invalid"
@@ -423,7 +448,9 @@ def _execute_parallel_stage(
 
     if parallel_result.ok and parallel_result.merged_output:
         if handler.record_report is not None:
-            handler.record_report(parallel_result.merged_output, context.args, context.services)
+            handler.record_report(
+                parallel_result.merged_output, context.args, context.services
+            )
             return StageExecutionResult(status="ready", payload={}, used_parallel=True)
         return StageExecutionResult(status="ready", payload={})
 
@@ -432,7 +459,9 @@ def _execute_parallel_stage(
 
     elapsed = int(time.monotonic() - context.stage_start)
     error_reason = parallel_result.reason or "parallel_execution_failed"
-    print(colorize(f"  {stage.capitalize()}: parallel execution failed. Aborting.", "red"))
+    print(
+        colorize(f"  {stage.capitalize()}: parallel execution failed. Aborting.", "red")
+    )
     context.append_run_log(
         f"stage-failed stage={stage} elapsed={elapsed}s reason={error_reason}"
     )
@@ -567,8 +596,7 @@ def _run_subprocess_stage(
     print(colorize(f"  Check log: {log_file}", "dim"))
     print(colorize("  Re-run to resume (confirmed stages are skipped).", "dim"))
     context.append_run_log(
-        "stage-failed "
-        f"stage={stage} elapsed={elapsed}s code={stage_result.exit_code}"
+        f"stage-failed stage={stage} elapsed={elapsed}s code={stage_result.exit_code}"
     )
     return StageExecutionResult(
         status="failed",

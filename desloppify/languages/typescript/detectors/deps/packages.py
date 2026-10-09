@@ -29,10 +29,22 @@ from desloppify.languages.typescript.detectors.deps.resolve import (
     resolve_target,
 )
 
-_SKIP_DIRS = frozenset({"node_modules", ".git", ".next", ".turbo", "dist", "build", "coverage"})
+_SKIP_DIRS = frozenset(
+    {"node_modules", ".git", ".next", ".turbo", "dist", "build", "coverage"}
+)
 _MANIFEST_ENTRY_FIELDS = ("types", "typings", "source", "module", "main", "browser")
 # Directories build tools commonly emit into, tried when no tsconfig names one.
-_OUTPUT_DIRS = ("dist", "distribution", "build", "lib", "out", "output", "esm", "cjs", "types")
+_OUTPUT_DIRS = (
+    "dist",
+    "distribution",
+    "build",
+    "lib",
+    "out",
+    "output",
+    "esm",
+    "cjs",
+    "types",
+)
 _SOURCE_DIRS = ("src", "source", "lib", "")
 _DECLARATION_TO_SPECIFIER = ((".d.ts", ".js"), (".d.mts", ".mjs"), (".d.cts", ".cjs"))
 _JS_OUTPUT_SUFFIXES = (".js", ".mjs", ".cjs", ".jsx")
@@ -92,7 +104,9 @@ def _pnpm_workspace_patterns(path: Path) -> list[str] | None:
             rest = rest.strip()
             if in_packages and rest.startswith("["):
                 patterns.extend(
-                    item.strip().strip("'\"") for item in rest.strip("[]").split(",") if item.strip()
+                    item.strip().strip("'\"")
+                    for item in rest.strip("[]").split(",")
+                    if item.strip()
                 )
                 in_packages = False
             continue
@@ -129,21 +143,31 @@ def _pattern_regex(pattern: str) -> re.Pattern[str]:
 
 
 def _expand_workspace_patterns(root: Path, patterns: list[str]) -> list[Path]:
-    includes = [_pattern_regex(p.removeprefix("./")) for p in patterns if not p.startswith("!")]
-    excludes = [_pattern_regex(p[1:].removeprefix("./")) for p in patterns if p.startswith("!")]
+    includes = [
+        _pattern_regex(p.removeprefix("./")) for p in patterns if not p.startswith("!")
+    ]
+    excludes = [
+        _pattern_regex(p[1:].removeprefix("./")) for p in patterns if p.startswith("!")
+    ]
     if not includes:
         return []
     deep = any("**" in p for p in patterns)
-    max_depth = _MAX_WALK_DEPTH if deep else max(p.strip("/").count("/") + 1 for p in patterns)
+    max_depth = (
+        _MAX_WALK_DEPTH if deep else max(p.strip("/").count("/") + 1 for p in patterns)
+    )
     found: list[Path] = []
     for dirpath, dirnames, filenames in os.walk(root):
         relative = os.path.relpath(dirpath, root).replace(os.sep, "/")
         depth = 0 if relative == "." else relative.count("/") + 1
-        dirnames[:] = [d for d in dirnames if d not in _SKIP_DIRS] if depth < max_depth else []
+        dirnames[:] = (
+            [d for d in dirnames if d not in _SKIP_DIRS] if depth < max_depth else []
+        )
         if relative == "." or "package.json" not in filenames:
             continue
         key = relative + "/"
-        if any(r.match(key) for r in includes) and not any(r.match(key) for r in excludes):
+        if any(r.match(key) for r in includes) and not any(
+            r.match(key) for r in excludes
+        ):
             found.append(Path(dirpath))
     return sorted(found)
 
@@ -170,7 +194,13 @@ def _compiler_dir(config: Path, option: str, depth: int = 0) -> Path | None:
     if isinstance(value, str):
         return Path(os.path.normpath(config.parent / value))
     extends = data.get("extends")
-    specs = [extends] if isinstance(extends, str) else extends if isinstance(extends, list) else []
+    specs = (
+        [extends]
+        if isinstance(extends, str)
+        else extends
+        if isinstance(extends, list)
+        else []
+    )
     for spec in reversed(specs):  # later entries win
         if isinstance(spec, str):
             parent = _resolve_extends(spec, config.parent)
@@ -305,7 +335,9 @@ def _subpath_map(exports: Any) -> dict[str, Any]:
     return {".": exports}
 
 
-def _match_subpath(subpaths: dict[str, Any], subpath: str) -> tuple[Any, str | None] | None:
+def _match_subpath(
+    subpaths: dict[str, Any], subpath: str
+) -> tuple[Any, str | None] | None:
     """Exports target for a subpath, with the ``*`` substitution if a pattern matched."""
     if subpath in subpaths:
         return subpaths[subpath], None
@@ -313,7 +345,11 @@ def _match_subpath(subpaths: dict[str, Any], subpath: str) -> tuple[Any, str | N
     for key, value in subpaths.items():
         if "*" in key:
             head, _, tail = key.partition("*")
-            if subpath.startswith(head) and subpath.endswith(tail) and len(subpath) >= len(key) - 1:
+            if (
+                subpath.startswith(head)
+                and subpath.endswith(tail)
+                and len(subpath) >= len(key) - 1
+            ):
                 match = subpath[len(head) : len(subpath) - len(tail)]
                 if best is None or len(head) > best[0]:
                     best = (len(head), value, match)
@@ -364,15 +400,24 @@ def package_import_targets(package: Package, specifier: str) -> list[str]:
     imports = package.manifest.get("imports")
     if not isinstance(imports, dict):
         return []
-    keys = {k: v for k, v in imports.items() if isinstance(k, str) and k.startswith("#")}
+    keys = {
+        k: v for k, v in imports.items() if isinstance(k, str) and k.startswith("#")
+    }
     matched = _match_subpath(keys, specifier)
     if matched is None:
         return []
     value, star = matched
-    return [leaf.replace("*", star) if star is not None else leaf for leaf in _leaves(value)]
+    return [
+        leaf.replace("*", star) if star is not None else leaf for leaf in _leaves(value)
+    ]
 
 
-_DEPENDENCY_FIELDS = ("dependencies", "devDependencies", "peerDependencies", "optionalDependencies")
+_DEPENDENCY_FIELDS = (
+    "dependencies",
+    "devDependencies",
+    "peerDependencies",
+    "optionalDependencies",
+)
 
 
 def declared_dependencies(packages: list[Package]) -> set[str]:
@@ -436,7 +481,12 @@ def _script_files(command: str) -> Iterator[str]:
     for token in tokens:
         if token.startswith("-") and "=" in token:
             token = token.partition("=")[2]  # --dataSource=src/data-source.ts
-        if token.startswith("-") or token.endswith("/") or "*" in token or "://" in token:
+        if (
+            token.startswith("-")
+            or token.endswith("/")
+            or "*" in token
+            or "://" in token
+        ):
             continue
         if not _SCRIPT_FILE_RE.match(token):
             continue
@@ -464,7 +514,13 @@ def package_entries(package: Package, candidates: list[str]) -> PackageEntries:
                 entries.public.add(found)
 
     bin_field = manifest.get("bin")
-    bins = [bin_field] if isinstance(bin_field, str) else list(_leaves(bin_field)) if isinstance(bin_field, dict) else []
+    bins = (
+        [bin_field]
+        if isinstance(bin_field, str)
+        else list(_leaves(bin_field))
+        if isinstance(bin_field, dict)
+        else []
+    )
     for value in bins:
         found = resolve_package_path(package, value)
         if found is not None:

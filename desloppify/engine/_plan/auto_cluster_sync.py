@@ -83,7 +83,9 @@ def _subjective_cli_keys(issue_ids: list[str]) -> list[str]:
 
 
 def _subjective_action(issue_ids: list[str]) -> str:
-    return "desloppify review --prepare --dimensions " + ",".join(_subjective_cli_keys(issue_ids))
+    return "desloppify review --prepare --dimensions " + ",".join(
+        _subjective_cli_keys(issue_ids)
+    )
 
 
 def _sync_subjective_cluster(
@@ -101,7 +103,11 @@ def _sync_subjective_cluster(
     optional: bool = False,
 ) -> int:
     """Sync one subjective auto-cluster when it has enough members."""
-    min_size = _MIN_UNSCORED_CLUSTER_SIZE if cluster_key == _UNSCORED_KEY else _MIN_CLUSTER_SIZE
+    min_size = (
+        _MIN_UNSCORED_CLUSTER_SIZE
+        if cluster_key == _UNSCORED_KEY
+        else _MIN_CLUSTER_SIZE
+    )
     if len(member_ids) < min_size:
         return 0
     active_auto_keys.add(cluster_key)
@@ -128,9 +134,7 @@ def _queue_subjective_members(
     unscored_state_ids: set[str],
 ) -> tuple[list[str], list[str], list[str]]:
     all_subjective_ids = sorted(
-        fid
-        for fid in order
-        if fid.startswith(SUBJECTIVE_PREFIX)
+        fid for fid in order if fid.startswith(SUBJECTIVE_PREFIX)
     )
     unscored_queue_ids = sorted(
         fid for fid in all_subjective_ids if fid in unscored_state_ids
@@ -216,11 +220,13 @@ def sync_subjective_clusters(
     stale_state_ids, under_target_ids, unscored_state_ids = _subjective_state_sets(
         state, policy=policy, target_strict=target_strict
     )
-    unscored_queue_ids, stale_queue_ids, under_target_queue_ids = _queue_subjective_members(
-        order,
-        stale_state_ids=stale_state_ids,
-        under_target_ids=under_target_ids,
-        unscored_state_ids=unscored_state_ids,
+    unscored_queue_ids, stale_queue_ids, under_target_queue_ids = (
+        _queue_subjective_members(
+            order,
+            stale_state_ids=stale_state_ids,
+            under_target_ids=under_target_ids,
+            unscored_state_ids=unscored_state_ids,
+        )
     )
 
     has_objective_items = _has_objective_backlog(issues, policy)

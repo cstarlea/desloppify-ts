@@ -185,7 +185,9 @@ def _weak_crypto_entries(
     entries: list[dict[str, Any]] = []
     for pattern, label, severity, remediation in _WEAK_CRYPTO_PATTERNS:
         # A setting starts in code; its value may be a string (``= '0'``).
-        if not any(_in_code(code, line, match.start()) for match in pattern.finditer(line)):
+        if not any(
+            _in_code(code, line, match.start()) for match in pattern.finditer(line)
+        ):
             continue
         entries.append(
             make_security_entry(
@@ -213,7 +215,9 @@ def _sensitive_log_entries(
     uncommented: str | None = None,
 ) -> list[dict[str, Any]]:
     log_call = _LOG_CALLS.search(line if code is None else code)
-    if log_call is None or not _SENSITIVE_IN_LOG.search(line if uncommented is None else uncommented):
+    if log_call is None or not _SENSITIVE_IN_LOG.search(
+        line if uncommented is None else uncommented
+    ):
         return []
     # A sensitive word only in a string counts when the call logs a value
     # too (``console.log("Authorization:", header)``); a message alone

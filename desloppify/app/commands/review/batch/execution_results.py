@@ -34,7 +34,9 @@ def collect_and_reconcile_results(
 
     execution_failure_set = set(execution_failures)
     failure_set = set(failures)
-    successful_indexes = sorted(idx for idx in selected_indexes if idx not in failure_set)
+    successful_indexes = sorted(
+        idx for idx in selected_indexes if idx not in failure_set
+    )
     for idx in selected_indexes:
         key = str(idx + 1)
         state = batch_status.setdefault(
@@ -111,7 +113,11 @@ def merge_and_write_results(
         "full_sweep_included": full_sweep_included,
     }
     total_files = packet.get("total_files")
-    if isinstance(total_files, int) and not isinstance(total_files, bool) and total_files > 0:
+    if (
+        isinstance(total_files, int)
+        and not isinstance(total_files, bool)
+        and total_files > 0
+    ):
         review_scope["total_files"] = total_files
     merged["review_scope"] = review_scope
     if reviewed_files:

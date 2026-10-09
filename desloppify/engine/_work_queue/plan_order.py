@@ -29,7 +29,9 @@ def new_item_ids(state: StateModel) -> set[str]:
         return set()
     return {
         issue_id
-        for issue_id, issue in (state.get("work_items") or state.get("issues", {})).items()
+        for issue_id, issue in (
+            state.get("work_items") or state.get("issues", {})
+        ).items()
         if issue.get("first_seen", "") >= threshold
     }
 
@@ -120,11 +122,16 @@ def filter_cluster_focus(
         return items
     # Plan-mode items (subjective reviews, workflow stages, triage) are not
     # cluster members but must remain visible regardless of cluster focus.
-    _PLAN_ITEM_KINDS = {"subjective_dimension", "workflow_stage", "workflow_action", "triage_stage"}
+    _PLAN_ITEM_KINDS = {
+        "subjective_dimension",
+        "workflow_stage",
+        "workflow_action",
+        "triage_stage",
+    }
     return [
-        item for item in items
-        if item["id"] in cluster_member_ids
-        or item.get("kind") in _PLAN_ITEM_KINDS
+        item
+        for item in items
+        if item["id"] in cluster_member_ids or item.get("kind") in _PLAN_ITEM_KINDS
     ]
 
 
@@ -164,7 +171,9 @@ def _build_cluster_meta(
     if autofix_hint:
         primary_command = f"desloppify next --cluster {cluster_name} --count 10"
     else:
-        primary_command = action or f"desloppify next --cluster {cluster_name} --count 10"
+        primary_command = (
+            action or f"desloppify next --cluster {cluster_name} --count 10"
+        )
 
     estimated_impact = max(
         (m.get("estimated_impact", 0.0) for m in members), default=0.0
@@ -228,13 +237,12 @@ def collapse_clusters(items: list[WorkQueueItem], plan: dict) -> list[WorkQueueI
     for cname, members in cluster_members.items():
         if len(members) < 2:
             continue
-        meta_items[cname] = _build_cluster_meta(
-            cname, members, clusters.get(cname, {})
-        )
+        meta_items[cname] = _build_cluster_meta(cname, members, clusters.get(cname, {}))
 
     # Collect manual cluster names in plan order (for front-insertion)
     manual_names = [
-        name for name in clusters
+        name
+        for name in clusters
         if not clusters[name].get("auto") and name in meta_items
     ]
 

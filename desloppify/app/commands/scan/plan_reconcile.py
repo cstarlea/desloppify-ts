@@ -90,7 +90,9 @@ def _plan_has_user_content(plan: dict[str, object]) -> bool:
     )
 
 
-def _apply_plan_reconciliation(plan: dict[str, object], state: state_mod.StateModel) -> bool:
+def _apply_plan_reconciliation(
+    plan: dict[str, object], state: state_mod.StateModel
+) -> bool:
     if not _plan_has_user_content(plan):
         return False
     recon = reconcile_plan_after_scan(plan, state)
@@ -104,7 +106,9 @@ def _apply_plan_reconciliation(plan: dict[str, object], state: state_mod.StateMo
     return bool(recon.changes)
 
 
-def _seed_plan_start_scores(plan: dict[str, object], state: state_mod.StateModel) -> bool:
+def _seed_plan_start_scores(
+    plan: dict[str, object], state: state_mod.StateModel
+) -> bool:
     """Set plan_start_scores when beginning a new queue cycle."""
     existing = plan.get("plan_start_scores")
     if existing and not isinstance(existing, dict):
@@ -117,7 +121,11 @@ def _seed_plan_start_scores(plan: dict[str, object], state: state_mod.StateModel
     # Preserve current plan_start_scores as previous_plan_start_scores
     # (only if previous doesn't already have a value — don't overwrite
     # a good baseline with a post-regression one)
-    if existing and isinstance(existing, dict) and not plan.get("previous_plan_start_scores"):
+    if (
+        existing
+        and isinstance(existing, dict)
+        and not plan.get("previous_plan_start_scores")
+    ):
         plan["previous_plan_start_scores"] = dict(existing)
     preserve_score_sentinel = "previous_plan_start_scores" in plan
     plan["plan_start_scores"] = {
@@ -154,7 +162,11 @@ def _refresh_plan_start_baseline(
     # Preserve current plan_start_scores as previous_plan_start_scores
     # (only if previous doesn't already have a value — don't overwrite
     # a good baseline with a post-regression one)
-    if existing and isinstance(existing, dict) and not plan.get("previous_plan_start_scores"):
+    if (
+        existing
+        and isinstance(existing, dict)
+        and not plan.get("previous_plan_start_scores")
+    ):
         plan["previous_plan_start_scores"] = dict(existing)
     plan["plan_start_scores"] = {
         "strict": scores.strict,
@@ -178,7 +190,9 @@ def _has_objective_cycle(
 
         breakdown = plan_aware_queue_breakdown(state, plan)
     except PLAN_LOAD_EXCEPTIONS as exc:
-        log_best_effort_failure(logger, "compute queue breakdown for plan-start seeding", exc)
+        log_best_effort_failure(
+            logger, "compute queue breakdown for plan-start seeding", exc
+        )
         return None
     return breakdown.objective_actionable > 0
 
@@ -201,7 +215,9 @@ def _clear_plan_start_scores_if_queue_empty(
 
         breakdown = plan_aware_queue_breakdown(state, plan)
         frozen_strict = plan.get("plan_start_scores", {}).get("strict")
-        queue_empty = score_display_mode(breakdown, frozen_strict) is not ScoreDisplayMode.FROZEN
+        queue_empty = (
+            score_display_mode(breakdown, frozen_strict) is not ScoreDisplayMode.FROZEN
+        )
     except PLAN_LOAD_EXCEPTIONS as exc:
         log_best_effort_failure(logger, "run post-scan plan reconciliation", exc)
         return False
@@ -266,7 +282,10 @@ def _sync_postflight_scan_completion_and_log(
                 )
             )
         except Exception:
-            logger.warning("Failed to append postflight_scan_completed progression event", exc_info=True)
+            logger.warning(
+                "Failed to append postflight_scan_completed progression event",
+                exc_info=True,
+            )
     return changed
 
 
@@ -409,7 +428,9 @@ def reconcile_plan_post_scan(runtime: Any) -> None:
             dirty = True
     elif _sync_plan_start_scores_and_log(plan, runtime.state):
         dirty = True
-    if _sync_postflight_scan_completion_and_log(plan, runtime.state, phase_before=phase_before):
+    if _sync_postflight_scan_completion_and_log(
+        plan, runtime.state, phase_before=phase_before
+    ):
         dirty = True
 
     save_succeeded = False
@@ -421,9 +442,7 @@ def reconcile_plan_post_scan(runtime: Any) -> None:
             logger.warning("Plan reconciliation save failed: %s", exc)
 
     _emit_checkpoint = (
-        boundary_crossed
-        and save_succeeded
-        and result.checkpoint_plan_start is not None
+        boundary_crossed and save_succeeded and result.checkpoint_plan_start is not None
     )
     if _emit_checkpoint:
         try:
@@ -445,7 +464,9 @@ def reconcile_plan_post_scan(runtime: Any) -> None:
                 )
             )
         except Exception:
-            logger.warning("Failed to append plan_checkpoint progression event", exc_info=True)
+            logger.warning(
+                "Failed to append plan_checkpoint progression event", exc_info=True
+            )
 
     # --- Progression: scan_complete (unconditional) ---
     try:
@@ -466,7 +487,9 @@ def reconcile_plan_post_scan(runtime: Any) -> None:
             )
         )
     except Exception:
-        logger.warning("Failed to append scan_complete progression event", exc_info=True)
+        logger.warning(
+            "Failed to append scan_complete progression event", exc_info=True
+        )
 
     # --- Progression: entered_planning_mode ---
     try:
@@ -479,7 +502,9 @@ def reconcile_plan_post_scan(runtime: Any) -> None:
             phase_before=phase_before,
         )
     except Exception:
-        logger.warning("Failed to append entered_planning_mode progression event", exc_info=True)
+        logger.warning(
+            "Failed to append entered_planning_mode progression event", exc_info=True
+        )
 
 
 __all__ = [

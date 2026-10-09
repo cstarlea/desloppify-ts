@@ -282,7 +282,9 @@ class TestDetectFlatDirs:
         assert entry["sparse_child_count"] == 9
         assert entry["sparse_child_ratio"] == 1.0
 
-    def test_fragmented_parent_not_detected_when_children_are_not_sparse(self, tmp_path):
+    def test_fragmented_parent_not_detected_when_children_are_not_sparse(
+        self, tmp_path
+    ):
         parent = tmp_path / "parent"
         parent.mkdir()
         files = []

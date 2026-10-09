@@ -86,9 +86,7 @@ def render_grouped(items: list[dict], group: str) -> None:
             confidence = item.get("confidence", "medium")
             tag = effort_tag(item)
             tag_str = f" {tag}" if tag else ""
-            print(
-                f"    [{confidence}]{tag_str} {item.get('summary', '')}"
-            )
+            print(f"    [{confidence}]{tag_str} {item.get('summary', '')}")
 
 
 def _cluster_type_label(cluster_name: str, action_type: str) -> str:
@@ -166,7 +164,9 @@ def _cluster_header_bits(item: dict) -> tuple[str, str, str, list[dict]]:
     action_type = item.get("action_type", "manual_fix")
     action_steps = item.get("action_steps") or []
     done_count = sum(1 for s in action_steps if isinstance(s, dict) and s.get("done"))
-    step_badge = f" [{done_count}/{len(action_steps)} steps done]" if action_steps else ""
+    step_badge = (
+        f" [{done_count}/{len(action_steps)} steps done]" if action_steps else ""
+    )
     optional_tag = " — optional" if item.get("cluster_optional") else ""
     type_label = _cluster_type_label(cluster_name, action_type)
     return cluster_name, type_label, f"{step_badge}{optional_tag}", action_steps
@@ -267,14 +267,18 @@ def show_empty_queue(
         delta = format_plan_delta(strict, plan_start_strict)
         delta_str = f" ({delta})" if delta else ""
         print(colorize("\n  Queue cleared!", "green"))
-        print(colorize(
-            f"  Frozen plan-start: strict {plan_start_strict:.1f} → Live estimate: strict {strict:.1f}{delta_str}",
-            "cyan",
-        ))
-        print(colorize(
-            "  Run `desloppify scan` now to finalize and reveal your updated score.",
-            "dim",
-        ))
+        print(
+            colorize(
+                f"  Frozen plan-start: strict {plan_start_strict:.1f} → Live estimate: strict {strict:.1f}{delta_str}",
+                "cyan",
+            )
+        )
+        print(
+            colorize(
+                "  Run `desloppify scan` now to finalize and reveal your updated score.",
+                "dim",
+            )
+        )
         return True
 
     suffix = f" Strict score: {strict:.1f}/100" if strict is not None else ""

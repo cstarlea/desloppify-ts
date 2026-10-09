@@ -106,16 +106,24 @@ def _pattern_targets(
     """Files matched by ``import.meta.glob('./x/*.ts')`` or ``import(`./x/${y}`)``."""
     specifier = ref.specifier
     if ref.kind == GLOB:
-        cut = min((specifier.find(c) for c in "*?{" if c in specifier), default=len(specifier))
+        cut = min(
+            (specifier.find(c) for c in "*?{" if c in specifier), default=len(specifier)
+        )
         static_head = specifier[: specifier.rfind("/", 0, cut) + 1]
     else:
         static_head = specifier[: specifier.rfind("/") + 1]
     tail = specifier[len(static_head) :]
     if ref.kind == GLOB and static_head.startswith("/"):
-        base: Path | None = (project_root / static_head.lstrip("/")).resolve()  # Vite: root-relative
+        base: Path | None = (
+            project_root / static_head.lstrip("/")
+        ).resolve()  # Vite: root-relative
     else:
         base = _specifier_target(
-            static_head or "./", filepath, tsconfig_paths, tsconfig_root, source_root=project_root
+            static_head or "./",
+            filepath,
+            tsconfig_paths,
+            tsconfig_root,
+            source_root=project_root,
         )
     if base is None:
         return []
@@ -126,7 +134,8 @@ def _pattern_targets(
     return [
         c
         for c in candidates
-        if c.startswith(base_str) and tail_re.match(c[len(base_str) :].replace(os.sep, "/"))
+        if c.startswith(base_str)
+        and tail_re.match(c[len(base_str) :].replace(os.sep, "/"))
     ]
 
 
@@ -191,11 +200,15 @@ def build_dep_graph(
             if target is not None:
                 graph[source_resolved]["imports"].add(target)
                 graph[target]["importers"].add(source_resolved)
-            elif is_bare(module_path) and not resolver.is_external(module_path, source_resolved):
+            elif is_bare(module_path) and not resolver.is_external(
+                module_path, source_resolved
+            ):
                 # Not a dependency and not resolved: probably an alias the
                 # resolver doesn't understand, so the file it names may look
                 # orphaned when it isn't.
-                graph[source_resolved].setdefault("unresolved_imports", set()).add(module_path)
+                graph[source_resolved].setdefault("unresolved_imports", set()).add(
+                    module_path
+                )
             if target is not None and ref.runtime:
                 runtime_edges[source_resolved].add(target)
 
@@ -267,7 +280,9 @@ def cmd_deps(args: Any) -> None:
         )
         return
 
-    print(colorize(f"\nMost coupled files: {len(scored)} with >5 connections\n", "bold"))
+    print(
+        colorize(f"\nMost coupled files: {len(scored)} with >5 connections\n", "bold")
+    )
     rows = []
     for s in scored[: args.top]:
         rows.append(

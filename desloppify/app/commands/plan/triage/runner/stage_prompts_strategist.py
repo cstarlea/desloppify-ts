@@ -57,28 +57,28 @@ def build_strategist_prompt(
         "",
         "## Output Contract",
         "Return a JSON object with these keys:",
-        '- `computed_at`: ISO timestamp',
-        '- `lookback_scans`: integer',
-        '- `focus_dimensions`: list of `{name, reason, headroom, trend}`',
-        '- `avoid_areas`: list of `{name, reason, type}`',
-        '- `rework_warnings`: list of `{dimension, resolved, new_open, files}`',
-        '- `file_churn_hotspots`: list of `{file, count, detectors}`',
-        '- `stagnant_dimensions`: list of strings',
+        "- `computed_at`: ISO timestamp",
+        "- `lookback_scans`: integer",
+        "- `focus_dimensions`: list of `{name, reason, headroom, trend}`",
+        "- `avoid_areas`: list of `{name, reason, type}`",
+        "- `rework_warnings`: list of `{dimension, resolved, new_open, files}`",
+        "- `file_churn_hotspots`: list of `{file, count, detectors}`",
+        "- `stagnant_dimensions`: list of strings",
         '- `debt_trend`: `"growing" | "stable" | "shrinking"`',
         '- `score_trend`: `"improving" | "stable" | "declining" | "recovering"` (recovering = improving but still below all-time high)',
-        '- `momentum_dimensions`: list of strings',
-        '- `executive_summary`: 2-3 paragraph big-picture briefing',
-        '- `observe_guidance`: prose for observe',
-        '- `reflect_guidance`: prose for reflect',
-        '- `organize_guidance`: prose for organize',
-        '- `sense_check_guidance`: prose for sense-check value judgment',
-        '- `anti_patterns`: list of `{type, description, evidence}`',
-        '- `strategic_issues` (optional): list of `{identifier, summary, priority, recommendation, dimensions_affected}`',
+        "- `momentum_dimensions`: list of strings",
+        "- `executive_summary`: 2-3 paragraph big-picture briefing",
+        "- `observe_guidance`: prose for observe",
+        "- `reflect_guidance`: prose for reflect",
+        "- `organize_guidance`: prose for organize",
+        "- `sense_check_guidance`: prose for sense-check value judgment",
+        "- `anti_patterns`: list of `{type, description, evidence}`",
+        "- `strategic_issues` (optional): list of `{identifier, summary, priority, recommendation, dimensions_affected}`",
         '  - `identifier`: short kebab-case id (e.g., "rework-loop-naming")',
-        '  - `summary`: one-line description of the strategic concern',
+        "  - `summary`: one-line description of the strategic concern",
         '  - `priority`: `"critical" | "high" | "medium"`',
-        '  - `recommendation`: concrete recommended action',
-        '  - `dimensions_affected`: list of dimension name strings',
+        "  - `recommendation`: concrete recommended action",
+        "  - `dimensions_affected`: list of dimension name strings",
         "",
         "When you detect score regressions, rework loops, or strategic misalignment, create "
         "strategic_issues with concrete recommendations. These will become high-priority work "
@@ -91,7 +91,9 @@ def build_strategist_prompt(
     ]
     if mode == "self_record":
         parts.append("")
-        parts.append("The orchestrator will record the JSON for you. Do not run triage commands.")
+        parts.append(
+            "The orchestrator will record the JSON for you. Do not run triage commands."
+        )
     return "\n".join(parts)
 
 

@@ -51,7 +51,11 @@ def _extract_import_names(line: str) -> list[str]:
         names.append(star_match.group(1))
 
     default_part = clause.split(",", 1)[0].strip()
-    if default_part and not default_part.startswith("{") and not default_part.startswith("*"):
+    if (
+        default_part
+        and not default_part.startswith("{")
+        and not default_part.startswith("*")
+    ):
         if _IDENT_RE.match(default_part):
             names.append(default_part)
 
@@ -83,7 +87,11 @@ def detect_unused_fallback(path: Path, category: str) -> tuple[list[dict], int]:
     entries: list[dict] = []
 
     for filepath in files:
-        full = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
+        full = (
+            Path(filepath)
+            if Path(filepath).is_absolute()
+            else get_project_root() / filepath
+        )
         raw = read_file_text(str(full))
         if raw is None:
             continue
@@ -150,7 +158,11 @@ def _contains_deno_markers(path: Path) -> bool:
 
 def _has_deno_import_syntax(ts_files: list[str]) -> bool:
     for filepath in ts_files:
-        full = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
+        full = (
+            Path(filepath)
+            if Path(filepath).is_absolute()
+            else get_project_root() / filepath
+        )
         content = read_file_text(str(full))
         if content and _DENO_IMPORT_RE.search(content):
             return True
@@ -159,7 +171,10 @@ def _has_deno_import_syntax(ts_files: list[str]) -> bool:
 
 def should_use_deno_fallback(path: Path, ts_files: list[str]) -> bool:
     normalized = path.resolve().as_posix().lower()
-    if normalized.endswith(f"/{SUPABASE_FUNCTIONS_DIR}") or f"/{SUPABASE_FUNCTIONS_DIR}/" in normalized:
+    if (
+        normalized.endswith(f"/{SUPABASE_FUNCTIONS_DIR}")
+        or f"/{SUPABASE_FUNCTIONS_DIR}/" in normalized
+    ):
         return True
     if _contains_deno_markers(path):
         return True

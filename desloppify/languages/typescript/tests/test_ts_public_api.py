@@ -17,7 +17,9 @@ from desloppify.languages.typescript.detectors.deps.public_api import (
 from desloppify.languages.typescript.detectors.deps.resolver import clear_resolver_cache
 from desloppify.languages.typescript.syntax.tree import get_parser
 
-pytestmark = pytest.mark.skipif(get_parser("tsx") is None, reason="needs tree-sitter with the tsx grammar")
+pytestmark = pytest.mark.skipif(
+    get_parser("tsx") is None, reason="needs tree-sitter with the tsx grammar"
+)
 
 
 def _write(root: Path, name: str, text: str) -> None:
@@ -31,7 +33,11 @@ def _library(root: Path, *, private: bool = False) -> None:
     if private:
         manifest["private"] = True
     _write(root, "package.json", json.dumps(manifest))
-    _write(root, "tsconfig.json", json.dumps({"compilerOptions": {"outDir": "dist", "rootDir": "src"}}))
+    _write(
+        root,
+        "tsconfig.json",
+        json.dumps({"compilerOptions": {"outDir": "dist", "rootDir": "src"}}),
+    )
     _write(
         root,
         "src/index.ts",
@@ -42,11 +48,19 @@ def _library(root: Path, *, private: bool = False) -> None:
         "import { Method } from './method.js';\n"
         "export { Method };\n",
     )
-    _write(root, "src/request.ts", "export function request() {}\nexport function internalHelper() {}\n")
+    _write(
+        root,
+        "src/request.ts",
+        "export function request() {}\nexport function internalHelper() {}\n",
+    )
     _write(root, "src/errors.ts", "export class HttpError {}\nexport default 1;\n")
     _write(root, "src/hooks.ts", "export const before = 1;\nexport default 2;\n")
-    _write(root, "src/types.ts", "export type Options = {};\nexport type Hidden = {};\n")
-    _write(root, "src/method.ts", "export enum Method { Get = 'GET', Purge = 'PURGE' }\n")
+    _write(
+        root, "src/types.ts", "export type Options = {};\nexport type Hidden = {};\n"
+    )
+    _write(
+        root, "src/method.ts", "export enum Method { Get = 'GET', Purge = 'PURGE' }\n"
+    )
 
 
 @pytest.fixture
@@ -77,11 +91,14 @@ def test_public_api_follows_reexport_chains(scope):
         ("src/method.ts", "Method"),
     } <= public
     # Not re-exported, and ``export *`` doesn't forward a default export.
-    assert not {
-        ("src/request.ts", "internalHelper"),
-        ("src/types.ts", "Hidden"),
-        ("src/errors.ts", "default"),
-    } & public
+    assert (
+        not {
+            ("src/request.ts", "internalHelper"),
+            ("src/types.ts", "Hidden"),
+            ("src/errors.ts", "default"),
+        }
+        & public
+    )
 
 
 def test_private_package_publishes_nothing(scope):
@@ -95,13 +112,31 @@ def test_unused_exports_keep_internal_ones_only(scope):
     _library(root)
     knip = [
         {"file": "src/request.ts", "name": "request", "line": 1, "kind": "export"},
-        {"file": "src/request.ts", "name": "internalHelper", "line": 2, "kind": "export"},
+        {
+            "file": "src/request.ts",
+            "name": "internalHelper",
+            "line": 2,
+            "kind": "export",
+        },
         {"file": "src/types.ts", "name": "Options", "line": 1, "kind": "type"},
         {"file": "src/types.ts", "name": "Hidden", "line": 2, "kind": "type"},
-        {"file": "src/method.ts", "name": "Method.Purge", "line": 1, "kind": "enum_member"},
-        {"file": "src/errors.ts", "name": "HttpError=Alias", "line": 1, "kind": "duplicate", "names": []},
+        {
+            "file": "src/method.ts",
+            "name": "Method.Purge",
+            "line": 1,
+            "kind": "enum_member",
+        },
+        {
+            "file": "src/errors.ts",
+            "name": "HttpError=Alias",
+            "line": 1,
+            "kind": "duplicate",
+            "names": [],
+        },
     ]
-    with patch.object(exports_mod, "detect_with_knip_result", return_value=(knip, None)):
+    with patch.object(
+        exports_mod, "detect_with_knip_result", return_value=(knip, None)
+    ):
         entries, _total, _coverage = exports_mod.detect_dead_exports_result(root)
     assert [(e["file"], e["name"]) for e in entries] == [
         ("src/request.ts", "internalHelper"),

@@ -114,7 +114,9 @@ def test_show_score_delta_hides_legend_on_subsequent_scans(monkeypatch, capsys):
         ),
     )
     # Ensure not in agent environment so the non-agent path hides the legend
-    monkeypatch.setattr(scan_reporting_summary_mod, "is_agent_environment", lambda: False)
+    monkeypatch.setattr(
+        scan_reporting_summary_mod, "is_agent_environment", lambda: False
+    )
 
     scan_reporting_summary_mod.show_score_delta(
         state={"stats": {"open": 1, "total": 5, "wontfix": 0}, "scan_count": 5},
@@ -139,7 +141,9 @@ def test_show_score_delta_shows_legend_in_agent_environment(monkeypatch, capsys)
             verified=92.0,
         ),
     )
-    monkeypatch.setattr(scan_reporting_summary_mod, "is_agent_environment", lambda: True)
+    monkeypatch.setattr(
+        scan_reporting_summary_mod, "is_agent_environment", lambda: True
+    )
 
     scan_reporting_summary_mod.show_score_delta(
         state={"stats": {"open": 1, "total": 5, "wontfix": 0}, "scan_count": 5},
@@ -296,9 +300,7 @@ def test_show_post_scan_analysis_surfaces_warnings_and_headline(monkeypatch, cap
     assert narrative["headline"] == "Tighten structural debt first"
 
 
-def test_show_post_scan_analysis_no_committee_sections(
-    monkeypatch, capsys
-):
+def test_show_post_scan_analysis_no_committee_sections(monkeypatch, capsys):
     import desloppify.intelligence.narrative.core as narrative_mod
 
     monkeypatch.setattr(
@@ -441,6 +443,7 @@ def test_print_llm_summary_respects_env_and_includes_dimension_table(
 ):
     import desloppify.base.registry as registry_mod
     import desloppify.engine._scoring.policy.core as scoring_policy_mod
+
     monkeypatch.setenv("DESLOPPIFY_AGENT", "1")
     monkeypatch.delenv("CLAUDE_CODE", raising=False)
     monkeypatch.setattr(
@@ -714,5 +717,3 @@ def test_show_scorecard_dimensions_uses_scorecard_rows(monkeypatch, capsys):
     assert "Elegance" in out
     if "Scorecard dimensions (matches scorecard.png):" in out:
         assert "File health" in out
-
-

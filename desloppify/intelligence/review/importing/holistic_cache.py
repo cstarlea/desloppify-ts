@@ -69,11 +69,15 @@ def update_holistic_review_cache(
     valid = [
         issue
         for issue in issues_data
-        if all(key in issue for key in ("dimension", "identifier", "summary", "confidence"))
+        if all(
+            key in issue for key in ("dimension", "identifier", "summary", "confidence")
+        )
         and issue["dimension"] in holistic_prompts
     ]
 
-    total_override = review_scope.get("total_files") if isinstance(review_scope, dict) else None
+    total_override = (
+        review_scope.get("total_files") if isinstance(review_scope, dict) else None
+    )
     if (
         isinstance(total_override, int)
         and not isinstance(total_override, bool)

@@ -81,8 +81,12 @@ def test_generate_tweet_and_prompt_wraps_bad_claude_payload(
         lambda: SimpleNamespace(messages=_Messages()),
     )
 
-    with pytest.raises(module.ReleaseTweetError, match="Anthropic returned invalid JSON payload"):
-        module.generate_tweet_and_prompt("v1.2.3", ["Feature"], "https://example.com/release")
+    with pytest.raises(
+        module.ReleaseTweetError, match="Anthropic returned invalid JSON payload"
+    ):
+        module.generate_tweet_and_prompt(
+            "v1.2.3", ["Feature"], "https://example.com/release"
+        )
 
 
 def test_download_image_uses_timeout_and_wraps_network_failure(
@@ -120,11 +124,14 @@ def test_main_posts_trimmed_tweet_and_cleans_up(
         module,
         "generate_tweet_and_prompt",
         lambda *_args: {
-            "tweet": "Introducing desloppify v1.2.3!\n" + "\n".join("- feature" for _ in range(80)),
+            "tweet": "Introducing desloppify v1.2.3!\n"
+            + "\n".join("- feature" for _ in range(80)),
             "image_prompt": "draw a release board",
         },
     )
-    monkeypatch.setattr(module, "generate_image", lambda *_args: "https://example.com/img.png")
+    monkeypatch.setattr(
+        module, "generate_image", lambda *_args: "https://example.com/img.png"
+    )
     monkeypatch.setattr(module, "download_image", lambda *_args: str(image_path))
 
     def fake_post(tweet_text: str, image_file: str, reply_text: str) -> None:
@@ -158,7 +165,9 @@ def test_post_tweet_with_reply_wraps_media_upload_failure(
     monkeypatch.setenv("TWITTER_ACCESS_SECRET", "access-secret")
     monkeypatch.setattr(module.tweepy, "API", lambda _auth: _Api())
 
-    with pytest.raises(module.ReleaseTweetError, match="Twitter media upload failed: upload boom"):
+    with pytest.raises(
+        module.ReleaseTweetError, match="Twitter media upload failed: upload boom"
+    ):
         module.post_tweet_with_reply("tweet", "/tmp/image.png", "reply")
 
 
@@ -187,12 +196,16 @@ def test_post_tweet_with_reply_wraps_non_retryable_create_tweet_failure(
     monkeypatch.setattr(
         module.tweepy,
         "errors",
-        SimpleNamespace(TwitterServerError=type("TwitterServerError", (Exception,), {})),
+        SimpleNamespace(
+            TwitterServerError=type("TwitterServerError", (Exception,), {})
+        ),
     )
     monkeypatch.setattr(module.tweepy, "API", lambda _auth: _Api())
     monkeypatch.setattr(module.tweepy, "Client", lambda **_kwargs: _Client())
 
-    with pytest.raises(module.ReleaseTweetError, match="Twitter create_tweet failed: tweet boom"):
+    with pytest.raises(
+        module.ReleaseTweetError, match="Twitter create_tweet failed: tweet boom"
+    ):
         module.post_tweet_with_reply("tweet", "/tmp/image.png", "reply")
 
 
@@ -217,7 +230,9 @@ def test_main_exits_cleanly_on_bounded_release_failure(
     monkeypatch.setattr(
         module,
         "generate_image",
-        lambda *_args: (_ for _ in ()).throw(module.ReleaseTweetError("fal.ai request failed")),
+        lambda *_args: (_ for _ in ()).throw(
+            module.ReleaseTweetError("fal.ai request failed")
+        ),
     )
 
     with pytest.raises(SystemExit) as exc_info:

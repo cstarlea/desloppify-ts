@@ -45,7 +45,9 @@ from desloppify.languages.typescript.syntax.tree import (
 from .edits import apply_replacements
 from .fixer_io import apply_fixer
 
-_PROPERTY_MODIFIERS = frozenset({"accessibility_modifier", "override_modifier", "readonly"})
+_PROPERTY_MODIFIERS = frozenset(
+    {"accessibility_modifier", "override_modifier", "readonly"}
+)
 
 
 def fix_unused_params(entries: list[dict], *, dry_run: bool = False) -> FixResult:
@@ -62,7 +64,9 @@ def fix_unused_params(entries: list[dict], *, dry_run: bool = False) -> FixResul
 
     skip_reasons: dict[str, int] = defaultdict(int)
 
-    def transform(lines: list[str], file_entries: list[dict]) -> tuple[list[str], list[dict]]:
+    def transform(
+        lines: list[str], file_entries: list[dict]
+    ) -> tuple[list[str], list[dict]]:
         path = str(file_entries[0].get("file", "")) if file_entries else ""
         parsed = parse_text("".join(lines), path)
         if parsed is None:
@@ -91,16 +95,26 @@ def prefix_unused_params(
         if isinstance(nodes, str):
             skipped.append(nodes)
             continue
-        reason = next((r for node in nodes if (r := _blocker(names, node)) is not None), None)
+        reason = next(
+            (r for node in nodes if (r := _blocker(names, node)) is not None), None
+        )
         if reason is not None:
             skipped.append(reason)
             continue
         for node in nodes:
             name = parsed.text(node)
             text = f"_{name}" if node.type == "identifier" else f"{name}: _{name}"
-            replacements[node_key(node)] = (node.start_byte, node.end_byte, text.encode("utf-8"))
+            replacements[node_key(node)] = (
+                node.start_byte,
+                node.end_byte,
+                text.encode("utf-8"),
+            )
         fixed.append(entry)
-    return apply_replacements(parsed.source, list(replacements.values())), fixed, skipped
+    return (
+        apply_replacements(parsed.source, list(replacements.values())),
+        fixed,
+        skipped,
+    )
 
 
 def _targets(names: NameIndex, entry: dict) -> list | str:
@@ -112,7 +126,11 @@ def _targets(names: NameIndex, entry: dict) -> list | str:
         pattern = pattern_at(names.parsed, line, col)
         if pattern is None:
             return "not_found"
-        nodes = [n for n in binding_names(pattern) if not names.parsed.text(n).startswith("_")]
+        nodes = [
+            n
+            for n in binding_names(pattern)
+            if not names.parsed.text(n).startswith("_")
+        ]
         return nodes or "not_found"
     node = names.find(name, line, col)
     return [node] if node is not None else "not_found"
@@ -142,7 +160,9 @@ def _named_in_signature(occurrences: list, node, owner) -> bool:
     """
     body = owner.child_by_field_name("body")
     return any(
-        not same(other, node) and within(other, owner) and not (body is not None and within(other, body))
+        not same(other, node)
+        and within(other, owner)
+        and not (body is not None and within(other, body))
         for other in occurrences
     )
 

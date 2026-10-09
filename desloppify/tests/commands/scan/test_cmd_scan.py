@@ -86,7 +86,9 @@ class TestCmdScanExecution:
             scan_cmd_mod, "show_score_model_breakdown", lambda _state: None
         )
         monkeypatch.setattr(
-            scan_cmd_mod, "target_strict_score_from_config", lambda _config, fallback=95.0: fallback
+            scan_cmd_mod,
+            "target_strict_score_from_config",
+            lambda _config, fallback=95.0: fallback,
         )
         monkeypatch.setattr(
             scan_cmd_mod,
@@ -171,18 +173,28 @@ class TestCmdScanExecution:
             scan_cmd_mod, "resolve_noise_snapshot", lambda _state, _config: noise
         )
         monkeypatch.setattr(scan_cmd_mod, "show_diff_summary", lambda _diff: None)
-        monkeypatch.setattr(scan_cmd_mod, "show_score_delta", lambda *_args, **_kwargs: None)
-        monkeypatch.setattr(scan_cmd_mod, "show_scorecard_subjective_measures", lambda _state: None)
-        monkeypatch.setattr(scan_cmd_mod, "show_score_model_breakdown", lambda _state: None)
         monkeypatch.setattr(
-            scan_cmd_mod, "target_strict_score_from_config", lambda _config, fallback=95.0: fallback
+            scan_cmd_mod, "show_score_delta", lambda *_args, **_kwargs: None
+        )
+        monkeypatch.setattr(
+            scan_cmd_mod, "show_scorecard_subjective_measures", lambda _state: None
+        )
+        monkeypatch.setattr(
+            scan_cmd_mod, "show_score_model_breakdown", lambda _state: None
+        )
+        monkeypatch.setattr(
+            scan_cmd_mod,
+            "target_strict_score_from_config",
+            lambda _config, fallback=95.0: fallback,
         )
         monkeypatch.setattr(
             scan_cmd_mod,
             "show_post_scan_analysis",
             lambda *_args, **_kwargs: ([], {"headline": None, "actions": []}),
         )
-        monkeypatch.setattr(scan_cmd_mod, "persist_reminder_history", lambda _runtime, _narrative: None)
+        monkeypatch.setattr(
+            scan_cmd_mod, "persist_reminder_history", lambda _runtime, _narrative: None
+        )
         monkeypatch.setattr(
             scan_cmd_mod,
             "build_scan_query_payload",
@@ -194,7 +206,9 @@ class TestCmdScanExecution:
             "emit_scorecard_badge",
             lambda *_args, **_kwargs: (None, None),
         )
-        monkeypatch.setattr(scan_cmd_mod, "print_llm_summary", lambda *_args, **_kwargs: None)
+        monkeypatch.setattr(
+            scan_cmd_mod, "print_llm_summary", lambda *_args, **_kwargs: None
+        )
 
         cmd_scan(args)
 
@@ -222,7 +236,9 @@ class TestCmdScanExecution:
 
 
 class TestScorecardBadgeContract:
-    def test_missing_scorecard_support_is_soft_skip_when_not_requested(self, monkeypatch):
+    def test_missing_scorecard_support_is_soft_skip_when_not_requested(
+        self, monkeypatch
+    ):
         monkeypatch.setattr(
             scan_artifacts_mod,
             "_load_scorecard_helpers",
@@ -233,7 +249,9 @@ class TestScorecardBadgeContract:
         assert result.ok is True
         assert result.status == "skipped"
 
-    def test_missing_scorecard_support_is_error_when_explicitly_requested(self, monkeypatch):
+    def test_missing_scorecard_support_is_error_when_explicitly_requested(
+        self, monkeypatch
+    ):
         monkeypatch.setattr(
             scan_artifacts_mod,
             "_load_scorecard_helpers",
@@ -356,6 +374,7 @@ class TestShowDiffSummary:
 # show_score_delta
 # ---------------------------------------------------------------------------
 
+
 class TestShowScoreDelta:
     def test_marks_delta_non_comparable(self, capsys):
         state = {
@@ -380,6 +399,7 @@ class TestShowScoreDelta:
 # ---------------------------------------------------------------------------
 # show_strict_target_progress
 # ---------------------------------------------------------------------------
+
 
 class TestShowStrictTargetProgress:
     def test_below_default_target(self, capsys):
@@ -419,7 +439,9 @@ class TestShowStrictTargetProgress:
         assert "below target" in out
 
     def test_unavailable_strict_score(self, capsys):
-        target, gap = show_strict_target_progress({"target": 95.0, "current": None, "gap": None, "state": "unavailable"})
+        target, gap = show_strict_target_progress(
+            {"target": 95.0, "current": None, "gap": None, "state": "unavailable"}
+        )
         out = capsys.readouterr().out
         assert target == 95
         assert gap is None
@@ -517,7 +539,9 @@ class TestCollectCodebaseMetrics:
 
         class FakeLang:
             def file_finder(self, _path):
-                raise AssertionError("file_finder should not run when files are provided")
+                raise AssertionError(
+                    "file_finder should not run when files are provided"
+                )
 
         result = collect_codebase_metrics(
             FakeLang(),

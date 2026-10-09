@@ -75,17 +75,22 @@ def cmd_plan_output(args: argparse.Namespace) -> None:
     if output:
         try:
             from pathlib import Path
+
             output_path = Path(output)
             if output_path.exists():
-                print(colorize(
-                    f"  {output} already exists — refusing to overwrite.",
-                    "red",
-                ))
-                print(colorize(
-                    f"  Delete it first (`desloppify plan reset` or `rm {output}`), "
-                    f"or choose a different filename.",
-                    "dim",
-                ))
+                print(
+                    colorize(
+                        f"  {output} already exists — refusing to overwrite.",
+                        "red",
+                    )
+                )
+                print(
+                    colorize(
+                        f"  Delete it first (`desloppify plan reset` or `rm {output}`), "
+                        f"or choose a different filename.",
+                        "dim",
+                    )
+                )
                 return
             safe_write_text(output, plan_md)
             print(colorize(f"Plan written to {output}", "green"))
@@ -182,7 +187,9 @@ def _cmd_plan_show(args: argparse.Namespace) -> None:
     print(colorize("  " + "─" * 40, "dim"))
     print(f"  {queue_line}")
     if total_skipped:
-        print(f"  Skipped:          {total_skipped} (temp: {temp_count}, wontfix: {perm_count}, fp: {fp_count})")
+        print(
+            f"  Skipped:          {total_skipped} (temp: {temp_count}, wontfix: {perm_count}, fp: {fp_count})"
+        )
     else:
         print("  Skipped:          0")
     _print_cluster_summary(plan, active=active)
@@ -191,7 +198,9 @@ def _cmd_plan_show(args: argparse.Namespace) -> None:
     if active:
         print(f"  Focus:            {active}")
     if superseded:
-        print(f"  Scan drift:       {superseded} (no longer actionable in current state)")
+        print(
+            f"  Scan drift:       {superseded} (no longer actionable in current state)"
+        )
 
     _print_commit_tracking(plan)
 
@@ -203,8 +212,13 @@ def _cmd_plan_reset(args: argparse.Namespace) -> None:
     cluster_count = len(plan.get("clusters", {}))
     reset_plan(plan)
     append_log_entry(
-        plan, "reset", actor="user",
-        detail={"previous_queue_size": queue_len, "previous_cluster_count": cluster_count},
+        plan,
+        "reset",
+        actor="user",
+        detail={
+            "previous_queue_size": queue_len,
+            "previous_cluster_count": cluster_count,
+        },
     )
     save_plan(plan)
     print(colorize("  Plan reset to empty.", "green"))
@@ -245,5 +259,6 @@ def cmd_plan(args: argparse.Namespace) -> None:
         print(f"Unknown plan action: {plan_action}")
         return
     handler(args)
+
 
 __all__ = ["cmd_plan", "cmd_plan_output"]

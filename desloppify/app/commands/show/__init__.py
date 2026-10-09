@@ -11,4 +11,5 @@ def cmd_show(args: argparse.Namespace) -> None:
 
     _cmd_show(args)
 
+
 __all__ = ["cmd_show"]
