@@ -7,7 +7,10 @@ import re
 from collections import defaultdict
 from pathlib import Path
 
-from desloppify.base.discovery.file_paths import rel
+from desloppify.base.discovery.file_paths import rel, resolve_path
+from desloppify.base.discovery.paths import get_project_root
+from desloppify.languages.typescript.detectors.deps.public_api import published_entry_files
+from desloppify.languages.typescript.detectors.deps.resolver import project_resolver
 from desloppify.languages.typescript.syntax.queries import definitions
 from desloppify.languages.typescript.syntax.tree import ParsedSource, parse_text
 
@@ -213,12 +216,27 @@ def _sort_and_trim(col: _AbstractionsCollector, derived: dict) -> None:
     col.facade_modules.sort(key=lambda d: (-d["source_count"], d["file"]))
 
 
+def _published_entries(filepaths: list[str]) -> set[str]:
+    """Relative paths of the entry files published packages expose (``exports``, ``main``, ...)."""
+    candidates = [resolve_path(f) for f in filepaths]
+    try:
+        packages = project_resolver(get_project_root()).packages
+    except OSError:
+        return set()
+    return {rel(path) for path in published_entry_files(packages, candidates)}
+
+
 def _abstractions_context(file_contents: dict[str, str]) -> dict:
     """Produce abstraction-economy context from codebase file contents."""
     col = _AbstractionsCollector()
 
     for filepath, content in file_contents.items():
         _scan_file(col, filepath, content)
+
+    # A barrel that is a published package's entry point is its public API, not indirection.
+    if col.facade_modules:
+        public = _published_entries(list(file_contents))
+        col.facade_modules = [f for f in col.facade_modules if f["file"] not in public]
 
     derived = _derive_post_scan_results(col)
     _sort_and_trim(col, derived)

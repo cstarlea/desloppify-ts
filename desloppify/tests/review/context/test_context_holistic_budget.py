@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 import pytest
 
+from desloppify.base.runtime_state import RuntimeContext, runtime_scope
 from desloppify.intelligence.review.context_holistic import budget as budget_mod
+from desloppify.languages.typescript.detectors.deps.resolver import clear_resolver_cache
 from desloppify.languages.typescript.syntax.tree import get_parser
 
 needs_treesitter = pytest.mark.skipif(
@@ -280,3 +285,31 @@ def test_definition_directness_counts_facades(tmp_path):
     assert context["summary"]["facade_module_count"] == 1
     assert context["sub_axes"]["definition_directness"] == 92
     assert context["facade_modules"][0]["imports_from"] == ["./a", "./b"]
+
+
+@pytest.mark.parametrize("private", [False, True])
+def test_definition_directness_skips_published_entry_barrels(tmp_path, private):
+    """A barrel a published package's ``exports`` points at is its public API, not a facade."""
+    manifest = {"name": "lib", "exports": {".": "./dist/index.js"}, "private": private}
+    (tmp_path / "package.json").write_text(json.dumps(manifest))
+    (tmp_path / "tsconfig.json").write_text(json.dumps({"compilerOptions": {"outDir": "dist", "rootDir": "src"}}))
+    (tmp_path / "src" / "inner").mkdir(parents=True)
+    files = {
+        str(tmp_path / "src" / "index.ts"): "export * from './a';\nexport * from './inner/index';\n",
+        str(tmp_path / "src" / "inner" / "index.ts"): "export * from './b';\n",
+    }
+    for path, text in files.items():
+        Path(path).write_text(text)
+
+    with runtime_scope(RuntimeContext(project_root=tmp_path)):
+        clear_resolver_cache()
+        try:
+            context = budget_mod._abstractions_context(files)
+        finally:
+            clear_resolver_cache()
+    facades = [f["file"] for f in context.get("facade_modules", [])]
+    if private:
+        assert facades == ["src/index.ts", "src/inner/index.ts"]
+    else:
+        assert facades == ["src/inner/index.ts"]
+        assert context["sub_axes"]["definition_directness"] == 92
