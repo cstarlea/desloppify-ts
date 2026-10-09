@@ -255,6 +255,28 @@ def extract_imports_regex(text: str) -> list[ImportRef]:
     return refs
 
 
+# ── MDX ─────────────────────────────────────────────────────
+
+_MDX_FENCE_RE = re.compile(r"^ {0,3}(`{3,}|~{3,}).*?^ {0,3}\1[ \t]*$", re.MULTILINE | re.DOTALL)
+# MDX ESM: ``import``/``export ... from`` at the start of a line, outside code.
+_MDX_ESM_RE = re.compile(
+    r"""^(?:import|export)\s(?:(?!^\s*$)[^'"])*?\bfrom\s*['"]([^'"]+)['"]|^import\s*['"]([^'"]+)['"]""",
+    re.MULTILINE,
+)
+
+
+def extract_mdx_imports(text: str) -> list[ImportRef]:
+    """The ESM imports of an MDX document; code fences and prose don't count."""
+    code = _MDX_FENCE_RE.sub("", text)
+    refs = []
+    for match in _MDX_ESM_RE.finditer(code):
+        if match.group(1):
+            refs.append(ImportRef(match.group(1), STATIC))
+        else:
+            refs.append(ImportRef(match.group(2), SIDE_EFFECT))
+    return refs
+
+
 class ImportExtractor:
     """Extract imports from files, using tree-sitter when it is available."""
 
@@ -274,6 +296,11 @@ class ImportExtractor:
         return extract_imports_regex(text)
 
     def extract(self, filepath: str) -> list[ImportRef]:
+        if filepath.endswith((".mdx", ".md")):
+            try:
+                return extract_mdx_imports(Path(filepath).read_text(encoding="utf-8", errors="replace"))
+            except OSError:
+                return []
         if self._parser is not None and not filepath.endswith((".vue", ".svelte", ".astro")):
             refs = extract_imports_treesitter(filepath)
             if refs is not None:
@@ -299,5 +326,6 @@ __all__ = [
     "SIDE_EFFECT",
     "STATIC",
     "extract_imports_regex",
+    "extract_mdx_imports",
     "extract_imports_treesitter",
 ]

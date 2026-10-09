@@ -199,6 +199,25 @@ def test_no_tests_issues_critical_by_importers(tmp_path):
     assert issues[0]["detail"]["kind"] == "untested_critical"
 
 
+def test_docs_pages_are_not_blast_radius(tmp_path):
+    """A component that docs pages import isn't critical because of them."""
+    f = tmp_path / "Snippet.tsx"
+    f.write_text("\n".join(f"line {i}" for i in range(50)) + "\n")
+    filepath = str(f)
+    docs = {str(tmp_path / f"docs/page{i}.{'mdx' if i % 2 else 'md'}") for i in range(11)}
+    graph = {filepath: {"importers": docs | {str(tmp_path / "app.tsx")}, "importer_count": 12}}
+
+    with patch.object(
+        discovery_mod, "_has_testable_logic", return_value=True
+    ), patch.object(
+        discovery_mod, "_is_runtime_entrypoint", return_value=False
+    ):
+        issues = discovery_mod._no_tests_issues({filepath}, graph, "typescript")
+
+    assert issues[0]["detail"]["kind"] == "untested_module"
+    assert issues[0]["detail"]["importer_count"] == 1
+
+
 def test_no_tests_issues_critical_by_complexity(tmp_path):
     f = tmp_path / "complex.py"
     f.write_text("\n".join(f"line {i}" for i in range(50)) + "\n")

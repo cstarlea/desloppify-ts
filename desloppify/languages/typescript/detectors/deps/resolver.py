@@ -124,6 +124,34 @@ class _PackageScopeLookup:
         return result
 
 
+_DOCUSAURUS_SITE_PREFIX = "@site/"
+_DOCUSAURUS_CONFIGS = tuple(f"docusaurus.config.{ext}" for ext in ("ts", "mts", "js", "mjs", "cjs"))
+
+
+@lru_cache(maxsize=4096)
+def _docusaurus_root_of_dir(directory: str) -> str | None:
+    path = Path(directory)
+    if any((path / name).is_file() for name in _DOCUSAURUS_CONFIGS):
+        return directory
+    parent = path.parent
+    return None if parent == path else _docusaurus_root_of_dir(str(parent))
+
+
+def docusaurus_site_root(filepath: str) -> Path | None:
+    """The Docusaurus site holding *filepath*: the nearest directory with a ``docusaurus.config``."""
+    root = _docusaurus_root_of_dir(str(Path(filepath).parent))
+    return Path(root) if root is not None else None
+
+
+def _resolve_docusaurus_site(specifier: str, from_abs: str) -> str | None:
+    """``@site/x``: Docusaurus's alias for the site directory, set by its
+    bundler config, not a tsconfig."""
+    root = docusaurus_site_root(from_abs)
+    if root is None:
+        return None
+    return resolve_target(root / specifier[len(_DOCUSAURUS_SITE_PREFIX) :])
+
+
 class ModuleResolver:
     """Resolve TypeScript import specifiers for files under one project."""
 
@@ -145,6 +173,8 @@ class ModuleResolver:
         resolved = resolve_target(target) if target is not None else None
         if resolved is None and specifier.startswith("#"):
             return self._resolve_package_import(specifier, from_abs)
+        if resolved is None and specifier.startswith(_DOCUSAURUS_SITE_PREFIX):
+            return _resolve_docusaurus_site(specifier, from_abs)
         if resolved is None and self.workspace and is_bare(specifier):
             # tsconfig paths take precedence, as in TypeScript; then the
             # workspace package that node_modules would symlink to.
@@ -241,11 +271,13 @@ def project_resolver(project_root: Path) -> ModuleResolver:
 
 def clear_resolver_cache() -> None:
     _cached_resolver.cache_clear()
+    _docusaurus_root_of_dir.cache_clear()
 
 
 __all__ = [
     "ModuleResolver",
     "clear_resolver_cache",
+    "docusaurus_site_root",
     "is_bare",
     "package_name",
     "project_resolver",

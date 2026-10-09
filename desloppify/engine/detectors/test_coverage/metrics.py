@@ -25,6 +25,20 @@ def _file_loc(filepath: str) -> int:
     return len(read_result.content.splitlines())
 
 
+# Docs pages (MDX, Docusaurus Markdown) import components to render them; that
+# isn't production blast radius.
+_DOCS_SUFFIXES = (".mdx", ".md")
+
+
+def _importer_count(graph: dict, filepath: str) -> int:
+    """Importers of *filepath* that count as blast radius: docs pages don't."""
+    node = graph.get(filepath, {})
+    importers = node.get("importers")
+    if importers is None:
+        return node.get("importer_count", 0)
+    return sum(1 for importer in importers if not str(importer).endswith(_DOCS_SUFFIXES))
+
+
 def _loc_weight(loc: int) -> float:
     """Compute LOC weight for a file: sqrt(loc) capped at 50."""
     return min(math.sqrt(loc), 50)

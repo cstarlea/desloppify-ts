@@ -200,7 +200,7 @@ class TestLangGuidance:
         lang.file_finder = MagicMock(return_value=[str(f)])
         data = prepare_review(tmp_path, lang, empty_state)
         assert data["language"] == "python"
-        assert "patterns" in data["lang_guidance"]
+        assert "react" in data["lang_guidance"]
 
 
 # ── Sibling conventions tests ────────────────────────────────────
