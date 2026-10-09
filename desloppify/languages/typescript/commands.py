@@ -42,6 +42,7 @@ from desloppify.languages.typescript.detectors.patterns.cli import cmd_patterns
 from desloppify.languages.typescript.detectors.props import cmd_props
 from desloppify.languages.typescript.detectors.react.cli import cmd_react
 from desloppify.languages.typescript.detectors.unused import cmd_unused
+from desloppify.languages.typescript.extractors_classes import extract_ts_classes
 from desloppify.languages.typescript.extractors_components import (
     detect_passthrough_components,
     extract_ts_components,
@@ -49,6 +50,7 @@ from desloppify.languages.typescript.extractors_components import (
 from desloppify.languages.typescript.extractors_functions import extract_ts_functions
 from desloppify.languages.typescript.phases_coupling import find_orphans, package_context
 from desloppify.languages.typescript.phases_config import (
+    TS_CLASS_GOD_RULES,
     TS_COMPLEXITY_SIGNALS,
     TS_GOD_RULES,
     TS_SKIP_DIRS,
@@ -100,20 +102,21 @@ cmd_facade = make_cmd_facade(
 
 
 def cmd_gods(args: argparse.Namespace) -> None:
-    entries, _ = gods_detector_mod.detect_gods(
-        extract_ts_components(Path(args.path)), TS_GOD_RULES
-    )
+    path = Path(args.path)
+    components, _ = gods_detector_mod.detect_gods(extract_ts_components(path), TS_GOD_RULES)
+    god_classes, _ = gods_detector_mod.detect_gods(extract_ts_classes(path), TS_CLASS_GOD_RULES)
+    entries = sorted(components + god_classes, key=lambda e: -e["loc"])
     display_entries(
         args,
         entries,
-        label="God components",
-        empty_msg="No god components found.",
-        columns=["File", "LOC", "Hooks", "Why"],
-        widths=[55, 5, 6, 45],
+        label="God components and classes",
+        empty_msg="No god components or classes found.",
+        columns=["File", "Name", "LOC", "Why"],
+        widths=[50, 20, 5, 45],
         row_fn=lambda e: [
             rel(e["file"]),
+            str(e.get("name", "")),
             str(e["loc"]),
-            str(e["detail"].get("hook_total", 0)),
             ", ".join(e["reasons"]),
         ],
     )

@@ -118,6 +118,19 @@ When the project has a coverage report, measured line coverage takes over from t
 - A file missing from every report also keeps the graph's verdict. Coverage tools leave out both files that never loaded and files excluded on purpose, and the report can't tell the two apart.
 - Several reports are merged by covered line, so per-package reports in a monorepo and a root report from another run add up.
 
+### File health
+
+`structural` reports at most one issue per file (`structural::<file>`), listing every signal the file hits: large (500 lines or more), a complexity score, a god component (React hook counts), god classes and mixed concerns. Three or more signals make the issue tier 4 and high confidence; otherwise it is tier 3 and medium. A file whose only signal is complexity needs a score of 50.
+
+A class is a god class when it meets two of these rules:
+
+- 20 or more methods. Arrow-function fields count; accessors and overload signatures don't.
+- 7 or more constructor dependencies: constructor parameters plus fields set with Angular's `inject()`.
+- 40 or more decorators on the class, its methods and their parameters. Field decorators (ORM columns, validators, Angular inputs) declare a shape, so they don't count.
+- 300 or more lines.
+
+One rule alone isn't enough. NestJS services and Angular components routinely inject several collaborators, and a controller stacks decorators on every route. The classes are listed in the issue's `detail.god_classes` (`desloppify detect gods` shows them).
+
 ### Type checks
 
 `type_error` reports what tsc reports, read from the same tsc run as `unused` (`detectors/tsc.py` runs tsc once per scan with `--noUnusedLocals --noUnusedParameters --listFiles`; those flags only add the unused diagnostics, which `type_error` leaves out). Its potential is the number of files tsc checked in the scan path, from `--listFiles`. One issue covers one error code on one line, with ID `type_error::<file>::TS<code>::<line>`.

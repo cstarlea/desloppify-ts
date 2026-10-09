@@ -303,7 +303,7 @@ def test_ts_command_registry_canonical_surface_and_wrapper_passthrough(
     monkeypatch.setattr(cli_mod.gods_detector_mod, "detect_gods", lambda _components, _rules: ([{"file": "src/App.tsx", "loc": 200, "detail": {"hook_total": 5}, "reasons": ["long"]}], 1))
 
     cli_mod.cmd_gods(SimpleNamespace(path=str(tmp_path), json=False, top=5))
-    assert display_calls and display_calls[0]["label"] == "God components"
+    assert display_calls and display_calls[0]["label"] == "God components and classes"
 
     monkeypatch.setattr(cli_mod, "get_src_path", lambda: "src")
     monkeypatch.setattr(cli_mod.coupling_detector_mod, "detect_coupling_violations", lambda *_args, **_kwargs: ([{"file": "src/shared/a.ts", "target": "src/tools/x.ts", "tool": "x"}], 1))

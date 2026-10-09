@@ -18,11 +18,13 @@ from desloppify.languages._framework.base.structural import (
 from desloppify.languages._framework.base.types import LangRuntimeContract
 import desloppify.languages.typescript.detectors.concerns as concerns_detector_mod
 import desloppify.languages.typescript.detectors.props as props_detector_mod
+from desloppify.languages.typescript.extractors_classes import extract_ts_classes
 from desloppify.languages.typescript.extractors_components import (
     detect_passthrough_components,
     extract_ts_components,
 )
 from desloppify.languages.typescript.phases_config import (
+    TS_CLASS_GOD_RULES,
     TS_COMPLEXITY_SIGNALS,
     TS_GOD_RULES,
 )
@@ -32,7 +34,7 @@ from desloppify.state_io import Issue
 def _detect_structural_signals(
     path: Path, lang: LangRuntimeContract
 ) -> tuple[list[Issue], int]:
-    """Detect large files, complexity, god components, and mixed concerns."""
+    """Detect large files, complexity, god components and classes, and mixed concerns."""
     structural: dict[str, dict] = {}
 
     large_entries, file_count = large_detector_mod.detect_large_files(
@@ -74,6 +76,8 @@ def _detect_structural_signals(
             },
         )
 
+    _add_god_class_signals(structural, path, lang)
+
     concern_entries, _ = concerns_detector_mod.detect_mixed_concerns(path)
     for entry in concern_entries:
         add_structural_signal(
@@ -85,6 +89,37 @@ def _detect_structural_signals(
 
     results = merge_structural_signals(structural, log)
     return results, file_count
+
+
+def _add_god_class_signals(structural: dict, path: Path, lang: LangRuntimeContract) -> None:
+    """One structural signal per file for its god classes (two or more class rules hit)."""
+    entries, _ = gods_detector_mod.detect_gods(
+        extract_ts_classes(path, lang.file_finder(path)), TS_CLASS_GOD_RULES, min_reasons=2
+    )
+    by_file: dict[str, list[dict]] = {}
+    for entry in sorted(entries, key=lambda e: e["line"]):
+        by_file.setdefault(entry["file"], []).append(entry)
+    for filepath, file_entries in by_file.items():
+        if len(file_entries) == 1:
+            entry = file_entries[0]
+            signal = f"god class {entry['name']} ({', '.join(entry['reasons'][:2])})"
+        else:
+            names = [e["name"] for e in file_entries]
+            more = f" +{len(names) - 3}" if len(names) > 3 else ""
+            signal = f"god classes {', '.join(names[:3])}{more}"
+        add_structural_signal(
+            structural,
+            filepath,
+            signal,
+            {
+                "god_classes": [
+                    {"name": e["name"], "line": e["line"], "reasons": e["reasons"]}
+                    for e in file_entries
+                ]
+            },
+        )
+    if entries:
+        log(f"         god classes: {len(entries)}")
 
 
 def _detect_flat_dirs(path: Path, lang: LangRuntimeContract) -> tuple[list[Issue], int]:
