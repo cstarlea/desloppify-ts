@@ -23,6 +23,7 @@ from desloppify.languages._framework.issue_factories import (
     make_single_use_issues,
 )
 import desloppify.languages.typescript.detectors.deps as deps_detector_mod
+from desloppify.languages.typescript.detectors.deps.auto_imports import auto_import_entries
 import desloppify.languages.typescript.detectors.deps.packages as packages_mod
 import desloppify.languages.typescript.detectors.facade as facade_detector_mod
 import desloppify.languages.typescript.detectors.knip_adapter as knip_adapter_mod
@@ -211,7 +212,7 @@ def find_orphans(
             extra_barrel_names=lang.barrel_names,
             # Dynamic imports, import.meta.glob and mocks are graph edges
             # already, so no suffix-matched dynamic import fallback here.
-            entry_files=entries.all if entries else None,
+            entry_files=(entries.all if entries else set()) | auto_import_entries(path),
             package_roots=[p.directory for p in packages or ()],
             entry_conventions=framework_entry_conventions(),
         ),
