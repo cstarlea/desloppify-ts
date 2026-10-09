@@ -46,12 +46,13 @@ from pathlib import Path
 import pytest
 
 import desloppify.languages.typescript.detectors.tsc as tsc_mod
+from desloppify.base.discovery.sfc import is_sfc, sfc_code
 from desloppify.base.discovery.source import clear_source_file_cache_for_tests
 from desloppify.base.runtime_state import RuntimeContext, runtime_scope
 from desloppify.languages.typescript._fixers import get_ts_fixers
 from desloppify.languages.typescript.fixers.params import prefix_unused_params
 from desloppify.languages.typescript.syntax.nodes import byte_offset
-from desloppify.languages.typescript.syntax.tree import get_parser, parse_text
+from desloppify.languages.typescript.syntax.tree import ParsedSource, get_parser, parse_text
 from desloppify.languages.typescript.syntax.validation import count_syntax_errors
 
 needs_treesitter = pytest.mark.skipif(
@@ -455,10 +456,59 @@ export function breaks(x: number, unusedArg: number) {
 """,
     # The last statement goes and there is no final newline.
     "src/no_eol.ts": "import { a, b } from './m';\nexport const k = a;\nconst unusedLast = 2;",
+    # 3.7: components. Fixers edit the script blocks only: the template's
+    # look-alike code, the Vue <script> and the CRLF/BOM copy below stay as
+    # they are, and a log on the <script> tag's own line is left alone.
+    "src/Comp.vue": """\
+<template>
+  <p>{{ console.log('[Tpl] kept') }}</p>
+  <!-- if (x) {} else {} -->
+</template>
+
+<script lang="ts">
+export default { name: 'Comp' }
+</script>
+
+<script setup lang="ts">
+import { useEffect } from './react';
+const x = Number('1') as number;
+console.log('[Comp] setup', x);
+if (x) {
+} else {
+}
+useEffect(() => {}, []);
+</script>
+
+<style>
+p::before { content: "console.log('[Css] kept')"; }
+</style>
+""",
+    "src/Inline.svelte": """\
+<script lang="ts">console.log('[Inline] kept on the tag line')
+  export let n: number = 1
+  if (n) {} else if (n > 1) {}
+</script>
+
+<p>{n}</p>
+""",
+    "src/Page.astro": """\
+---
+const title = 'Page';
+console.log('[Astro] frontmatter', title);
+---
+<h1>{title}</h1>
+<script>
+  const h = document.querySelector('h1');
+  if (h) {
+  } else {
+  }
+  console.log('[Astro] client', h);
+</script>
+""",
 }
 
-_CRLF = {"src/crlf.ts", "src/crlf_bom.tsx"}
-_WITH_BOM = {"src/bom.ts", "src/crlf_bom.tsx"}
+_CRLF = {"src/crlf.ts", "src/crlf_bom.tsx", "src/Page.astro"}
+_WITH_BOM = {"src/bom.ts", "src/crlf_bom.tsx", "src/Page.astro"}
 # Mostly LF with one CRLF line: neither ending may be rewritten to the other.
 _MIXED = {"src/mixed.ts": "import { a, b } from './m';\r\nconst unusedMixed = 1;\nexport const m = a;\n"}
 _EXECUTABLE = {"src/asi.ts"}
@@ -510,7 +560,12 @@ def _is_subsequence(short: bytes, long: bytes) -> bool:
 
 
 def _literals(text: str, path: str) -> set[str]:
-    parsed = parse_text(text, path)
+    if is_sfc(path):
+        component = sfc_code(text, path)
+        tree = get_parser(component.grammar).parse(component.view.encode("utf-8"))
+        parsed = ParsedSource(component.view.encode("utf-8"), tree)
+    else:
+        parsed = parse_text(text, path)
     assert parsed is not None
     found: set[str] = set()
     stack = [parsed.root]

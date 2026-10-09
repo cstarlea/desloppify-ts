@@ -12,6 +12,7 @@ from pathlib import Path
 
 from desloppify.base.output.fallbacks import log_best_effort_failure
 from desloppify.base.discovery.file_paths import rel
+from desloppify.base.discovery.sfc import apply_view_change, is_sfc, sfc_code
 from desloppify.base.output.terminal import colorize
 from desloppify.base.discovery.paths import get_project_root
 from desloppify.languages._framework.treesitter import is_available as treesitter_available
@@ -98,12 +99,31 @@ def _process_fixer_file(
     original = raw.removeprefix(_UTF8_BOM)
     if uses_crlf:
         original = original.replace("\r\n", "\n")
-    lines = original.splitlines(keepends=True)
+    # A component's fixers see its code view, where the markup is blank; the
+    # edit is carried back only if it stays inside the script blocks.
+    component = sfc_code(original, path) if is_sfc(path) else None
+    working = component.view if component is not None else original
+    lines = working.splitlines(keepends=True)
 
     new_lines, fixed = transform_fn(lines, file_entries)
-    new_content = "".join(new_lines)
-    if new_content == original:
+    new_working = "".join(new_lines)
+    if new_working == working:
         return None
+    if component is None:
+        new_content = new_working
+    else:
+        carried = apply_view_change(component, new_working, path)
+        if carried is None:
+            print(
+                colorize(
+                    f"  Skip {rel(filepath)}: the edit reaches outside the component's "
+                    "<script> blocks; file left unchanged",
+                    "yellow",
+                ),
+                file=sys.stderr,
+            )
+            return None
+        new_content = carried
 
     problem = syntax_regression(path, original, new_content)
     if problem:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -104,10 +105,25 @@ class EntryConventions:
     # Stems that are entry points anywhere beneath a ``route_dir`` segment.
     route_dir: str | None = None
     route_stems: frozenset[str] = frozenset()
+    # Stems starting with this are entry points beneath ``route_dir`` too
+    # (SvelteKit's ``+page``, ``+layout.server``, ``+page@group``).
+    route_stem_prefix: str | None = None
+    # Every file beneath these package-relative directories is an entry point
+    # (Nuxt's auto-imported ``components/``, Astro's ``src/pages/``).
+    entry_dirs: tuple[str, ...] = ()
+    # Package-relative paths without their extension (``src/content/config``).
+    entry_paths: frozenset[str] = frozenset()
+    # When set, the package must also list one of these in package.json:
+    # a convention of a Vite plugin applies only where the plugin is used.
+    dependencies: tuple[str, ...] = ()
 
     def applies_to(self, package_root: Path) -> bool:
         """Whether the package at *package_root* uses this framework."""
-        return any((package_root / name).exists() for name in self.config_files)
+        if not any((package_root / name).exists() for name in self.config_files):
+            return False
+        return not self.dependencies or bool(
+            set(self.dependencies) & _manifest_dependencies(package_root)
+        )
 
     def is_entry(self, rel_path: str) -> bool:
         """Whether *rel_path* (relative to the package root) is a convention file."""
@@ -116,11 +132,31 @@ class EntryConventions:
             return False
         if path.stem in self.root_stems and len(path.parts) <= 2:
             return True
-        return (
-            self.route_dir is not None
-            and path.stem in self.route_stems
-            and self.route_dir in path.parts
+        if self.entry_dirs and rel_path.startswith(tuple(d + "/" for d in self.entry_dirs)):
+            return True
+        if self.entry_paths and path.with_suffix("").as_posix() in self.entry_paths:
+            return True
+        if self.route_dir is None or self.route_dir not in path.parts[:-1]:
+            return False
+        return path.stem in self.route_stems or (
+            self.route_stem_prefix is not None and path.stem.startswith(self.route_stem_prefix)
         )
+
+
+def _manifest_dependencies(package_root: Path) -> set[str]:
+    """Every dependency name the package.json at *package_root* declares."""
+    try:
+        payload = json.loads((package_root / "package.json").read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, ValueError):
+        return set()
+    if not isinstance(payload, dict):
+        return set()
+    names: set[str] = set()
+    for key in ("dependencies", "devDependencies", "peerDependencies", "optionalDependencies"):
+        section = payload.get(key)
+        if isinstance(section, dict):
+            names.update(str(name) for name in section)
+    return names
 
 
 @dataclass

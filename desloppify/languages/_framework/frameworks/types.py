@@ -67,7 +67,8 @@ class FrameworkSpec:
     excludes: tuple[str, ...] = ()
     scanners: tuple[ScannerRule, ...] = ()
     tools: tuple[ToolIntegration, ...] = ()
-    entry_conventions: EntryConventions | None = None
+    # One set of conventions, or several (a framework's Vite plugins each add their own).
+    entry_conventions: EntryConventions | tuple[EntryConventions, ...] | None = None
 
 
 @dataclass(frozen=True)

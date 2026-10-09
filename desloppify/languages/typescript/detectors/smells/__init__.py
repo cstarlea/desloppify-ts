@@ -6,6 +6,7 @@ import logging
 import re
 from pathlib import Path
 
+from desloppify.base.discovery.sfc import is_sfc, read_code_text, read_sfc
 from desloppify.base.output.fallbacks import log_best_effort_failure
 from .detector_flow import (
     _detect_async_no_await,
@@ -71,13 +72,14 @@ def detect_smells(path: Path) -> tuple[list[dict], int]:
     for filepath in files:
         try:
             p = resolve_typescript_source(filepath)
-            content = p.read_text()
+            content = read_code_text(p)
         except (OSError, UnicodeDecodeError) as exc:
             log_best_effort_failure(logger, f"read TypeScript smell candidate {filepath}", exc)
             continue
 
         ctx = _file_context(filepath, content)
-        loc[filepath] = len(ctx.lines)
+        component = read_sfc(p) if is_sfc(p) else None
+        loc[filepath] = component.line_count if component is not None else len(ctx.lines)
         for check in checks:
             if check["pattern"] is None:
                 continue

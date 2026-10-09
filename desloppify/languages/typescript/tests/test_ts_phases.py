@@ -181,5 +181,5 @@ def test_phase_coupling_passes_orphaned_options(monkeypatch, tmp_path: Path):
     assert options.dynamic_import_finder is None
     assert options.alias_resolver is None
 
-    # Extensions were correctly passed from lang config
-    assert captured["extensions"] == [".ts", ".tsx"]
+    # The lang config's extensions, plus components (.vue, .svelte, .astro)
+    assert captured["extensions"] == [".ts", ".tsx", ".vue", ".svelte", ".astro"]

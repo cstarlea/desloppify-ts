@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from desloppify.base.discovery.sfc import code_bytes
 from desloppify.base.runtime_state import resolve_runtime_context
 
 if TYPE_CHECKING:
@@ -39,7 +40,8 @@ class ParseTreeCache:
             return self._trees[key]
 
         try:
-            source = Path(filepath).read_bytes()
+            # A component (.vue/.svelte/.astro) parses as its script code.
+            source = code_bytes(Path(filepath).read_bytes(), filepath)
         except (OSError, UnicodeDecodeError):
             return None
 

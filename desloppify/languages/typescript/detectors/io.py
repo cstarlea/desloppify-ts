@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from desloppify.base.discovery.paths import get_project_root
-from desloppify.base.discovery.source import find_ts_and_js_files
+from desloppify.base.discovery.source import find_component_files, find_ts_and_js_files
 from desloppify.languages.typescript.plugin_contract import TS_EXCLUSIONS
 
 
@@ -23,10 +23,14 @@ def should_skip_typescript_source(filepath: str) -> bool:
 
 
 def iter_typescript_sources(path: Path) -> list[str]:
-    """Return normalized source candidates for TypeScript detectors."""
+    """Return normalized source candidates for TypeScript detectors.
+
+    Components (``.vue``, ``.svelte``, ``.astro``) are included: detectors
+    read them through their code view (``base.discovery.sfc``).
+    """
     return [
         filepath
-        for filepath in find_ts_and_js_files(path)
+        for filepath in [*find_ts_and_js_files(path), *find_component_files(path)]
         if not should_skip_typescript_source(filepath)
     ]
 
