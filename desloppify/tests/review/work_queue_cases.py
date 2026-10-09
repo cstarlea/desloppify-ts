@@ -877,6 +877,7 @@ def test_registry_standalone_threshold_count():
         "naming",
         "nextjs",
         "react_router",
+        "nestjs",
         "patterns",
         "props",
         "react",

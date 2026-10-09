@@ -69,6 +69,9 @@ class FrameworkSpec:
     tools: tuple[ToolIntegration, ...] = ()
     # One set of conventions, or several (a framework's Vite plugins each add their own).
     entry_conventions: EntryConventions | tuple[EntryConventions, ...] | None = None
+    # Class decorators of the framework's DI container: a class it wires from
+    # metadata is imported once by design.
+    injected_class_decorators: frozenset[str] = frozenset()
 
 
 @dataclass(frozen=True)

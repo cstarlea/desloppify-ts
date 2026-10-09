@@ -434,6 +434,8 @@ def _script_files(command: str) -> Iterator[str]:
     except ValueError:
         tokens = command.split()
     for token in tokens:
+        if token.startswith("-") and "=" in token:
+            token = token.partition("=")[2]  # --dataSource=src/data-source.ts
         if token.startswith("-") or token.endswith("/") or "*" in token or "://" in token:
             continue
         if not _SCRIPT_FILE_RE.match(token):
