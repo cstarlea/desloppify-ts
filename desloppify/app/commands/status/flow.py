@@ -31,6 +31,7 @@ from desloppify.intelligence.narrative.core import NarrativeContext, compute_nar
 from desloppify.state_io import StateModel
 from desloppify.state_scoring import ScoreSnapshot, score_snapshot, subjective_unassessed
 
+from .render_io import show_disabled_summary
 from .render import (
     StatusQueryRequest,
     print_open_scope_breakdown,
@@ -235,6 +236,8 @@ def render_terminal_status(
 
     if ignores:
         show_ignore_summary(ignores, suppression)
+    if config.get("disabled"):
+        show_disabled_summary(state, config["disabled"])
 
     review_age = config.get("review_max_age_days", 30)
     _print_review_staleness(review_age)

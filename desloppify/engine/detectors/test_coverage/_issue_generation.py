@@ -7,9 +7,14 @@ from desloppify.engine.detectors.coverage.mapping import (
     get_test_files_for_prod,
 )
 
-from ._issue_gaps import transitive_coverage_gap_issue, untested_module_issue
+from ._issue_gaps import (
+    measured_coverage_issue,
+    transitive_coverage_gap_issue,
+    untested_module_issue,
+)
 from ._issue_quality import select_direct_test_quality_issue
 from .metrics import _file_loc, _loc_weight
+from .reports import FileCoverage
 
 
 def generate_issues(
@@ -20,10 +25,16 @@ def generate_issues(
     graph: dict,
     lang_name: str,
     complexity_map: dict[str, float] | None = None,
+    measured: dict[str, FileCoverage] | None = None,
 ) -> list[dict]:
-    """Generate test-coverage issues for all scorable production files."""
+    """Generate test-coverage issues for all scorable production files.
+
+    A file with fresh measured coverage is judged by it instead of by the
+    import graph; quality checks on its direct tests still apply.
+    """
     entries: list[dict] = []
     cmap = complexity_map or {}
+    measured = measured or {}
     test_files = set(test_quality.keys())
     production_scope = set(scorable) | set(directly_tested) | set(transitively_tested)
     parsed_imports_by_test = build_test_import_index(
@@ -53,9 +64,22 @@ def generate_issues(
             )
             if issue:
                 entries.append(issue)
-            continue
+            if filepath not in measured:
+                continue
 
         complexity = cmap.get(filepath, 0)
+        if filepath in measured:
+            gap = measured_coverage_issue(
+                file_path=filepath,
+                coverage=measured[filepath],
+                loc=loc,
+                importer_count=importer_count,
+                loc_weight=loc_weight,
+                complexity=complexity,
+            )
+            if gap:
+                entries.append(gap)
+            continue
         if filepath in transitively_tested:
             entries.append(
                 transitive_coverage_gap_issue(

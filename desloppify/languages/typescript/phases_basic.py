@@ -12,6 +12,7 @@ from desloppify.engine.policy.zones import EXCLUDED_ZONES, Zone, adjust_potentia
 from desloppify.languages._framework.base.shared_phases_helpers import record_reduced_coverage
 from desloppify.languages._framework.base.types import LangRuntimeContract
 from desloppify.languages._framework.issue_factories import make_unused_issues
+import desloppify.languages.typescript.detectors.dependencies as dependencies_detector_mod
 import desloppify.languages.typescript.detectors.deprecated as deprecated_detector_mod
 import desloppify.languages.typescript.detectors.exports as exports_detector_mod
 import desloppify.languages.typescript.detectors.lint as lint_detector_mod
@@ -168,24 +169,79 @@ def phase_tsconfig_health(
     return results, {"tsconfig_health": result.population_size}
 
 
+_EXPORT_SUMMARIES = {
+    "type": "Dead export: {name}",
+    "export": "Dead export: {name}",
+    "enum_member": "Unused enum member: {name}",
+    "duplicate": "Duplicate export: {names}",
+}
+
+
 def phase_exports(path: Path, lang: LangRuntimeContract) -> tuple[list[Issue], dict[str, int]]:
-    export_entries, total_exports, coverage = exports_detector_mod.detect_dead_exports_result(path)
+    export_entries, total_exports, coverage = exports_detector_mod.detect_dead_exports_result(
+        path, cache=lang.runtime_cache
+    )
     record_reduced_coverage(lang, coverage)
     results = []
     for entry in export_entries:
+        kind = entry.get("kind")
+        detail = {"line": entry.get("line"), "kind": kind}
+        if kind == "duplicate":
+            detail["names"] = entry["names"]
+        summary = _EXPORT_SUMMARIES.get(kind, _EXPORT_SUMMARIES["export"])
         results.append(
             make_issue(
                 "exports",
                 entry["file"],
                 entry["name"],
-                tier=2,
-                confidence="high",
-                summary=f"Dead export: {entry['name']}",
-                detail={"line": entry.get("line"), "kind": entry.get("kind")},
+                tier=3 if kind == "duplicate" else 2,
+                confidence="medium" if kind == "duplicate" else "high",
+                summary=summary.format(name=entry["name"], names=", ".join(entry.get("names", ()))),
+                detail=detail,
             )
         )
     log(f"         {len(export_entries)} instances → {len(results)} issues")
     return results, {"exports": total_exports}
+
+
+_DEPENDENCY_ISSUES = {
+    "unused": (2, "Unused dependency: {name}"),
+    "unused_dev": (3, "Unused devDependency: {name}"),
+    "unlisted": (2, "Unlisted dependency: {name} is imported but not declared"),
+    "unlisted_binary": (3, "Unlisted binary: {name} is run by a script but not declared"),
+}
+
+
+def phase_dependencies(
+    path: Path, lang: LangRuntimeContract
+) -> tuple[list[Issue], dict[str, int]]:
+    result = dependencies_detector_mod.detect_dependencies(
+        path, lang.zone_map, cache=lang.runtime_cache
+    )
+    record_reduced_coverage(lang, result.coverage)
+    if result.population_size is None:
+        log("         skipped (Knip did not run)")
+        return [], {}
+    results = []
+    for entry in result.entries:
+        tier, summary = _DEPENDENCY_ISSUES[entry["kind"]]
+        detail: dict = {"kind": entry["kind"], "package": entry["name"], "line": entry["line"]}
+        if entry.get("importers"):
+            detail["importers"] = entry["importers"]
+            summary += f" ({entry['importers'][0]})"
+        results.append(
+            make_issue(
+                "dependencies",
+                entry["file"],
+                f"{entry['kind']}::{entry['name']}",
+                tier=tier,
+                confidence=entry["confidence"],
+                summary=summary.format(name=entry["name"]),
+                detail=detail,
+            )
+        )
+    log(f"         {result.population_size} checks → {len(results)} issues")
+    return results, {"dependencies": result.population_size}
 
 
 def phase_deprecated(
@@ -232,6 +288,7 @@ def phase_deprecated(
 
 
 __all__ = [
+    "phase_dependencies",
     "phase_deprecated",
     "phase_exports",
     "phase_lint",

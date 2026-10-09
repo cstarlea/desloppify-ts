@@ -109,6 +109,13 @@ def _add_config_parser(sub) -> None:
     c_set.add_argument("config_value", type=str, help="Value to set")
     c_unset = config_sub.add_parser("unset", help="Reset a config key to default")
     c_unset.add_argument("config_key", type=str, help="Config key name")
+    c_unset.add_argument(
+        "config_value",
+        type=str,
+        nargs="?",
+        default=None,
+        help="For a list key, remove only this value",
+    )
 
 
 def _add_directives_parser(sub) -> None:

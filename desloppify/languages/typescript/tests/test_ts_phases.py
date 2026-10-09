@@ -25,6 +25,7 @@ class _FakeCouplingLang:
     barrel_names = {"index.ts", "index.tsx"}
     file_finder = staticmethod(lambda _path: [])
     zone_map = None
+    runtime_cache: dict = {}
     get_area = staticmethod(lambda _f: "area")
 
 

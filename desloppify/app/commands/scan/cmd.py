@@ -213,6 +213,9 @@ def cmd_scan(args: argparse.Namespace) -> None:
     # Nudge: if plan_start_scores was just seeded, tell the agent about the lifecycle.
     _print_plan_workflow_nudge(runtime.state)
     _show_scan_visibility(noise, runtime.effective_include_slow)
+    disabled = runtime.config.get("disabled") or []
+    if disabled:
+        print(colorize(f"  * Disabled in config, out of scoring: {', '.join(disabled)}", "dim"))
     show_scorecard_subjective_measures(runtime.state)
     show_score_model_breakdown(runtime.state)
 

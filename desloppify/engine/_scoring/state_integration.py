@@ -160,6 +160,7 @@ def _materialize_dimension_scores(
 
     prev_dim_scores = dict(state.get("dimension_scores", {}))
     scan_count = _scan_count(state)
+    disabled = set(state.get("disabled_detectors") or [])
 
     state["dimension_scores"] = {
         name: dict(
@@ -183,6 +184,9 @@ def _materialize_dimension_scores(
         if "subjective_assessment" in prev_detectors:
             continue
         if any(detector in potentials for detector in prev_detectors):
+            continue
+        # A disabled detector's old score isn't carried: it is out of scoring.
+        if any(detector in disabled for detector in prev_detectors):
             continue
         since = _carried_since(prev_data, scan_count)
         if scan_count - since >= CARRIED_FORWARD_MAX_SCANS:
@@ -214,7 +218,12 @@ def _update_objective_health(
     if not pots:
         return
 
-    merged = merge_potentials(pots)
+    disabled = set(state.get("disabled_detectors") or [])
+    merged = {
+        detector: count
+        for detector, count in merge_potentials(pots).items()
+        if detector not in disabled
+    }
     if not merged:
         return
 

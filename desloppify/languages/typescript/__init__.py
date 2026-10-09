@@ -26,6 +26,7 @@ from desloppify.languages.typescript.detectors.security.detector import detect_t
 from desloppify.languages.typescript.detectors.lint import DEFAULT_TYPE_AWARE_MAX_FILES
 from desloppify.languages.typescript.extractors_functions import extract_ts_functions
 from desloppify.languages.typescript.phases_basic import (
+    phase_dependencies,
     phase_deprecated,
     phase_exports,
     phase_lint,
@@ -112,6 +113,7 @@ class TypeScriptConfig(LangConfig):
                 DetectorPhase("Lint (project linter)", phase_lint),
                 DetectorPhase("tsconfig health", phase_tsconfig_health),
                 DetectorPhase("Dead exports", phase_exports),
+                DetectorPhase("Dependencies (knip)", phase_dependencies),
                 DetectorPhase("Deprecated", phase_deprecated),
                 DetectorPhase("Structural analysis", phase_structural),
                 DetectorPhase(
