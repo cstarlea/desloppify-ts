@@ -164,7 +164,9 @@ def test_framework_runtime_cache_stays_out_of_persisted_review_cache(tmp_path: P
     )
     (tmp_path / "next.config.ts").write_text("export default {};\n")
     (tmp_path / "app").mkdir()
-    (tmp_path / "app" / "page.tsx").write_text("export default function Page() { return null; }\n")
+    (tmp_path / "app" / "page.tsx").write_text(
+        "export default function Page() { return null; }\n"
+    )
 
     state = state_mod.empty_state()
     review_cache: dict[str, object] = {}
@@ -182,7 +184,10 @@ def test_framework_runtime_cache_stays_out_of_persisted_review_cache(tmp_path: P
     assert "nextjs" in detection.present
     assert info.package_root == tmp_path
     assert state["review_cache"] == {}
-    assert any(key.startswith("frameworks.ecosystem.present:node:") for key in lang.runtime_cache)
+    assert any(
+        key.startswith("frameworks.ecosystem.present:node:")
+        for key in lang.runtime_cache
+    )
     assert any(key.startswith("framework.nextjs.info:") for key in lang.runtime_cache)
 
     persisted = state_mod.load_state(state_path)

@@ -85,7 +85,11 @@ def _triage_progression_target(plan: dict) -> tuple[str | None, bool]:
     triage_stages = meta.get("triage_stages", {}) or {}
     for stage, _sid in TRIAGE_STAGE_SPECS:
         stage_payload = triage_stages.get(stage)
-        if isinstance(stage_payload, dict) and stage_payload and not stage_payload.get("confirmed_at"):
+        if (
+            isinstance(stage_payload, dict)
+            and stage_payload
+            and not stage_payload.get("confirmed_at")
+        ):
             return stage, True
 
     order = set(plan.get("queue_order", []))
@@ -106,10 +110,7 @@ def _create_plan_primary_command(plan: dict) -> str:
         return triage_run_stages_command()
     if needs_confirm:
         attestation = _confirm_attestation_hint(stage)
-        return (
-            f'desloppify plan triage --confirm {stage} '
-            f'--attestation "{attestation}"'
-        )
+        return f'desloppify plan triage --confirm {stage} --attestation "{attestation}"'
     if stage == "commit":
         return triage_run_stages_command()
     return triage_run_stages_command(only_stages=stage)
@@ -183,7 +184,9 @@ def build_import_scores_item(plan: dict, state: dict) -> WorkflowActionItem | No
     if WORKFLOW_IMPORT_SCORES_ID not in plan.get("queue_order", []):
         return None
     meta = pending_import_scores_meta(plan, state)
-    import_file = (meta.import_file if meta is not None else "").strip() or "issues.json"
+    import_file = (
+        meta.import_file if meta is not None else ""
+    ).strip() or "issues.json"
     quoted_import_file = shlex.quote(import_file)
     packet_sha = meta.packet_sha256 if meta is not None else ""
     explanation = (
@@ -301,7 +304,9 @@ def _deferred_cluster_breakdown(
         issue_ids = cluster.get("issue_ids", [])
         if not isinstance(issue_ids, list):
             continue
-        matched = {str(issue_id) for issue_id in issue_ids if str(issue_id) in deferred_set}
+        matched = {
+            str(issue_id) for issue_id in issue_ids if str(issue_id) in deferred_set
+        }
         if not matched:
             continue
         cluster_count += 1

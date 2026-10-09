@@ -78,7 +78,9 @@ class TestWriteQuery:
         # Should not raise
         write_query({"data": 1})
 
-    def test_load_query_result_returns_parse_error_contract(self, tmp_path, monkeypatch):
+    def test_load_query_result_returns_parse_error_contract(
+        self, tmp_path, monkeypatch
+    ):
         query_file = tmp_path / ".desloppify" / "query.json"
         query_file.parent.mkdir(parents=True, exist_ok=True)
         query_file.write_text("{bad json", encoding="utf-8")

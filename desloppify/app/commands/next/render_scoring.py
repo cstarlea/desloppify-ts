@@ -10,7 +10,9 @@ def _normalized_dimension_key(value: str | None) -> str:
     return str(value or "").lower().replace(" ", "_")
 
 
-def _dimension_for_detector(detector: str, dim_scores: dict, *, get_dimension_for_detector_fn):
+def _dimension_for_detector(
+    detector: str, dim_scores: dict, *, get_dimension_for_detector_fn
+):
     dimension = get_dimension_for_detector_fn(detector)
     if not dimension or dimension.name not in dim_scores:
         return None, None
@@ -23,12 +25,17 @@ def _review_dimension_entry(item: dict, breakdown: dict) -> dict | None:
         return None
     target_key = _normalized_dimension_key(dim_key)
     for entry in breakdown.get("entries", []):
-        if isinstance(entry, dict) and _normalized_dimension_key(entry.get("name", "")) == target_key:
+        if (
+            isinstance(entry, dict)
+            and _normalized_dimension_key(entry.get("name", "")) == target_key
+        ):
             return entry
     return None
 
 
-def _review_dimension_score_entry(item: dict, dim_scores: dict) -> tuple[str, dict] | None:
+def _review_dimension_score_entry(
+    item: dict, dim_scores: dict
+) -> tuple[str, dict] | None:
     dim_key = _normalized_dimension_key(item.get("detail", {}).get("dimension", ""))
     if not dim_key:
         return None
@@ -85,7 +92,9 @@ def render_detector_impact_estimate(
     get_dimension_for_detector_fn,
 ) -> None:
     try:
-        impact = compute_score_impact_fn(dim_scores, potentials, detector, issues_to_fix=1)
+        impact = compute_score_impact_fn(
+            dim_scores, potentials, detector, issues_to_fix=1
+        )
         if impact > 0:
             print(
                 colorize_fn(
@@ -105,7 +114,9 @@ def render_detector_impact_estimate(
         issues = dimension_score.get("failing", 0)
         if issues <= 1:
             return
-        bulk = compute_score_impact_fn(dim_scores, potentials, detector, issues_to_fix=issues)
+        bulk = compute_score_impact_fn(
+            dim_scores, potentials, detector, issues_to_fix=issues
+        )
         if bulk > 0:
             print(
                 colorize_fn(
@@ -216,7 +227,9 @@ def render_item_explain(
             ds_name, ds_data = entry
             score_val = ds_data.get("score", "?")
             score_str = (
-                f"{score_val:.1f}" if isinstance(score_val, int | float) else str(score_val)
+                f"{score_val:.1f}"
+                if isinstance(score_val, int | float)
+                else str(score_val)
             )
             parts.append(f"Subjective dimension: {ds_name} at {score_str}%")
     policy = explanation.get("policy")

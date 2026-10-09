@@ -126,7 +126,12 @@ def _on_disk(path) -> dict:
             "is a str, not an object",
         ),
         (
-            {"clusters": {"mine": _cluster("mine"), "bad": _cluster("bad", issue_ids="x")}},
+            {
+                "clusters": {
+                    "mine": _cluster("mine"),
+                    "bad": _cluster("bad", issue_ids="x"),
+                }
+            },
             "clusters",
             "bad",
             "non-list issue_ids",
@@ -138,7 +143,12 @@ def _on_disk(path) -> dict:
             "non-string name",
         ),
         (
-            {"clusters": {"mine": _cluster("mine"), "bad": _cluster("bad", action_steps=[5])}},
+            {
+                "clusters": {
+                    "mine": _cluster("mine"),
+                    "bad": _cluster("bad", action_steps=[5]),
+                }
+            },
             "clusters",
             "bad",
             "malformed action step",
@@ -174,7 +184,12 @@ def _on_disk(path) -> dict:
             "is a str, not an object",
         ),
         (
-            {"superseded": {"good": _superseded("good"), "bad": _superseded("bad", candidates="x")}},
+            {
+                "superseded": {
+                    "good": _superseded("good"),
+                    "bad": _superseded("bad", candidates="x"),
+                }
+            },
             "superseded",
             "bad",
             "malformed candidates",
@@ -274,7 +289,12 @@ def test_well_formed_log_entries_load_untouched(tmp_path):
 
     assert "quarantined_entries" not in plan
     assert plan["superseded"]["gone"]["original_id"] == "gone"
-    for section in ("promoted_ids", "uncommitted_issues", "execution_log", "commit_log"):
+    for section in (
+        "promoted_ids",
+        "uncommitted_issues",
+        "execution_log",
+        "commit_log",
+    ):
         assert plan[section] == fields[section]
 
 
@@ -403,7 +423,9 @@ def test_ensure_plan_defaults_without_quarantine_keeps_old_behaviour():
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("content", ["{not json", '{"queue_order": [', "[1, 2]", '"text"', "\xff\xfe"])
+@pytest.mark.parametrize(
+    "content", ["{not json", '{"queue_order": [', "[1, 2]", '"text"', "\xff\xfe"]
+)
 def test_unusable_file_is_renamed_and_plan_starts_fresh(tmp_path, capsys, content):
     path = tmp_path / "plan.json"
     if content == "\xff\xfe":
@@ -467,7 +489,10 @@ def test_unusable_file_falls_back_to_good_backup(tmp_path, capsys):
 def test_backup_with_a_bad_entry_is_quarantined_too(tmp_path, capsys):
     path = tmp_path / "plan.json"
     _write(path, "[]")
-    _write(tmp_path / "plan.json.bak", _plan_with(clusters={"mine": _cluster("mine"), "bad": 0}))
+    _write(
+        tmp_path / "plan.json.bak",
+        _plan_with(clusters={"mine": _cluster("mine"), "bad": 0}),
+    )
 
     status = resolve_plan_load_status(path)
 
@@ -533,7 +558,9 @@ def test_save_after_quarantine_does_not_rotate_over_backup(tmp_path):
     path = tmp_path / "plan.json"
     backup = tmp_path / "plan.json.bak"
     _write(path, _plan_with(clusters={"mine": _cluster("mine"), "bad": 0}))
-    _write(backup, _plan_with(clusters={"mine": _cluster("mine"), "old": _cluster("old")}))
+    _write(
+        backup, _plan_with(clusters={"mine": _cluster("mine"), "old": _cluster("old")})
+    )
     good_backup = backup.read_text()
 
     save_plan(load_plan(path), path)

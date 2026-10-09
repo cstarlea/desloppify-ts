@@ -33,8 +33,16 @@ def test_banner_pending_when_stale_triage_is_deferred_behind_objective_backlog()
     state = {
         "issues": {
             "obj-1": {"id": "obj-1", "status": "open", "detector": "complexity"},
-            "review::old": {"id": "review::old", "status": "open", "detector": "review"},
-            "review::new": {"id": "review::new", "status": "open", "detector": "review"},
+            "review::old": {
+                "id": "review::old",
+                "status": "open",
+                "detector": "review",
+            },
+            "review::new": {
+                "id": "review::new",
+                "status": "open",
+                "detector": "review",
+            },
         }
     }
 

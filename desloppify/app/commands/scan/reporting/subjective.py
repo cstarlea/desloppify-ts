@@ -119,9 +119,7 @@ def subjective_rerun_command(
 
 
 def _subjective_display_name_from_key(dimension_key: str) -> str:
-    return DISPLAY_NAMES.get(
-        dimension_key, dimension_key.replace("_", " ").title()
-    )
+    return DISPLAY_NAMES.get(dimension_key, dimension_key.replace("_", " ").title())
 
 
 def subjective_entries_for_dimension_keys(
@@ -341,11 +339,9 @@ def subjective_integrity_notice_lines(
     if not integrity_notice:
         return []
 
-    status, count, target_display, rendered, command = (
-        _coerce_integrity_notice_fields(
-            integrity_notice,
-            fallback_target=fallback_target,
-        )
+    status, count, target_display, rendered, command = _coerce_integrity_notice_fields(
+        integrity_notice,
+        fallback_target=fallback_target,
     )
 
     if status == "penalized":
@@ -423,7 +419,7 @@ def build_subjective_followup(
 
 
 def _subjective_coverage_global(state: dict) -> int:
-    all_issues = (state.get("work_items") or state.get("issues", {}))
+    all_issues = state.get("work_items") or state.get("issues", {})
     if not isinstance(all_issues, dict):
         all_issues = {}
     coverage_global, _reason_counts, _holistic_reasons = (

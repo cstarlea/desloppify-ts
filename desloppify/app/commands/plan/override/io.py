@@ -92,9 +92,8 @@ def save_plan_state_transactional(
         )
         rollback_note = ""
         if failed_paths:
-            rollback_note = (
-                "; rollback may be incomplete for: "
-                + ", ".join(failed_paths)
+            rollback_note = "; rollback may be incomplete for: " + ", ".join(
+                failed_paths
             )
         raise CommandError(
             f"could not save plan/state transaction: {exc}{rollback_note}"

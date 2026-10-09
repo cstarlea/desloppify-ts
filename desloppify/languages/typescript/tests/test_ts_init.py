@@ -14,7 +14,16 @@ def test_config_name():
 def test_config_extensions():
     """TypeScriptConfig.extensions covers TypeScript and JavaScript sources."""
     cfg = TypeScriptConfig()
-    assert cfg.extensions == [".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".mjs", ".cjs"]
+    assert cfg.extensions == [
+        ".ts",
+        ".tsx",
+        ".mts",
+        ".cts",
+        ".js",
+        ".jsx",
+        ".mjs",
+        ".cjs",
+    ]
 
 
 def test_config_exclusions():

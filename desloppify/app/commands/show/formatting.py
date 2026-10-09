@@ -25,7 +25,11 @@ DETAIL_DISPLAY = [
         lambda v: ", ".join(v[:5]) + (f" +{len(v) - 5}" if len(v) > 5 else ""),
     ),
     ("suggestion", "suggestion", lambda v: v[:200]),
-    ("evidence", "evidence", lambda v: "\n      ".join(v[:5]) if isinstance(v, list) else str(v)[:200]),
+    (
+        "evidence",
+        "evidence",
+        lambda v: "\n      ".join(v[:5]) if isinstance(v, list) else str(v)[:200],
+    ),
     ("review", "review", lambda v: v[:80]),
     ("majority", "majority", None),
     ("minority", "minority", None),

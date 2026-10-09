@@ -75,9 +75,7 @@ def test_gather_auth_context_tracks_policy_only_tables_separately():
             "CREATE TABLE posts(id int);\n"
             "ALTER TABLE accounts ENABLE ROW LEVEL SECURITY;\n"
         ),
-        "policies.sql": (
-            "CREATE POLICY post_reader ON posts;\n"
-        ),
+        "policies.sql": ("CREATE POLICY post_reader ON posts;\n"),
     }
     result = signal_auth_mod.gather_auth_context(file_contents, rel_fn=lambda p: p)
     assert result["rls_coverage"]["with_rls"] == ["accounts"]

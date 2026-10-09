@@ -78,7 +78,11 @@ def infer_work_item_kind(
         return REVIEW_DEFECT
     if detector_name == "concerns":
         return REVIEW_CONCERN
-    if detector_name in {"subjective_review", "subjective_assessment", "holistic_review"}:
+    if detector_name in {
+        "subjective_review",
+        "subjective_assessment",
+        "holistic_review",
+    }:
         return ASSESSMENT_REQUEST
     # Legacy imported confirmed concerns sometimes carried review-like detail;
     # keep explicit concern markers mapped to concern findings.
@@ -101,16 +105,18 @@ def infer_work_item_origin(
     if detector_name == "concerns":
         verdict = str(detail_dict.get("concern_verdict", "")).strip().lower()
         return REVIEW_IMPORT_ORIGIN if verdict == "confirmed" else SCAN_ORIGIN
-    if detector_name in {"subjective_review", "subjective_assessment", "holistic_review"}:
+    if detector_name in {
+        "subjective_review",
+        "subjective_assessment",
+        "holistic_review",
+    }:
         return SYNTHETIC_TASK_ORIGIN
     return SCAN_ORIGIN
 
 
 def normalized_work_item_kind(issue: Mapping[str, Any]) -> WorkItemKind:
     """Return the canonical work-item kind, inferring from legacy data when needed."""
-    raw_kind = str(
-        issue.get("work_item_kind", issue.get("issue_kind", ""))
-    ).strip()
+    raw_kind = str(issue.get("work_item_kind", issue.get("issue_kind", ""))).strip()
     if raw_kind in WORK_ITEM_KINDS:
         return raw_kind
     if raw_kind in _LEGACY_KIND_ALIASES:

@@ -168,7 +168,9 @@ def run_coupling_phase(
         barrel_names=lang.barrel_names,
     )
     single_entries = filter_entries(zone_map, single_entries, "single_use")
-    single_issues = make_single_use_issues(single_entries, lang.get_area, stderr_fn=log_fn)
+    single_issues = make_single_use_issues(
+        single_entries, lang.get_area, stderr_fn=log_fn
+    )
     if post_process_fn:
         post_process_fn(single_issues, single_entries, lang)
     results.extend(single_issues)
@@ -211,7 +213,9 @@ def make_structural_coupling_phase_pair(
 ) -> tuple[StructuralPhaseRunner, StructuralPhaseRunner]:
     """Create default structural/coupling phase callables for a language."""
 
-    def phase_structural(path: Path, lang: LangRuntimeContract) -> tuple[list[Issue], dict[str, int]]:
+    def phase_structural(
+        path: Path, lang: LangRuntimeContract
+    ) -> tuple[list[Issue], dict[str, int]]:
         return run_structural_phase(
             path,
             lang,
@@ -219,7 +223,9 @@ def make_structural_coupling_phase_pair(
             log_fn=log_fn,
         )
 
-    def phase_coupling(path: Path, lang: LangRuntimeContract) -> tuple[list[Issue], dict[str, int]]:
+    def phase_coupling(
+        path: Path, lang: LangRuntimeContract
+    ) -> tuple[list[Issue], dict[str, int]]:
         return run_coupling_phase(
             path,
             lang,

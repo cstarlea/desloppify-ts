@@ -1,2 +1,1 @@
 """Scoring result internals."""
-

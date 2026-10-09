@@ -51,14 +51,18 @@ def detect_single_use(
     path: Path, graph: dict, lang: LangRuntimeContract
 ) -> tuple[list[Issue], list[dict], int]:
     """Detect single-use abstractions."""
-    single_entries, single_candidates = single_use_detector_mod.detect_single_use_abstractions(
-        path, graph, barrel_names=lang.barrel_names
+    single_entries, single_candidates = (
+        single_use_detector_mod.detect_single_use_abstractions(
+            path, graph, barrel_names=lang.barrel_names
+        )
     )
     single_entries = filter_entries(lang.zone_map, single_entries, "single_use")
     decorators = injected_class_decorators(path, lang)
     if decorators:
         single_entries = [
-            e for e in single_entries if not _declares_injected_class(e["file"], decorators)
+            e
+            for e in single_entries
+            if not _declares_injected_class(e["file"], decorators)
         ]
     issues = make_single_use_issues(
         single_entries, lang.get_area, skip_dir_names={"commands"}, stderr_fn=log
@@ -69,7 +73,9 @@ def detect_single_use(
 def _declares_injected_class(filepath: str, decorators: frozenset[str]) -> bool:
     """Whether the file declares a class the framework's DI container wires."""
     try:
-        text = Path(resolve_path(filepath)).read_text(encoding="utf-8", errors="replace")
+        text = Path(resolve_path(filepath)).read_text(
+            encoding="utf-8", errors="replace"
+        )
     except OSError:
         return False
     return any(cls.has_decorator(decorators) for cls in iter_classes(text))
@@ -84,7 +90,9 @@ def detect_layer_issues(
     """Imports up the layer stack and across slices of a layer."""
     if not layers:
         return [], 0
-    entries, edge_counts = coupling_detector_mod.detect_layer_violations(path, graph, layers)
+    entries, edge_counts = coupling_detector_mod.detect_layer_violations(
+        path, graph, layers
+    )
     entries = filter_entries(lang.zone_map, entries, "coupling")
     results: list[Issue] = []
     for entry in entries:
@@ -104,7 +112,13 @@ def detect_layer_issues(
             )
             detail = {
                 key: entry[key]
-                for key in ("target", "layer", "source_slice", "target_slice", "direction")
+                for key in (
+                    "target",
+                    "layer",
+                    "source_slice",
+                    "target_slice",
+                    "direction",
+                )
             }
         results.append(
             make_issue(
@@ -169,7 +183,9 @@ def flag_unresolved_orphans(entries: list[dict], graph: dict) -> None:
             entry["possible_importers"] = sorted(rel(s) for s in sources)
 
 
-def corroborate_orphans_with_knip(entries: list[dict], path: Path, lang: LangRuntimeContract) -> None:
+def corroborate_orphans_with_knip(
+    entries: list[dict], path: Path, lang: LangRuntimeContract
+) -> None:
     """Check orphans against Knip's unused files, from the scan's shared Knip run.
 
     Knip agreeing raises an orphan to high confidence, unless Knip also can't
@@ -192,7 +208,9 @@ def corroborate_orphans_with_knip(entries: list[dict], path: Path, lang: LangRun
         still_unresolved = any(
             _specifier_could_name(specifier, entry["file"])
             for importer in possible
-            for specifier in unresolved.get(str(Path(resolve_path(importer)).resolve()), ())
+            for specifier in unresolved.get(
+                str(Path(resolve_path(importer)).resolve()), ()
+            )
         )
         if not still_unresolved:
             entry["confidence"] = "high"
@@ -240,10 +258,14 @@ def detect_cycles_and_orphans(
     """Detect import cycles and orphaned files."""
     results: list[Issue] = []
     cycle_entries, _ = graph_detector_mod.detect_cycles(graph)
-    cycle_entries = filter_entries(lang.zone_map, cycle_entries, "cycles", file_key="files")
+    cycle_entries = filter_entries(
+        lang.zone_map, cycle_entries, "cycles", file_key="files"
+    )
     results.extend(make_cycle_issues(cycle_entries, log))
 
-    orphan_entries, total_graph_files = find_orphans(path, graph, lang, packages, entries)
+    orphan_entries, total_graph_files = find_orphans(
+        path, graph, lang, packages, entries
+    )
     results.extend(make_orphaned_issues(orphan_entries, log))
     return results, total_graph_files
 
@@ -380,9 +402,7 @@ def make_boundary_issues(
             )
         )
     if deduped:
-        log(
-            f"         ({deduped} boundary candidates skipped — covered by single_use)"
-        )
+        log(f"         ({deduped} boundary candidates skipped — covered by single_use)")
     return results, total_shared
 
 

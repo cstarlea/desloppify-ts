@@ -24,7 +24,9 @@ def test_resolve_reusable_report_reuses_existing_report() -> None:
 
 
 def test_record_observe_stage_clears_later_confirmations(monkeypatch) -> None:
-    monkeypatch.setattr(stage_records_mod, "utc_now", lambda: "2026-03-08T00:00:00+00:00")
+    monkeypatch.setattr(
+        stage_records_mod, "utc_now", lambda: "2026-03-08T00:00:00+00:00"
+    )
     stages = {
         "reflect": {
             "confirmed_at": "2026-03-01T00:00:00+00:00",
@@ -37,7 +39,10 @@ def test_record_observe_stage_clears_later_confirmations(monkeypatch) -> None:
         report="observe analysis",
         issue_count=3,
         cited_ids=["review::abc"],
-        existing_stage={"confirmed_at": "2026-03-01T00:00:00+00:00", "confirmed_text": "x"},
+        existing_stage={
+            "confirmed_at": "2026-03-01T00:00:00+00:00",
+            "confirmed_text": "x",
+        },
         is_reuse=False,
     )
 
@@ -50,7 +55,9 @@ def test_record_observe_stage_clears_later_confirmations(monkeypatch) -> None:
 
 
 def test_record_organize_stage_reuse_keeps_confirmation(monkeypatch) -> None:
-    monkeypatch.setattr(stage_records_mod, "utc_now", lambda: "2026-03-08T00:00:00+00:00")
+    monkeypatch.setattr(
+        stage_records_mod, "utc_now", lambda: "2026-03-08T00:00:00+00:00"
+    )
     stages: dict = {}
 
     _cleared = stage_records_mod.record_organize_stage(
@@ -70,7 +77,9 @@ def test_record_organize_stage_reuse_keeps_confirmation(monkeypatch) -> None:
 
 
 def test_record_confirm_existing_completion_sets_confirmed_fields(monkeypatch) -> None:
-    monkeypatch.setattr(stage_records_mod, "utc_now", lambda: "2026-03-08T00:00:00+00:00")
+    monkeypatch.setattr(
+        stage_records_mod, "utc_now", lambda: "2026-03-08T00:00:00+00:00"
+    )
     stages: dict = {}
 
     stage_records_mod.record_confirm_existing_completion(

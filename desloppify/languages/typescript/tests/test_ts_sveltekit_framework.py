@@ -37,15 +37,27 @@ def test_private_env_in_component_and_universal_load(tmp_path: Path):
     _write(
         tmp_path,
         "src/routes/+page.svelte",
-        "<script lang=\"ts\">\n"
+        '<script lang="ts">\n'
         "  import { onMount } from 'svelte';\n"
         "  import { API_KEY } from '$env/static/private';\n"
         "</script>\n<p>{API_KEY}</p>\n",
     )
-    _write(tmp_path, "src/routes/+page.ts", "import { env } from '$env/dynamic/private';\nexport const load = () => ({});\n")
+    _write(
+        tmp_path,
+        "src/routes/+page.ts",
+        "import { env } from '$env/dynamic/private';\nexport const load = () => ({});\n",
+    )
     _write(tmp_path, "src/hooks.client.ts", "import { db } from '$lib/server/db';\n")
-    _write(tmp_path, "src/lib/Widget.svelte", "<script>\n  import { q } from './server/queries';\n</script>\n")
-    _write(tmp_path, "src/lib/Other.svelte", "<script>\n  import { s } from '../secrets.server';\n</script>\n")
+    _write(
+        tmp_path,
+        "src/lib/Widget.svelte",
+        "<script>\n  import { q } from './server/queries';\n</script>\n",
+    )
+    _write(
+        tmp_path,
+        "src/lib/Other.svelte",
+        "<script>\n  import { s } from '../secrets.server';\n</script>\n",
+    )
     entries, scanned = scan_server_imports_in_client(tmp_path)
     assert scanned == 5
     assert sorted((Path(e["file"]).name, e["line"], e["module"]) for e in entries) == [
@@ -58,14 +70,24 @@ def test_private_env_in_component_and_universal_load(tmp_path: Path):
 
 
 def test_server_modules_and_type_imports_may_import_server_code(tmp_path: Path):
-    _write(tmp_path, "src/routes/+page.server.ts", "import { SECRET } from '$env/static/private';\n")
-    _write(tmp_path, "src/routes/+layout.server.ts", "import { db } from '$lib/server/db';\n")
-    _write(tmp_path, "src/hooks.server.ts", "import { env } from '$env/dynamic/private';\n")
+    _write(
+        tmp_path,
+        "src/routes/+page.server.ts",
+        "import { SECRET } from '$env/static/private';\n",
+    )
+    _write(
+        tmp_path,
+        "src/routes/+layout.server.ts",
+        "import { db } from '$lib/server/db';\n",
+    )
+    _write(
+        tmp_path, "src/hooks.server.ts", "import { env } from '$env/dynamic/private';\n"
+    )
     _write(tmp_path, "src/lib/db.ts", "import { env } from '$env/dynamic/private';\n")
     _write(
         tmp_path,
         "src/routes/+page.svelte",
-        "<script lang=\"ts\">\n"
+        '<script lang="ts">\n'
         "  import type { User } from '$lib/server/db';\n"
         "  import { type Row } from '$lib/server/db';\n"
         "  import { PUBLIC_URL } from '$env/static/public';\n"
@@ -206,7 +228,11 @@ def test_spec_wires_scanners(tmp_path: Path):
         "load_global_fetch",
         "redirect_in_try",
     ]
-    _write(tmp_path, "src/routes/+page.svelte", "<script>\n  import { K } from '$env/static/private';\n</script>\n")
+    _write(
+        tmp_path,
+        "src/routes/+page.svelte",
+        "<script>\n  import { K } from '$env/static/private';\n</script>\n",
+    )
     rule = SVELTEKIT_SPEC.scanners[0]
     entries, _ = rule.scan(tmp_path, None)
     issue = rule.issue_factory(entries[0])

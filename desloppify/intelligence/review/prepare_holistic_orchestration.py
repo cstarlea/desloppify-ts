@@ -106,7 +106,9 @@ def _resolve_dimension_context(
     get_lang_guidance_fn,
 ) -> _DimensionContext:
     """Load, resolve, and validate dimensions for the review."""
-    default_dims, holistic_prompts, system_prompt = load_dimensions_for_lang_fn(lang_name)
+    default_dims, holistic_prompts, system_prompt = load_dimensions_for_lang_fn(
+        lang_name
+    )
     _, per_file_prompts, _ = load_dimensions_for_lang_fn(lang_name)
     dims = resolve_dimensions_fn(
         cli_dimensions=options.dimensions,

@@ -67,7 +67,9 @@ def detect_flat_dirs(
 
         if legacy_settings:
             unknown = ", ".join(sorted(legacy_settings.keys()))
-            raise TypeError(f"detect_flat_dirs got unexpected keyword argument(s): {unknown}")
+            raise TypeError(
+                f"detect_flat_dirs got unexpected keyword argument(s): {unknown}"
+            )
 
         settings = resolve_detection_settings(
             threshold=threshold,

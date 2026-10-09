@@ -30,16 +30,16 @@ class ReleaseTweetError(RuntimeError):
 
 # ── Extract section headers from release markdown ────────────────────────────
 
+
 def extract_headers(body: str) -> list[str]:
     """Pull ## headers from the release body."""
     return [
-        line.lstrip("#").strip()
-        for line in body.splitlines()
-        if line.startswith("## ")
+        line.lstrip("#").strip() for line in body.splitlines() if line.startswith("## ")
     ]
 
 
 # ── Use Claude to write the tweet + image prompt ─────────────────────────────
+
 
 def generate_tweet_and_prompt(tag: str, headers: list[str], url: str) -> dict:
     """Ask Claude to produce a tweet and an image-gen prompt."""
@@ -88,7 +88,9 @@ Return ONLY valid JSON, no markdown fences.""",
     try:
         text = msg.content[0].text
     except (AttributeError, IndexError, KeyError, TypeError) as exc:
-        raise ReleaseTweetError("Anthropic response did not include text content") from exc
+        raise ReleaseTweetError(
+            "Anthropic response did not include text content"
+        ) from exc
     # Strip markdown fences if Claude adds them anyway
     text = re.sub(r"^```json\s*", "", text.strip())
     text = re.sub(r"\s*```$", "", text.strip())
@@ -155,13 +157,16 @@ def download_image(url: str) -> str:
                 tmp.write(chunk)
     except requests.RequestException as exc:
         os.unlink(tmp.name)
-        raise ReleaseTweetError(f"image download failed while streaming: {exc}") from exc
+        raise ReleaseTweetError(
+            f"image download failed while streaming: {exc}"
+        ) from exc
     finally:
         tmp.close()
     return tmp.name
 
 
 # ── Post tweet with image ────────────────────────────────────────────────────
+
 
 def post_tweet_with_reply(tweet_text: str, image_path: str, reply_text: str):
     """Post main tweet with image, then reply with the release link."""
@@ -202,7 +207,9 @@ def post_tweet_with_reply(tweet_text: str, image_path: str, reply_text: str):
                 print(f"  Twitter 5xx error, retrying in {5 * (attempt + 1)}s...")
                 time.sleep(5 * (attempt + 1))
             else:
-                raise ReleaseTweetError("Twitter create_tweet failed after retries") from exc
+                raise ReleaseTweetError(
+                    "Twitter create_tweet failed after retries"
+                ) from exc
         except Exception as exc:
             raise ReleaseTweetError(f"Twitter create_tweet failed: {exc}") from exc
 
@@ -231,6 +238,7 @@ def post_tweet_with_reply(tweet_text: str, image_path: str, reply_text: str):
 
 
 # ── Main ─────────────────────────────────────────────────────────────────────
+
 
 def main():
     tag = os.environ["RELEASE_TAG"]

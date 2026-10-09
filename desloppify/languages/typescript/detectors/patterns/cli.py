@@ -34,7 +34,9 @@ def cmd_patterns(args: argparse.Namespace) -> None:
 
     if args.json:
         serializable = {
-            area: {family: sorted(patterns) for family, patterns in area_families.items()}
+            area: {
+                family: sorted(patterns) for family, patterns in area_families.items()
+            }
             for area, area_families in census.items()
         }
         print(
@@ -68,7 +70,11 @@ def cmd_patterns(args: argparse.Namespace) -> None:
 
         for name in family_names:
             fam = families[name]
-            marker = colorize("▶", "yellow") if fam["type"] == "competing" else colorize("·", "dim")
+            marker = (
+                colorize("▶", "yellow")
+                if fam["type"] == "competing"
+                else colorize("·", "dim")
+            )
             print(f"  {marker} {name}: {fam['description']}")
         print()
 
@@ -77,7 +83,9 @@ def cmd_patterns(args: argparse.Namespace) -> None:
             cells = []
             for family in family_names:
                 patterns = census[area].get(family, set())
-                cells.append(", ".join(sorted(patterns)) if patterns else colorize("-", "dim"))
+                cells.append(
+                    ", ".join(sorted(patterns)) if patterns else colorize("-", "dim")
+                )
             rows.append([area, *cells])
 
         headers = ["Area", *family_names]
@@ -95,7 +103,9 @@ def cmd_patterns(args: argparse.Namespace) -> None:
                 f"[{anomaly['confidence']}]",
                 "yellow" if anomaly["confidence"] == "medium" else "dim",
             )
-            print(f"  {colorize(anomaly['area'], 'cyan')} :: {anomaly['family']} {conf_badge}")
+            print(
+                f"  {colorize(anomaly['area'], 'cyan')} :: {anomaly['family']} {conf_badge}"
+            )
             print(f"    Patterns: {patterns_str}")
             for pname, matches in (anomaly.get("pattern_evidence") or {}).items():
                 files = [m.get("file", "") for m in matches[:3]]

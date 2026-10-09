@@ -40,8 +40,14 @@ def test_narrative_actions_no_clusters_unchanged():
     from desloppify.intelligence.narrative.action_engine import _annotate_with_clusters
 
     actions = [
-        {"detector": "unused", "count": 5, "command": "original-cmd",
-         "description": "original desc", "type": "auto_fix", "impact": 3.0},
+        {
+            "detector": "unused",
+            "count": 5,
+            "command": "original-cmd",
+            "description": "original desc",
+            "type": "auto_fix",
+            "impact": 3.0,
+        },
     ]
     _annotate_with_clusters(actions, None)
     assert actions[0]["command"] == "original-cmd"
@@ -51,6 +57,7 @@ def test_narrative_actions_no_clusters_unchanged():
 # ---------------------------------------------------------------------------
 # Initial review (unscored) cluster
 # ---------------------------------------------------------------------------
+
 
 def _unscored_state(*dim_keys: str) -> dict:
     """Build a state with unscored (placeholder) subjective dimensions."""
@@ -154,9 +161,9 @@ def test_stale_and_unscored_separate_clusters():
     """Unscored and stale dims create two disjoint clusters."""
     plan = empty_plan()
     plan["queue_order"] = [
-        "subjective::design_coherence",   # unscored
-        "subjective::error_consistency",   # stale
-        "subjective::convention_drift",    # stale
+        "subjective::design_coherence",  # unscored
+        "subjective::error_consistency",  # stale
+        "subjective::convention_drift",  # stale
     ]
     # Mixed state: design_coherence is unscored, the other two are stale
     state = _unscored_state("design_coherence")
@@ -190,6 +197,7 @@ def test_stale_and_unscored_separate_clusters():
 # _repair_ghost_cluster_refs
 # ---------------------------------------------------------------------------
 
+
 def test_repair_ghost_cluster_refs():
     """Overrides pointing to non-existent clusters should be cleared."""
     plan = empty_plan()
@@ -217,6 +225,7 @@ def test_repair_ghost_cluster_refs():
     }
 
     from desloppify.engine._state.schema import utc_now
+
     repaired = _repair_ghost_cluster_refs(plan, utc_now())
 
     assert repaired == 1
@@ -244,6 +253,7 @@ def test_repair_ghost_cluster_refs_no_ghosts():
     }
 
     from desloppify.engine._state.schema import utc_now
+
     repaired = _repair_ghost_cluster_refs(plan, utc_now())
     assert repaired == 0
 
@@ -271,6 +281,7 @@ def test_auto_cluster_runs_repair():
 # ---------------------------------------------------------------------------
 # Under-target regression tests (#186)
 # ---------------------------------------------------------------------------
+
 
 def _under_target_state(*dim_keys: str, score: float = 70.0) -> dict:
     """Build a state with scored, current (NOT stale), below-target dimensions.
@@ -309,10 +320,10 @@ def test_stale_cluster_uses_actual_stale_ids():
     """Under-target (not stale) IDs must NOT appear in auto/stale-review."""
     plan = empty_plan()
     plan["queue_order"] = [
-        "subjective::design_coherence",    # under-target (current, below target)
-        "subjective::error_consistency",   # under-target
-        "subjective::convention_drift",    # actually stale
-        "subjective::naming_quality",      # actually stale
+        "subjective::design_coherence",  # under-target (current, below target)
+        "subjective::error_consistency",  # under-target
+        "subjective::convention_drift",  # actually stale
+        "subjective::naming_quality",  # actually stale
     ]
 
     # Build mixed state: two under-target + two stale

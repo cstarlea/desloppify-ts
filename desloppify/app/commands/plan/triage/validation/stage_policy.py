@@ -117,7 +117,11 @@ def confirm_stage(
     stage_record["confirmed_at"] = resolved_utc_now()
     stage_record["confirmed_text"] = confirmed_text
     resolved_save_plan(plan)
-    print(colorize(f"  ✓ {request.stage_label} auto-confirmed via --attestation.", "green"))
+    print(
+        colorize(
+            f"  ✓ {request.stage_label} auto-confirmed via --attestation.", "green"
+        )
+    )
     return True
 
 
@@ -173,7 +177,9 @@ def auto_confirm_reflect_for_organize(
         runtime = runtime_factory(args)
         triage_input = resolved_deps.collect_triage_input_fn(plan, runtime.state)
 
-    review_issues = getattr(triage_input, "review_issues", getattr(triage_input, "open_issues", {}))
+    review_issues = getattr(
+        triage_input, "review_issues", getattr(triage_input, "open_issues", {})
+    )
     valid_ids = set(review_issues.keys())
     accounting_ok, cited_ids, missing_ids, duplicate_ids = validate_reflect_accounting(
         report=str(reflect_stage.get("report", "")),
@@ -190,9 +196,13 @@ def auto_confirm_reflect_for_organize(
         triage_input.resolved_issues,
     )
     _by_dim, observe_dims = observe_dimension_breakdown(triage_input)
-    reflect_dims = sorted(set((list(recurring.keys()) if recurring else []) + observe_dims))
+    reflect_dims = sorted(
+        set((list(recurring.keys()) if recurring else []) + observe_dims)
+    )
     reflect_clusters = [
-        name for name, cluster in plan.get("clusters", {}).items() if not cluster.get("auto")
+        name
+        for name, cluster in plan.get("clusters", {}).items()
+        if not cluster.get("auto")
     ]
     return confirm_stage(
         plan=plan,

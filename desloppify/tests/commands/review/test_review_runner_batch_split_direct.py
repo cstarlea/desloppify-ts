@@ -49,9 +49,13 @@ def test_handle_successful_attempt_core_recovers_from_stdout_fallback(tmp_path) 
         timeout_seconds=30,
         subprocess_run=object(),
         timeout_error=TimeoutError,
-        safe_write_text_fn=lambda path, text: Path(path).write_text(text, encoding="utf-8"),
+        safe_write_text_fn=lambda path, text: Path(path).write_text(
+            text, encoding="utf-8"
+        ),
         sleep_fn=lambda _seconds: None,
-        validate_output_fn=lambda path: path.exists() and path.read_text(encoding="utf-8").strip() == "ok payload",
+        validate_output_fn=lambda path: (
+            path.exists() and path.read_text(encoding="utf-8").strip() == "ok payload"
+        ),
         output_validation_grace_seconds=0.0,
     )
     result = _ExecutionResult(code=0, stdout_text="ok payload", stderr_text="")
@@ -72,7 +76,9 @@ def test_handle_successful_attempt_core_recovers_from_stdout_fallback(tmp_path) 
     assert "recovered" in log_file.read_text(encoding="utf-8").lower()
 
 
-def test_handle_successful_attempt_core_treats_validator_exception_as_invalid(tmp_path) -> None:
+def test_handle_successful_attempt_core_treats_validator_exception_as_invalid(
+    tmp_path,
+) -> None:
     output_file = tmp_path / "out.json"
     output_file.write_text('{"ok": true}\n', encoding="utf-8")
     log_file = tmp_path / "run.log"
@@ -81,7 +87,9 @@ def test_handle_successful_attempt_core_treats_validator_exception_as_invalid(tm
         timeout_seconds=30,
         subprocess_run=object(),
         timeout_error=TimeoutError,
-        safe_write_text_fn=lambda path, text: Path(path).write_text(text, encoding="utf-8"),
+        safe_write_text_fn=lambda path, text: Path(path).write_text(
+            text, encoding="utf-8"
+        ),
         sleep_fn=lambda _seconds: None,
         validate_output_fn=lambda _path: (_ for _ in ()).throw(
             KeyError("missing required field")
@@ -129,22 +137,27 @@ def test_core_parse_helpers_handle_selection_and_payload_extraction() -> None:
 
     logs: list[str] = []
     payload = core_parse_mod.extract_json_payload(
-        "prefix {\"assessments\": {}, \"issues\": []} suffix",
+        'prefix {"assessments": {}, "issues": []} suffix',
         log_fn=logs.append,
     )
     assert payload == {"assessments": {}, "issues": []}
-    assert core_parse_mod.extract_json_payload("no json here", log_fn=logs.append) is None
+    assert (
+        core_parse_mod.extract_json_payload("no json here", log_fn=logs.append) is None
+    )
     assert logs
 
 
 def test_core_merge_support_issue_merge_and_scoring_helpers() -> None:
     issues = [{"dimension": "naming_quality"}, {"dimension": "naming_quality"}]
     notes = {"naming_quality": {"evidence": ["a", "b"]}}
-    assert merge_support_mod.assessment_weight(
-        dimension="naming_quality",
-        issues=issues,
-        dimension_notes=notes,
-    ) == 5.0
+    assert (
+        merge_support_mod.assessment_weight(
+            dimension="naming_quality",
+            issues=issues,
+            dimension_notes=notes,
+        )
+        == 5.0
+    )
 
     existing = {
         "dimension": "naming_quality",
@@ -182,7 +195,9 @@ def test_core_merge_support_issue_merge_and_scoring_helpers() -> None:
 
 
 def test_core_normalize_helpers_and_batch_normalization() -> None:
-    assert core_normalize_mod._low_score_dimensions({"naming_quality": 59.9, "design_coherence": 80.0}) == {"naming_quality", "design_coherence"}
+    assert core_normalize_mod._low_score_dimensions(
+        {"naming_quality": 59.9, "design_coherence": 80.0}
+    ) == {"naming_quality", "design_coherence"}
 
     judgment = core_normalize_mod._validate_dimension_judgment(
         "naming_quality",
@@ -263,12 +278,14 @@ def test_core_normalize_helpers_and_batch_normalization() -> None:
             }
         },
     }
-    assessments, issues_payload, notes_payload, judgments, norm_quality, _ctx = core_normalize_mod.normalize_batch_result(
-        payload,
-        {"naming_quality"},
-        max_batch_issues=5,
-        abstraction_sub_axes=("cohesion",),
-        log_fn=lambda _msg: None,
+    assessments, issues_payload, notes_payload, judgments, norm_quality, _ctx = (
+        core_normalize_mod.normalize_batch_result(
+            payload,
+            {"naming_quality"},
+            max_batch_issues=5,
+            abstraction_sub_axes=("cohesion",),
+            log_fn=lambda _msg: None,
+        )
     )
     assert assessments == {"naming_quality": 80.0}
     assert len(issues_payload) == 1

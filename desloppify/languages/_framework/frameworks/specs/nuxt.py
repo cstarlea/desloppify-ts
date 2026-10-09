@@ -16,7 +16,15 @@ _NUXT_CONFIG_FILES = config_names("nuxt.config")
 
 # Directories Nuxt loads by convention or auto-imports from: nothing imports
 # their files. Nuxt 4 keeps them in app/, Nuxt 3 at the root.
-_APP_DIRS = ("components", "composables", "layouts", "middleware", "pages", "plugins", "utils")
+_APP_DIRS = (
+    "components",
+    "composables",
+    "layouts",
+    "middleware",
+    "pages",
+    "plugins",
+    "utils",
+)
 
 NUXT_ENTRY_CONVENTIONS = EntryConventions(
     config_files=_NUXT_CONFIG_FILES,
@@ -49,7 +57,9 @@ NUXT_SCANNERS: tuple[ScannerRule, ...] = (
             ),
             detail={"line": entry["line"], "composable": entry["composable"]},
         ),
-        log_message=lambda count: f"       nuxt: {count} data composables called after setup",
+        log_message=lambda count: (
+            f"       nuxt: {count} data composables called after setup"
+        ),
     ),
     ScannerRule(
         id="private_runtime_config_in_client",
@@ -66,7 +76,9 @@ NUXT_SCANNERS: tuple[ScannerRule, ...] = (
             ),
             detail={"line": entry["line"], "key": entry["key"]},
         ),
-        log_message=lambda count: f"       nuxt: {count} private runtimeConfig keys read client-side",
+        log_message=lambda count: (
+            f"       nuxt: {count} private runtimeConfig keys read client-side"
+        ),
     ),
     ScannerRule(
         id="legacy_process_flag",
@@ -80,11 +92,21 @@ NUXT_SCANNERS: tuple[ScannerRule, ...] = (
             summary=(
                 f"{entry['flag']} is deprecated since Nuxt 3; use "
                 f"import.meta.{entry['flag'].split('.', 1)[1]}"
-                + (f" ({entry['count']} uses in this file)." if entry["count"] > 1 else ".")
+                + (
+                    f" ({entry['count']} uses in this file)."
+                    if entry["count"] > 1
+                    else "."
+                )
             ),
-            detail={"line": entry["line"], "flag": entry["flag"], "count": entry["count"]},
+            detail={
+                "line": entry["line"],
+                "flag": entry["flag"],
+                "count": entry["count"],
+            },
         ),
-        log_message=lambda count: f"       nuxt: {count} files use process.client/server/dev",
+        log_message=lambda count: (
+            f"       nuxt: {count} files use process.client/server/dev"
+        ),
     ),
 )
 

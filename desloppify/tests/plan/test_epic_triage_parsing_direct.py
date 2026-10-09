@@ -36,7 +36,9 @@ def test_extract_issue_citations_ignores_unknown_matches() -> None:
     assert cited == set()
 
 
-def test_extract_issue_citations_matches_hierarchical_ids_and_bracket_short_ids() -> None:
+def test_extract_issue_citations_matches_hierarchical_ids_and_bracket_short_ids() -> (
+    None
+):
     valid_ids = {
         "review::.::holistic::abstraction_fitness::planmodel_used_as_parameter_bag",
         "review::.::holistic::api_surface_coherence::triage_runner_result_shape_drift",
@@ -70,10 +72,14 @@ def test_parse_triage_result_filters_ids_and_normalizes_direction() -> None:
                 "dismissed": ["review::1234abcd", "review::other"],
                 "agent_safe": 1,
                 "dependency_order": "3",
-                    "action_steps": [
-                        {"title": "step 1", "detail": "touch src/a.py", "issue_refs": ["review::abcdef12"]},
-                        2,
-                    ],
+                "action_steps": [
+                    {
+                        "title": "step 1",
+                        "detail": "touch src/a.py",
+                        "issue_refs": ["review::abcdef12"],
+                    },
+                    2,
+                ],
                 "status": "pending",
             }
         ],
@@ -82,7 +88,11 @@ def test_parse_triage_result_filters_ids_and_normalizes_direction() -> None:
             {"issue_id": "review::unknown", "reason": "skip"},
         ],
         "contradiction_notes": [
-            {"kept": "review::abcdef12", "dismissed": "review::1234abcd", "reason": "same fix"}
+            {
+                "kept": "review::abcdef12",
+                "dismissed": "review::1234abcd",
+                "reason": "same fix",
+            }
         ],
         "priority_rationale": "unblock dependent work",
     }
@@ -101,7 +111,11 @@ def test_parse_triage_result_filters_ids_and_normalizes_direction() -> None:
     assert epic["agent_safe"] is True
     assert epic["dependency_order"] == 3
     assert epic["action_steps"] == [
-        {"title": "step 1", "detail": "touch src/a.py", "issue_refs": ["review::abcdef12"]},
+        {
+            "title": "step 1",
+            "detail": "touch src/a.py",
+            "issue_refs": ["review::abcdef12"],
+        },
     ]
 
     assert [d.issue_id for d in result.dismissed_issues] == ["review::abcdef12"]

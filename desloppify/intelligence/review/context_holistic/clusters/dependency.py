@@ -51,9 +51,7 @@ def _build_private_crossings(by_detector: dict[str, list[dict]]) -> list[dict]:
     for issue in by_detector.get("private_imports", []):
         filepath = issue.get("file", "")
         symbol = _get_detail(issue, "symbol") or _get_detail(issue, "name", "")
-        source = _get_detail(issue, "source") or _get_detail(
-            issue, "imported_from", ""
-        )
+        source = _get_detail(issue, "source") or _get_detail(issue, "imported_from", "")
         target = _get_detail(issue, "target") or filepath
         results.append(
             {

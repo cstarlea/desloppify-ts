@@ -43,22 +43,36 @@ def test_legacy_process_flags(tmp_path: Path):
     _write(
         tmp_path,
         "components/Chart.vue",
-        "<template>\n  <div v-if=\"process.client\" />\n</template>\n"
-        "<script setup lang=\"ts\">\n"
+        '<template>\n  <div v-if="process.client" />\n</template>\n'
+        '<script setup lang="ts">\n'
         "// process.server in a comment\n"
         "const label = 'process.client'\n"
         "if (process.client) {\n  init()\n}\n"
         "const dev = process.dev\n"
         "</script>\n",
     )
-    _write(tmp_path, "plugins/analytics.ts", "export default defineNuxtPlugin(() => {\n  if (!process.server) track()\n})\n")
+    _write(
+        tmp_path,
+        "plugins/analytics.ts",
+        "export default defineNuxtPlugin(() => {\n  if (!process.server) track()\n})\n",
+    )
     _write(tmp_path, "utils/ok.ts", "export const isClient = import.meta.client\n")
     # Node-side code.
-    _write(tmp_path, "server/api/x.ts", "export default defineEventHandler(() => process.server)\n")
-    _write(tmp_path, "nuxt.config.ts", "export default defineNuxtConfig({ ssr: !process.client })\n")
+    _write(
+        tmp_path,
+        "server/api/x.ts",
+        "export default defineEventHandler(() => process.server)\n",
+    )
+    _write(
+        tmp_path,
+        "nuxt.config.ts",
+        "export default defineNuxtConfig({ ssr: !process.client })\n",
+    )
     _write(tmp_path, "modules/m.ts", "export default () => process.server\n")
     entries, _ = scan_legacy_process_flags(tmp_path)
-    assert sorted((Path(e["file"]).name, e["line"], e["flag"], e["count"]) for e in entries) == [
+    assert sorted(
+        (Path(e["file"]).name, e["line"], e["flag"], e["count"]) for e in entries
+    ) == [
         ("Chart.vue", 7, "process.client", 2),
         ("analytics.ts", 2, "process.server", 1),
     ]
@@ -78,7 +92,7 @@ def test_data_composables_in_handlers_and_hooks(tmp_path: Path):
     _write(
         tmp_path,
         "pages/index.vue",
-        "<script setup lang=\"ts\">\n"
+        '<script setup lang="ts">\n'
         "const { data } = await useFetch('/api/items')\n"
         "async function save(item: Item) {\n"
         "  await useFetch('/api/items', { method: 'POST', body: item })\n"
@@ -94,11 +108,13 @@ def test_data_composables_in_handlers_and_hooks(tmp_path: Path):
         "  useFetch('/api/items')\n"
         "}\n"
         "</script>\n"
-        "<template>\n  <button @click=\"save(item)\">Save</button>\n  <Item @remove=\"remove\" />\n</template>\n",
+        '<template>\n  <button @click="save(item)">Save</button>\n  <Item @remove="remove" />\n</template>\n',
     )
     entries, scanned = scan_data_composables_outside_setup(tmp_path)
     assert scanned == 1
-    assert [(e["line"], e["composable"]) for e in sorted(entries, key=lambda e: e["line"])] == [
+    assert [
+        (e["line"], e["composable"]) for e in sorted(entries, key=lambda e: e["line"])
+    ] == [
         (4, "useFetch"),
         (7, "useAsyncData"),
         (10, "useLazyFetch"),
@@ -111,19 +127,19 @@ def test_data_composables_in_setup_and_composables_pass(tmp_path: Path):
     _write(
         tmp_path,
         "pages/a.vue",
-        "<script setup lang=\"ts\">\n"
+        '<script setup lang="ts">\n'
         "function useItems() {\n  return useFetch('/api/items')\n}\n"
         "async function load() {\n  return await useAsyncData('a', () => $fetch('/api/a'))\n}\n"
         "const { data } = await load()\n"
         "const [x, y] = await Promise.all([\n  useFetch('/api/x'),\n  useAsyncData('y', () => $fetch('/y')),\n])\n"
         "async function onSubmit() {\n  await $fetch('/api/save', { method: 'POST' })\n}\n"
         "</script>\n"
-        "<template><form @submit=\"onSubmit\" /></template>\n",
+        '<template><form @submit="onSubmit" /></template>\n',
     )
     _write(
         tmp_path,
         "components/B.vue",
-        "<script lang=\"ts\">\nexport default defineNuxtComponent({\n"
+        '<script lang="ts">\nexport default defineNuxtComponent({\n'
         "  async setup() {\n    const { data } = await useFetch('/api/b')\n    return { data }\n  },\n})\n</script>\n",
     )
     entries, _ = scan_data_composables_outside_setup(tmp_path)
@@ -148,7 +164,11 @@ _CONFIG = """export default defineNuxtConfig({
 
 def test_private_runtime_config_keys(tmp_path: Path):
     _write(tmp_path, "nuxt.config.ts", _CONFIG)
-    assert private_runtime_config_keys(tmp_path) == {"apiSecret", "stripe-key", "github"}
+    assert private_runtime_config_keys(tmp_path) == {
+        "apiSecret",
+        "stripe-key",
+        "github",
+    }
 
 
 def test_private_runtime_config_read_in_component(tmp_path: Path):
@@ -157,7 +177,7 @@ def test_private_runtime_config_read_in_component(tmp_path: Path):
     _write(
         tmp_path,
         "components/Pay.vue",
-        "<script setup lang=\"ts\">\n"
+        '<script setup lang="ts">\n'
         "const config = useRuntimeConfig()\n"
         "const base = config.public.apiBase\n"
         "const secret = config.apiSecret\n"
@@ -168,11 +188,27 @@ def test_private_runtime_config_read_in_component(tmp_path: Path):
         "components/Login.vue",
         "<script setup>\nconst { github, public: pub } = useRuntimeConfig()\n</script>\n",
     )
-    _write(tmp_path, "plugins/track.client.ts", "export default defineNuxtPlugin(() => {\n  init(useRuntimeConfig().apiSecret)\n})\n")
+    _write(
+        tmp_path,
+        "plugins/track.client.ts",
+        "export default defineNuxtPlugin(() => {\n  init(useRuntimeConfig().apiSecret)\n})\n",
+    )
     # Server-side readers.
-    _write(tmp_path, "components/Report.server.vue", "<script setup>\nconst k = useRuntimeConfig().apiSecret\n</script>\n")
-    _write(tmp_path, "server/api/pay.ts", "export default defineEventHandler((e) => useRuntimeConfig(e).apiSecret)\n")
-    _write(tmp_path, "plugins/a.server.ts", "export default defineNuxtPlugin(() => useRuntimeConfig().apiSecret)\n")
+    _write(
+        tmp_path,
+        "components/Report.server.vue",
+        "<script setup>\nconst k = useRuntimeConfig().apiSecret\n</script>\n",
+    )
+    _write(
+        tmp_path,
+        "server/api/pay.ts",
+        "export default defineEventHandler((e) => useRuntimeConfig(e).apiSecret)\n",
+    )
+    _write(
+        tmp_path,
+        "plugins/a.server.ts",
+        "export default defineNuxtPlugin(() => useRuntimeConfig().apiSecret)\n",
+    )
     entries, _ = scan_private_runtime_config_in_client(tmp_path)
     assert sorted((Path(e["file"]).name, e["line"], e["key"]) for e in entries) == [
         ("Login.vue", 2, "github"),
@@ -184,7 +220,11 @@ def test_private_runtime_config_read_in_component(tmp_path: Path):
 def test_private_runtime_config_needs_declared_keys(tmp_path: Path):
     _package(tmp_path)
     _write(tmp_path, "nuxt.config.ts", "export default defineNuxtConfig({})\n")
-    _write(tmp_path, "components/A.vue", "<script setup>\nconst k = useRuntimeConfig().apiSecret\n</script>\n")
+    _write(
+        tmp_path,
+        "components/A.vue",
+        "<script setup>\nconst k = useRuntimeConfig().apiSecret\n</script>\n",
+    )
     assert scan_private_runtime_config_in_client(tmp_path) == ([], 0)
 
 
@@ -195,7 +235,9 @@ def test_spec_wires_scanners(tmp_path: Path):
         "legacy_process_flag",
     ]
     _package(tmp_path)
-    _write(tmp_path, "app/app.vue", "<script setup>\nif (process.server) x()\n</script>\n")
+    _write(
+        tmp_path, "app/app.vue", "<script setup>\nif (process.server) x()\n</script>\n"
+    )
     rule = NUXT_SPEC.scanners[2]
     entries, _ = rule.scan(tmp_path, None)
     issue = rule.issue_factory(entries[0])

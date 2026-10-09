@@ -13,16 +13,22 @@ def test_print_score_section_frozen_mode_uses_frozen_renderer(monkeypatch) -> No
     frozen_calls: list[tuple[float, float]] = []
     breakdown = QueueBreakdown(queue_total=3, subjective=1)
     monkeypatch.setattr(flow_mod, "get_plan_start_strict", lambda _plan: 80.0)
-    monkeypatch.setattr(flow_mod, "plan_aware_queue_breakdown", lambda *_a, **_k: breakdown)
+    monkeypatch.setattr(
+        flow_mod, "plan_aware_queue_breakdown", lambda *_a, **_k: breakdown
+    )
     monkeypatch.setattr(
         flow_mod,
         "print_frozen_score_with_queue_context",
-        lambda _breakdown, frozen_strict, live_score: frozen_calls.append((frozen_strict, live_score)),
+        lambda _breakdown, frozen_strict, live_score: frozen_calls.append(
+            (frozen_strict, live_score)
+        ),
     )
 
     result = flow_mod.print_score_section(
         state={},
-        scores=SimpleNamespace(overall=90.0, objective=95.0, strict=85.0, verified=84.0),
+        scores=SimpleNamespace(
+            overall=90.0, objective=95.0, strict=85.0, verified=84.0
+        ),
         plan={},
         target_strict_score=95.0,
         ctx=SimpleNamespace(),
@@ -35,15 +41,21 @@ def test_print_score_section_frozen_mode_uses_frozen_renderer(monkeypatch) -> No
     assert frozen_calls == [(80.0, 85.0)]
 
 
-def test_print_score_section_phase_transition_renders_live_scores(capsys, monkeypatch) -> None:
+def test_print_score_section_phase_transition_renders_live_scores(
+    capsys, monkeypatch
+) -> None:
     breakdown = QueueBreakdown(queue_total=2, subjective=1, workflow=1)
     monkeypatch.setattr(flow_mod, "get_plan_start_strict", lambda _plan: 80.0)
-    monkeypatch.setattr(flow_mod, "plan_aware_queue_breakdown", lambda *_a, **_k: breakdown)
+    monkeypatch.setattr(
+        flow_mod, "plan_aware_queue_breakdown", lambda *_a, **_k: breakdown
+    )
     monkeypatch.setattr(flow_mod, "colorize", lambda text, _style=None: text)
 
     result = flow_mod.print_score_section(
         state={},
-        scores=SimpleNamespace(overall=90.0, objective=95.0, strict=85.0, verified=84.0),
+        scores=SimpleNamespace(
+            overall=90.0, objective=95.0, strict=85.0, verified=84.0
+        ),
         plan={},
         target_strict_score=95.0,
         ctx=SimpleNamespace(),
@@ -60,10 +72,14 @@ def test_print_score_section_phase_transition_renders_live_scores(capsys, monkey
     assert "subjective + workflow items remain" in out
 
 
-def test_render_terminal_status_writes_query_payload_with_empty_plan(monkeypatch) -> None:
+def test_render_terminal_status_writes_query_payload_with_empty_plan(
+    monkeypatch,
+) -> None:
     written: list[flow_mod.StatusQueryRequest] = []
     monkeypatch.setattr(flow_mod, "load_plan", lambda: {})
-    monkeypatch.setattr(flow_mod, "write_status_query", lambda request: written.append(request))
+    monkeypatch.setattr(
+        flow_mod, "write_status_query", lambda request: written.append(request)
+    )
 
     flow_mod.render_terminal_status(
         argparse.Namespace(path=".", lang=None),

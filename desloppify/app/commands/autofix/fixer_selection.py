@@ -19,9 +19,7 @@ def resolve_fixer_config(args, fixer_name: str) -> tuple[LangConfig, FixerConfig
         raise CommandError(f"No auto-fixers available for {lang.name}.")
     if fixer_name not in lang.fixers:
         available = ", ".join(sorted(lang.fixers.keys()))
-        raise CommandError(
-            f"Unknown fixer: {fixer_name}\n  Available: {available}"
-        )
+        raise CommandError(f"Unknown fixer: {fixer_name}\n  Available: {available}")
     fixer_config = lang.fixers[fixer_name]
     if fixer_name in _COMMAND_POST_FIX and not fixer_config.post_fix:
         fixer_config = dataclasses.replace(

@@ -22,13 +22,21 @@ def _triage_input() -> SimpleNamespace:
         review_issues={
             "review::src/a.py::id1": {
                 "summary": "Rename symbol",
-                "detail": {"dimension": "naming", "file_path": "src/a.py", "description": "rename oldThing"},
+                "detail": {
+                    "dimension": "naming",
+                    "file_path": "src/a.py",
+                    "description": "rename oldThing",
+                },
             }
         },
         open_issues={
             "review::src/a.py::id1": {
                 "summary": "Rename symbol",
-                "detail": {"dimension": "naming", "file_path": "src/a.py", "description": "rename oldThing"},
+                "detail": {
+                    "dimension": "naming",
+                    "file_path": "src/a.py",
+                    "description": "rename oldThing",
+                },
             }
         },
         new_since_last=set(),
@@ -53,11 +61,39 @@ def _plan_with_briefing() -> dict:
                 "reflect_guidance": "Do not create a fresh naming mega-cluster without acknowledging the rework loop.",
                 "organize_guidance": "Prioritize naming first and avoid touching the same file in multiple clusters.",
                 "sense_check_guidance": "Reject value-neutral rename churn if it adds coordination cost.",
-                "focus_dimensions": [{"name": "naming", "reason": "high headroom", "trend": "stagnant", "headroom": 20}],
-                "avoid_areas": [{"name": "src/shared.py", "reason": "rework loop", "type": "file"}],
-                "rework_warnings": [{"dimension": "naming", "resolved": 3, "new_open": 3, "files": ["src/shared.py"]}],
-                "file_churn_hotspots": [{"file": "src/shared.py", "count": 4, "detectors": ["review", "smells"]}],
-                "anti_patterns": [{"type": "rework", "description": "Repeated naming cleanup in src/shared.py", "evidence": ["same file"]}],
+                "focus_dimensions": [
+                    {
+                        "name": "naming",
+                        "reason": "high headroom",
+                        "trend": "stagnant",
+                        "headroom": 20,
+                    }
+                ],
+                "avoid_areas": [
+                    {"name": "src/shared.py", "reason": "rework loop", "type": "file"}
+                ],
+                "rework_warnings": [
+                    {
+                        "dimension": "naming",
+                        "resolved": 3,
+                        "new_open": 3,
+                        "files": ["src/shared.py"],
+                    }
+                ],
+                "file_churn_hotspots": [
+                    {
+                        "file": "src/shared.py",
+                        "count": 4,
+                        "detectors": ["review", "smells"],
+                    }
+                ],
+                "anti_patterns": [
+                    {
+                        "type": "rework",
+                        "description": "Repeated naming cleanup in src/shared.py",
+                        "evidence": ["same file"],
+                    }
+                ],
             },
             "triage_stages": {
                 "strategize": {
@@ -133,7 +169,11 @@ def test_build_observe_batch_prompt_accepts_strategist_guidance() -> None:
         {
             "review::src/a.py::id1": {
                 "summary": "Rename symbol",
-                "detail": {"dimension": "naming", "file_path": "src/a.py", "description": "rename oldThing"},
+                "detail": {
+                    "dimension": "naming",
+                    "file_path": "src/a.py",
+                    "description": "rename oldThing",
+                },
             }
         },
         repo_root=Path("/tmp/repo"),
@@ -145,5 +185,13 @@ def test_build_observe_batch_prompt_accepts_strategist_guidance() -> None:
 
 def test_runner_wiring_includes_strategize_stage() -> None:
     assert "strategize" in DEFAULT_STAGE_HANDLERS
-    assert is_full_stage_run(["observe", "reflect", "organize", "enrich", "sense-check"]) is True
-    assert is_full_stage_run(["strategize", "observe", "reflect", "organize", "enrich", "sense-check"]) is True
+    assert (
+        is_full_stage_run(["observe", "reflect", "organize", "enrich", "sense-check"])
+        is True
+    )
+    assert (
+        is_full_stage_run(
+            ["strategize", "observe", "reflect", "organize", "enrich", "sense-check"]
+        )
+        is True
+    )

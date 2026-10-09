@@ -57,7 +57,10 @@ def test_load_fixer_returns_lang_and_fixer_config():
     lang = _make_lang(fixers={"unused": fc})
     args = _FakeArgs()
 
-    with patch("desloppify.app.commands.autofix.fixer_selection.resolve_lang", return_value=lang):
+    with patch(
+        "desloppify.app.commands.autofix.fixer_selection.resolve_lang",
+        return_value=lang,
+    ):
         result_lang, result_fc = resolve_fixer_config(args, "unused")
 
     assert result_lang is lang
@@ -74,7 +77,10 @@ def test_load_fixer_attaches_command_post_fix():
     original = _COMMAND_POST_FIX.copy()
     try:
         _COMMAND_POST_FIX["logs"] = sentinel
-        with patch("desloppify.app.commands.autofix.fixer_selection.resolve_lang", return_value=lang):
+        with patch(
+            "desloppify.app.commands.autofix.fixer_selection.resolve_lang",
+            return_value=lang,
+        ):
             _, result_fc = resolve_fixer_config(args, "logs")
         assert result_fc.post_fix is sentinel
         # Original should be unchanged (dataclasses.replace creates a copy)
@@ -94,7 +100,10 @@ def test_load_fixer_does_not_override_existing_post_fix():
     original = _COMMAND_POST_FIX.copy()
     try:
         _COMMAND_POST_FIX["logs"] = MagicMock()
-        with patch("desloppify.app.commands.autofix.fixer_selection.resolve_lang", return_value=lang):
+        with patch(
+            "desloppify.app.commands.autofix.fixer_selection.resolve_lang",
+            return_value=lang,
+        ):
             _, result_fc = resolve_fixer_config(args, "logs")
         assert result_fc.post_fix is existing_hook
     finally:
@@ -109,7 +118,10 @@ def test_load_fixer_exits_when_no_fixers():
     """When language has no fixers, sys.exit(1) is called."""
     lang = _make_lang(fixers={})
     args = _FakeArgs()
-    with patch("desloppify.app.commands.autofix.fixer_selection.resolve_lang", return_value=lang):
+    with patch(
+        "desloppify.app.commands.autofix.fixer_selection.resolve_lang",
+        return_value=lang,
+    ):
         with pytest.raises(CommandError) as exc_info:
             resolve_fixer_config(args, "unused")
         assert exc_info.value.exit_code == 1
@@ -120,7 +132,10 @@ def test_load_fixer_exits_when_fixer_name_unknown():
     fc = _make_fixer("unused")
     lang = _make_lang(fixers={"unused": fc})
     args = _FakeArgs()
-    with patch("desloppify.app.commands.autofix.fixer_selection.resolve_lang", return_value=lang):
+    with patch(
+        "desloppify.app.commands.autofix.fixer_selection.resolve_lang",
+        return_value=lang,
+    ):
         with pytest.raises(CommandError) as exc_info:
             resolve_fixer_config(args, "nonexistent")
         assert exc_info.value.exit_code == 1
@@ -130,5 +145,8 @@ def test_load_fixer_compat_alias_still_resolves() -> None:
     fc = _make_fixer("unused")
     lang = _make_lang(fixers={"unused": fc})
     args = _FakeArgs()
-    with patch("desloppify.app.commands.autofix.fixer_selection.resolve_lang", return_value=lang):
+    with patch(
+        "desloppify.app.commands.autofix.fixer_selection.resolve_lang",
+        return_value=lang,
+    ):
         assert load_fixer(args, "unused") == (lang, fc)

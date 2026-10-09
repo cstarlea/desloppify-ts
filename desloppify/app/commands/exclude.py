@@ -91,7 +91,9 @@ def cmd_exclude(args: argparse.Namespace) -> None:
             try:
                 plan_purged = _purge_removed_ids_from_plan(state_file, removed_ids)
             except PLAN_LOAD_EXCEPTIONS as exc:
-                logger.debug("Exclude command could not update living plan.", exc_info=exc)
+                logger.debug(
+                    "Exclude command could not update living plan.", exc_info=exc
+                )
                 print(
                     colorize("  Warning: could not update living plan.", "yellow"),
                     file=sys.stderr,

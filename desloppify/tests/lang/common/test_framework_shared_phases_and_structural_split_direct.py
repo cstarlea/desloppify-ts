@@ -20,7 +20,9 @@ def test_phase_dupes_filters_non_production_functions(monkeypatch) -> None:
     lang = SimpleNamespace(
         extract_functions=lambda _path: functions,
         zone_map=SimpleNamespace(
-            get=lambda file_path: Zone.TEST if "tests/" in str(file_path) else Zone.PRODUCTION
+            get=lambda file_path: (
+                Zone.TEST if "tests/" in str(file_path) else Zone.PRODUCTION
+            )
         ),
         review_cache={},
     )
@@ -35,7 +37,9 @@ def test_phase_dupes_filters_non_production_functions(monkeypatch) -> None:
         return [{"id": "pair"}], len(filtered)
 
     monkeypatch.setattr(review_mod, "detect_duplicates", _fake_detect)
-    monkeypatch.setattr(review_mod, "make_dupe_issues", lambda entries, _log: [{"entries": entries}])
+    monkeypatch.setattr(
+        review_mod, "make_dupe_issues", lambda entries, _log: [{"entries": entries}]
+    )
 
     issues, potentials = review_mod.phase_dupes(Path("."), lang)
 
@@ -66,7 +70,9 @@ def test_phase_boilerplate_duplication_handles_none_and_entries(monkeypatch) -> 
         }
     ]
     monkeypatch.setattr(review_mod, "detect_with_jscpd", lambda _path: entries)
-    monkeypatch.setattr(review_mod, "_filter_boilerplate_entries_by_zone", lambda items, _zone: items)
+    monkeypatch.setattr(
+        review_mod, "_filter_boilerplate_entries_by_zone", lambda items, _zone: items
+    )
 
     issues, potentials = review_mod.phase_boilerplate_duplication(Path("."), lang)
 
@@ -75,7 +81,9 @@ def test_phase_boilerplate_duplication_handles_none_and_entries(monkeypatch) -> 
     assert potentials == {"boilerplate_duplication": 2}
 
 
-def test_phase_boilerplate_duplication_reuses_cached_entries(monkeypatch, tmp_path) -> None:
+def test_phase_boilerplate_duplication_reuses_cached_entries(
+    monkeypatch, tmp_path
+) -> None:
     (tmp_path / "src").mkdir()
     (tmp_path / "src" / "a.py").write_text("print('a')\n")
 
@@ -104,10 +112,16 @@ def test_phase_boilerplate_duplication_reuses_cached_entries(monkeypatch, tmp_pa
         return entries
 
     monkeypatch.setattr(review_mod, "detect_with_jscpd", _fake_detect)
-    monkeypatch.setattr(review_mod, "_filter_boilerplate_entries_by_zone", lambda items, _zone: items)
+    monkeypatch.setattr(
+        review_mod, "_filter_boilerplate_entries_by_zone", lambda items, _zone: items
+    )
 
-    first_issues, first_potentials = review_mod.phase_boilerplate_duplication(tmp_path, lang)
-    second_issues, second_potentials = review_mod.phase_boilerplate_duplication(tmp_path, lang)
+    first_issues, first_potentials = review_mod.phase_boilerplate_duplication(
+        tmp_path, lang
+    )
+    second_issues, second_potentials = review_mod.phase_boilerplate_duplication(
+        tmp_path, lang
+    )
 
     assert calls["count"] == 1
     assert len(first_issues) == 1
@@ -116,7 +130,9 @@ def test_phase_boilerplate_duplication_reuses_cached_entries(monkeypatch, tmp_pa
     assert second_potentials == {"boilerplate_duplication": 2}
 
 
-def test_phase_boilerplate_duplication_uses_prefetched_result(monkeypatch, tmp_path) -> None:
+def test_phase_boilerplate_duplication_uses_prefetched_result(
+    monkeypatch, tmp_path
+) -> None:
     class _ImmediateExecutor:
         def submit(self, fn, *args, **kwargs):
             future: concurrent.futures.Future = concurrent.futures.Future()
@@ -151,12 +167,19 @@ def test_phase_boilerplate_duplication_uses_prefetched_result(monkeypatch, tmp_p
         "detect_with_jscpd",
         lambda _path: (calls.__setitem__("count", calls["count"] + 1), entries)[1],
     )
-    monkeypatch.setattr(review_mod, "_filter_boilerplate_entries_by_zone", lambda items, _zone: items)
+    monkeypatch.setattr(
+        review_mod, "_filter_boilerplate_entries_by_zone", lambda items, _zone: items
+    )
 
     review_mod.prewarm_review_phase_detectors(
         tmp_path,
         lang,
-        [SimpleNamespace(label="Boilerplate duplication", run=review_mod.phase_boilerplate_duplication)],
+        [
+            SimpleNamespace(
+                label="Boilerplate duplication",
+                run=review_mod.phase_boilerplate_duplication,
+            )
+        ],
     )
     issues, potentials = review_mod.phase_boilerplate_duplication(tmp_path, lang)
 
@@ -186,13 +209,19 @@ def test_phase_security_records_default_coverage_when_missing(monkeypatch) -> No
         ),
     )
 
-    monkeypatch.setattr(review_mod, "filter_entries", lambda _zones, entries, _detector: entries)
+    monkeypatch.setattr(
+        review_mod, "filter_entries", lambda _zones, entries, _detector: entries
+    )
     monkeypatch.setattr(
         review_mod,
         "_entries_to_issues",
-        lambda detector, entries, **_kwargs: [{"detector": detector, "file": e["file"]} for e in entries],
+        lambda detector, entries, **_kwargs: [
+            {"detector": detector, "file": e["file"]} for e in entries
+        ],
     )
-    monkeypatch.setattr(review_mod, "_log_phase_summary", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(
+        review_mod, "_log_phase_summary", lambda *_args, **_kwargs: None
+    )
 
     issues, potentials = review_mod.phase_security(
         Path("."),
@@ -244,13 +273,19 @@ def test_phase_security_reuses_lang_security_cache(monkeypatch, tmp_path) -> Non
         )[1],
     )
 
-    monkeypatch.setattr(review_mod, "filter_entries", lambda _zones, entries, _detector: entries)
+    monkeypatch.setattr(
+        review_mod, "filter_entries", lambda _zones, entries, _detector: entries
+    )
     monkeypatch.setattr(
         review_mod,
         "_entries_to_issues",
-        lambda detector, entries, **_kwargs: [{"detector": detector, "file": e["file"]} for e in entries],
+        lambda detector, entries, **_kwargs: [
+            {"detector": detector, "file": e["file"]} for e in entries
+        ],
     )
-    monkeypatch.setattr(review_mod, "_log_phase_summary", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(
+        review_mod, "_log_phase_summary", lambda *_args, **_kwargs: None
+    )
 
     first_issues, first_potentials = review_mod.phase_security(
         tmp_path,
@@ -318,9 +353,13 @@ def test_phase_security_uses_prefetched_lang_result(monkeypatch, tmp_path) -> No
     )
 
     monkeypatch.setattr(review_mod, "_PREFETCH_EXECUTOR", _ImmediateExecutor())
-    monkeypatch.setattr(review_mod, "filter_entries", lambda _zones, entries, _detector: entries)
+    monkeypatch.setattr(
+        review_mod, "filter_entries", lambda _zones, entries, _detector: entries
+    )
     monkeypatch.setattr(review_mod, "_entries_to_issues", lambda *_a, **_k: [])
-    monkeypatch.setattr(review_mod, "_log_phase_summary", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(
+        review_mod, "_log_phase_summary", lambda *_args, **_kwargs: None
+    )
 
     review_mod.prewarm_review_phase_detectors(
         tmp_path,
@@ -338,7 +377,9 @@ def test_phase_security_uses_prefetched_lang_result(monkeypatch, tmp_path) -> No
     assert potentials == {"security": 4}
 
 
-def test_review_function_extraction_cached_across_signature_and_dupes(monkeypatch, tmp_path) -> None:
+def test_review_function_extraction_cached_across_signature_and_dupes(
+    monkeypatch, tmp_path
+) -> None:
     calls = {"count": 0}
     functions = [SimpleNamespace(file="src/a.py", name="foo")]
     lang = SimpleNamespace(
@@ -354,7 +395,9 @@ def test_review_function_extraction_cached_across_signature_and_dupes(monkeypatc
         "desloppify.engine.detectors.signature.detect_signature_variance",
         lambda _functions, **_kwargs: ([], 0),
     )
-    monkeypatch.setattr(review_mod, "detect_duplicates", lambda _functions, **_kwargs: ([], 1))
+    monkeypatch.setattr(
+        review_mod, "detect_duplicates", lambda _functions, **_kwargs: ([], 1)
+    )
     monkeypatch.setattr(review_mod, "make_dupe_issues", lambda *_args, **_kwargs: [])
 
     review_mod.phase_signature(tmp_path, lang)
@@ -371,7 +414,9 @@ def test_phase_test_coverage_and_private_imports_paths(monkeypatch) -> None:
     lang = SimpleNamespace(
         zone_map=SimpleNamespace(),
         dep_graph=None,
-        build_dep_graph=lambda _path: {"src/a.py": {"imports": set(), "importers": set()}},
+        build_dep_graph=lambda _path: {
+            "src/a.py": {"imports": set(), "importers": set()}
+        },
         name="python",
         complexity_map={"src/a.py": 2.0},
         detect_private_imports=lambda _graph, _zones: (
@@ -388,9 +433,15 @@ def test_phase_test_coverage_and_private_imports_paths(monkeypatch) -> None:
         ),
     )
 
-    monkeypatch.setattr(review_mod, "_find_external_test_files", lambda _path, _lang: {"tests/a_test.py"})
+    monkeypatch.setattr(
+        review_mod,
+        "_find_external_test_files",
+        lambda _path, _lang: {"tests/a_test.py"},
+    )
 
-    def _fake_run_test_coverage(graph, zone_map, name, *, extra_test_files, complexity_map):
+    def _fake_run_test_coverage(
+        graph, zone_map, name, *, extra_test_files, complexity_map
+    ):
         test_calls["graph"] = graph
         test_calls["extra_test_files"] = extra_test_files
         test_calls["complexity_map"] = complexity_map
@@ -410,13 +461,19 @@ def test_phase_test_coverage_and_private_imports_paths(monkeypatch) -> None:
         )
 
     monkeypatch.setattr(review_mod, "run_test_coverage", _fake_run_test_coverage)
-    monkeypatch.setattr(review_mod, "filter_entries", lambda _zones, entries, _detector: entries)
+    monkeypatch.setattr(
+        review_mod, "filter_entries", lambda _zones, entries, _detector: entries
+    )
     monkeypatch.setattr(
         review_mod,
         "_entries_to_issues",
-        lambda detector, entries, **_kwargs: [{"detector": detector, "file": e["file"]} for e in entries],
+        lambda detector, entries, **_kwargs: [
+            {"detector": detector, "file": e["file"]} for e in entries
+        ],
     )
-    monkeypatch.setattr(review_mod, "_log_phase_summary", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(
+        review_mod, "_log_phase_summary", lambda *_args, **_kwargs: None
+    )
 
     issues, potentials = review_mod.phase_test_coverage(Path("."), lang)
     assert len(issues) == 1
@@ -425,7 +482,9 @@ def test_phase_test_coverage_and_private_imports_paths(monkeypatch) -> None:
     assert test_calls["extra_test_files"] == {"tests/a_test.py"}
     assert test_calls["complexity_map"] == {"src/a.py": 2.0}
 
-    private_issues, private_potentials = review_mod.phase_private_imports(Path("."), lang)
+    private_issues, private_potentials = review_mod.phase_private_imports(
+        Path("."), lang
+    )
     assert len(private_issues) == 1
     assert private_potentials == {"private_imports": 4}
 
@@ -451,7 +510,9 @@ def test_phase_subjective_review_normalizes_cache_shape(monkeypatch) -> None:
         "desloppify.base.subjective_dimensions.dimension_display_name",
         lambda dim_key, lang_name=None: dim_key.replace("_", " ").title(),
     )
-    monkeypatch.setattr(review_mod, "_log_phase_summary", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(
+        review_mod, "_log_phase_summary", lambda *_args, **_kwargs: None
+    )
 
     issues, potentials = review_mod.phase_subjective_review(Path("."), lang)
 
@@ -466,7 +527,9 @@ def test_phase_subjective_review_normalizes_cache_shape(monkeypatch) -> None:
 
 def test_phase_signature_reports_variance(monkeypatch) -> None:
     lang = SimpleNamespace(
-        extract_functions=lambda _path: [SimpleNamespace(name="run", file="src/a.py", line=1)],
+        extract_functions=lambda _path: [
+            SimpleNamespace(name="run", file="src/a.py", line=1)
+        ],
     )
 
     monkeypatch.setattr(
@@ -491,7 +554,9 @@ def test_phase_signature_reports_variance(monkeypatch) -> None:
     assert potentials == {"signature": 1}
 
 
-def test_run_structural_phase_merges_large_complexity_and_flat_dirs(monkeypatch) -> None:
+def test_run_structural_phase_merges_large_complexity_and_flat_dirs(
+    monkeypatch,
+) -> None:
     lang = SimpleNamespace(
         file_finder=lambda _path: ["src/a.py"],
         large_threshold=100,
@@ -508,7 +573,10 @@ def test_run_structural_phase_merges_large_complexity_and_flat_dirs(monkeypatch)
     monkeypatch.setattr(
         structural_mod,
         "detect_complexity",
-        lambda _path, **_kwargs: ([{"file": "src/complex.py", "score": 21, "signals": ["TODOs"]}], 1),
+        lambda _path, **_kwargs: (
+            [{"file": "src/complex.py", "score": 21, "signals": ["TODOs"]}],
+            1,
+        ),
     )
     monkeypatch.setattr(
         structural_mod,
@@ -545,7 +613,9 @@ def test_run_structural_phase_merges_large_complexity_and_flat_dirs(monkeypatch)
     assert potentials == {"structural": 3, "flat_dirs": 7}
 
 
-def test_run_coupling_phase_wires_single_cycles_orphaned_and_post_process(monkeypatch) -> None:
+def test_run_coupling_phase_wires_single_cycles_orphaned_and_post_process(
+    monkeypatch,
+) -> None:
     lang = SimpleNamespace(
         dep_graph=None,
         zone_map=None,
@@ -564,16 +634,38 @@ def test_run_coupling_phase_wires_single_cycles_orphaned_and_post_process(monkey
         "detect_single_use_abstractions",
         lambda _path, _graph, **_kwargs: ([{"file": "src/a.py"}], 2),
     )
-    monkeypatch.setattr(structural_mod, "filter_entries", lambda _zones, entries, _detector, file_key="file": entries)
-    monkeypatch.setattr(structural_mod, "make_single_use_issues", lambda entries, _get_area, stderr_fn=None: [{"kind": "single", "entries": entries}])
-    monkeypatch.setattr(structural_mod, "detect_cycles", lambda _graph: ([{"length": 2, "files": ["src/a.py", "src/b.py"]}], 0))
-    monkeypatch.setattr(structural_mod, "make_cycle_issues", lambda entries, _log_fn: [{"kind": "cycle", "entries": entries}])
+    monkeypatch.setattr(
+        structural_mod,
+        "filter_entries",
+        lambda _zones, entries, _detector, file_key="file": entries,
+    )
+    monkeypatch.setattr(
+        structural_mod,
+        "make_single_use_issues",
+        lambda entries, _get_area, stderr_fn=None: [
+            {"kind": "single", "entries": entries}
+        ],
+    )
+    monkeypatch.setattr(
+        structural_mod,
+        "detect_cycles",
+        lambda _graph: ([{"length": 2, "files": ["src/a.py", "src/b.py"]}], 0),
+    )
+    monkeypatch.setattr(
+        structural_mod,
+        "make_cycle_issues",
+        lambda entries, _log_fn: [{"kind": "cycle", "entries": entries}],
+    )
     monkeypatch.setattr(
         structural_mod,
         "detect_orphaned_files",
         lambda _path, _graph, **_kwargs: ([{"file": "src/c.py", "loc": 8}], 5),
     )
-    monkeypatch.setattr(structural_mod, "make_orphaned_issues", lambda entries, _log_fn: [{"kind": "orphaned", "entries": entries}])
+    monkeypatch.setattr(
+        structural_mod,
+        "make_orphaned_issues",
+        lambda entries, _log_fn: [{"kind": "orphaned", "entries": entries}],
+    )
 
     post_process_calls: list[tuple[int, int]] = []
 
@@ -598,21 +690,31 @@ def test_make_structural_coupling_phase_pair_delegates_to_runners(monkeypatch) -
     monkeypatch.setattr(
         structural_mod,
         "run_structural_phase",
-        lambda path, lang, **_kwargs: ([{"phase": "structural", "path": str(path)}], {"structural": 1}),
+        lambda path, lang, **_kwargs: (
+            [{"phase": "structural", "path": str(path)}],
+            {"structural": 1},
+        ),
     )
     monkeypatch.setattr(
         structural_mod,
         "run_coupling_phase",
-        lambda path, lang, **_kwargs: ([{"phase": "coupling", "path": str(path)}], {"cycles": 1}),
+        lambda path, lang, **_kwargs: (
+            [{"phase": "coupling", "path": str(path)}],
+            {"cycles": 1},
+        ),
     )
 
-    phase_structural, phase_coupling = structural_mod.make_structural_coupling_phase_pair(
-        complexity_signals=[],
-        build_dep_graph_fn=lambda _path: {},
-        log_fn=lambda _msg: None,
+    phase_structural, phase_coupling = (
+        structural_mod.make_structural_coupling_phase_pair(
+            complexity_signals=[],
+            build_dep_graph_fn=lambda _path: {},
+            log_fn=lambda _msg: None,
+        )
     )
 
-    structural_issues, structural_potentials = phase_structural(Path("."), SimpleNamespace())
+    structural_issues, structural_potentials = phase_structural(
+        Path("."), SimpleNamespace()
+    )
     coupling_issues, coupling_potentials = phase_coupling(Path("."), SimpleNamespace())
 
     assert structural_issues[0]["phase"] == "structural"

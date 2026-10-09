@@ -63,10 +63,12 @@ def test_add_save_load_round_trip(tmp_path: Path) -> None:
 
 def test_remove_rule(tmp_path: Path) -> None:
     path = tmp_path / "policy.json"
-    policy = {"rules": [
-        {"text": "Rule A", "created_at": "2026-01-01"},
-        {"text": "Rule B", "created_at": "2026-01-02"},
-    ]}
+    policy = {
+        "rules": [
+            {"text": "Rule A", "created_at": "2026-01-01"},
+            {"text": "Rule B", "created_at": "2026-01-02"},
+        ]
+    }
     save_policy(policy, path)
 
     loaded = load_policy(path)
@@ -84,10 +86,12 @@ def test_render_policy_block_empty() -> None:
 
 
 def test_render_policy_block_with_rules() -> None:
-    policy = {"rules": [
-        {"text": "No re-export facades"},
-        {"text": "No dependency injection explosion"},
-    ]}
+    policy = {
+        "rules": [
+            {"text": "No re-export facades"},
+            {"text": "No dependency injection explosion"},
+        ]
+    }
     block = render_policy_block(policy)
     assert "## Project Policy" in block
     assert "1. No re-export facades" in block

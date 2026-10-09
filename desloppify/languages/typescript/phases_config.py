@@ -10,7 +10,9 @@ from desloppify.languages.typescript.syntax.scanner import SourceText
 
 
 def _compute_ts_destructure_props(content, lines):
-    long_destructures = re.findall(r"\{\s*(\w+(?:\s*,\s*\w+){8,})\s*\}", code_text(content))
+    long_destructures = re.findall(
+        r"\{\s*(\w+(?:\s*,\s*\w+){8,})\s*\}", code_text(content)
+    )
     if not long_destructures:
         return None
     max_props = max(len(d.split(",")) for d in long_destructures)
@@ -19,26 +21,36 @@ def _compute_ts_destructure_props(content, lines):
 
 def _compute_ts_inline_types(content, lines):
     inline_types = len(
-        re.findall(r"^(?:export\s+)?(?:type|interface)\s+\w+", code_text(content), re.MULTILINE)
+        re.findall(
+            r"^(?:export\s+)?(?:type|interface)\s+\w+", code_text(content), re.MULTILINE
+        )
     )
     if inline_types > 3:
         return inline_types, f"{inline_types} inline types"
     return None
 
 
-def _code_signal(name: str, pattern: str, *, weight: int, threshold: int, comments: bool = False) -> ComplexitySignal:
+def _code_signal(
+    name: str, pattern: str, *, weight: int, threshold: int, comments: bool = False
+) -> ComplexitySignal:
     """A signal counting ``pattern`` where it starts in code, or with ``comments``, in a comment."""
     regex = re.compile(pattern, re.MULTILINE)
 
     def compute(content, lines):
         if comments:
             source = SourceText(content)
-            count = sum(1 for match in regex.finditer(content) if source.kind_at(match.start()) == "comment")
+            count = sum(
+                1
+                for match in regex.finditer(content)
+                if source.kind_at(match.start()) == "comment"
+            )
         else:
             count = len(regex.findall(code_text(content)))
         return (count, f"{count} {name}") if count > threshold else None
 
-    return ComplexitySignal(name, None, weight=weight, threshold=threshold, compute=compute)
+    return ComplexitySignal(
+        name, None, weight=weight, threshold=threshold, compute=compute
+    )
 
 
 TS_COMPLEXITY_SIGNALS = [
@@ -54,7 +66,9 @@ TS_COMPLEXITY_SIGNALS = [
     ComplexitySignal(
         "inline types", None, weight=1, threshold=3, compute=_compute_ts_inline_types
     ),
-    _code_signal("TODOs", r"//\s*(?:TODO|FIXME|HACK|XXX)", weight=2, threshold=0, comments=True),
+    _code_signal(
+        "TODOs", r"//\s*(?:TODO|FIXME|HACK|XXX)", weight=2, threshold=0, comments=True
+    ),
     _code_signal(
         "nested ternaries", r"[^?]\?[^?.:\n][^:\n]*[^?]\?[^?.]", weight=3, threshold=2
     ),
@@ -62,10 +76,14 @@ TS_COMPLEXITY_SIGNALS = [
 ]
 
 TS_GOD_RULES = [
-    GodRule("context_hooks", "context hooks", lambda c: c.metrics.get("context_hooks", 0), 3),
+    GodRule(
+        "context_hooks", "context hooks", lambda c: c.metrics.get("context_hooks", 0), 3
+    ),
     GodRule("use_effects", "useEffects", lambda c: c.metrics.get("use_effects", 0), 4),
     GodRule("use_states", "useStates", lambda c: c.metrics.get("use_states", 0), 5),
-    GodRule("custom_hooks", "custom hooks", lambda c: c.metrics.get("custom_hooks", 0), 8),
+    GodRule(
+        "custom_hooks", "custom hooks", lambda c: c.metrics.get("custom_hooks", 0), 8
+    ),
     GodRule("hook_total", "total hooks", lambda c: c.metrics.get("hook_total", 0), 10),
 ]
 
@@ -75,7 +93,10 @@ TS_GOD_RULES = [
 TS_CLASS_GOD_RULES = [
     GodRule("methods", "methods", lambda c: c.metrics.get("methods", 0), 20),
     GodRule(
-        "constructor_deps", "constructor deps", lambda c: c.metrics.get("constructor_deps", 0), 7
+        "constructor_deps",
+        "constructor deps",
+        lambda c: c.metrics.get("constructor_deps", 0),
+        7,
     ),
     GodRule("decorators", "decorators", lambda c: c.metrics.get("decorators", 0), 40),
     GodRule("loc", "LOC", lambda c: c.loc, 300),

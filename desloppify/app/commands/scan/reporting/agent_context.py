@@ -65,7 +65,9 @@ def _print_score_lines(
     print("Score guide:")
     print("  overall  = 25% mechanical + 75% subjective (lenient — ignores wontfix)")
     print("  objective = mechanical detectors only (no subjective review)")
-    print("  strict   = like overall, but wontfix counts against you  <-- your north star")
+    print(
+        "  strict   = like overall, but wontfix counts against you  <-- your north star"
+    )
     print("  verified = strict, but only credits scan-verified fixes")
     print()
 
@@ -137,7 +139,11 @@ def _print_drag_summary(dim_scores: dict[str, Any]) -> None:
         breakdown = compute_health_breakdown(dim_scores)
         entries = breakdown.get("entries", [])
         drags = sorted(
-            [e for e in entries if isinstance(e, dict) and float(e.get("overall_drag", 0) or 0) > 0.01],
+            [
+                e
+                for e in entries
+                if isinstance(e, dict) and float(e.get("overall_drag", 0) or 0) > 0.01
+            ],
             key=lambda e: -float(e.get("overall_drag", 0) or 0),
         )
         if drags:
@@ -146,7 +152,7 @@ def _print_drag_summary(dim_scores: dict[str, Any]) -> None:
                 print(
                     f"  - {entry['name']}: -{float(entry['overall_drag']):.2f} pts "
                     f"(score {float(entry['score']):.1f}%, "
-                    f"{float(entry['pool_share'])*100:.1f}% of {entry['pool']} pool)"
+                    f"{float(entry['pool_share']) * 100:.1f}% of {entry['pool']} pool)"
                 )
             print()
     except (ImportError, TypeError, ValueError, KeyError) as exc:
@@ -223,7 +229,9 @@ def _print_badge_hint(badge_path: Path | None) -> None:
     if not (badge_path and badge_path.exists()):
         return
 
-    rel_path = badge_path.name if badge_path.parent == get_project_root() else str(badge_path)
+    rel_path = (
+        badge_path.name if badge_path.parent == get_project_root() else str(badge_path)
+    )
     print(f"A scorecard image was saved to `{rel_path}`.")
     print("Let the user know they can view it, and suggest adding it")
     print(f'to their README: `<img src="{rel_path}" width="100%">`')
@@ -278,8 +286,12 @@ def print_llm_summary(
         strict_score=scores.strict,
     )
     if has_plan:
-        print("\nFollow the living plan: `desloppify next` for your next execution task,")
-        print("`desloppify backlog` for broader backlog discovery, and `desloppify plan` for plan details.")
+        print(
+            "\nFollow the living plan: `desloppify next` for your next execution task,"
+        )
+        print(
+            "`desloppify backlog` for broader backlog discovery, and `desloppify plan` for plan details."
+        )
     else:
         _print_workflow_guide()
     _print_narrative_status(narrative)
@@ -294,7 +306,9 @@ def print_llm_summary(
         )
 
 
-def _llm_summary_empty(scores: state_mod.ScoreSnapshot, dim_scores: dict[str, Any]) -> bool:
+def _llm_summary_empty(
+    scores: state_mod.ScoreSnapshot, dim_scores: dict[str, Any]
+) -> bool:
     return (
         scores.overall is None
         and scores.objective is None
@@ -347,7 +361,9 @@ def _load_living_plan_snapshot() -> tuple[dict[str, object], bool]:
         "skipped": skipped if isinstance(skipped, dict) else {},
         "active_cluster": active if isinstance(active, str) and active else None,
     }
-    has_plan = bool(snapshot["queue_order"] or snapshot["clusters"] or snapshot["skipped"])
+    has_plan = bool(
+        snapshot["queue_order"] or snapshot["clusters"] or snapshot["skipped"]
+    )
     return snapshot, has_plan
 
 
@@ -360,7 +376,11 @@ def _print_living_plan_notice(plan_snapshot: dict[str, object]) -> None:
         cluster = plan_snapshot.get("clusters", {}).get(active)
         issue_ids = cluster.get("issue_ids", []) if isinstance(cluster, dict) else []
         queue_set = set(plan_snapshot.get("queue_order", []))
-        remaining = sum(1 for fid in issue_ids if fid in queue_set) if isinstance(issue_ids, list) else 0
+        remaining = (
+            sum(1 for fid in issue_ids if fid in queue_set)
+            if isinstance(issue_ids, list)
+            else 0
+        )
         print(f"Focused on: {active} ({remaining} items remaining).")
     print("The plan is the single source of truth for work order.")
     print("Use `desloppify next` which respects the plan.")
@@ -383,7 +403,10 @@ def auto_update_skill() -> None:
 
     # check_skill_version returned None — either a current install exists,
     # or no install at all.  Distinguish the two cases.
-    if not skill_docs_mod.find_installed_skill() and not skill_docs_mod.find_any_global_install():
+    if (
+        not skill_docs_mod.find_installed_skill()
+        and not skill_docs_mod.find_any_global_install()
+    ):
         print(
             "No skill document found. Install globally for better workflow guidance: "
             "desloppify setup"

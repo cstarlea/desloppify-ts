@@ -126,7 +126,9 @@ def test_is_available_loads_the_tsx_grammar(monkeypatch, fresh_availability):
     assert parsing_mod.grammar_load_failures() == {}
 
 
-def test_is_available_false_when_the_grammar_cannot_load(monkeypatch, fresh_availability):
+def test_is_available_false_when_the_grammar_cannot_load(
+    monkeypatch, fresh_availability
+):
     """An installed pack without its grammar (offline) is not available, and says so."""
     _fake_language_pack(monkeypatch, fail=True)
     assert fresh_availability.is_available() is False

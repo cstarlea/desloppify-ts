@@ -63,9 +63,23 @@ def print_dashboard_header(
     print(colorize("  Cluster triage", "bold"))
     print(colorize("  " + "─" * 60, "dim"))
     print(f"  Open review issues: {len(review_issues)}")
-    print(colorize("  Goal: identify contradictions, resolve them, then group the coherent", "cyan"))
-    print(colorize("  remainder into clusters by root cause with action steps and priorities.", "cyan"))
-    print(colorize("  Preferred: staged runner workflow (Codex, Claude, or Rovo Dev).", "cyan"))
+    print(
+        colorize(
+            "  Goal: identify contradictions, resolve them, then group the coherent",
+            "cyan",
+        )
+    )
+    print(
+        colorize(
+            "  remainder into clusters by root cause with action steps and priorities.",
+            "cyan",
+        )
+    )
+    print(
+        colorize(
+            "  Preferred: staged runner workflow (Codex, Claude, or Rovo Dev).", "cyan"
+        )
+    )
     print(colorize(f"    Codex:    {TRIAGE_CMD_RUN_STAGES_CODEX}", "dim"))
     print(colorize(f"    Claude:   {TRIAGE_CMD_RUN_STAGES_CLAUDE}", "dim"))
     print(colorize(f"    Rovo Dev: {TRIAGE_CMD_RUN_STAGES_ROVODEV}", "dim"))
@@ -74,7 +88,9 @@ def print_dashboard_header(
     if existing_clusters:
         print(f"  Existing clusters: {len(existing_clusters)}")
     new_since_last = (
-        set(snapshot.new_since_triage_ids) if snapshot is not None else set(si.new_since_last)
+        set(snapshot.new_since_triage_ids)
+        if snapshot is not None
+        else set(si.new_since_last)
     )
     if new_since_last:
         print(colorize(f"  New since last triage: {len(new_since_last)}", "yellow"))
@@ -85,7 +101,12 @@ def print_dashboard_header(
             if isinstance(detail, dict):
                 dim = detail.get("dimension", "")
             dim_tag = f" ({dim})" if dim else ""
-            print(colorize(f"    * [{short_issue_id(fid)}] {issue.get('summary', '')}{dim_tag}", "yellow"))
+            print(
+                colorize(
+                    f"    * [{short_issue_id(fid)}] {issue.get('summary', '')}{dim_tag}",
+                    "yellow",
+                )
+            )
     if si.resolved_since_last:
         print(f"  Resolved since last triage: {len(si.resolved_since_last)}")
 
@@ -106,7 +127,12 @@ def _print_completed_guidance(si: object) -> None:
     print(colorize("  Triage complete. Executing current plan.", "green"))
     print(colorize("    desloppify next", "dim"))
     if si.resolved_since_last:
-        print(colorize(f"  {len(si.resolved_since_last)} issue(s) resolved since last triage.", "dim"))
+        print(
+            colorize(
+                f"  {len(si.resolved_since_last)} issue(s) resolved since last triage.",
+                "dim",
+            )
+        )
 
 
 def _print_retriage_guidance(si: object, meta: dict) -> None:
@@ -115,8 +141,15 @@ def _print_retriage_guidance(si: object, meta: dict) -> None:
     if has_only_additions and meta.get("strategy_summary"):
         print(colorize("  Two paths available:", "yellow"))
         print()
-        print(colorize("  To reuse the existing enriched cluster plan (without rewriting clusters):", "cyan"))
-        print('    desloppify plan triage --confirm-existing --note "..." --strategy "same" --confirmed "I have reviewed..."')
+        print(
+            colorize(
+                "  To reuse the existing enriched cluster plan (without rewriting clusters):",
+                "cyan",
+            )
+        )
+        print(
+            '    desloppify plan triage --confirm-existing --note "..." --strategy "same" --confirmed "I have reviewed..."'
+        )
         print()
         print(colorize("  To re-prioritize and restructure:", "cyan"))
         print(f"    Codex:    {TRIAGE_CMD_RUN_STAGES_CODEX}")
@@ -129,7 +162,12 @@ def _print_retriage_guidance(si: object, meta: dict) -> None:
             manual_fallback=TRIAGE_CMD_STRATEGIZE,
             intro="  Next step:",
         )
-        print(colorize("    (cross-cycle history, rework loops, score churn, and strategic constraints)", "dim"))
+        print(
+            colorize(
+                "    (cross-cycle history, rework loops, score churn, and strategic constraints)",
+                "dim",
+            )
+        )
 
 
 def _print_in_progress_guidance(
@@ -153,7 +191,12 @@ def _print_in_progress_guidance(
             manual_fallback=TRIAGE_CMD_REFLECT,
             intro="  Next step: use the completed work and patterns below to write your reflect report.",
         )
-        print(colorize("    (Contradictions, recurring patterns, which direction to take, what to defer)", "dim"))
+        print(
+            colorize(
+                "    (Contradictions, recurring patterns, which direction to take, what to defer)",
+                "dim",
+            )
+        )
     elif "organize" not in stages or current_stage == "organize":
         gaps = unenriched_clusters(plan)
         manual = manual_clusters_with_issues(plan)
@@ -170,13 +213,17 @@ def _print_in_progress_guidance(
             print(f"    3. Enrich clusters:  {TRIAGE_CMD_CLUSTER_STEPS}")
             print(f"    4. Record stage:     {TRIAGE_CMD_ORGANIZE}")
         elif gaps:
-            print(colorize("  Enrich these clusters before recording organize:", "yellow"))
+            print(
+                colorize("  Enrich these clusters before recording organize:", "yellow")
+            )
             for name, missing in gaps:
                 print(colorize(f"    {name}: missing {', '.join(missing)}", "yellow"))
             print(colorize(f"    Fix: {TRIAGE_CMD_CLUSTER_ENRICH_COMPACT}", "dim"))
             print(colorize(f"    Then: {TRIAGE_CMD_ORGANIZE}", "dim"))
         else:
-            print(colorize("  All clusters enriched! Record the organize stage:", "green"))
+            print(
+                colorize("  All clusters enriched! Record the organize stage:", "green")
+            )
             _print_runner_paths(
                 only_stages="organize",
                 manual_fallback=TRIAGE_CMD_ORGANIZE,
@@ -185,14 +232,33 @@ def _print_in_progress_guidance(
 
         if meta.get("strategy_summary"):
             print()
-            print(colorize("  Or fast-track by reusing the current enriched cluster plan:", "dim"))
-            print(colorize("    (This confirms the existing manual clusters; it does not materialize a new reflect blueprint.)", "dim"))
+            print(
+                colorize(
+                    "  Or fast-track by reusing the current enriched cluster plan:",
+                    "dim",
+                )
+            )
+            print(
+                colorize(
+                    "    (This confirms the existing manual clusters; it does not materialize a new reflect blueprint.)",
+                    "dim",
+                )
+            )
             print(f"    {TRIAGE_CMD_CONFIRM_EXISTING}")
     elif "enrich" not in stages or current_stage == "enrich":
         shallow = unenriched_clusters(plan)
         if shallow:
-            print(colorize("  Next step: enrich steps with detail and issue_refs.", "yellow"))
-            print(colorize('    desloppify plan cluster update <name> --update-step N --detail "sub-details"', "dim"))
+            print(
+                colorize(
+                    "  Next step: enrich steps with detail and issue_refs.", "yellow"
+                )
+            )
+            print(
+                colorize(
+                    '    desloppify plan cluster update <name> --update-step N --detail "sub-details"',
+                    "dim",
+                )
+            )
         else:
             print(colorize("  Steps look enriched. Record the enrich stage:", "green"))
         _print_runner_paths(
@@ -200,7 +266,11 @@ def _print_in_progress_guidance(
             manual_fallback=TRIAGE_CMD_ENRICH,
             intro="  Preferred runner paths:",
         )
-        print(colorize("  You can still reorganize: add/remove clusters, reorder items.", "dim"))
+        print(
+            colorize(
+                "  You can still reorganize: add/remove clusters, reorder items.", "dim"
+            )
+        )
     else:
         print(colorize("  Ready to complete:", "green"))
         _print_runner_paths(
@@ -230,7 +300,15 @@ def print_action_guidance(
     has_new_issues = snapshot.is_triage_stale
 
     later_stage_present = any(
-        name in stages for name in ("observe", "reflect", "organize", "enrich", "sense-check", "commit")
+        name in stages
+        for name in (
+            "observe",
+            "reflect",
+            "organize",
+            "enrich",
+            "sense-check",
+            "commit",
+        )
     )
     if "strategize" not in stages and not later_stage_present:
         if triage_has_run and not has_new_issues:
@@ -243,7 +321,12 @@ def print_action_guidance(
             manual_fallback=TRIAGE_CMD_OBSERVE,
             intro="  Next step:",
         )
-        print(colorize("    (themes, root causes, contradictions between issues — NOT a list of IDs)", "dim"))
+        print(
+            colorize(
+                "    (themes, root causes, contradictions between issues — NOT a list of IDs)",
+                "dim",
+            )
+        )
     else:
         _print_in_progress_guidance(stages, meta, plan, snapshot=snapshot)
 
@@ -280,13 +363,22 @@ def print_issues_by_dimension(open_issues: dict) -> None:
     """Print issues grouped by dimension with suggestions to surface contradictions."""
     by_dim: dict[str, list[tuple[str, dict]]] = defaultdict(list)
     for fid, issue in open_issues.items():
-        detail = issue.get("detail", {}) if isinstance(issue.get("detail"), dict) else {}
+        detail = (
+            issue.get("detail", {}) if isinstance(issue.get("detail"), dict) else {}
+        )
         dim = detail.get("dimension", "unknown")
         by_dim[dim].append((fid, issue))
 
     print(colorize("\n  Review issues by dimension:", "cyan"))
-    print(colorize("  (Look for contradictions: issues in the same dimension that", "dim"))
-    print(colorize("  recommend opposite changes. These must be resolved before clustering.)", "dim"))
+    print(
+        colorize("  (Look for contradictions: issues in the same dimension that", "dim")
+    )
+    print(
+        colorize(
+            "  recommend opposite changes. These must be resolved before clustering.)",
+            "dim",
+        )
+    )
     max_per_dim = 5
     for dim in sorted(by_dim, key=lambda d: (-len(by_dim[d]), d)):
         items = by_dim[dim]
@@ -294,14 +386,21 @@ def print_issues_by_dimension(open_issues: dict) -> None:
         for fid, issue in items[:max_per_dim]:
             summary = issue.get("summary", "")
             short = short_issue_id(fid)
-            detail = issue.get("detail", {}) if isinstance(issue.get("detail"), dict) else {}
+            detail = (
+                issue.get("detail", {}) if isinstance(issue.get("detail"), dict) else {}
+            )
             suggestion = (detail.get("suggestion") or "")[:120]
             print(f"      [{short}] {summary}")
             if suggestion:
                 print(colorize(f"        → {suggestion}", "dim"))
         if len(items) > max_per_dim:
             print(colorize(f"      ... and {len(items) - max_per_dim} more", "dim"))
-    print(colorize("\n  Use hash in commands: desloppify plan skip <hash>  |  desloppify show <hash>", "dim"))
+    print(
+        colorize(
+            "\n  Use hash in commands: desloppify plan skip <hash>  |  desloppify show <hash>",
+            "dim",
+        )
+    )
 
 
 def show_plan_summary(plan: dict, state: dict) -> None:
@@ -312,7 +411,7 @@ def show_plan_summary(plan: dict, state: dict) -> None:
         for name, cluster in clusters.items()
         if cluster_issue_ids(cluster) and not cluster.get("auto")
     }
-    issues = (state.get("work_items") or state.get("issues", {}))
+    issues = state.get("work_items") or state.get("issues", {})
 
     if active:
         print(colorize(f"\n  Clusters ({len(active)}):", "bold"))
@@ -323,21 +422,25 @@ def show_plan_summary(plan: dict, state: dict) -> None:
             print(f"    {name}: {count} items, {steps} steps — {desc}")
 
     queue_order = [
-        fid
-        for fid in plan.get("queue_order", [])
-        if not is_synthetic_id(fid)
+        fid for fid in plan.get("queue_order", []) if not is_synthetic_id(fid)
     ]
     if queue_order:
         show = min(15, len(queue_order))
-        print(colorize(f"\n  Queue order (first {show} of {len(queue_order)}):", "bold"))
+        print(
+            colorize(f"\n  Queue order (first {show} of {len(queue_order)}):", "bold")
+        )
         for i, fid in enumerate(queue_order[:show]):
             issue = issues.get(fid, {})
             summary = (issue.get("summary") or fid)[:60]
             detector = issue.get("detector", "?")
             cluster_name = find_cluster_for(fid, active)
-            print(f"    {i + 1}. [{detector}] {summary}{f' ({cluster_name})' if cluster_name else ''}")
+            print(
+                f"    {i + 1}. [{detector}] {summary}{f' ({cluster_name})' if cluster_name else ''}"
+            )
 
-    organized, total, _ = triage_coverage(plan, open_review_ids=open_review_ids_from_state(state))
+    organized, total, _ = triage_coverage(
+        plan, open_review_ids=open_review_ids_from_state(state)
+    )
     pct = int(organized / total * 100) if total else 0
     print(colorize(f"\n  Coverage: {organized}/{total} in clusters ({pct}%)", "bold"))
 

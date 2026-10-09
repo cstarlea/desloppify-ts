@@ -127,7 +127,9 @@ def _apply_disabled_to_state(runtime, *, enabling: bool = False) -> None:
     if not state.get("last_scan"):
         return
     before = score_snapshot(state)
-    hidden, restored = apply_disabled(state, runtime.config.get("disabled", []), utc_now())
+    hidden, restored = apply_disabled(
+        state, runtime.config.get("disabled", []), utc_now()
+    )
     save_state_or_exit(state, runtime.state_path)
     after = score_snapshot(state)
     if hidden:
@@ -135,6 +137,10 @@ def _apply_disabled_to_state(runtime, *, enabling: bool = False) -> None:
     if restored:
         print(f"  {restored} issue(s) shown again; the next scan rechecks them.")
     if enabling:
-        print(colorize("  Run `desloppify scan` to score the re-enabled detectors.", "dim"))
+        print(
+            colorize(
+                "  Run `desloppify scan` to score the re-enabled detectors.", "dim"
+            )
+        )
     if before.strict is not None and after.strict is not None:
         print(f"  Strict score: {before.strict:.1f} → {after.strict:.1f}")

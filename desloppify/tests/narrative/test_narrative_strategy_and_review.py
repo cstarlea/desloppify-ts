@@ -195,7 +195,12 @@ class TestComputeHeadline:
         """Lowest dimension with impact > 0 generates a leverage headline."""
         dimensions = {
             "lowest_dimensions": [
-                {"name": "Import hygiene", "failing": 20, "impact": 8.5, "strict": 70.0},
+                {
+                    "name": "Import hygiene",
+                    "failing": 20,
+                    "impact": 8.5,
+                    "strict": 70.0,
+                },
             ],
         }
         result = compute_headline(
@@ -1143,8 +1148,12 @@ class TestComputeNarrativeContract:
             "objective_score": 82.0,
             "strict_score": 78.0,
             "scan_history": [
-                _history_entry(strict_score=75.0, objective_score=78.0, lang="typescript"),
-                _history_entry(strict_score=78.0, objective_score=82.0, lang="typescript"),
+                _history_entry(
+                    strict_score=75.0, objective_score=78.0, lang="typescript"
+                ),
+                _history_entry(
+                    strict_score=78.0, objective_score=82.0, lang="typescript"
+                ),
             ],
             "dimension_scores": {
                 "Code quality": {

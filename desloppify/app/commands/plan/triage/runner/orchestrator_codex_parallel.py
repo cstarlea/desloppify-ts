@@ -37,7 +37,9 @@ def run_parallel_batches(
             elapsed = event.details.get("elapsed_seconds", 0) if event.details else 0
             status = "done" if event.code == 0 else f"failed ({event.code})"
             tone = "dim" if event.code == 0 else "yellow"
-            print(colorize(f"    {stage_label} {label} {status} in {int(elapsed)}s", tone))
+            print(
+                colorize(f"    {stage_label} {label} {status} in {int(elapsed)}s", tone)
+            )
             append_run_log(
                 f"{stage_slug}-batch-done {label} code={event.code} elapsed={int(elapsed)}s"
             )
@@ -48,7 +50,8 @@ def run_parallel_batches(
         append_run_log(f"{stage_slug}-batch-error batch={batch_index} error={exc}")
 
     wrapped_tasks: dict[int, Callable[[], int]] = {
-        idx: (lambda idx=idx, task=task: task().exit_code) for idx, task in tasks.items()
+        idx: (lambda idx=idx, task=task: task().exit_code)
+        for idx, task in tasks.items()
     }
 
     return execute_batches(

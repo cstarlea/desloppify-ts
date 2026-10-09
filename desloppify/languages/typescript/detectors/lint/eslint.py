@@ -19,7 +19,12 @@ from desloppify.languages.typescript.detectors.lint.runner import (
 
 PRINT_CONFIG_TIMEOUT = 60
 # parserOptions that make typescript-eslint build a TypeScript program.
-_TYPE_INFO_OPTIONS = ("project", "projectService", "EXPERIMENTAL_useProjectService", "programs")
+_TYPE_INFO_OPTIONS = (
+    "project",
+    "projectService",
+    "EXPERIMENTAL_useProjectService",
+    "programs",
+)
 _UNUSED_DIRECTIVE = "unused-disable-directive"
 
 
@@ -31,11 +36,19 @@ def uses_type_information(
     Returns ``(type_aware, failure, error)``. ``--print-config`` loads the
     config and its plugins, so a broken config fails here, before the run.
     """
-    flag = ["--print-config", str(sample)] if config.linter == "eslint" else [f"--print-config={sample}"]
+    flag = (
+        ["--print-config", str(sample)]
+        if config.linter == "eslint"
+        else [f"--print-config={sample}"]
+    )
     try:
         result = run_process([str(binary), *flag], config, PRINT_CONFIG_TIMEOUT)
     except subprocess.TimeoutExpired:
-        return False, "linter_timeout", f"--print-config took over {PRINT_CONFIG_TIMEOUT}s"
+        return (
+            False,
+            "linter_timeout",
+            f"--print-config took over {PRINT_CONFIG_TIMEOUT}s",
+        )
     except MemoryLimitExceeded as exc:
         return False, "linter_oom", f"--print-config went {exc}"
     except OSError as exc:
@@ -51,14 +64,18 @@ def uses_type_information(
         return False, None, ""
     language_options = resolved.get("languageOptions")
     options = (
-        language_options.get("parserOptions") if isinstance(language_options, dict) else None
+        language_options.get("parserOptions")
+        if isinstance(language_options, dict)
+        else None
     ) or resolved.get("parserOptions")
     if not isinstance(options, dict):
         return False, None, ""
     return any(options.get(key) for key in _TYPE_INFO_OPTIONS), None, ""
 
 
-def _parse_messages(file: Path, raw: list[Any], rules_meta: dict[str, Any], run: LinterRun) -> None:
+def _parse_messages(
+    file: Path, raw: list[Any], rules_meta: dict[str, Any], run: LinterRun
+) -> None:
     for message in raw:
         if not isinstance(message, dict):
             continue
@@ -80,7 +97,9 @@ def _parse_messages(file: Path, raw: list[Any], rules_meta: dict[str, Any], run:
                 severity="error" if message.get("severity") == 2 else "warning",
                 message=text,
                 fixable="fix" in message,
-                meta=rules_meta.get(rule) if isinstance(rules_meta.get(rule), dict) else None,
+                meta=rules_meta.get(rule)
+                if isinstance(rules_meta.get(rule), dict)
+                else None,
             )
         )
 
@@ -126,7 +145,12 @@ def run_eslint(
         for pattern in ignore_patterns:
             cmd.append(f"--ignore={pattern}")
     else:
-        cmd = [str(binary), "--format", "json-with-metadata", "--no-error-on-unmatched-pattern"]
+        cmd = [
+            str(binary),
+            "--format",
+            "json-with-metadata",
+            "--no-error-on-unmatched-pattern",
+        ]
         for pattern in ignore_patterns:
             cmd += ["--ignore-pattern", pattern]
     return run_linter([*cmd, *targets], LinterRun(config=config), parse_eslint_output)

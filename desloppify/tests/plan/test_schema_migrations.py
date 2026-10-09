@@ -131,7 +131,9 @@ def test_normalize_cluster_defaults_restores_issue_ids_from_execution_log() -> N
     ]
 
 
-def test_normalize_cluster_defaults_preserves_non_review_ids_and_recovers_overrides() -> None:
+def test_normalize_cluster_defaults_preserves_non_review_ids_and_recovers_overrides() -> (
+    None
+):
     plan = {
         "clusters": {
             "auto/initial-review": {

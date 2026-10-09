@@ -67,7 +67,11 @@ class _Function(NamedTuple):
     object_member: bool = False
 
 
-_LAST: list = [None, [], False]  # (ctx, functions, from_tree): detectors run one file at a time
+_LAST: list = [
+    None,
+    [],
+    False,
+]  # (ctx, functions, from_tree): detectors run one file at a time
 
 
 def _functions(ctx) -> list[_Function]:
@@ -89,7 +93,11 @@ def _functions_tree(parsed: ParsedSource) -> list[_Function]:
         if body is None:
             continue
         block = not info.expression_body
-        start, end = (body.start_byte + 1, body.end_byte - 1) if block else (body.start_byte, body.end_byte)
+        start, end = (
+            (body.start_byte + 1, body.end_byte - 1)
+            if block
+            else (body.start_byte, body.end_byte)
+        )
         found.append(
             _Function(
                 name=definition.name,
@@ -102,7 +110,8 @@ def _functions_tree(parsed: ParsedSource) -> list[_Function]:
                 awaits=info.is_async and _awaits(body),
                 # Parameter properties need a constructor; decorated members
                 # are framework hooks.
-                stub_exempt=(info.kind == "method" and info.name == "constructor") or _decorated(info.node),
+                stub_exempt=(info.kind == "method" and info.name == "constructor")
+                or _decorated(info.node),
                 object_member=definition.object_member,
             )
         )
@@ -115,7 +124,8 @@ def _awaits(body) -> bool:
     while stack:
         node = stack.pop()
         if node.type == "await_expression" or (
-            node.type == "for_in_statement" and any(c.type == "await" for c in node.children)
+            node.type == "for_in_statement"
+            and any(c.type == "await" for c in node.children)
         ):
             return True
         stack.extend(c for c in node.named_children if c.type not in FUNCTIONS)
@@ -142,7 +152,9 @@ def _functions_regex(ctx) -> list[_Function]:
             continue
         brace_line = _find_opening_brace_line(ctx.lines, index, window=5)
         end_line = (
-            None if brace_line is None else _track_brace_body(ctx.lines, brace_line, max_scan=2000)
+            None
+            if brace_line is None
+            else _track_brace_body(ctx.lines, brace_line, max_scan=2000)
         )
         found.append(
             _Function(
@@ -186,7 +198,9 @@ def _extract_async_declaration_body(lines: list[str], index: int) -> str | None:
         cursor += 1
         while cursor < len(code) and code[cursor].isspace():
             cursor += 1
-    direct_object_return = has_return_type and cursor < len(code) and code[cursor] == "{"
+    direct_object_return = (
+        has_return_type and cursor < len(code) and code[cursor] == "{"
+    )
 
     angle_depth = 0
     square_depth = 0
@@ -226,7 +240,13 @@ def _detect_async_no_await(ctx, smell_counts: dict[str, list[dict]]) -> None:
         if function.object_member:
             continue
         if function.is_async and not function.is_generator and not function.awaits:
-            _emit(smell_counts, "async_no_await", ctx, function.line + 1, f"async {function.name} has no await")
+            _emit(
+                smell_counts,
+                "async_no_await",
+                ctx,
+                function.line + 1,
+                f"async {function.name} has no await",
+            )
 
 
 def _async_no_await_regex(ctx, smell_counts: dict[str, list[dict]]) -> None:
@@ -251,7 +271,9 @@ def _async_no_await_regex(ctx, smell_counts: dict[str, list[dict]]) -> None:
             )
 
 
-def _scan_single_line_chain(ctx, index: int, smell_counts: dict[str, list[dict]]) -> int:
+def _scan_single_line_chain(
+    ctx, index: int, smell_counts: dict[str, list[dict]]
+) -> int:
     """Consume a single-line empty if/else-if chain and return next index."""
     cursor = index + 1
     while cursor < len(ctx.lines):
@@ -263,7 +285,9 @@ def _scan_single_line_chain(ctx, index: int, smell_counts: dict[str, list[dict]]
             cursor += 1
             continue
         break
-    _emit(smell_counts, "empty_if_chain", ctx, index + 1, ctx.lines[index].strip()[:100])
+    _emit(
+        smell_counts, "empty_if_chain", ctx, index + 1, ctx.lines[index].strip()[:100]
+    )
     return cursor
 
 
@@ -297,7 +321,13 @@ def _scan_multi_line_chain(ctx, index: int, smell_counts: dict[str, list[dict]])
         cursor += 1
 
     if chain_all_empty and cursor > index + 1:
-        _emit(smell_counts, "empty_if_chain", ctx, index + 1, ctx.lines[index].strip()[:100])
+        _emit(
+            smell_counts,
+            "empty_if_chain",
+            ctx,
+            index + 1,
+            ctx.lines[index].strip()[:100],
+        )
     return max(index + 1, cursor)
 
 
@@ -308,7 +338,9 @@ def _detect_empty_if_chains(ctx, smell_counts: dict[str, list[dict]]) -> None:
         _empty_if_chains_regex(ctx, smell_counts)
         return
     for node in descendants(parsed.root, ("if_statement",)):
-        if (node.parent is None or node.parent.type != "else_clause") and _chain_is_empty(node):
+        if (
+            node.parent is None or node.parent.type != "else_clause"
+        ) and _chain_is_empty(node):
             _emit(smell_counts, "empty_if_chain", ctx, *_node_line(parsed, node))
 
 
@@ -355,7 +387,12 @@ def _empty_if_chains_regex(ctx, smell_counts: dict[str, list[dict]]) -> None:
 def _starts_in_code(ctx, index: int) -> bool:
     """Whether line ``index``'s first non-blank character is code."""
     line = ctx.lines[index]
-    return ctx.source.kind_at(ctx.source.line_starts[index] + len(line) - len(line.lstrip())) is None
+    return (
+        ctx.source.kind_at(
+            ctx.source.line_starts[index] + len(line) - len(line.lstrip())
+        )
+        is None
+    )
 
 
 def _detect_error_no_throw(ctx, smell_counts: dict[str, list[dict]]) -> None:
@@ -374,10 +411,18 @@ def _detect_error_no_throw(ctx, smell_counts: dict[str, list[dict]]) -> None:
             continue
         following = "\n".join(code_lines[index + 1 : index + 4])
         if not _HANDLED_RE.search(following):
-            _emit(smell_counts, "console_error_no_throw", ctx, index + 1, ctx.lines[index].strip()[:100])
+            _emit(
+                smell_counts,
+                "console_error_no_throw",
+                ctx,
+                index + 1,
+                ctx.lines[index].strip()[:100],
+            )
 
 
-def _detect_high_cyclomatic_complexity(ctx, smell_counts: dict[str, list[dict]]) -> None:
+def _detect_high_cyclomatic_complexity(
+    ctx, smell_counts: dict[str, list[dict]]
+) -> None:
     """Flag functions with cyclomatic complexity > 15."""
     for function in _functions(ctx):
         if function.body is None:
@@ -400,7 +445,13 @@ def _detect_monster_functions(ctx, smell_counts: dict[str, list[dict]]) -> None:
             continue
         loc = function.end_line - function.line + 1
         if loc > _MONSTER_FUNCTION_LOC:
-            _emit(smell_counts, "monster_function", ctx, function.line + 1, f"{function.name}() — {loc} LOC")
+            _emit(
+                smell_counts,
+                "monster_function",
+                ctx,
+                function.line + 1,
+                f"{function.name}() — {loc} LOC",
+            )
 
 
 def _detect_nested_closures(ctx, smell_counts: dict[str, list[dict]]) -> None:
@@ -408,7 +459,9 @@ def _detect_nested_closures(ctx, smell_counts: dict[str, list[dict]]) -> None:
     for function in _functions(ctx):
         if function.body is None:
             continue
-        closure_count = _count_pattern_in_body(function.body, _FUNC_RE) + _count_pattern_in_body(
+        closure_count = _count_pattern_in_body(
+            function.body, _FUNC_RE
+        ) + _count_pattern_in_body(
             function.body,
             _ARROW_RE,
         )
@@ -426,13 +479,22 @@ def _detect_stub_functions(ctx, smell_counts: dict[str, list[dict]]) -> None:
     """Find functions with empty or return-only bodies."""
     for function in _functions(ctx):
         # An empty object member is a no-op implementation (an observer, a mock, an option).
-        if function.body is None or not function.block or function.stub_exempt or function.object_member:
+        if (
+            function.body is None
+            or not function.block
+            or function.stub_exempt
+            or function.object_member
+        ):
             continue
         body_clean = _strip_ts_comments(function.body).strip().rstrip(";")
         if body_clean in ("", "return", "return null", "return undefined"):
             label = body_clean or "empty"
             _emit(
-                smell_counts, "stub_function", ctx, function.line + 1, f"{function.name}() — body is {label}"
+                smell_counts,
+                "stub_function",
+                ctx,
+                function.line + 1,
+                f"{function.name}() — body is {label}",
             )
 
 

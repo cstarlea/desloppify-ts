@@ -339,7 +339,9 @@ class TestNewHolisticDimensions:
                 "summary": "Restating comments across 12 files",
                 "confidence": "medium",
                 "related_files": ["src/services/a.ts", "src/services/b.ts"],
-                "evidence": ["Comments repeat code behavior without additional intent."],
+                "evidence": [
+                    "Comments repeat code behavior without additional intent."
+                ],
                 "suggestion": "Remove restating comments",
             },
             {
@@ -402,7 +404,9 @@ class TestNewInvestigationBatches:
 
         names = [b["name"] for b in batches]
         assert "authorization_consistency" in names
-        auth_batch = next(b for b in batches if b["name"] == "authorization_consistency")
+        auth_batch = next(
+            b for b in batches if b["name"] == "authorization_consistency"
+        )
         assert "authorization_consistency" in auth_batch["dimensions"]
         assert "files_to_read" not in auth_batch
 
@@ -708,7 +712,9 @@ class TestPackageOrganizationDimension:
                 "summary": "3 viz files at root should be in output/ subpackage",
                 "confidence": "high",
                 "related_files": ["visualize.py", "scorecard.py", "_scorecard_draw.py"],
-                "evidence": ["Visualization modules sit at root with unrelated concerns."],
+                "evidence": [
+                    "Visualization modules sit at root with unrelated concerns."
+                ],
                 "suggestion": "Move viz files into output/ subpackage",
             }
         ]

@@ -24,15 +24,37 @@ def test_add_plan_parser_invokes_section_builders_once(monkeypatch) -> None:
     sub = parser.add_subparsers(dest="command")
     calls: list[str] = []
 
-    monkeypatch.setattr(plan_group_mod, "_add_queue_subparser", lambda p: calls.append("queue"))
-    monkeypatch.setattr(plan_group_mod, "_add_reorder_subparser", lambda p: calls.append("reorder"))
-    monkeypatch.setattr(plan_group_mod, "_add_annotation_subparsers", lambda p: calls.append("annotation"))
-    monkeypatch.setattr(plan_group_mod, "_add_skip_subparsers", lambda p: calls.append("skip"))
-    monkeypatch.setattr(plan_group_mod, "_add_resolve_subparser", lambda p: calls.append("resolve"))
-    monkeypatch.setattr(plan_group_mod, "_add_cluster_subparser", lambda p: calls.append("cluster"))
-    monkeypatch.setattr(plan_group_mod, "_add_triage_subparser", lambda p: calls.append("triage"))
-    monkeypatch.setattr(plan_group_mod, "_add_scan_gate_subparser", lambda p: calls.append("scan_gate"))
-    monkeypatch.setattr(plan_group_mod, "_add_commit_log_subparser", lambda p: calls.append("commit_log"))
+    monkeypatch.setattr(
+        plan_group_mod, "_add_queue_subparser", lambda p: calls.append("queue")
+    )
+    monkeypatch.setattr(
+        plan_group_mod, "_add_reorder_subparser", lambda p: calls.append("reorder")
+    )
+    monkeypatch.setattr(
+        plan_group_mod,
+        "_add_annotation_subparsers",
+        lambda p: calls.append("annotation"),
+    )
+    monkeypatch.setattr(
+        plan_group_mod, "_add_skip_subparsers", lambda p: calls.append("skip")
+    )
+    monkeypatch.setattr(
+        plan_group_mod, "_add_resolve_subparser", lambda p: calls.append("resolve")
+    )
+    monkeypatch.setattr(
+        plan_group_mod, "_add_cluster_subparser", lambda p: calls.append("cluster")
+    )
+    monkeypatch.setattr(
+        plan_group_mod, "_add_triage_subparser", lambda p: calls.append("triage")
+    )
+    monkeypatch.setattr(
+        plan_group_mod, "_add_scan_gate_subparser", lambda p: calls.append("scan_gate")
+    )
+    monkeypatch.setattr(
+        plan_group_mod,
+        "_add_commit_log_subparser",
+        lambda p: calls.append("commit_log"),
+    )
 
     plan_group_mod.add_plan_parser(sub)
     assert calls == [

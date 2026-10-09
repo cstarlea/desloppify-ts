@@ -21,6 +21,7 @@ from desloppify.engine._state.progression import (
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _runtime(*, state=None, config=None, force_rescan=False) -> SimpleNamespace:
     return SimpleNamespace(
         state=state or {},
@@ -70,8 +71,8 @@ def _make_issue(
 # Tests: _plan_has_user_content
 # ---------------------------------------------------------------------------
 
-class TestPlanHasUserContent:
 
+class TestPlanHasUserContent:
     def test_empty_plan_has_no_user_content(self):
         plan = empty_plan()
         assert reconcile_mod._plan_has_user_content(plan) is False
@@ -93,9 +94,13 @@ class TestPlanHasUserContent:
 
     def test_plan_with_skipped(self):
         plan = empty_plan()
-        plan["skipped"] = {"issue-1": {
-            "issue_id": "issue-1", "kind": "temporary", "skipped_at_scan": 1,
-        }}
+        plan["skipped"] = {
+            "issue-1": {
+                "issue_id": "issue-1",
+                "kind": "temporary",
+                "skipped_at_scan": 1,
+            }
+        }
         assert reconcile_mod._plan_has_user_content(plan) is True
 
     def test_empty_collections_are_falsy(self):
@@ -112,29 +117,37 @@ class TestPlanHasUserContent:
 # Tests: _seed_plan_start_scores
 # ---------------------------------------------------------------------------
 
-class TestSeedPlanStartScores:
 
+class TestSeedPlanStartScores:
     def test_seeds_when_plan_start_scores_empty(self):
         plan = empty_plan()
         state = _make_state(
-            strict_score=85.0, overall_score=90.0,
-            objective_score=88.0, verified_strict_score=80.0,
+            strict_score=85.0,
+            overall_score=90.0,
+            objective_score=88.0,
+            verified_strict_score=80.0,
         )
         assert reconcile_mod._seed_plan_start_scores(plan, state) is True
         assert plan["plan_start_scores"] == {
-            "strict": 85.0, "overall": 90.0,
-            "objective": 88.0, "verified": 80.0,
+            "strict": 85.0,
+            "overall": 90.0,
+            "objective": 88.0,
+            "verified": 80.0,
         }
 
     def test_does_not_reseed_when_scores_exist(self):
         plan = empty_plan()
         plan["plan_start_scores"] = {
-            "strict": 70.0, "overall": 75.0,
-            "objective": 72.0, "verified": 68.0,
+            "strict": 70.0,
+            "overall": 75.0,
+            "objective": 72.0,
+            "verified": 68.0,
         }
         state = _make_state(
-            strict_score=85.0, overall_score=90.0,
-            objective_score=88.0, verified_strict_score=80.0,
+            strict_score=85.0,
+            overall_score=90.0,
+            objective_score=88.0,
+            verified_strict_score=80.0,
         )
         assert reconcile_mod._seed_plan_start_scores(plan, state) is False
         assert plan["plan_start_scores"]["strict"] == 70.0
@@ -143,8 +156,10 @@ class TestSeedPlanStartScores:
         plan = empty_plan()
         plan["plan_start_scores"] = {"reset": True}
         state = _make_state(
-            strict_score=85.0, overall_score=90.0,
-            objective_score=88.0, verified_strict_score=80.0,
+            strict_score=85.0,
+            overall_score=90.0,
+            objective_score=88.0,
+            verified_strict_score=80.0,
         )
         assert reconcile_mod._seed_plan_start_scores(plan, state) is True
         assert plan["plan_start_scores"]["strict"] == 85.0
@@ -161,8 +176,12 @@ class TestSeedPlanStartScores:
         """Edge case: plan_start_scores set to a non-dict value."""
         plan = empty_plan()
         plan["plan_start_scores"] = "garbage"
-        state = _make_state(strict_score=85.0, overall_score=90.0,
-                            objective_score=88.0, verified_strict_score=80.0)
+        state = _make_state(
+            strict_score=85.0,
+            overall_score=90.0,
+            objective_score=88.0,
+            verified_strict_score=80.0,
+        )
         assert reconcile_mod._seed_plan_start_scores(plan, state) is False
 
 
@@ -170,19 +189,22 @@ class TestSeedPlanStartScores:
 # Tests: _apply_plan_reconciliation
 # ---------------------------------------------------------------------------
 
-class TestApplyPlanReconciliation:
 
+class TestApplyPlanReconciliation:
     def test_supersedes_resolved_issue(self):
         """An issue in queue_order that no longer exists in state should be superseded."""
         plan = empty_plan()
         plan["queue_order"] = ["issue-1", "issue-2"]
         plan["overrides"] = {"issue-1": {"issue_id": "issue-1"}}
-        state = _make_state(issues={
-            "issue-2": _make_issue(status="open"),
-        })
+        state = _make_state(
+            issues={
+                "issue-2": _make_issue(status="open"),
+            }
+        )
         from desloppify.engine._plan.scan_issue_reconcile import (
             reconcile_plan_after_scan,
         )
+
         result = reconcile_plan_after_scan(plan, state)
         assert "issue-1" in result.superseded
         assert "issue-1" in plan["superseded"]
@@ -198,6 +220,7 @@ class TestApplyPlanReconciliation:
         from desloppify.engine._plan.scan_issue_reconcile import (
             reconcile_plan_after_scan,
         )
+
         result = reconcile_plan_after_scan(plan, state)
         assert "gone-id" in result.superseded
 
@@ -205,9 +228,11 @@ class TestApplyPlanReconciliation:
         plan = empty_plan()
         plan["queue_order"] = ["issue-1"]
         plan["overrides"] = {"issue-1": {"issue_id": "issue-1"}}
-        state = _make_state(issues={
-            "issue-1": _make_issue(status="open"),
-        })
+        state = _make_state(
+            issues={
+                "issue-1": _make_issue(status="open"),
+            }
+        )
         changed = reconcile_mod._apply_plan_reconciliation(plan, state)
         assert changed is False
 
@@ -222,8 +247,8 @@ class TestApplyPlanReconciliation:
 # Tests: _display_reconcile_results
 # ---------------------------------------------------------------------------
 
-class TestDisplayReconcileResults:
 
+class TestDisplayReconcileResults:
     def test_reports_subjective_injection(self, capsys):
         plan = empty_plan()
         reconcile_mod._display_reconcile_results(
@@ -277,7 +302,9 @@ class TestDisplayReconcileResults:
         plan["plan_start_scores"] = {"strict": 81.4}
         reconcile_mod._display_reconcile_results(
             reconcile_mod.ReconcileResult(
-                communicate_score=QueueSyncResult(auto_resolved=["workflow::communicate-score"])
+                communicate_score=QueueSyncResult(
+                    auto_resolved=["workflow::communicate-score"]
+                )
             ),
             plan,
             mid_cycle=False,
@@ -301,8 +328,8 @@ class TestDisplayReconcileResults:
 # Tests: _is_mid_cycle_scan
 # ---------------------------------------------------------------------------
 
-class TestIsMidCycleScan:
 
+class TestIsMidCycleScan:
     def test_false_when_cycle_not_active(self):
         plan = empty_plan()
         state = _make_state()
@@ -340,13 +367,15 @@ class TestIsMidCycleScan:
 # Tests: _sync_plan_start_scores_and_log
 # ---------------------------------------------------------------------------
 
-class TestSyncPlanStartScoresAndLog:
 
+class TestSyncPlanStartScoresAndLog:
     def test_seeds_and_appends_log(self, monkeypatch):
         plan = empty_plan()
         state = _make_state(
-            strict_score=85.0, overall_score=90.0,
-            objective_score=88.0, verified_strict_score=80.0,
+            strict_score=85.0,
+            overall_score=90.0,
+            objective_score=88.0,
+            verified_strict_score=80.0,
         )
         monkeypatch.setattr(
             "desloppify.app.commands.helpers.queue_progress.plan_aware_queue_breakdown",
@@ -361,16 +390,21 @@ class TestSyncPlanStartScoresAndLog:
     def test_no_change_when_already_seeded(self, monkeypatch):
         plan = empty_plan()
         plan["plan_start_scores"] = {
-            "strict": 70.0, "overall": 75.0,
-            "objective": 72.0, "verified": 68.0,
+            "strict": 70.0,
+            "overall": 75.0,
+            "objective": 72.0,
+            "verified": 68.0,
         }
         state = _make_state(
-            strict_score=85.0, overall_score=90.0,
-            objective_score=88.0, verified_strict_score=80.0,
+            strict_score=85.0,
+            overall_score=90.0,
+            objective_score=88.0,
+            verified_strict_score=80.0,
         )
         # Stub out _clear to isolate seeding logic
         monkeypatch.setattr(
-            reconcile_mod, "_clear_plan_start_scores_if_queue_empty",
+            reconcile_mod,
+            "_clear_plan_start_scores_if_queue_empty",
             lambda state, plan: False,
         )
         changed = reconcile_mod._sync_plan_start_scores_and_log(plan, state)
@@ -380,15 +414,19 @@ class TestSyncPlanStartScoresAndLog:
     def test_clears_when_queue_empty(self, monkeypatch):
         plan = empty_plan()
         plan["plan_start_scores"] = {
-            "strict": 70.0, "overall": 75.0,
-            "objective": 72.0, "verified": 68.0,
+            "strict": 70.0,
+            "overall": 75.0,
+            "objective": 72.0,
+            "verified": 68.0,
         }
         state = _make_state()  # no scores so seeding fails
 
         # Mock the queue breakdown to report empty
         monkeypatch.setattr(
             "desloppify.app.commands.helpers.queue_progress.plan_aware_queue_breakdown",
-            lambda s, p: SimpleNamespace(objective_actionable=0, queue_total=0, lifecycle_phase="execution"),
+            lambda s, p: SimpleNamespace(
+                objective_actionable=0, queue_total=0, lifecycle_phase="execution"
+            ),
         )
         changed = reconcile_mod._sync_plan_start_scores_and_log(plan, state)
         assert changed is True
@@ -399,7 +437,6 @@ class TestSyncPlanStartScoresAndLog:
 
 
 class TestReconcilePlanPostScanProgression:
-
     def test_emits_plan_checkpoint_on_scan_boundary_without_subjective_queue(
         self,
         monkeypatch,
@@ -458,11 +495,21 @@ class TestReconcilePlanPostScanProgression:
             "desloppify.engine._state.progression.progression_path",
             lambda: progression_file,
         )
-        monkeypatch.setattr(reconcile_mod, "_sync_post_scan_without_policy", lambda **_kwargs: False)
-        monkeypatch.setattr(reconcile_mod, "_sync_postflight_scan_completion_and_log", lambda *args, **kwargs: False)
+        monkeypatch.setattr(
+            reconcile_mod, "_sync_post_scan_without_policy", lambda **_kwargs: False
+        )
+        monkeypatch.setattr(
+            reconcile_mod,
+            "_sync_postflight_scan_completion_and_log",
+            lambda *args, **kwargs: False,
+        )
         monkeypatch.setattr(reconcile_mod, "append_log_entry", lambda *_a, **_k: None)
-        monkeypatch.setattr(reconcile_mod, "_display_reconcile_results", lambda *_a, **_k: None)
-        monkeypatch.setattr(reconcile_mod, "maybe_append_entered_planning", lambda *_a, **_k: None)
+        monkeypatch.setattr(
+            reconcile_mod, "_display_reconcile_results", lambda *_a, **_k: None
+        )
+        monkeypatch.setattr(
+            reconcile_mod, "maybe_append_entered_planning", lambda *_a, **_k: None
+        )
 
         def fake_reconcile(_plan, _state, **_kwargs):
             _plan["plan_start_scores"] = {
@@ -555,11 +602,21 @@ class TestReconcilePlanPostScanProgression:
             "desloppify.engine._state.progression.progression_path",
             lambda: progression_file,
         )
-        monkeypatch.setattr(reconcile_mod, "_sync_post_scan_without_policy", lambda **_kwargs: False)
-        monkeypatch.setattr(reconcile_mod, "_sync_postflight_scan_completion_and_log", lambda *args, **kwargs: False)
+        monkeypatch.setattr(
+            reconcile_mod, "_sync_post_scan_without_policy", lambda **_kwargs: False
+        )
+        monkeypatch.setattr(
+            reconcile_mod,
+            "_sync_postflight_scan_completion_and_log",
+            lambda *args, **kwargs: False,
+        )
         monkeypatch.setattr(reconcile_mod, "append_log_entry", lambda *_a, **_k: None)
-        monkeypatch.setattr(reconcile_mod, "_display_reconcile_results", lambda *_a, **_k: None)
-        monkeypatch.setattr(reconcile_mod, "maybe_append_entered_planning", lambda *_a, **_k: None)
+        monkeypatch.setattr(
+            reconcile_mod, "_display_reconcile_results", lambda *_a, **_k: None
+        )
+        monkeypatch.setattr(
+            reconcile_mod, "maybe_append_entered_planning", lambda *_a, **_k: None
+        )
 
         def fake_reconcile(_plan, _state, **_kwargs):
             _plan["plan_start_scores"] = {"strict": 74.5}
@@ -612,11 +669,23 @@ class TestReconcilePlanPostScanProgression:
             "desloppify.engine._state.progression.progression_path",
             lambda: progression_file,
         )
-        monkeypatch.setattr(reconcile_mod, "_sync_post_scan_without_policy", lambda **_kwargs: False)
-        monkeypatch.setattr(reconcile_mod, "_sync_plan_start_scores_and_log", lambda *_a, **_k: False)
-        monkeypatch.setattr(reconcile_mod, "_sync_postflight_scan_completion_and_log", lambda *args, **kwargs: False)
-        monkeypatch.setattr(reconcile_mod, "_display_reconcile_results", lambda *_a, **_k: None)
-        monkeypatch.setattr(reconcile_mod, "maybe_append_entered_planning", lambda *_a, **_k: None)
+        monkeypatch.setattr(
+            reconcile_mod, "_sync_post_scan_without_policy", lambda **_kwargs: False
+        )
+        monkeypatch.setattr(
+            reconcile_mod, "_sync_plan_start_scores_and_log", lambda *_a, **_k: False
+        )
+        monkeypatch.setattr(
+            reconcile_mod,
+            "_sync_postflight_scan_completion_and_log",
+            lambda *args, **kwargs: False,
+        )
+        monkeypatch.setattr(
+            reconcile_mod, "_display_reconcile_results", lambda *_a, **_k: None
+        )
+        monkeypatch.setattr(
+            reconcile_mod, "maybe_append_entered_planning", lambda *_a, **_k: None
+        )
         monkeypatch.setattr(reconcile_mod, "save_plan", lambda _plan, _path=None: None)
         monkeypatch.setattr(
             reconcile_mod,
@@ -647,10 +716,20 @@ class TestReconcilePlanPostScanProgression:
             "desloppify.engine._state.progression.progression_path",
             lambda: progression_file,
         )
-        monkeypatch.setattr(reconcile_mod, "_sync_post_scan_without_policy", lambda **_kwargs: False)
-        monkeypatch.setattr(reconcile_mod, "_sync_plan_start_scores_and_log", lambda *_a, **_k: False)
-        monkeypatch.setattr(reconcile_mod, "_sync_postflight_scan_completion_and_log", lambda *args, **kwargs: False)
-        monkeypatch.setattr(reconcile_mod, "maybe_append_entered_planning", lambda *_a, **_k: None)
+        monkeypatch.setattr(
+            reconcile_mod, "_sync_post_scan_without_policy", lambda **_kwargs: False
+        )
+        monkeypatch.setattr(
+            reconcile_mod, "_sync_plan_start_scores_and_log", lambda *_a, **_k: False
+        )
+        monkeypatch.setattr(
+            reconcile_mod,
+            "_sync_postflight_scan_completion_and_log",
+            lambda *args, **kwargs: False,
+        )
+        monkeypatch.setattr(
+            reconcile_mod, "maybe_append_entered_planning", lambda *_a, **_k: None
+        )
         monkeypatch.setattr(reconcile_mod, "save_plan", lambda _plan, _path=None: None)
 
         reconcile_mod.reconcile_plan_post_scan(runtime)
@@ -673,11 +752,23 @@ class TestReconcilePlanPostScanProgression:
             "desloppify.engine._state.progression.progression_path",
             lambda: progression_file,
         )
-        monkeypatch.setattr(reconcile_mod, "_sync_post_scan_without_policy", lambda **_kwargs: False)
-        monkeypatch.setattr(reconcile_mod, "_sync_plan_start_scores_and_log", lambda *_a, **_k: False)
-        monkeypatch.setattr(reconcile_mod, "_sync_postflight_scan_completion_and_log", lambda *args, **kwargs: False)
-        monkeypatch.setattr(reconcile_mod, "_display_reconcile_results", lambda *_a, **_k: None)
-        monkeypatch.setattr(reconcile_mod, "maybe_append_entered_planning", lambda *_a, **_k: None)
+        monkeypatch.setattr(
+            reconcile_mod, "_sync_post_scan_without_policy", lambda **_kwargs: False
+        )
+        monkeypatch.setattr(
+            reconcile_mod, "_sync_plan_start_scores_and_log", lambda *_a, **_k: False
+        )
+        monkeypatch.setattr(
+            reconcile_mod,
+            "_sync_postflight_scan_completion_and_log",
+            lambda *args, **kwargs: False,
+        )
+        monkeypatch.setattr(
+            reconcile_mod, "_display_reconcile_results", lambda *_a, **_k: None
+        )
+        monkeypatch.setattr(
+            reconcile_mod, "maybe_append_entered_planning", lambda *_a, **_k: None
+        )
         monkeypatch.setattr(reconcile_mod, "save_plan", lambda _plan, _path=None: None)
         monkeypatch.setattr(
             reconcile_mod,

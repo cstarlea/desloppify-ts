@@ -32,12 +32,47 @@ from desloppify.languages.typescript.detectors.deps.resolve import (
 
 _NODE_BUILTINS = frozenset(
     {
-        "assert", "async_hooks", "buffer", "child_process", "cluster", "console",
-        "constants", "crypto", "dgram", "diagnostics_channel", "dns", "domain",
-        "events", "fs", "http", "http2", "https", "inspector", "module", "net",
-        "os", "path", "perf_hooks", "process", "punycode", "querystring",
-        "readline", "repl", "stream", "string_decoder", "sys", "timers", "tls",
-        "trace_events", "tty", "url", "util", "v8", "vm", "wasi", "worker_threads",
+        "assert",
+        "async_hooks",
+        "buffer",
+        "child_process",
+        "cluster",
+        "console",
+        "constants",
+        "crypto",
+        "dgram",
+        "diagnostics_channel",
+        "dns",
+        "domain",
+        "events",
+        "fs",
+        "http",
+        "http2",
+        "https",
+        "inspector",
+        "module",
+        "net",
+        "os",
+        "path",
+        "perf_hooks",
+        "process",
+        "punycode",
+        "querystring",
+        "readline",
+        "repl",
+        "stream",
+        "string_decoder",
+        "sys",
+        "timers",
+        "tls",
+        "trace_events",
+        "tty",
+        "url",
+        "util",
+        "v8",
+        "vm",
+        "wasi",
+        "worker_threads",
         "zlib",
     }
 )
@@ -45,7 +80,11 @@ _NODE_BUILTINS = frozenset(
 
 def package_name(specifier: str) -> str:
     parts = specifier.split("/")
-    return "/".join(parts[:2]) if specifier.startswith("@") and len(parts) > 1 else parts[0]
+    return (
+        "/".join(parts[:2])
+        if specifier.startswith("@") and len(parts) > 1
+        else parts[0]
+    )
 
 
 def is_bare(specifier: str) -> bool:
@@ -167,7 +206,9 @@ _SVELTEKIT_VIRTUAL = ("$app/", "$env/", "$service-worker")
 def _nuxt_src_dir(root: Path) -> Path:
     """Nuxt 4's ``app/`` when the project has one, else the root (Nuxt 3)."""
     app = root / "app"
-    if any((app / name).exists() for name in ("app.vue", "pages", "components", "layouts")):
+    if any(
+        (app / name).exists() for name in ("app.vue", "pages", "components", "layouts")
+    ):
         return app
     return root
 
@@ -220,7 +261,11 @@ class ModuleResolver:
         from_abs = self._absolute(from_file)
         tsconfig_root, tsconfig_paths = self.tsconfigs.for_file(from_abs)
         target = specifier_target(
-            specifier, from_abs, tsconfig_paths, tsconfig_root, source_root=self.project_root
+            specifier,
+            from_abs,
+            tsconfig_paths,
+            tsconfig_root,
+            source_root=self.project_root,
         )
         resolved = resolve_target(target) if target is not None else None
         if resolved is None and specifier.startswith("#"):
@@ -230,7 +275,9 @@ class ModuleResolver:
             return resolved
         if resolved is None and specifier.startswith(_DOCUSAURUS_SITE_PREFIX):
             return _resolve_docusaurus_site(specifier, from_abs)
-        if resolved is None and specifier.startswith(("$lib", *_NUXT_SRC_ALIASES, *_NUXT_ROOT_ALIASES)):
+        if resolved is None and specifier.startswith(
+            ("$lib", *_NUXT_SRC_ALIASES, *_NUXT_ROOT_ALIASES)
+        ):
             return _resolve_framework_alias(specifier, from_abs)
         if resolved is None and self.workspace and is_bare(specifier):
             # tsconfig paths take precedence, as in TypeScript; then the
@@ -261,14 +308,18 @@ class ModuleResolver:
         to such a package (``"#fetch": "node-fetch"``). SvelteKit's ``$app/*``
         and ``$env/*`` and Nuxt's ``#imports`` are the framework's own.
         """
-        if from_file is not None and _is_framework_virtual(specifier, self._absolute(from_file)):
+        if from_file is not None and _is_framework_virtual(
+            specifier, self._absolute(from_file)
+        ):
             return True
         if specifier.startswith("#"):
             if from_file is None:
                 return False
             package = self.package_scopes.for_file(self._absolute(from_file))
             return package is not None and any(
-                is_bare(target) and not target.startswith("#") and self.is_external(target)
+                is_bare(target)
+                and not target.startswith("#")
+                and self.is_external(target)
                 for target in package_import_targets(package, specifier)
             )
         if ":" in specifier:
@@ -283,11 +334,15 @@ class ModuleResolver:
         tsconfig_root, paths = self.tsconfigs.for_file(self._absolute(from_file))
         for prefix in sorted(paths, key=len, reverse=True):
             if specifier.startswith(prefix):
-                target = resolve_alias(specifier, {prefix: paths[prefix]}, tsconfig_root)
+                target = resolve_alias(
+                    specifier, {prefix: paths[prefix]}, tsconfig_root
+                )
                 return prefix if target is not None and resolve_target(target) else None
         return None
 
-    def alias_specifier(self, target: str, from_file: str, prefer: str | None = None) -> str | None:
+    def alias_specifier(
+        self, target: str, from_file: str, prefer: str | None = None
+    ) -> str | None:
         """An alias specifier (without extension) for *target*, as seen from *from_file*.
 
         Uses *prefer* when its directory contains the target, else the

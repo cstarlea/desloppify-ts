@@ -20,14 +20,18 @@ needs_treesitter = pytest.mark.skipif(
 # Facades recognised both on the syntax tree and by the regex fallback.
 _FACADES = [
     pytest.param("export { a, b } from './x';\n", ["./x"], id="named"),
-    pytest.param("export {\n  a,\n  b as c,\n} from './x';\n", ["./x"], id="multi-line"),
+    pytest.param(
+        "export {\n  a,\n  b as c,\n} from './x';\n", ["./x"], id="multi-line"
+    ),
     pytest.param("export * from './x';\n", ["./x"], id="star"),
     pytest.param("export * as ns from './x';\n", ["./x"], id="star-as"),
     pytest.param("export type { T } from './t';\n", ["./t"], id="type-named"),
     pytest.param("export type * from './t';\n", ["./t"], id="type-star"),
     pytest.param("export type * as T from './t';\n", ["./t"], id="type-star-as"),
     pytest.param("export { default } from './d';\n", ["./d"], id="default"),
-    pytest.param('"use strict"\nexport * from "./x"\n', ["./x"], id="use-strict-no-semicolons"),
+    pytest.param(
+        '"use strict"\nexport * from "./x"\n', ["./x"], id="use-strict-no-semicolons"
+    ),
     pytest.param("#!/usr/bin/env node\nexport * from './x';\n", ["./x"], id="hashbang"),
     pytest.param(
         "/**\n * Public API.\n */\n// see http://example.com\nexport * from './a'; // a\nexport * from './b';\n",
@@ -42,12 +46,20 @@ _NOT_FACADES = [
     pytest.param("// only a comment\n/* and another */\n", id="comments-only"),
     pytest.param("'use client';\n", id="directive-only"),
     pytest.param("export * from './x';\nconst y = 1;\n", id="declaration"),
-    pytest.param("export * from './x';\nexport const y = 1;\n", id="exported-declaration"),
-    pytest.param("export * from './x';\nexport default function f() {}\n", id="default-function"),
-    pytest.param("import './polyfill';\nexport * from './x';\n", id="side-effect-import"),
+    pytest.param(
+        "export * from './x';\nexport const y = 1;\n", id="exported-declaration"
+    ),
+    pytest.param(
+        "export * from './x';\nexport default function f() {}\n", id="default-function"
+    ),
+    pytest.param(
+        "import './polyfill';\nexport * from './x';\n", id="side-effect-import"
+    ),
     pytest.param("export * from './x';\n'use client';\n", id="late-directive"),
     # A file opening with a Next.js boundary directive is load-bearing (roadmap 2.28).
-    pytest.param("'use client';\n\nexport { Button } from './button';\n", id="use-client"),
+    pytest.param(
+        "'use client';\n\nexport { Button } from './button';\n", id="use-client"
+    ),
     pytest.param('"use server"\nexport * from "./actions"\n', id="use-server"),
     pytest.param(
         "// Client boundary.\n/* see docs */\n'use client';\nexport * from './x';\n",
@@ -89,9 +101,15 @@ def test_non_facades(tmp_path, source):
     ("source", "sources"),
     [
         pytest.param("import { a } from './x';\nexport { a };\n", ["./x"], id="named"),
-        pytest.param("import { a as b } from './x';\nexport { b as c };\n", ["./x"], id="renamed"),
-        pytest.param("import * as ns from './x';\nexport { ns };\n", ["./x"], id="namespace"),
-        pytest.param("import D from './d';\nexport default D;\n", ["./d"], id="default"),
+        pytest.param(
+            "import { a as b } from './x';\nexport { b as c };\n", ["./x"], id="renamed"
+        ),
+        pytest.param(
+            "import * as ns from './x';\nexport { ns };\n", ["./x"], id="namespace"
+        ),
+        pytest.param(
+            "import D from './d';\nexport default D;\n", ["./d"], id="default"
+        ),
         pytest.param(
             "import { type T, a } from './x';\nexport * from './y';\nexport { type T, a };\n",
             ["./y", "./x"],
@@ -109,12 +127,18 @@ def test_import_then_export_is_facade(tmp_path, source, sources):
 @pytest.mark.parametrize(
     "source",
     [
-        pytest.param("import { a } from './x';\nexport { a, b };\n", id="unimported-name"),
-        pytest.param("import { a } from './x';\nexport const b = a;\n", id="uses-import"),
+        pytest.param(
+            "import { a } from './x';\nexport { a, b };\n", id="unimported-name"
+        ),
+        pytest.param(
+            "import { a } from './x';\nexport const b = a;\n", id="uses-import"
+        ),
         pytest.param("import { a } from './x';\n", id="import-only"),
         pytest.param("import x = require('./x');\nexport = x;\n", id="import-require"),
         pytest.param("export * from './x'\nexport type * from\n", id="syntax-error"),
-        pytest.param("'use client';\nimport { a } from './x';\nexport { a };\n", id="use-client"),
+        pytest.param(
+            "'use client';\nimport { a } from './x';\nexport { a };\n", id="use-client"
+        ),
     ],
 )
 def test_import_then_export_non_facades(tmp_path, source):

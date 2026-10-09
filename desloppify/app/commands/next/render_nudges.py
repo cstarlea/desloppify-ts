@@ -44,11 +44,13 @@ def render_uncommitted_reminder(plan: dict | None) -> None:
             return
 
         count = len(uncommitted)
-        print(colorize(
-            f"\n  {count} resolved issue{'s' if count != 1 else ''} uncommitted"
-            " — `desloppify plan commit-log` to review",
-            "dim",
-        ))
+        print(
+            colorize(
+                f"\n  {count} resolved issue{'s' if count != 1 else ''} uncommitted"
+                " — `desloppify plan commit-log` to review",
+                "dim",
+            )
+        )
     except (ImportError, OSError, ValueError, KeyError, TypeError) as exc:
         log(f"  uncommitted reminder skipped: {exc}")
 
@@ -159,8 +161,6 @@ def _render_live_queue_block(
         print(colorize(text, style))
 
 
-
-
 def _render_subjective_bottleneck(dim_scores: dict) -> None:
     try:
         health_breakdown = compute_health_breakdown(dim_scores)
@@ -176,17 +176,21 @@ def _render_subjective_bottleneck(dim_scores: dict) -> None:
         )
         if subjective_drag <= mechanical_drag or subjective_drag <= 5.0:
             return
-        print(colorize(
-            f"\n  Subjective dimensions are the main bottleneck "
-            f"(-{subjective_drag:.0f} pts vs -{mechanical_drag:.0f} pts mechanical).",
-            "yellow",
-        ))
-        print(colorize(
-            "  Code fixes alone won't close the gap — run "
-            "`desloppify review --prepare` and follow your "
-            "skill doc's review workflow to re-score.",
-            "yellow",
-        ))
+        print(
+            colorize(
+                f"\n  Subjective dimensions are the main bottleneck "
+                f"(-{subjective_drag:.0f} pts vs -{mechanical_drag:.0f} pts mechanical).",
+                "yellow",
+            )
+        )
+        print(
+            colorize(
+                "  Code fixes alone won't close the gap — run "
+                "`desloppify review --prepare` and follow your "
+                "skill doc's review workflow to re-score.",
+                "yellow",
+            )
+        )
     except (ImportError, TypeError, ValueError, KeyError) as exc:
         log(f"  subjective bottleneck banner skipped: {exc}")
 
@@ -219,7 +223,9 @@ def _subjective_summary_parts(
             f"{open_review_count} review work item{'s' if open_review_count != 1 else ''} open"
         )
     if coverage_open > 0:
-        parts.append(f"{coverage_open} file{'s' if coverage_open != 1 else ''} need review")
+        parts.append(
+            f"{coverage_open} file{'s' if coverage_open != 1 else ''} need review"
+        )
     return parts
 
 
@@ -272,11 +278,13 @@ def render_followup_nudges(
 
     # Rescan nudge after structural work
     if queue_total > 10:
-        print(colorize(
-            "\n  Tip: after structural fixes (splitting files, moving code), rescan to "
-            "let cascade effects settle: `desloppify scan --path .`",
-            "dim",
-        ))
+        print(
+            colorize(
+                "\n  Tip: after structural fixes (splitting files, moving code), rescan to "
+                "let cascade effects settle: `desloppify scan --path .`",
+                "dim",
+            )
+        )
 
     # Collapsed subjective summary.
     coverage_open, _coverage_reasons, _holistic_reasons = subjective_coverage_breakdown(

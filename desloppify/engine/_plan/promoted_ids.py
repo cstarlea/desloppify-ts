@@ -31,7 +31,9 @@ def prune_promoted_ids(plan: dict[str, Any], issue_ids: set[str] | list[str]) ->
     if not remove_set:
         return
     promoted = _promoted_ids(plan)
-    plan["promoted_ids"] = [issue_id for issue_id in promoted if issue_id not in remove_set]
+    plan["promoted_ids"] = [
+        issue_id for issue_id in promoted if issue_id not in remove_set
+    ]
 
 
 def promoted_insertion_index(order: list[str], plan: dict[str, Any]) -> int:

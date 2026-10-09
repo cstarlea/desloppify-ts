@@ -54,7 +54,11 @@ def format_queue_block(
         lines.append((focus_line, "cyan"))
 
     if frozen_score is not None:
-        delta_str = format_plan_delta(live_score, frozen_score) if live_score is not None else ""
+        delta_str = (
+            format_plan_delta(live_score, frozen_score)
+            if live_score is not None
+            else ""
+        )
         if delta_str:
             lines.append(
                 (
@@ -64,7 +68,10 @@ def format_queue_block(
             )
         else:
             lines.append(
-                (f"  Score (frozen at plan start): strict {frozen_score:.1f}/100", "cyan")
+                (
+                    f"  Score (frozen at plan start): strict {frozen_score:.1f}/100",
+                    "cyan",
+                )
             )
 
     lines.append((f"  {format_queue_headline(breakdown)}", "bold"))

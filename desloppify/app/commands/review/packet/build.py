@@ -57,11 +57,7 @@ def resolve_review_packet_context(args: Any) -> ReviewPacketContext:
     )
     return ReviewPacketContext(
         path=Path(getattr(args, "path", ".") or "."),
-        state_path=(
-            Path(args.state)
-            if getattr(args, "state", None)
-            else None
-        ),
+        state_path=(Path(args.state) if getattr(args, "state", None) else None),
         dimensions=dimensions,
         retrospective=retrospective,
         retrospective_max_issues=retrospective_max_issues,
@@ -160,9 +156,16 @@ def build_run_batches_next_command(context: ReviewPacketContext) -> str:
         parts.append("--no-retrospective")
     else:
         if context.retrospective_max_issues != 30:
-            parts.extend(["--retrospective-max-issues", str(context.retrospective_max_issues)])
+            parts.extend(
+                ["--retrospective-max-issues", str(context.retrospective_max_issues)]
+            )
         if context.retrospective_max_batch_items != 20:
-            parts.extend(["--retrospective-max-batch-items", str(context.retrospective_max_batch_items)])
+            parts.extend(
+                [
+                    "--retrospective-max-batch-items",
+                    str(context.retrospective_max_batch_items),
+                ]
+            )
     return " ".join(parts)
 
 
@@ -176,7 +179,9 @@ def prepared_packet_contract(
     payload = json.dumps(redacted, sort_keys=True, separators=(",", ":"))
     return {
         "path": str(context.path.resolve()),
-        "state_path": str(context.state_path.resolve()) if context.state_path is not None else None,
+        "state_path": str(context.state_path.resolve())
+        if context.state_path is not None
+        else None,
         "dimensions": sorted(context.dimensions or []),
         "retrospective": context.retrospective,
         "retrospective_max_issues": context.retrospective_max_issues,

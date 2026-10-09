@@ -34,4 +34,3 @@ def test_coerce_non_negative_int() -> None:
     assert coerce_non_negative_int(5.9, default=2) == 5
     assert coerce_non_negative_int(-1, default=2) == 2
     assert coerce_non_negative_int([], default=2) == 2
-

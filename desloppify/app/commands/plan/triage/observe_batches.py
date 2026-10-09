@@ -14,7 +14,9 @@ def observe_dimension_breakdown(si: TriageInput) -> tuple[dict[str, int], list[s
     review_issues = getattr(si, "review_issues", getattr(si, "open_issues", {}))
     by_dim: dict[str, int] = defaultdict(int)
     for issue in review_issues.values():
-        detail = issue.get("detail", {}) if isinstance(issue.get("detail"), dict) else {}
+        detail = (
+            issue.get("detail", {}) if isinstance(issue.get("detail"), dict) else {}
+        )
         dim = detail.get("dimension", "unknown")
         by_dim[dim] += 1
     dim_names = sorted(by_dim, key=lambda dim: (-by_dim[dim], dim))
@@ -41,7 +43,9 @@ def group_issues_into_observe_batches(
 
     dim_to_issues: dict[str, dict[str, Issue]] = defaultdict(dict)
     for fid, issue in review_issues.items():
-        detail = issue.get("detail", {}) if isinstance(issue.get("detail"), dict) else {}
+        detail = (
+            issue.get("detail", {}) if isinstance(issue.get("detail"), dict) else {}
+        )
         dim = detail.get("dimension", "unknown")
         dim_to_issues[dim][fid] = issue
 
@@ -78,7 +82,8 @@ def sample_auto_clusters(
     """
     auto_clusters = getattr(si, "auto_clusters", {})
     backlog = getattr(
-        si, "objective_backlog_issues",
+        si,
+        "objective_backlog_issues",
         getattr(si, "mechanical_issues", {}),
     )
     samples: list[AutoClusterSample] = []
@@ -86,7 +91,9 @@ def sample_auto_clusters(
         issue_ids = cluster.get("issue_ids", [])
         if not isinstance(issue_ids, list):
             continue
-        member_ids = [iid for iid in issue_ids if isinstance(iid, str) and iid in backlog]
+        member_ids = [
+            iid for iid in issue_ids if isinstance(iid, str) and iid in backlog
+        ]
         if not member_ids:
             continue
 
@@ -94,17 +101,23 @@ def sample_auto_clusters(
         def _severity_key(iid: str) -> int:
             issue = backlog.get(iid, {})
             detail = issue.get("detail") or {}
-            sev = str(detail.get("severity", "medium")).lower() if isinstance(detail, dict) else "medium"
+            sev = (
+                str(detail.get("severity", "medium")).lower()
+                if isinstance(detail, dict)
+                else "medium"
+            )
             return {"high": 0, "medium": 1, "low": 2}.get(sev, 1)
 
         member_ids.sort(key=_severity_key)
         selected = member_ids[:sample_size]
-        samples.append(AutoClusterSample(
-            cluster_name=name,
-            total_count=len(member_ids),
-            sample_ids=selected,
-            sample_issues={iid: backlog[iid] for iid in selected},
-        ))
+        samples.append(
+            AutoClusterSample(
+                cluster_name=name,
+                total_count=len(member_ids),
+                sample_ids=selected,
+                sample_issues={iid: backlog[iid] for iid in selected},
+            )
+        )
     return samples
 
 

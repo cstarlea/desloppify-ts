@@ -281,7 +281,4 @@ class TestStatusSubjectiveFollowup:
         out = capsys.readouterr().out
         assert "were reset to 0.0 this scan" in out
         assert "Anti-gaming safeguard applied" in out
-        assert (
-            "review --prepare --force-review-rerun --dimensions"
-            in out
-        )
+        assert "review --prepare --force-review-rerun --dimensions" in out

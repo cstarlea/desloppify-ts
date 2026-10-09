@@ -18,6 +18,7 @@ from desloppify.base.exception_sets import CommandError
 def _colorize(text: str, _style: str) -> str:
     return text
 
+
 def test_write_packet_snapshot_redacts_target_from_blind_packet(tmp_path):
     packet = {
         "command": "review",
@@ -56,7 +57,9 @@ _P_BUILD_PAYLOAD = "desloppify.app.commands.review.prepare.build_review_packet_p
 _P_WRITE_QUERY = "desloppify.app.commands.review.prepare.write_query"
 
 
-def _do_prepare_patched(*, total_files: int = 3, state: dict | None = None, config: dict | None = None):
+def _do_prepare_patched(
+    *, total_files: int = 3, state: dict | None = None, config: dict | None = None
+):
     """Call do_prepare with mocked dependencies; return captured write_query payload."""
     args = SimpleNamespace(path=".", dimensions=None)
     captured: dict = {}
@@ -70,7 +73,9 @@ def _do_prepare_patched(*, total_files: int = 3, state: dict | None = None, conf
             _P_BUILD_PAYLOAD,
             side_effect=(
                 lambda **_kwargs: (
-                    (_ for _ in ()).throw(ValueError("no files found at path '.'. Nothing to review."))
+                    (_ for _ in ()).throw(
+                        ValueError("no files found at path '.'. Nothing to review.")
+                    )
                     if total_files == 0
                     else {
                         "total_files": total_files,

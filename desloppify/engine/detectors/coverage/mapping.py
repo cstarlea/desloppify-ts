@@ -61,9 +61,7 @@ def _graph_tested_imports(
         # `from megaplan.evaluation import X`) to the package __init__.py
         # rather than the actual submodule file, causing false
         # "transitive_only" reports for modules with dedicated test files.
-        tested |= _parse_test_imports(
-            tf, production_files, prod_by_module, lang_name
-        )
+        tested |= _parse_test_imports(tf, production_files, prod_by_module, lang_name)
     return tested
 
 
@@ -178,7 +176,9 @@ def naming_based_mapping(
     """Map test files to production files by naming conventions."""
     tested = set()
     # Optional language hook restricting name-only matches (e.g. to a package).
-    allowed = getattr(_load_lang_test_coverage_module(lang_name), "basename_match_allowed", None)
+    allowed = getattr(
+        _load_lang_test_coverage_module(lang_name), "basename_match_allowed", None
+    )
     allowed = allowed if callable(allowed) else None
 
     prod_by_basename: dict[str, list[str]] = {}

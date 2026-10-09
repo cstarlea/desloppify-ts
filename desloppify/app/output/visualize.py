@@ -114,6 +114,7 @@ def generate_visualization(
 @dataclass
 class TreeTextOptions:
     """Text tree rendering options."""
+
     max_depth: int = 2
     focus: str | None = None
     min_loc: int = 0
@@ -133,12 +134,18 @@ def generate_tree_text(
     files = _collect_file_data(path, lang)
     dep_graph = _build_dep_graph_for_path(path, lang)
     prefix, name = scan_root_label(path)
-    tree = _build_tree(files, dep_graph, _issues_by_file(state), prefix=prefix, name=name)
+    tree = _build_tree(
+        files, dep_graph, _issues_by_file(state), prefix=prefix, name=name
+    )
 
     root = tree
     if resolved_options.focus:
         # Relative to the scanned directory, or to the project root.
-        parts = [p for p in resolved_options.focus.strip("/").split("/") if p not in ("", ".")]
+        parts = [
+            p
+            for p in resolved_options.focus.strip("/").split("/")
+            if p not in ("", ".")
+        ]
         prefix_parts = [] if prefix == "." else prefix.split("/")
         if prefix_parts and parts[: len(prefix_parts)] == prefix_parts:
             parts = parts[len(prefix_parts) :]

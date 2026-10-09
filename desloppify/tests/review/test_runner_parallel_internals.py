@@ -284,7 +284,13 @@ class TestHeartbeat:
         lock = threading.Lock()
         # Should not raise
         _heartbeat(
-            {f1}, futures, started_at, lock, [0], None, lambda: 110.0,
+            {f1},
+            futures,
+            started_at,
+            lock,
+            [0],
+            None,
+            lambda: 110.0,
             contract_cache={},
         )
 
@@ -300,8 +306,13 @@ class TestHeartbeat:
             raise ValueError("callback broken")
 
         _heartbeat(
-            {f1}, futures, started_at, lock, [0],
-            bad_progress, lambda: 110.0,
+            {f1},
+            futures,
+            started_at,
+            lock,
+            [0],
+            bad_progress,
+            lambda: 110.0,
             error_log_fn=lambda idx, exc: errors.append((idx, exc)),
             contract_cache={},
         )
@@ -317,7 +328,11 @@ class TestHeartbeat:
         events = []
 
         _heartbeat(
-            {f1}, futures, started_at, lock, [0],
+            {f1},
+            futures,
+            started_at,
+            lock,
+            [0],
             lambda evt: events.append(evt),
             lambda: 145.0,  # 45s elapsed
             contract_cache={},

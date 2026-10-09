@@ -43,7 +43,9 @@ ANGULAR_SCANNERS: tuple[ScannerRule, ...] = (
             summary=f"@Component {entry['key']} names a file that doesn't exist ({entry['resource']}).",
             detail={"line": entry["line"], "resource": entry["resource"]},
         ),
-        log_message=lambda count: f"       angular: {count} component resources missing",
+        log_message=lambda count: (
+            f"       angular: {count} component resources missing"
+        ),
     ),
     ScannerRule(
         id="standalone_mismatch",

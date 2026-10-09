@@ -67,7 +67,9 @@ def resolve_target_strict_score(config: dict | None) -> tuple[int, str | None]:
     return target, None
 
 
-def compute_strict_target(strict_score: float | None, config: dict | None) -> StrictTarget:
+def compute_strict_target(
+    strict_score: float | None, config: dict | None
+) -> StrictTarget:
     """Build strict-target context for command rendering and agents."""
     target, warning = resolve_target_strict_score(config)
     if not isinstance(strict_score, int | float):
@@ -109,7 +111,9 @@ def count_open_by_detector(issues: dict) -> dict[str, int]:
         if is_review_finding(issue) and issue.get("detail", {}).get("holistic"):
             by_detector["review_holistic"] = by_detector.get("review_holistic", 0) + 1
         if is_assessment_request(issue):
-            by_detector["assessment_request"] = by_detector.get("assessment_request", 0) + 1
+            by_detector["assessment_request"] = (
+                by_detector.get("assessment_request", 0) + 1
+            )
     if by_detector.get("review", 0) > 0:
         by_detector["review_uninvestigated"] = sum(
             1
@@ -232,7 +236,9 @@ def compute_risk_flags(state: StateModel, debt: dict) -> list[RiskFlag]:
     suppressed_pct = float(ignore_integrity.get("suppressed_pct", 0.0) or 0.0)
     ignored_count = int(ignore_integrity.get("ignored", 0) or 0)
     if suppressed_pct >= _HIGH_IGNORE_SUPPRESSION_THRESHOLD or ignored_count >= 100:
-        severity = "high" if suppressed_pct >= 40.0 or ignored_count >= 200 else "medium"
+        severity = (
+            "high" if suppressed_pct >= 40.0 or ignored_count >= 200 else "medium"
+        )
         message = (
             f"{suppressed_pct:.1f}% issues hidden by ignore patterns"
             if suppressed_pct > 0

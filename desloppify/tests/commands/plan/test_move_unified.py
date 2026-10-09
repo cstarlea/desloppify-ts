@@ -11,6 +11,7 @@ from desloppify.engine._plan.schema import empty_plan
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _plan_with_queue(*ids: str) -> dict:
     plan = empty_plan()
     plan["queue_order"] = list(ids)
@@ -37,6 +38,7 @@ def _state_with_issues(*ids: str, status: str = "open") -> dict:
 # ---------------------------------------------------------------------------
 # resolve_ids_from_patterns — cluster-name fallback
 # ---------------------------------------------------------------------------
+
 
 def test_resolve_cluster_name_to_member_ids():
     """Pattern 'my-cluster' expands to cluster members."""
@@ -116,6 +118,7 @@ def test_issue_pattern_priority_over_cluster_name():
 # resolve_target — cluster name as before/after target
 # ---------------------------------------------------------------------------
 
+
 def test_before_cluster_target():
     """`before my-cluster` resolves to first member in queue order."""
     plan = _plan_with_queue("x", "a", "b", "y")
@@ -171,6 +174,7 @@ def testresolve_target_with_only_step_refs_falls_back_to_cluster_name():
 # ---------------------------------------------------------------------------
 # Multi-cluster move — collects all members, moves as one batch
 # ---------------------------------------------------------------------------
+
 
 def test_multi_cluster_move():
     """Moving 2 cluster names moves all members as one batch."""

@@ -257,9 +257,7 @@ class TestCurrentStaleIds:
         assert result == {"subjective::design_coherence"}
 
     def test_multiple_stale_dimensions(self):
-        state = _state_with_stale_dimensions(
-            "design_coherence", "error_consistency"
-        )
+        state = _state_with_stale_dimensions("design_coherence", "error_consistency")
         result = current_stale_ids(state)
         assert result == {
             "subjective::design_coherence",
@@ -308,9 +306,7 @@ class TestCurrentUnscoredIds:
 
     def test_unscored_via_dim_scores_fallback(self):
         """When subjective_assessments is absent, falls back to dim_scores detectors."""
-        state = _state_with_unscored_dimensions_via_dim_scores(
-            "design_coherence"
-        )
+        state = _state_with_unscored_dimensions_via_dim_scores("design_coherence")
         result = current_unscored_ids(state)
         assert result == {"subjective::design_coherence"}
 
@@ -412,9 +408,7 @@ class TestCurrentUnderTargetIds:
         state_high = _scored_state("dim_high", score=100.0)
         # Merge the two states
         state_low["dimension_scores"].update(state_high["dimension_scores"])
-        state_low["subjective_assessments"].update(
-            state_high["subjective_assessments"]
-        )
+        state_low["subjective_assessments"].update(state_high["subjective_assessments"])
         result = current_under_target_ids(state_low, target_strict=95.0)
         assert result == {"subjective::dim_low"}
 
@@ -524,14 +518,19 @@ class TestIsTriageStale:
 
     def test_mechanical_within_threshold_not_stale(self):
         """Mechanical count growth within threshold does not trigger staleness."""
-        plan = {"epic_triage_meta": {
-            "triaged_ids": ["r1"],
-            "last_mechanical_count": 100,
-        }}
+        plan = {
+            "epic_triage_meta": {
+                "triaged_ids": ["r1"],
+                "last_mechanical_count": 100,
+            }
+        }
         state = {
             "issues": {
                 "r1": {"status": "open", "detector": "review"},
-                **{f"u{i}": {"status": "open", "detector": "unused"} for i in range(105)},
+                **{
+                    f"u{i}": {"status": "open", "detector": "unused"}
+                    for i in range(105)
+                },
             }
         }
         assert is_triage_stale(plan, state) is False

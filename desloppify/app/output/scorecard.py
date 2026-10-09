@@ -43,8 +43,12 @@ logger = logging.getLogger(__name__)
 def generate_scorecard(state: dict, output_path: str | Path) -> Path:
     """Render a landscape scorecard PNG from scan state. Returns the output path."""
     image_mod = importlib.import_module("PIL.Image")  # deferred: optional dependency
-    image_draw_mod = importlib.import_module("PIL.ImageDraw")  # deferred: optional dependency
-    scorecard_draw_mod = importlib.import_module("desloppify.app.output.scorecard_parts.draw")  # deferred: depends on PIL
+    image_draw_mod = importlib.import_module(
+        "PIL.ImageDraw"
+    )  # deferred: optional dependency
+    scorecard_draw_mod = importlib.import_module(
+        "desloppify.app.output.scorecard_parts.draw"
+    )  # deferred: depends on PIL
 
     output_path = Path(output_path)
 
@@ -174,10 +178,7 @@ def _scorecard_ignore_warning(state: dict) -> str | None:
     suppressed_pct = float(info.get("suppressed_pct", 0.0) or 0.0)
     rounded = round(suppressed_pct)
     level = "high" if suppressed_pct >= 50 else "moderate"
-    return (
-        f"Ignore suppression is {rounded}% ({level}) "
-        f"across {ignored} issues."
-    )
+    return f"Ignore suppression is {rounded}% ({level}) across {ignored} issues."
 
 
 __all__ = [

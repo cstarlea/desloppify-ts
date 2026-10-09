@@ -58,13 +58,17 @@ def _resolve_edge_position(
     item_set: set[str],
 ) -> tuple[str, str | None, int | None] | None:
     if position == "top":
-        first_non_item = next((fid for fid in ordered_slice if fid not in item_set), None)
+        first_non_item = next(
+            (fid for fid in ordered_slice if fid not in item_set), None
+        )
         if first_non_item is None or set(ordered_slice[: len(item_ids)]) == item_set:
             print(colorize("  Already at the top of the cluster.", "yellow"))
             return None
         return ("before", first_non_item, None)
 
-    last_non_item = next((fid for fid in reversed(ordered_slice) if fid not in item_set), None)
+    last_non_item = next(
+        (fid for fid in reversed(ordered_slice) if fid not in item_set), None
+    )
     if last_non_item is None or set(ordered_slice[-len(item_ids) :]) == item_set:
         print(colorize("  Already at the bottom of the cluster.", "yellow"))
         return None
@@ -80,7 +84,12 @@ def _resolve_relative_position(
     plan: dict,
 ) -> tuple[str, str | None, int | None] | None:
     if target is None:
-        print(colorize(f"  '{position}' requires a target. Example: --item PAT {position} TARGET", "red"))
+        print(
+            colorize(
+                f"  '{position}' requires a target. Example: --item PAT {position} TARGET",
+                "red",
+            )
+        )
         return None
     target_ids = resolve_ids_from_patterns(state, [target], plan=plan)
     if not target_ids:
@@ -88,7 +97,12 @@ def _resolve_relative_position(
         return None
     resolved_target = target_ids[0]
     if resolved_target not in cluster_member_set:
-        print(colorize(f"  Target {resolved_target!r} is not in cluster {cluster_name!r}.", "red"))
+        print(
+            colorize(
+                f"  Target {resolved_target!r} is not in cluster {cluster_name!r}.",
+                "red",
+            )
+        )
         return None
     return (position, resolved_target, None)
 
@@ -98,7 +112,12 @@ def _resolve_offset_position(
     target: str | None,
 ) -> tuple[str, str | None, int | None] | None:
     if target is None:
-        print(colorize(f"  '{position}' requires an offset. Example: --item PAT {position} 3", "red"))
+        print(
+            colorize(
+                f"  '{position}' requires an offset. Example: --item PAT {position} 3",
+                "red",
+            )
+        )
         return None
     try:
         offset = int(target)
@@ -135,14 +154,20 @@ def _resolve_item_reorder_context(
         return None
     for fid in item_ids:
         if fid not in cluster_member_set:
-            print(colorize(f"  {fid!r} is not a member of cluster {cluster_name!r}.", "red"))
+            print(
+                colorize(
+                    f"  {fid!r} is not a member of cluster {cluster_name!r}.", "red"
+                )
+            )
             return None
     queue_order: list[str] = plan.get("queue_order", [])
     ordered_slice = [fid for fid in queue_order if fid in cluster_member_set]
     return state, cluster_member_set, item_ids, ordered_slice
 
 
-def _resolve_reorder_offset(position: str, target: str | None) -> tuple[str | None, int | None]:
+def _resolve_reorder_offset(
+    position: str, target: str | None
+) -> tuple[str | None, int | None]:
     if position not in ("up", "down") or target is None:
         return target, None
     try:
@@ -191,7 +216,9 @@ def _reorder_within_cluster(
         return
     resolved_position, resolved_target, offset = result
 
-    count = move_items(plan, item_ids, resolved_position, target=resolved_target, offset=offset)
+    count = move_items(
+        plan, item_ids, resolved_position, target=resolved_target, offset=offset
+    )
     append_log_entry(
         plan,
         "cluster_reorder",
@@ -200,7 +227,12 @@ def _reorder_within_cluster(
         detail={"position": resolved_position, "count": count, "item": item_pattern},
     )
     save_plan(plan)
-    print(colorize(f"  Moved {count} item(s) to {resolved_position} within cluster {cluster_name}.", "green"))
+    print(
+        colorize(
+            f"  Moved {count} item(s) to {resolved_position} within cluster {cluster_name}.",
+            "green",
+        )
+    )
 
 
 def _reorder_whole_clusters(
@@ -239,11 +271,15 @@ def _reorder_whole_clusters(
     )
     save_plan(plan)
     label = ", ".join(cluster_names)
-    print(colorize(f"  Moved cluster(s) {label} ({count} items) to {position}.", "green"))
+    print(
+        colorize(f"  Moved cluster(s) {label} ({count} items) to {position}.", "green")
+    )
 
 
 def _cmd_cluster_reorder(args: argparse.Namespace) -> None:
-    raw_names: str = getattr(args, "cluster_names", "") or getattr(args, "cluster_name", "")
+    raw_names: str = getattr(args, "cluster_names", "") or getattr(
+        args, "cluster_name", ""
+    )
     cluster_names: list[str] = [n.strip() for n in raw_names.split(",") if n.strip()]
     position: str = getattr(args, "position", "top")
     target: str | None = getattr(args, "target", None)
@@ -256,7 +292,9 @@ def _cmd_cluster_reorder(args: argparse.Namespace) -> None:
         return
 
     if item_pattern is not None:
-        _reorder_within_cluster(args, plan, clusters, cluster_names, position, target, item_pattern)
+        _reorder_within_cluster(
+            args, plan, clusters, cluster_names, position, target, item_pattern
+        )
     else:
         _reorder_whole_clusters(plan, clusters, cluster_names, position, target)
 

@@ -139,8 +139,7 @@ def test_print_ranked_actions_sorted_by_impact(capsys):
 def test_print_ranked_actions_respects_limit(capsys):
     """Only 'limit' actions are shown."""
     actions = [
-        {"detector": f"d{i}", "count": 1, "impact": float(10 - i)}
-        for i in range(5)
+        {"detector": f"d{i}", "count": 1, "impact": float(10 - i)} for i in range(5)
     ]
     print_ranked_actions(actions, limit=2)
     out = capsys.readouterr().out
@@ -193,15 +192,18 @@ def test_require_issue_inventory_none_last_scan(capsys):
 
 def test_require_issue_inventory_with_plan_reconstructed_inventory():
     """Plan-reconstructed state should satisfy inventory-backed command gating."""
-    assert require_issue_inventory(
-        {
-            "last_scan": None,
-            "scan_metadata": {
-                "source": "plan_reconstruction",
-                "reconstructed_issue_count": 1,
-            },
-        }
-    ) is True
+    assert (
+        require_issue_inventory(
+            {
+                "last_scan": None,
+                "scan_metadata": {
+                    "source": "plan_reconstruction",
+                    "reconstructed_issue_count": 1,
+                },
+            }
+        )
+        is True
+    )
 
 
 def test_has_saved_plan_without_scan_detects_live_plan():
@@ -278,9 +280,7 @@ def test_subjective_followup_low_assessed(capsys):
 
 def test_subjective_followup_integrity_lines(capsys):
     """Integrity lines are printed when present."""
-    followup = _make_followup(
-        integrity_lines=[("yellow", "Check naming conventions")]
-    )
+    followup = _make_followup(integrity_lines=[("yellow", "Check naming conventions")])
     assert print_subjective_followup(followup) is True
     out = capsys.readouterr().out
     assert "Check naming conventions" in out

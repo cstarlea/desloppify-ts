@@ -11,6 +11,7 @@ from desloppify.engine._plan.schema import empty_plan, ensure_plan_defaults
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _plan_with_cluster(name: str, issue_ids: list[str]) -> dict:
     plan = empty_plan()
     ensure_plan_defaults(plan)
@@ -43,6 +44,7 @@ def _state_with_issues(*ids: str) -> dict:
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
+
 
 def test_cluster_guard_allows_small_cluster():
     """Cluster-name resolve should expand small clusters instead of blocking."""

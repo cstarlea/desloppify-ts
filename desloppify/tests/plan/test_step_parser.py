@@ -36,7 +36,12 @@ def test_parse_steps_file_parses_detail_and_refs() -> None:
 def test_format_steps_renders_done_detail_and_refs() -> None:
     rendered = format_steps(
         [
-            {"title": "Do thing", "done": True, "detail": "line a\nline b", "issue_refs": ["x", "y"]},
+            {
+                "title": "Do thing",
+                "done": True,
+                "detail": "line a\nline b",
+                "issue_refs": ["x", "y"],
+            },
             {"title": "Second step"},
         ]
     )

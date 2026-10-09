@@ -109,10 +109,14 @@ def build_request(args) -> ClusterUpdateRequest:
         raise CommandError("--update-title requires --update-step")
 
     if (
-        getattr(args, "detail", None) is not None
-        or getattr(args, "effort", None) is not None
-        or getattr(args, "issue_refs", None) is not None
-    ) and add_step is None and update_step is None:
+        (
+            getattr(args, "detail", None) is not None
+            or getattr(args, "effort", None) is not None
+            or getattr(args, "issue_refs", None) is not None
+        )
+        and add_step is None
+        and update_step is None
+    ):
         raise CommandError(
             "--detail, --effort, and --issue-refs require --add-step or --update-step"
         )
@@ -154,10 +158,16 @@ def run_cluster_update_locked(
     plan = services.load_plan_fn()
     cluster = plan.get("clusters", {}).get(request.cluster_name)
     if cluster is None:
-        print(services.colorize_fn(f"  Cluster {request.cluster_name!r} does not exist.", "red"))
+        print(
+            services.colorize_fn(
+                f"  Cluster {request.cluster_name!r} does not exist.", "red"
+            )
+        )
         return
 
-    if not _apply_cluster_metadata(cluster=cluster, plan=plan, request=request, services=services):
+    if not _apply_cluster_metadata(
+        cluster=cluster, plan=plan, request=request, services=services
+    ):
         return
     if not _apply_step_source(cluster=cluster, request=request, services=services):
         return
@@ -165,12 +175,18 @@ def run_cluster_update_locked(
     current_steps = cluster.get("action_steps") or []
     current_steps = _as_step_list(current_steps)
 
-    if not _apply_step_mutations(current_steps=current_steps, request=request, services=services):
+    if not _apply_step_mutations(
+        current_steps=current_steps, request=request, services=services
+    ):
         return
     cluster["action_steps"] = current_steps
 
-    _print_current_steps(cluster=cluster, request=request, colorize_fn=services.colorize_fn)
-    _save_cluster_update(plan=plan, cluster_name=request.cluster_name, request=request, services=services)
+    _print_current_steps(
+        cluster=cluster, request=request, colorize_fn=services.colorize_fn
+    )
+    _save_cluster_update(
+        plan=plan, cluster_name=request.cluster_name, request=request, services=services
+    )
 
 
 def _apply_cluster_metadata(
@@ -196,7 +212,11 @@ def _apply_cluster_metadata(
         print(services.colorize_fn(f"  Unknown cluster(s): {', '.join(bad)}", "red"))
         return False
     cluster["depends_on_clusters"] = request.depends_on
-    print(services.colorize_fn(f"  Dependencies set: {', '.join(request.depends_on)}", "dim"))
+    print(
+        services.colorize_fn(
+            f"  Dependencies set: {', '.join(request.depends_on)}", "dim"
+        )
+    )
     return True
 
 
@@ -209,7 +229,11 @@ def _apply_step_source(
     if request.steps_file is not None:
         path = Path(request.steps_file)
         if not path.is_file():
-            print(services.colorize_fn(f"  Steps file not found: {request.steps_file}", "red"))
+            print(
+                services.colorize_fn(
+                    f"  Steps file not found: {request.steps_file}", "red"
+                )
+            )
             return False
         try:
             parsed = services.parse_steps_file_fn(path.read_text())
@@ -218,13 +242,21 @@ def _apply_step_source(
                 f"failed to load steps file {request.steps_file}: {exc}"
             ) from exc
         cluster["action_steps"] = parsed
-        print(services.colorize_fn(f"  Loaded {len(parsed)} step(s) from {request.steps_file}.", "dim"))
+        print(
+            services.colorize_fn(
+                f"  Loaded {len(parsed)} step(s) from {request.steps_file}.", "dim"
+            )
+        )
         return True
 
     if request.steps is not None:
         normalized_steps = [services.normalize_step_fn(step) for step in request.steps]
         cluster["action_steps"] = normalized_steps
-        print(services.colorize_fn(f"  Stored {len(request.steps)} action step(s).", "dim"))
+        print(
+            services.colorize_fn(
+                f"  Stored {len(request.steps)} action step(s).", "dim"
+            )
+        )
     return True
 
 
@@ -235,7 +267,11 @@ def _apply_step_mutations(
     services: ClusterUpdateServices,
 ) -> bool:
     if request.add_step is not None:
-        _apply_add_step(current_steps=current_steps, request=request, colorize_fn=services.colorize_fn)
+        _apply_add_step(
+            current_steps=current_steps,
+            request=request,
+            colorize_fn=services.colorize_fn,
+        )
     return (
         _run_optional_step_mutation(
             request.update_step is not None,
@@ -275,7 +311,9 @@ def _apply_step_mutations(
     )
 
 
-def _run_optional_step_mutation(enabled: bool, apply_change: Callable[[], bool]) -> bool:
+def _run_optional_step_mutation(
+    enabled: bool, apply_change: Callable[[], bool]
+) -> bool:
     return not enabled or apply_change()
 
 
@@ -381,7 +419,11 @@ def _resolve_step_index(
     idx = step_number - 1
     if 0 <= idx < len(current_steps):
         return idx
-    print(colorize_fn(f"  Step {step_number} out of range (1-{len(current_steps)}).", "red"))
+    print(
+        colorize_fn(
+            f"  Step {step_number} out of range (1-{len(current_steps)}).", "red"
+        )
+    )
     return None
 
 

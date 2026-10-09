@@ -28,7 +28,9 @@ def _build_lint_rules(by_detector: dict[str, list[dict]]) -> list[dict]:
     """The project's linter findings (``lint``), grouped by rule."""
     files_by_rule: dict[str, list[str]] = defaultdict(list)
     for issue in by_detector.get("lint", []):
-        files_by_rule[str(_get_detail(issue, "rule", "?"))].append(issue.get("file", ""))
+        files_by_rule[str(_get_detail(issue, "rule", "?"))].append(
+            issue.get("file", "")
+        )
     ranked = sorted(files_by_rule.items(), key=lambda kv: (-len(kv[1]), kv[0]))
     return [
         {"rule": rule, "count": len(files), "files": sorted(set(files))[:3]}
@@ -51,14 +53,19 @@ def _build_coverage_gaps(by_detector: dict[str, list[dict]]) -> dict:
             continue
         reports.add(str(_get_detail(issue, "coverage_report", "")))
         measured.append(
-            {"file": issue.get("file", ""), "line_pct": _safe_num(_get_detail(issue, "line_pct", 0))}
+            {
+                "file": issue.get("file", ""),
+                "line_pct": _safe_num(_get_detail(issue, "line_pct", 0)),
+            }
         )
     if not kinds:
         return {}
     result: dict = {"by_kind": dict(kinds.most_common())}
     if reports:
         result["measured_by"] = sorted(r for r in reports if r)
-        result["lowest_line_coverage"] = sorted(measured, key=lambda m: (m["line_pct"], m["file"]))[:10]
+        result["lowest_line_coverage"] = sorted(
+            measured, key=lambda m: (m["line_pct"], m["file"])
+        )[:10]
     return result
 
 

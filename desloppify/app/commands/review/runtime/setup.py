@@ -51,7 +51,9 @@ def setup_lang(
     return lang_run, files
 
 
-def setup_lang_concrete(lang: LangConfig, path: Path, config: dict) -> tuple[LangRun, list[str]]:
+def setup_lang_concrete(
+    lang: LangConfig, path: Path, config: dict
+) -> tuple[LangRun, list[str]]:
     """Build LangRun with zone map + dep graph using concrete dependencies."""
     return setup_lang(
         lang,

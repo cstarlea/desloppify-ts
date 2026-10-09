@@ -38,7 +38,9 @@ def _nest_cli_entries(package_root: Path) -> frozenset[str]:
                 continue
             base = (Path(source_root) / entry).as_posix().lstrip("./")
             found.update(
-                f"{base}{ext}" for ext in _EXTENSIONS if (package_root / f"{base}{ext}").is_file()
+                f"{base}{ext}"
+                for ext in _EXTENSIONS
+                if (package_root / f"{base}{ext}").is_file()
             )
         return frozenset(found)
     return frozenset()
@@ -89,7 +91,9 @@ NESTJS_SCANNERS: tuple[ScannerRule, ...] = (
             ),
             detail={"line": entry["line"], "name": entry["name"]},
         ),
-        log_message=lambda count: f"       nestjs: {count} controllers registered in no module",
+        log_message=lambda count: (
+            f"       nestjs: {count} controllers registered in no module"
+        ),
     ),
     ScannerRule(
         id="provider_missing_injectable",

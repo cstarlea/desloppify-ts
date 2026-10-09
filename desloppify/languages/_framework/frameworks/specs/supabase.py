@@ -59,7 +59,9 @@ SUPABASE_SPEC = FrameworkSpec(
                 ),
                 detail={"line": entry["line"], "table": entry["table"]},
             ),
-            log_message=lambda count: f"       supabase: {count} public tables without RLS",
+            log_message=lambda count: (
+                f"       supabase: {count} public tables without RLS"
+            ),
         ),
         ScannerRule(
             id="security_definer_view",

@@ -57,9 +57,9 @@ def _rule_meta(binary: Path, config: LinterConfig) -> dict[str, dict[str, Any]]:
     meta: dict[str, dict[str, Any]] = {}
     for rule in rules if isinstance(rules, list) else []:
         if isinstance(rule, dict) and rule.get("category") in _CATEGORY_META:
-            meta[rule_name(str(rule.get("scope")), str(rule.get("value")))] = _CATEGORY_META[
-                rule["category"]
-            ]
+            meta[rule_name(str(rule.get("scope")), str(rule.get("value")))] = (
+                _CATEGORY_META[rule["category"]]
+            )
     return meta
 
 
@@ -84,7 +84,11 @@ def parse_oxlint_output(
             continue
         rule = rule_name(*match.groups())
         labels = diagnostic.get("labels")
-        span = labels[0].get("span") if isinstance(labels, list) and labels and isinstance(labels[0], dict) else None
+        span = (
+            labels[0].get("span")
+            if isinstance(labels, list) and labels and isinstance(labels[0], dict)
+            else None
+        )
         span = span if isinstance(span, dict) else {}
         run.messages.append(
             LintMessage(
@@ -92,7 +96,9 @@ def parse_oxlint_output(
                 line=int(span.get("line") or 0),
                 col=int(span.get("column") or 0),
                 rule=rule,
-                severity="error" if diagnostic.get("severity") == "error" else "warning",
+                severity="error"
+                if diagnostic.get("severity") == "error"
+                else "warning",
                 message=str(diagnostic.get("message") or ""),
                 fixable=False,
                 meta=meta.get(rule),

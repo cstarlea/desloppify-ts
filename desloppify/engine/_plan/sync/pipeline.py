@@ -38,9 +38,7 @@ _SCAN_PHASE_WORKFLOW_IDS = {
     WORKFLOW_DEFERRED_DISPOSITION_ID,
     WORKFLOW_RUN_SCAN_ID,
 }
-_POSTFLIGHT_WORKFLOW_IDS = (
-    PRE_REVIEW_WORKFLOW_IDS - _SCAN_PHASE_WORKFLOW_IDS
-) | {
+_POSTFLIGHT_WORKFLOW_IDS = (PRE_REVIEW_WORKFLOW_IDS - _SCAN_PHASE_WORKFLOW_IDS) | {
     WORKFLOW_SCORE_CHECKPOINT_ID,
     WORKFLOW_COMMUNICATE_SCORE_ID,
     WORKFLOW_CREATE_PLAN_ID,
@@ -270,7 +268,9 @@ def reconcile_plan(
             # Snapshot rebaseline fields now, before post-reconcile clearing
             if result.communicate_score.auto_resolved:
                 result.checkpoint_plan_start = dict(plan.get("plan_start_scores", {}))
-                result.checkpoint_prev_start = dict(plan.get("previous_plan_start_scores", {}))
+                result.checkpoint_prev_start = dict(
+                    plan.get("previous_plan_start_scores", {})
+                )
 
         result.create_plan = sync_create_plan_needed(
             plan,

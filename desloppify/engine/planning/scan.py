@@ -43,7 +43,9 @@ def _resolve_lang(lang: LangConfig | LangRun | None) -> LangConfig | LangRun:
     return lang if lang is not None else default_lang()
 
 
-def _build_zone_map(path: Path, lang: LangRun, zone_overrides: dict[str, str] | None) -> None:
+def _build_zone_map(
+    path: Path, lang: LangRun, zone_overrides: dict[str, str] | None
+) -> None:
     if not (lang.zone_rules and lang.file_finder):
         return
 
@@ -58,7 +60,9 @@ def _build_zone_map(path: Path, lang: LangRun, zone_overrides: dict[str, str] | 
     _stderr(f"  Zones: {zone_str}")
 
 
-def _select_phases(lang: LangRun, *, include_slow: bool, profile: str) -> list[DetectorPhase]:
+def _select_phases(
+    lang: LangRun, *, include_slow: bool, profile: str
+) -> list[DetectorPhase]:
     active_profile = profile if profile in {"objective", "full", "ci"} else "full"
     phases = lang.phases
     if not include_slow or active_profile == "ci":
@@ -68,7 +72,9 @@ def _select_phases(lang: LangRun, *, include_slow: bool, profile: str) -> list[D
     return phases
 
 
-def _run_phases(path: Path, lang: LangRun, phases: list[DetectorPhase]) -> tuple[list[Issue], dict[str, int]]:
+def _run_phases(
+    path: Path, lang: LangRun, phases: list[DetectorPhase]
+) -> tuple[list[Issue], dict[str, int]]:
     issues: list[Issue] = []
     all_potentials: dict[str, int] = {}
 

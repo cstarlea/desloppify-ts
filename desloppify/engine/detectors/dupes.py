@@ -49,9 +49,7 @@ class _CachedNearPair(TypedDict):
     similarity: float
 
 
-def _build_clusters(
-    pairs: list[MatchedPair], n: int
-) -> list[list[int]]:
+def _build_clusters(pairs: list[MatchedPair], n: int) -> list[list[int]]:
     """Union-find clustering from pairwise matches. Returns list of clusters (size >= 2)."""
     parent = list(range(n))
 
@@ -147,7 +145,9 @@ def _load_cached_near_pairs(
 
     cached_functions = cache.get("functions")
     cached_near_pairs = cache.get("near_pairs")
-    if not isinstance(cached_functions, dict) or not isinstance(cached_near_pairs, list):
+    if not isinstance(cached_functions, dict) or not isinstance(
+        cached_near_pairs, list
+    ):
         return [], None
 
     changed_ids: set[str] = set()
@@ -194,7 +194,9 @@ def _load_cached_near_pairs(
         if pair_key in seen_pairs:
             continue
         seen_pairs.add(pair_key)
-        reusable_pairs.append((left_idx, right_idx, float(similarity), "near-duplicate"))
+        reusable_pairs.append(
+            (left_idx, right_idx, float(similarity), "near-duplicate")
+        )
 
     return reusable_pairs, changed_ids
 
@@ -322,7 +324,8 @@ def _collect_near_duplicate_pairs(
                 None,
                 normalized_lines[idx_a],
                 normalized_lines[idx_b],
-                autojunk=len_a >= _DUPES_AUTOJUNK_MIN_LINES and len_b >= _DUPES_AUTOJUNK_MIN_LINES,
+                autojunk=len_a >= _DUPES_AUTOJUNK_MIN_LINES
+                and len_b >= _DUPES_AUTOJUNK_MIN_LINES,
             )
             if matcher.real_quick_ratio() < threshold:
                 continue

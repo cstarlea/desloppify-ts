@@ -59,7 +59,11 @@ def test_build_private_crossings_uses_symbol_source_target_fallbacks() -> None:
         "private_imports": [
             {
                 "file": "src/a.py",
-                "detail": {"symbol": "_secret", "source": "src/lib.py", "target": "src/t.py"},
+                "detail": {
+                    "symbol": "_secret",
+                    "source": "src/lib.py",
+                    "target": "src/t.py",
+                },
             },
             {
                 "file": "src/b.py",

@@ -405,7 +405,9 @@ class TestCreateParser:
         assert args.prepare is True
 
     def test_review_allow_partial_flag(self, parser):
-        args = parser.parse_args(["review", "--import", "issues.json", "--allow-partial"])
+        args = parser.parse_args(
+            ["review", "--import", "issues.json", "--allow-partial"]
+        )
         assert args.import_file == "issues.json"
         assert args.allow_partial is True
 
@@ -673,9 +675,7 @@ class TestResolveDefaultPath:
 
         assert args.path.endswith("src")
 
-    def test_command_honors_language_default_src_exactly(
-        self, monkeypatch, tmp_path
-    ):
+    def test_command_honors_language_default_src_exactly(self, monkeypatch, tmp_path):
         project_root = tmp_path / "proj"
         project_root.mkdir()
         monkeypatch.setattr(cli_mod, "get_project_root", lambda: project_root)
@@ -863,7 +863,10 @@ class TestProjectRootFromScanPath:
         (tmp_path / "vendor" / "lib" / ".git").write_text(
             "gitdir: ../../.git/modules/vendor/lib\n"
         )
-        assert _project_root_from_scan_path(tmp_path / "vendor" / "lib", tmp_path) == tmp_path
+        assert (
+            _project_root_from_scan_path(tmp_path / "vendor" / "lib", tmp_path)
+            == tmp_path
+        )
 
     def test_submodule_without_superproject_state_is_its_own_root(self, tmp_path):
         from desloppify.cli import _project_root_from_scan_path
@@ -917,7 +920,9 @@ class TestProjectRootFromScanPath:
         (tmp_path / "app").mkdir()
         target = tmp_path / "app" / "main.ts"
         target.write_text("export {};\n")
-        assert _project_root_from_scan_path(target, tmp_path / "cwd") == tmp_path / "app"
+        assert (
+            _project_root_from_scan_path(target, tmp_path / "cwd") == tmp_path / "app"
+        )
 
 
 class TestMainProjectRoot:
@@ -931,7 +936,9 @@ class TestMainProjectRoot:
         monkeypatch.chdir(cwd)
         monkeypatch.setattr("sys.argv", ["desloppify", *argv])
         monkeypatch.setattr(
-            cli_mod, "_resolve_handler", lambda _cmd: lambda _args: seen.append(get_project_root())
+            cli_mod,
+            "_resolve_handler",
+            lambda _cmd: lambda _args: seen.append(get_project_root()),
         )
         cli_mod.main()
         return seen[0]
@@ -947,7 +954,9 @@ class TestMainProjectRoot:
     def test_nested_repo_is_root(self, tmp_path, monkeypatch):
         monkeypatch.delenv("DESLOPPIFY_ROOT", raising=False)
         nested = self._layout(tmp_path)
-        root = self._root_seen_by_handler(monkeypatch, ["scan", "--path", "copies/ky/src"], tmp_path)
+        root = self._root_seen_by_handler(
+            monkeypatch, ["scan", "--path", "copies/ky/src"], tmp_path
+        )
         assert root == nested
 
     def test_env_root_overrides_path_inference(self, tmp_path, monkeypatch):
@@ -955,12 +964,16 @@ class TestMainProjectRoot:
         override = tmp_path / "override"
         override.mkdir()
         monkeypatch.setenv("DESLOPPIFY_ROOT", str(override))
-        root = self._root_seen_by_handler(monkeypatch, ["scan", "--path", "copies/ky/src"], tmp_path)
+        root = self._root_seen_by_handler(
+            monkeypatch, ["scan", "--path", "copies/ky/src"], tmp_path
+        )
         assert root == override
 
 
 class TestRemovedLangFlag:
-    @pytest.mark.parametrize("argv", [["--lang", "typescript", "scan"], ["scan", "--lang=python"]])
+    @pytest.mark.parametrize(
+        "argv", [["--lang", "typescript", "scan"], ["scan", "--lang=python"]]
+    )
     def test_explains_removal(self, argv, capsys):
         with pytest.raises(SystemExit) as exc:
             cli_mod._reject_removed_lang_flag(argv)
@@ -968,4 +981,6 @@ class TestRemovedLangFlag:
         assert "--lang was removed" in capsys.readouterr().err
 
     def test_ignores_lang_opt_and_args_after_separator(self):
-        cli_mod._reject_removed_lang_flag(["scan", "--lang-opt", "tsc_cmd=x", "--", "--lang"])
+        cli_mod._reject_removed_lang_flag(
+            ["scan", "--lang-opt", "tsc_cmd=x", "--", "--lang"]
+        )

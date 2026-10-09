@@ -54,7 +54,11 @@ def detect_git_context() -> GitContext:
         root = root_result.stdout.strip() if root_result.returncode == 0 else None
 
         status_result = _run_git_command("status", "--porcelain")
-        has_uncommitted = bool(status_result.stdout.strip()) if status_result.returncode == 0 else False
+        has_uncommitted = (
+            bool(status_result.stdout.strip())
+            if status_result.returncode == 0
+            else False
+        )
 
         return GitContext(
             available=True,

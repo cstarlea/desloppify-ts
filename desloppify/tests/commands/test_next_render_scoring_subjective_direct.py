@@ -103,7 +103,9 @@ def test_render_detector_impact_estimate_logs_exceptions() -> None:
         {"unused": 2},
         colorize_fn=_colorize,
         log_fn=logs.append,
-        compute_score_impact_fn=lambda *_a, **_k: (_ for _ in ()).throw(TypeError("bad")),
+        compute_score_impact_fn=lambda *_a, **_k: (_ for _ in ()).throw(
+            TypeError("bad")
+        ),
         get_dimension_for_detector_fn=lambda _det: SimpleNamespace(name="Test health"),
     )
     assert logs

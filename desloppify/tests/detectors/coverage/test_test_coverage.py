@@ -55,7 +55,6 @@ def _reset_read_warning_cache():
 
 
 class TestStripTestMarkers:
-
     def test_python_no_marker(self):
         assert _strip_test_markers("utils.py", "python") is None
 
@@ -98,7 +97,6 @@ class TestInferLangName:
 
 
 class TestMapTestToSource:
-
     def test_typescript_test_marker(self):
         prod_set = {"src/utils.ts"}
         result = _map_test_to_source("src/utils.test.ts", prod_set, "typescript")
@@ -200,7 +198,9 @@ class TestImportBasedMapping:
         result = import_based_mapping(graph, test_files, production_files)
         assert result == {"src/a.py", "src/b.py"}
 
-    def test_typescript_parses_dynamic_imports_even_when_graph_entry_exists(self, tmp_path):
+    def test_typescript_parses_dynamic_imports_even_when_graph_entry_exists(
+        self, tmp_path
+    ):
         prod_file = _write_file(tmp_path, "src/utils.ts", "export const x = 1;\n")
         test_file = _write_file(
             tmp_path,
@@ -224,7 +224,6 @@ class TestImportBasedMapping:
 
 
 class TestParseTestImports:
-
     def test_ts_import(self, tmp_path):
         tf = _write_file(tmp_path, "test_x.ts", 'import { foo } from "./utils"\n')
         prod = {str(tmp_path / "utils.ts")}
@@ -438,9 +437,21 @@ class TestDetectTestCoverage:
     def test_typescript_dynamic_import_smoke_produces_placeholder_issues(
         self, tmp_path
     ):
-        prod_a = _write_file(tmp_path, "src/a.ts", ("export function a(v: number) {\n  return v + 1;\n}\n" * 4))
-        prod_b = _write_file(tmp_path, "src/b.ts", ("export function b(v: number) {\n  return v + 2;\n}\n" * 4))
-        prod_c = _write_file(tmp_path, "src/c.ts", ("export function c(v: number) {\n  return v + 3;\n}\n" * 4))
+        prod_a = _write_file(
+            tmp_path,
+            "src/a.ts",
+            ("export function a(v: number) {\n  return v + 1;\n}\n" * 4),
+        )
+        prod_b = _write_file(
+            tmp_path,
+            "src/b.ts",
+            ("export function b(v: number) {\n  return v + 2;\n}\n" * 4),
+        )
+        prod_c = _write_file(
+            tmp_path,
+            "src/c.ts",
+            ("export function c(v: number) {\n  return v + 3;\n}\n" * 4),
+        )
         test_f = _write_file(
             tmp_path,
             "src/moduleCoverage.test.ts",
@@ -727,13 +738,19 @@ class TestDetectTestCoverage:
         }
 
         entries, _potential = detect_test_coverage(graph, zone_map, "typescript")
-        quality_entries = [e for e in entries if e.get("file") == prod_f and e.get("detail", {}).get("kind") in {
-            "assertion_free_test",
-            "placeholder_test",
-            "shallow_tests",
-            "over_mocked",
-            "snapshot_heavy",
-        }]
+        quality_entries = [
+            e
+            for e in entries
+            if e.get("file") == prod_f
+            and e.get("detail", {}).get("kind")
+            in {
+                "assertion_free_test",
+                "placeholder_test",
+                "shallow_tests",
+                "over_mocked",
+                "snapshot_heavy",
+            }
+        ]
         assert quality_entries == []
 
     def test_multiple_weak_direct_tests_emit_single_highest_priority_issue(
@@ -776,7 +793,11 @@ class TestDetectTestCoverage:
 
         entries, _potential = detect_test_coverage(graph, zone_map, "typescript")
         quality_entries = [
-            e for e in entries if e.get("file") == prod_f and e.get("detail", {}).get("kind") in {
+            e
+            for e in entries
+            if e.get("file") == prod_f
+            and e.get("detail", {}).get("kind")
+            in {
                 "assertion_free_test",
                 "placeholder_test",
                 "shallow_tests",

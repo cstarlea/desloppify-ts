@@ -40,7 +40,9 @@ def cmd_plan_resolve(args: argparse.Namespace) -> None:
 
     if getattr(args, "confirm", False):
         if not note:
-            print(colorize("  --confirm requires --note to describe what you did.", "red"))
+            print(
+                colorize("  --confirm requires --note to describe what you did.", "red")
+            )
             return
         attestation = f"I have actually {note} and I am not gaming the score."
         args.attest = attestation
@@ -82,7 +84,9 @@ def cmd_plan_resolve(args: argparse.Namespace) -> None:
         if plan is None:
             plan = load_plan()
         clusters = plan.get("clusters", {})
-        cluster_name = next((pattern for pattern in patterns if pattern in clusters), None)
+        cluster_name = next(
+            (pattern for pattern in patterns if pattern in clusters), None
+        )
         append_log_entry(
             plan,
             "done",
@@ -94,7 +98,9 @@ def cmd_plan_resolve(args: argparse.Namespace) -> None:
         save_plan(plan)
     except PLAN_LOAD_EXCEPTIONS as exc:
         log_best_effort_failure(logger, "append plan resolve log entry", exc)
-        print(colorize(f"  Note: unable to append plan resolve log entry ({exc}).", "dim"))
+        print(
+            colorize(f"  Note: unable to append plan resolve log entry ({exc}).", "dim")
+        )
 
     resolve_args = argparse.Namespace(
         status="fixed",

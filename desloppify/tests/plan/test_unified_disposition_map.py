@@ -52,11 +52,17 @@ def test_issue_disposition_type_exists():
 class TestResolveShortHash:
     def test_direct_match(self):
         valid = {"review::complexity::abcd1234"}
-        assert resolve_short_hash_to_full_id("review::complexity::abcd1234", valid) == "review::complexity::abcd1234"
+        assert (
+            resolve_short_hash_to_full_id("review::complexity::abcd1234", valid)
+            == "review::complexity::abcd1234"
+        )
 
     def test_short_hash_resolves(self):
         valid = {"review::complexity::abcd1234"}
-        assert resolve_short_hash_to_full_id("abcd1234", valid) == "review::complexity::abcd1234"
+        assert (
+            resolve_short_hash_to_full_id("abcd1234", valid)
+            == "review::complexity::abcd1234"
+        )
 
     def test_ambiguous_short_hash_returns_none(self):
         # Two IDs with the same short hash
@@ -80,8 +86,18 @@ class TestCascadeClearDispositions:
     def test_observe_clears_all(self):
         meta = {
             "issue_dispositions": {
-                "id1": {"verdict": "genuine", "decision": "cluster", "target": "c1", "decision_source": "reflect"},
-                "id2": {"verdict": "false positive", "decision": "skip", "target": "fp", "decision_source": "observe_auto"},
+                "id1": {
+                    "verdict": "genuine",
+                    "decision": "cluster",
+                    "target": "c1",
+                    "decision_source": "reflect",
+                },
+                "id2": {
+                    "verdict": "false positive",
+                    "decision": "skip",
+                    "target": "fp",
+                    "decision_source": "observe_auto",
+                },
             }
         }
         cascade_clear_dispositions(meta, "observe")
@@ -254,7 +270,12 @@ class TestOrganizeDispositionValidation:
         }
         meta = plan["epic_triage_meta"]
         meta["issue_dispositions"] = {
-            "id1": {"verdict": "genuine", "decision": "cluster", "target": "my-cluster", "decision_source": "reflect"},
+            "id1": {
+                "verdict": "genuine",
+                "decision": "cluster",
+                "target": "my-cluster",
+                "decision_source": "reflect",
+            },
         }
         assert validate_organize_against_dispositions(plan=plan) == []
 
@@ -263,7 +284,12 @@ class TestOrganizeDispositionValidation:
         plan["skipped"]["id1"] = {"issue_id": "id1", "kind": "triage_observe_auto"}
         meta = plan["epic_triage_meta"]
         meta["issue_dispositions"] = {
-            "id1": {"verdict": "false positive", "decision": "skip", "target": "false positive", "decision_source": "observe_auto"},
+            "id1": {
+                "verdict": "false positive",
+                "decision": "skip",
+                "target": "false positive",
+                "decision_source": "observe_auto",
+            },
         }
         assert validate_organize_against_dispositions(plan=plan) == []
 
@@ -272,7 +298,12 @@ class TestOrganizeDispositionValidation:
         # id1 should be in cluster but isn't
         meta = plan["epic_triage_meta"]
         meta["issue_dispositions"] = {
-            "id1": {"verdict": "genuine", "decision": "cluster", "target": "my-cluster", "decision_source": "reflect"},
+            "id1": {
+                "verdict": "genuine",
+                "decision": "cluster",
+                "target": "my-cluster",
+                "decision_source": "reflect",
+            },
         }
         mismatches = validate_organize_against_dispositions(plan=plan)
         assert len(mismatches) == 1

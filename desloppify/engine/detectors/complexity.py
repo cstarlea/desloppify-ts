@@ -36,9 +36,9 @@ def detect_complexity(
                 try:
                     if sig.compute:
                         # Pass filepath to compute fns that accept it (tree-sitter signals).
-                        accepts_filepath = "_filepath" in inspect.signature(
-                            sig.compute
-                        ).parameters
+                        accepts_filepath = (
+                            "_filepath" in inspect.signature(sig.compute).parameters
+                        )
                         if accepts_filepath:
                             result = sig.compute(content, lines, _filepath=filepath)
                         else:
@@ -47,7 +47,9 @@ def detect_complexity(
                             count, label = result
                             file_signals.append(label)
                             excess = (
-                                max(0, count - sig.threshold) if sig.threshold else count
+                                max(0, count - sig.threshold)
+                                if sig.threshold
+                                else count
                             )
                             score += excess * sig.weight
                     elif sig.pattern:
@@ -55,7 +57,13 @@ def detect_complexity(
                         if count > sig.threshold:
                             file_signals.append(f"{count} {sig.name}")
                             score += (count - sig.threshold) * sig.weight
-                except (TypeError, ValueError, KeyError, AttributeError, re.error) as exc:
+                except (
+                    TypeError,
+                    ValueError,
+                    KeyError,
+                    AttributeError,
+                    re.error,
+                ) as exc:
                     log_best_effort_failure(
                         logger,
                         f"compute complexity signal '{sig.name}' for {filepath}",

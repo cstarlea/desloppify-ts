@@ -15,7 +15,11 @@ def validate_stage_report_length(
     min_chars = 50 if issue_count <= 3 else 100
     if len(report) >= min_chars:
         return True
-    print(colorize(f"  Report too short: {len(report)} chars (minimum {min_chars}).", "red"))
+    print(
+        colorize(
+            f"  Report too short: {len(report)} chars (minimum {min_chars}).", "red"
+        )
+    )
     print(colorize(guidance, "dim"))
     return False
 

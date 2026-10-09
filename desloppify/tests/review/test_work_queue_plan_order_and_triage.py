@@ -70,12 +70,29 @@ def test_collapse_clusters_preserves_order():
 
     # Place a non-cluster item first, then the two cluster members
     items = [
-        {"id": "other", "kind": "issue", "detector": "structural",
-         "confidence": "medium", "detail": {}},
-        {"id": "u1", "kind": "issue", "detector": "unused",
-         "confidence": "high", "detail": {}, "estimated_impact": 1.0},
-        {"id": "u2", "kind": "issue", "detector": "unused",
-         "confidence": "high", "detail": {}, "estimated_impact": 1.0},
+        {
+            "id": "other",
+            "kind": "issue",
+            "detector": "structural",
+            "confidence": "medium",
+            "detail": {},
+        },
+        {
+            "id": "u1",
+            "kind": "issue",
+            "detector": "unused",
+            "confidence": "high",
+            "detail": {},
+            "estimated_impact": 1.0,
+        },
+        {
+            "id": "u2",
+            "kind": "issue",
+            "detector": "unused",
+            "confidence": "high",
+            "detail": {},
+            "estimated_impact": 1.0,
+        },
     ]
 
     result = collapse_clusters(items, plan)
@@ -97,8 +114,7 @@ def test_plan_ordered_stale_subjective_gated_with_objective_backlog():
     from desloppify.engine._plan.schema import empty_plan
 
     objective_issues = [
-        _issue(f"smells::src/{c}.py::x", detector="smells", tier=3)
-        for c in "abcd"
+        _issue(f"smells::src/{c}.py::x", detector="smells", tier=3) for c in "abcd"
     ]
     state = _state(
         objective_issues,
@@ -144,7 +160,10 @@ def test_plan_ordered_stale_subjective_gated_with_objective_backlog():
         "postflight_scan_completed_at_scan_count": 1,
     }
     queue_with_plan = build_work_queue(
-        state, count=None, include_subjective=True, plan=plan,
+        state,
+        count=None,
+        include_subjective=True,
+        plan=plan,
     )
     subj_with_plan = [
         i["id"] for i in queue_with_plan["items"] if i["id"].startswith("subjective::")
@@ -250,7 +269,10 @@ def test_triage_pending_does_not_unhide_stale_subjective_items():
     }
 
     queue = build_work_queue(
-        state, count=None, include_subjective=True, plan=plan,
+        state,
+        count=None,
+        include_subjective=True,
+        plan=plan,
     )
     ids = [item["id"] for item in queue["items"]]
     assert "smells::src/a.py::x" in ids
@@ -353,7 +375,10 @@ def test_postflight_synthetic_queue_keeps_objective_backlog_suppressed():
     plan["refresh_state"] = {"postflight_scan_completed_at_scan_count": 15}
 
     queue = build_work_queue(
-        state, count=None, include_subjective=True, plan=plan,
+        state,
+        count=None,
+        include_subjective=True,
+        plan=plan,
     )
     ids = [item["id"] for item in queue["items"]]
     assert all(fid.startswith("subjective::") for fid in ids)
@@ -363,15 +388,17 @@ def test_explicit_planned_issue_bypasses_standalone_threshold_filter():
     """Explicit queue_order items must still surface even when naturally filtered."""
     from desloppify.engine._plan.schema import empty_plan
 
-    state = _state([
-        _issue(
-            "facade::src/a.py",
-            detector="facade",
-            file="src/a.py",
-            tier=2,
-            confidence="medium",
-        ),
-    ])
+    state = _state(
+        [
+            _issue(
+                "facade::src/a.py",
+                detector="facade",
+                file="src/a.py",
+                tier=2,
+                confidence="medium",
+            ),
+        ]
+    )
     plan = empty_plan()
     plan["queue_order"] = ["facade::src/a.py"]
 
@@ -599,8 +626,7 @@ def test_skipped_objective_items_dont_block_subjective():
     from desloppify.engine._plan.schema import empty_plan
 
     objective_issues = [
-        _issue(f"smells::src/{c}.py::x", detector="smells", tier=3)
-        for c in "abcd"
+        _issue(f"smells::src/{c}.py::x", detector="smells", tier=3) for c in "abcd"
     ]
     state = _state(
         objective_issues,
@@ -643,7 +669,10 @@ def test_skipped_objective_items_dont_block_subjective():
     }
 
     queue = build_work_queue(
-        state, count=None, include_subjective=True, plan=plan,
+        state,
+        count=None,
+        include_subjective=True,
+        plan=plan,
     )
     ids = [i["id"] for i in queue["items"]]
     # All objective items skipped → lifecycle filter sees no objective work
@@ -717,8 +746,7 @@ def test_wontfixed_issues_excluded_with_plan():
 def test_triage_stages_hidden_during_initial_reviews():
     """Phase 1 hides triage stages and workflow actions — only initial reviews visible."""
     objective_issues = [
-        _issue(f"smells::src/{c}.py::x", detector="smells", tier=3)
-        for c in "ab"
+        _issue(f"smells::src/{c}.py::x", detector="smells", tier=3) for c in "ab"
     ]
     state = _state(
         objective_issues,

@@ -26,7 +26,8 @@ def _find_referenced_names(text: str, names: list[str] | None) -> list[str]:
     if not names:
         return []
     return [
-        name for name in names
+        name
+        for name in names
         if name.lower().replace("_", " ") in text or name.lower() in text
     ]
 
@@ -39,7 +40,9 @@ def _count_phrase_hits(text: str, phrases: tuple[str, ...]) -> int:
     return sum(1 for phrase in phrases if phrase in text)
 
 
-def _validate_observe_attestation(text: str, dimensions: list[str] | None) -> str | None:
+def _validate_observe_attestation(
+    text: str, dimensions: list[str] | None
+) -> str | None:
     found = _find_referenced_names(text, dimensions)
     if found or not dimensions:
         return None
@@ -53,7 +56,9 @@ def _validate_reflect_attestation(
     dimensions: list[str] | None,
     cluster_names: list[str] | None,
 ) -> str | None:
-    refs = _find_referenced_names(text, dimensions) + _find_referenced_names(text, cluster_names)
+    refs = _find_referenced_names(text, dimensions) + _find_referenced_names(
+        text, cluster_names
+    )
     if refs or not (dimensions or cluster_names):
         return None
     return (
@@ -74,22 +79,64 @@ def _validate_cluster_attestation(
     if found or not cluster_names:
         return None
     if stage == "organize":
-        if _contains_any(text, ("cluster", "clusters")) and _count_phrase_hits(
-            text,
-            ("priority", "priorities", "action step", "action steps", "description", "descriptions", "depends-on", "dependency", "dependencies", "issue", "issues", "consolidat"),
-        ) >= 2:
+        if (
+            _contains_any(text, ("cluster", "clusters"))
+            and _count_phrase_hits(
+                text,
+                (
+                    "priority",
+                    "priorities",
+                    "action step",
+                    "action steps",
+                    "description",
+                    "descriptions",
+                    "depends-on",
+                    "dependency",
+                    "dependencies",
+                    "issue",
+                    "issues",
+                    "consolidat",
+                ),
+            )
+            >= 2
+        ):
             return None
     elif stage == "enrich":
-        if _contains_any(text, ("step", "steps", "cluster", "clusters")) and _count_phrase_hits(
-            text,
-            ("executor-ready", "detail", "details", "file path", "file paths", "issue ref", "issue refs", "effort"),
-        ) >= 2:
+        if (
+            _contains_any(text, ("step", "steps", "cluster", "clusters"))
+            and _count_phrase_hits(
+                text,
+                (
+                    "executor-ready",
+                    "detail",
+                    "details",
+                    "file path",
+                    "file paths",
+                    "issue ref",
+                    "issue refs",
+                    "effort",
+                ),
+            )
+            >= 2
+        ):
             return None
     elif stage == "sense-check":
         if _count_phrase_hits(
             text,
-            ("content", "structure", "value", "cross-cluster", "dependency", "dependencies", "decision ledger", "enrich-level", "factually accurate"),
-        ) >= 2 and _contains_any(text, ("verified", "safe", "pass", "passes", "recorded", "checked")):
+            (
+                "content",
+                "structure",
+                "value",
+                "cross-cluster",
+                "dependency",
+                "dependencies",
+                "decision ledger",
+                "enrich-level",
+                "factually accurate",
+            ),
+        ) >= 2 and _contains_any(
+            text, ("verified", "safe", "pass", "passes", "recorded", "checked")
+        ):
             return None
     names = ", ".join(cluster_names[:6])
     return (
@@ -182,7 +229,8 @@ def _apply_observe_auto_skips(
     # Remove auto-skipped IDs from queue_order
     if count:
         auto_skipped_ids = {
-            issue_id for issue_id, disp in dispositions.items()
+            issue_id
+            for issue_id, disp in dispositions.items()
             if disp.get("decision_source") == "observe_auto"
         }
         plan["queue_order"] = [
@@ -204,7 +252,8 @@ def _undo_observe_auto_skips(plan: dict, meta: dict) -> int:
 
     # Find all entries with decision_source == "observe_auto"
     auto_skipped_ids = {
-        issue_id for issue_id, disp in dispositions.items()
+        issue_id
+        for issue_id, disp in dispositions.items()
         if disp.get("decision_source") == "observe_auto"
     }
     for issue_id in auto_skipped_ids:
@@ -237,7 +286,9 @@ def confirm_observe(
     by_dim = obs.get("dimension_counts", {})
     dim_names = obs.get("dimension_names", sorted(by_dim))
     issue_count = int(obs.get("issue_count", 0) or 0)
-    print(f"  Your analysis covered {issue_count} issues across {len(by_dim)} dimensions:")
+    print(
+        f"  Your analysis covered {issue_count} issues across {len(by_dim)} dimensions:"
+    )
     for dim in dim_names:
         print(f"    {dim}: {by_dim[dim]} issues")
 
@@ -247,10 +298,29 @@ def confirm_observe(
 
     min_citations = min(5, max(1, issue_count // 10)) if issue_count > 0 else 0
     if len(cited) < min_citations:
-        print(colorize(f"\n  Cannot confirm: only {len(cited)} issue ID(s) cited in report (need {min_citations}+).", "red"))
-        print(colorize("  Your observe report should reference specific issues by their hash IDs to prove", "dim"))
-        print(colorize("  you actually read them. Cite at least 10% of issues or 5, whichever is smaller.", "dim"))
-        print(colorize("  Re-record observe with more issue citations, then re-confirm.", "dim"))
+        print(
+            colorize(
+                f"\n  Cannot confirm: only {len(cited)} issue ID(s) cited in report (need {min_citations}+).",
+                "red",
+            )
+        )
+        print(
+            colorize(
+                "  Your observe report should reference specific issues by their hash IDs to prove",
+                "dim",
+            )
+        )
+        print(
+            colorize(
+                "  you actually read them. Cite at least 10% of issues or 5, whichever is smaller.",
+                "dim",
+            )
+        )
+        print(
+            colorize(
+                "  Re-record observe with more issue citations, then re-confirm.", "dim"
+            )
+        )
         return
 
     if not finalize_stage_confirmation(
@@ -275,11 +345,16 @@ def confirm_observe(
     meta = plan.get("epic_triage_meta", {})
     auto_skipped = _apply_observe_auto_skips(plan, meta, resolved_services)
     if auto_skipped:
-        print(colorize(f"  Auto-skipped {auto_skipped} false-positive/exaggerated issue(s).", "green"))
+        print(
+            colorize(
+                f"  Auto-skipped {auto_skipped} false-positive/exaggerated issue(s).",
+                "green",
+            )
+        )
 
     print_user_message(
         "Hey — observe is confirmed. Run `desloppify plan triage"
-        " --stage reflect --report \"...\"` next. No need to reply,"
+        ' --stage reflect --report "..."` next. No need to reply,'
         " just keep going."
     )
 
@@ -305,14 +380,22 @@ def confirm_reflect(
     print(colorize("  " + "─" * 50, "dim"))
 
     review_issues = getattr(si, "review_issues", getattr(si, "open_issues", {}))
-    recurring = resolved_services.detect_recurring_patterns(review_issues, si.resolved_issues)
+    recurring = resolved_services.detect_recurring_patterns(
+        review_issues, si.resolved_issues
+    )
     if recurring:
         print(f"  Your strategy identified {len(recurring)} recurring dimension(s):")
         for dim, info in sorted(recurring.items()):
             resolved_count = len(info["resolved"])
             open_count = len(info["open"])
-            label = "potential loop" if open_count >= resolved_count else "root cause unaddressed"
-            print(f"    {dim}: {resolved_count} resolved, {open_count} still open — {label}")
+            label = (
+                "potential loop"
+                if open_count >= resolved_count
+                else "root cause unaddressed"
+            )
+            print(
+                f"    {dim}: {resolved_count} resolved, {open_count} still open — {label}"
+            )
     else:
         print("  No recurring patterns detected.")
 
@@ -328,8 +411,14 @@ def confirm_reflect(
 
     observe_stage = stages.get("observe", {})
     observe_dims = list(observe_stage.get("dimension_names", []))
-    reflect_dims = sorted(set((list(recurring.keys()) if recurring else []) + observe_dims))
-    reflect_clusters = [name for name in plan.get("clusters", {}) if not plan["clusters"][name].get("auto")]
+    reflect_dims = sorted(
+        set((list(recurring.keys()) if recurring else []) + observe_dims)
+    )
+    reflect_clusters = [
+        name
+        for name in plan.get("clusters", {})
+        if not plan["clusters"][name].get("auto")
+    ]
 
     if not finalize_stage_confirmation(
         plan=plan,
@@ -354,9 +443,14 @@ def confirm_reflect(
     print_user_message(
         "Hey — reflect is confirmed. Now create clusters, enrich"
         " them with action steps, then run `desloppify plan triage"
-        " --stage organize --report \"...\"`. No need to reply,"
+        ' --stage organize --report "..."`. No need to reply,'
         " just keep going."
     )
 
 
-__all__ = ["MIN_ATTESTATION_LEN", "confirm_observe", "confirm_reflect", "validate_attestation"]
+__all__ = [
+    "MIN_ATTESTATION_LEN",
+    "confirm_observe",
+    "confirm_reflect",
+    "validate_attestation",
+]

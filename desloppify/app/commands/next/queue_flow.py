@@ -183,7 +183,9 @@ def _render_empty_queue_view(
             plan_data=plan_for_queue,
             context=ctx,
         )
-    _render_queue_header(queue, opts.explain, snapshot=explain_snapshot, plan=plan_for_queue)
+    _render_queue_header(
+        queue, opts.explain, snapshot=explain_snapshot, plan=plan_for_queue
+    )
     _show_empty_queue(
         queue,
         strict_score,
@@ -235,7 +237,9 @@ def _render_terminal_queue_view(
         )
     queue_total = breakdown.queue_total if breakdown else 0
 
-    _render_queue_header(queue, opts.explain, snapshot=explain_snapshot, plan=plan_for_queue)
+    _render_queue_header(
+        queue, opts.explain, snapshot=explain_snapshot, plan=plan_for_queue
+    )
     strict_score = score_snapshot(state).strict
     if _show_empty_queue(
         queue,
@@ -372,7 +376,9 @@ def _render_non_empty_queue(
     lang_name = lang.name if lang else None
     narrative = compute_narrative(
         state,
-        context=NarrativeContext(lang=lang_name, command=view.command_name, plan=plan_data),
+        context=NarrativeContext(
+            lang=lang_name, command=view.command_name, plan=plan_data
+        ),
     )
     payload = _write_next_payload(
         queue=queue,

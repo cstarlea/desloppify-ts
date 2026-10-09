@@ -273,4 +273,3 @@ class TestFileCache:
         assert not is_file_cache_enabled()
         prepare_review(tmp_path, mock_lang, empty_state)
         assert not is_file_cache_enabled()  # Cleaned up after
-

@@ -70,6 +70,8 @@ def _resolve_all_patterns(
         )
         all_resolved.extend(resolved)
     return all_resolved
+
+
 def _write_resolve_query_entry(context: ResolveQueryContext) -> None:
     scores = state_mod.score_snapshot(context.state)
     _write_query_best_effort(

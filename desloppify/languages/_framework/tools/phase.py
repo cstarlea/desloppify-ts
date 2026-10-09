@@ -88,7 +88,9 @@ def make_tool_phase(
                 tier=tier,
                 confidence=str(entry.get("confidence") or confidence),
                 summary=str(entry.get("summary") or entry["message"]),
-                detail=entry.get("detail") if isinstance(entry.get("detail"), dict) else None,
+                detail=entry.get("detail")
+                if isinstance(entry.get("detail"), dict)
+                else None,
             )
             for entry in entries
         ]

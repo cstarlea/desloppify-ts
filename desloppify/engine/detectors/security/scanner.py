@@ -39,10 +39,14 @@ def _scan_line_for_security_entries(
         return entries
     entries.extend(_secret_name_entries(filepath, line_num, line, is_test, code=code))
     entries.extend(
-        _insecure_random_entries(filepath, line_num, line, code=code, uncommented=uncommented)
+        _insecure_random_entries(
+            filepath, line_num, line, code=code, uncommented=uncommented
+        )
     )
     entries.extend(_weak_crypto_entries(filepath, line_num, line, code=code))
     entries.extend(
-        _sensitive_log_entries(filepath, line_num, line, code=code, uncommented=uncommented)
+        _sensitive_log_entries(
+            filepath, line_num, line, code=code, uncommented=uncommented
+        )
     )
     return entries

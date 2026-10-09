@@ -96,7 +96,11 @@ def filter_batches_to_dimensions(
 ) -> list[dict]:
     """Keep only batches whose dimension is in the active set."""
     del fallback_max_files
-    selected = [dimension for dimension in dimensions if isinstance(dimension, str) and dimension]
+    selected = [
+        dimension
+        for dimension in dimensions
+        if isinstance(dimension, str) and dimension
+    ]
     if not selected:
         return []
     selected_set = set(selected)

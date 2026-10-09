@@ -33,6 +33,7 @@ if TYPE_CHECKING:
 # QueueBreakdown — single source of truth for queue numbers
 # ---------------------------------------------------------------------------
 
+
 @dataclass(frozen=True)
 class QueueBreakdown:
     """All numbers needed to render the standardized queue display."""
@@ -57,7 +58,12 @@ class QueueBreakdown:
         use ``score_display_mode()`` instead.
         """
         if self.lifecycle_phase in {
-            "scan", "review_initial", "review", "assessment", "workflow", "triage",
+            "scan",
+            "review_initial",
+            "review",
+            "assessment",
+            "workflow",
+            "triage",
         }:
             return 0
         return max(0, self.queue_total - self.subjective - self.workflow)
@@ -67,6 +73,7 @@ class QueueBreakdown:
 # ScoreDisplayMode — single decision point for frozen vs live score display
 # ---------------------------------------------------------------------------
 
+
 class ScoreDisplayMode(enum.Enum):
     """How to display the score given the current plan cycle and queue state.
 
@@ -75,6 +82,7 @@ class ScoreDisplayMode(enum.Enum):
       → show live scores + transition banner.
     - ``LIVE``: no active plan cycle or queue fully clear → show live scores.
     """
+
     FROZEN = "frozen"
     PHASE_TRANSITION = "phase_transition"
     LIVE = "live"
@@ -100,7 +108,13 @@ def score_display_mode(
         return ScoreDisplayMode.LIVE
     if breakdown.lifecycle_phase == "execute":
         return ScoreDisplayMode.FROZEN
-    if breakdown.lifecycle_phase in {"review_initial", "review", "assessment", "workflow", "triage"}:
+    if breakdown.lifecycle_phase in {
+        "review_initial",
+        "review",
+        "assessment",
+        "workflow",
+        "triage",
+    }:
         return ScoreDisplayMode.PHASE_TRANSITION
     if breakdown.objective_actionable > 0:
         return ScoreDisplayMode.FROZEN
@@ -151,13 +165,9 @@ def plan_aware_queue_breakdown(
 
     # Count subjective and workflow items in the queue.
     # Collapsed clusters whose members are all subjective count as subjective.
-    subjective = sum(
-        1 for item in items
-        if is_subjective_queue_item(item)
-    )
+    subjective = sum(1 for item in items if is_subjective_queue_item(item))
     workflow = sum(
-        1 for item in items
-        if item.get("kind") in ("workflow_stage", "workflow_action")
+        1 for item in items if item.get("kind") in ("workflow_stage", "workflow_action")
     )
 
     # Plan-derived counts
@@ -176,11 +186,13 @@ def plan_aware_queue_breakdown(
             plan_ordered = sum(1 for fid in queue_order if fid not in skipped_ids)
         else:
             plan_ordered = sum(
-                1 for fid in queue_order
+                1
+                for fid in queue_order
                 if fid not in skipped_ids and fid in current_item_ids
             )
             stale_plan_ordered = sum(
-                1 for fid in queue_order
+                1
+                for fid in queue_order
                 if fid not in skipped_ids and fid not in current_item_ids
             )
 
@@ -198,7 +210,9 @@ def plan_aware_queue_breakdown(
             cluster_member_ids = set(cluster_data.get("issue_ids", []))
             open_issues = {
                 fid
-                for fid, f in (state.get("work_items") or state.get("issues", {})).items()
+                for fid, f in (
+                    state.get("work_items") or state.get("issues", {})
+                ).items()
                 if f.get("status") == "open"
             }
             focus_cluster_count = len(cluster_member_ids & open_issues)
@@ -269,14 +283,18 @@ def print_frozen_score_with_queue_context(
     Only call from a ``ScoreDisplayMode.FROZEN`` path — assumes objective
     work remains in the queue.
     """
-    block = format_queue_block(breakdown, frozen_score=frozen_strict, live_score=live_score)
+    block = format_queue_block(
+        breakdown, frozen_score=frozen_strict, live_score=live_score
+    )
     print()
     for text, style in block:
         print(colorize(text, style))
-    print(colorize(
-        "  Score will not update until the queue is clear and you run `desloppify scan`.",
-        "dim",
-    ))
+    print(
+        colorize(
+            "  Score will not update until the queue is clear and you run `desloppify scan`.",
+            "dim",
+        )
+    )
 
 
 def print_objective_drained_banner(
@@ -291,16 +309,20 @@ def print_objective_drained_banner(
     if breakdown.workflow > 0:
         kind_labels.append("workflow")
     kind_desc = " + ".join(kind_labels) if kind_labels else "non-objective"
-    print(colorize(
-        f"\n  Objective queue complete (plan-start was {frozen_strict:.1f})."
-        f" {remaining} {kind_desc} item{'s' if remaining != 1 else ''} remain.",
-        "cyan",
-    ))
-    print(colorize(
-        "  Run `desloppify next` for remaining work,"
-        " then `desloppify scan` to finalize.",
-        "dim",
-    ))
+    print(
+        colorize(
+            f"\n  Objective queue complete (plan-start was {frozen_strict:.1f})."
+            f" {remaining} {kind_desc} item{'s' if remaining != 1 else ''} remain.",
+            "cyan",
+        )
+    )
+    print(
+        colorize(
+            "  Run `desloppify next` for remaining work,"
+            " then `desloppify scan` to finalize.",
+            "dim",
+        )
+    )
 
 
 def print_execution_or_reveal(

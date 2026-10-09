@@ -65,7 +65,14 @@ class TestCmdReviewPrepareRunnerHelpers:
 
         def normalize_result(payload, _allowed_dims):
             notes = payload.get("dimension_notes", {})
-            return payload.get("assessments", {}), payload.get("issues", []), notes, {}, {}, {}
+            return (
+                payload.get("assessments", {}),
+                payload.get("issues", []),
+                notes,
+                {},
+                {},
+                {},
+            )
 
         batch_results, failures = runner_helpers_mod.collect_batch_results(
             request=CollectBatchResultsRequest(
@@ -140,7 +147,9 @@ class TestCmdReviewPrepareRunnerHelpers:
         assert len(seen_inputs) == 1
         assert "Output schema:" not in seen_inputs[0]
 
-    def test_execute_batches_marks_progress_callback_exceptions_as_failures(self, tmp_path):
+    def test_execute_batches_marks_progress_callback_exceptions_as_failures(
+        self, tmp_path
+    ):
 
         def _broken_progress(*_args, **_kwargs):
             raise RuntimeError("progress callback failed")
@@ -287,11 +296,9 @@ class TestCmdReviewPrepareRunnerHelpers:
         logs_dir = tmp_path / "logs"
         logs_dir.mkdir(parents=True, exist_ok=True)
         (logs_dir / "batch-1.log").write_text(
-            
-                "$ codex ...\nSTDERR:\n"
-                "You\u2019ve hit your usage limit. To get more access now, "
-                "send a request to your admin or try again at 8:49 PM.\n"
-            
+            "$ codex ...\nSTDERR:\n"
+            "You\u2019ve hit your usage limit. To get more access now, "
+            "send a request to your admin or try again at 8:49 PM.\n"
         )
 
         runner_helpers_mod.print_failures(
@@ -333,7 +340,6 @@ class TestCmdReviewPrepareRunnerHelpers:
         assert "Environment hints:" in err
         assert "cannot reach chatgpt.com backend" in err
         assert "--external-start --external-runner claude" in err
-
 
     def test_print_failures_reports_sandbox_hint_for_backend_disconnect(
         self, tmp_path, capsys

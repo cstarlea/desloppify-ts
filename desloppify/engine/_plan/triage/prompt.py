@@ -22,17 +22,17 @@ from desloppify.engine._state.schema import StateModel
 class TriageInput:
     """All data needed to produce/update triage clusters."""
 
-    review_issues: dict[str, dict]       # id -> issue (review + concerns)
+    review_issues: dict[str, dict]  # id -> issue (review + concerns)
     objective_backlog_issues: dict[str, dict]  # id -> issue (non-review, for context)
-    auto_clusters: dict[str, dict]       # auto/ clusters available for promotion
+    auto_clusters: dict[str, dict]  # auto/ clusters available for promotion
     existing_clusters: dict[str, Cluster]
-    dimension_scores: dict[str, Any]      # for context
-    new_since_last: set[str]             # issue IDs new since last triage
-    resolved_since_last: set[str]        # issue IDs resolved since last
-    previously_dismissed: list[str]      # IDs dismissed in prior triage
-    triage_version: int                  # next version number
-    resolved_issues: dict[str, dict]   # full issue objects for resolved IDs
-    completed_clusters: list[dict]       # clusters completed since last triage
+    dimension_scores: dict[str, Any]  # for context
+    new_since_last: set[str]  # issue IDs new since last triage
+    resolved_since_last: set[str]  # issue IDs resolved since last
+    previously_dismissed: list[str]  # IDs dismissed in prior triage
+    triage_version: int  # next version number
+    resolved_issues: dict[str, dict]  # full issue objects for resolved IDs
+    completed_clusters: list[dict]  # clusters completed since last triage
     value_check_targets: list[str] | None
 
     def __init__(
@@ -91,12 +91,14 @@ class TriageInput:
         """Backward-compatible alias for older triage callsites."""
         return self.objective_backlog_issues
 
+
 @dataclass
 class DismissedIssue:
     """A issue the LLM says doesn't make sense."""
 
     issue_id: str
     reason: str
+
 
 @dataclass
 class ContradictionNote:
@@ -105,6 +107,7 @@ class ContradictionNote:
     kept: str
     dismissed: str
     reason: str
+
 
 @dataclass
 class AutoClusterDecision:
@@ -115,6 +118,7 @@ class AutoClusterDecision:
     reason: str = ""
     priority: str = ""  # e.g. "after dead-code-fixes", "last", "first"
     sub_clusters: list[str] = field(default_factory=list)  # for break_up action
+
 
 @dataclass
 class TriageResult:
@@ -189,6 +193,7 @@ def _split_open_issue_buckets(
         elif is_triage_finding(issue):
             # Fallback for items without explicit kind — infer from semantics
             from desloppify.engine._state.issue_semantics import is_review_work_item
+
             if is_review_work_item(issue):
                 open_review[issue_id] = issue
             else:
@@ -202,7 +207,8 @@ def _recent_completed_clusters(meta: dict, plan: PlanModel) -> list[dict]:
     if not last_completed:
         return list(all_completed)
     return [
-        cluster for cluster in all_completed
+        cluster
+        for cluster in all_completed
         if cluster.get("completed_at", "") > last_completed
     ]
 
@@ -210,7 +216,7 @@ def _recent_completed_clusters(meta: dict, plan: PlanModel) -> list[dict]:
 def collect_triage_input(plan: PlanModel, state: StateModel) -> TriageInput:
     """Gather all data needed for the triage LLM prompt."""
     ensure_plan_defaults(plan)
-    issues = (state.get("work_items") or state.get("issues", {}))
+    issues = state.get("work_items") or state.get("issues", {})
     meta = plan.get("epic_triage_meta", {})
     epics = triage_clusters(plan)
     auto_clusters = {
@@ -229,9 +235,7 @@ def collect_triage_input(plan: PlanModel, state: StateModel) -> TriageInput:
     version = int(meta.get("version", 0)) + 1
 
     # Resolved issue objects (for REFLECT stage)
-    resolved_issue_objs = {
-        fid: issues[fid] for fid in resolved_since if fid in issues
-    }
+    resolved_issue_objs = {fid: issues[fid] for fid in resolved_since if fid in issues}
 
     return TriageInput(
         review_issues=open_review,
@@ -246,6 +250,7 @@ def collect_triage_input(plan: PlanModel, state: StateModel) -> TriageInput:
         resolved_issues=resolved_issue_objs,
         completed_clusters=_recent_completed_clusters(meta, plan),
     )
+
 
 _TRIAGE_SYSTEM_PROMPT = """\
 You are maintaining the meta-plan for this codebase. Produce a coherent
@@ -319,7 +324,10 @@ Respond with a single JSON object matching this schema:
 }
 """
 
-def _append_existing_clusters_section(parts: list[str], clusters: dict[str, Cluster]) -> None:
+
+def _append_existing_clusters_section(
+    parts: list[str], clusters: dict[str, Cluster]
+) -> None:
     if not clusters:
         return
     parts.append("## Existing clusters")
@@ -355,7 +363,9 @@ def _append_changed_issue_section(
     parts.append("")
 
 
-def _append_resolved_issue_context(parts: list[str], resolved_issues: dict[str, dict]) -> None:
+def _append_resolved_issue_context(
+    parts: list[str], resolved_issues: dict[str, dict]
+) -> None:
     if not resolved_issues:
         return
     parts.append(
@@ -374,13 +384,12 @@ def _append_resolved_issue_context(parts: list[str], resolved_issues: dict[str, 
     parts.append("")
 
 
-def _append_completed_clusters_section(parts: list[str], completed_clusters: list[dict]) -> None:
+def _append_completed_clusters_section(
+    parts: list[str], completed_clusters: list[dict]
+) -> None:
     if not completed_clusters:
         return
-    parts.append(
-        "## Completed clusters since last triage "
-        f"({len(completed_clusters)})"
-    )
+    parts.append(f"## Completed clusters since last triage ({len(completed_clusters)})")
     completed = sorted(
         completed_clusters,
         key=lambda cluster: str(cluster.get("completed_at", "")),
@@ -420,10 +429,14 @@ def _append_recurring_dimensions_section(
     parts.append("")
 
 
-def _append_open_review_issues_section(parts: list[str], review_issues: dict[str, dict]) -> None:
+def _append_open_review_issues_section(
+    parts: list[str], review_issues: dict[str, dict]
+) -> None:
     parts.append(f"## All open review issues ({len(review_issues)})")
     for issue_id, issue in sorted(review_issues.items()):
-        detail = issue.get("detail", {}) if isinstance(issue.get("detail"), dict) else {}
+        detail = (
+            issue.get("detail", {}) if isinstance(issue.get("detail"), dict) else {}
+        )
         suggestion = detail.get("suggestion", "")
         dimension = detail.get("dimension", "")
         confidence = issue.get("confidence", "medium")
@@ -439,7 +452,9 @@ def _append_open_review_issues_section(parts: list[str], review_issues: dict[str
     parts.append("")
 
 
-def _append_dimension_scores_section(parts: list[str], dimension_scores: dict[str, Any]) -> None:
+def _append_dimension_scores_section(
+    parts: list[str], dimension_scores: dict[str, Any]
+) -> None:
     if not dimension_scores:
         return
     parts.append("## Dimension scores (context)")
@@ -478,7 +493,8 @@ def _append_mechanical_backlog_section(
     }
     clustered_issue_count = len(clustered_ids)
     auto_cluster_count = sum(
-        1 for cluster in auto_clusters.values()
+        1
+        for cluster in auto_clusters.values()
         if any(
             isinstance(issue_id, str) and issue_id in objective_backlog_issues
             for issue_id in cluster.get("issue_ids", [])
@@ -513,7 +529,8 @@ def _append_mechanical_backlog_section(
         if not isinstance(raw_issue_ids, list):
             continue
         member_count = sum(
-            1 for issue_id in raw_issue_ids
+            1
+            for issue_id in raw_issue_ids
             if isinstance(issue_id, str) and issue_id in objective_backlog_issues
         )
         if member_count <= 0:
@@ -539,7 +556,7 @@ def _append_mechanical_backlog_section(
             if stats:
                 parts.append(f"  {stats}")
         if len(rendered_clusters) > len(visible_clusters):
-            remaining = rendered_clusters[len(visible_clusters):]
+            remaining = rendered_clusters[len(visible_clusters) :]
             remaining_issues = sum(item[2] for item in remaining)
             parts.append(
                 f"- ... and {len(remaining)} more clusters ({remaining_issues} issues)"
@@ -581,7 +598,8 @@ def _cluster_stats(cluster: dict[str, Any], all_issues: dict[str, dict]) -> str:
     if not isinstance(issue_ids, list):
         return ""
     members = [
-        all_issues[iid] for iid in issue_ids
+        all_issues[iid]
+        for iid in issue_ids
         if isinstance(iid, str) and iid in all_issues
     ]
     if not members:
@@ -589,6 +607,7 @@ def _cluster_stats(cluster: dict[str, Any], all_issues: dict[str, dict]) -> str:
 
     # Severity/confidence breakdown
     from collections import Counter
+
     severities: Counter[str] = Counter()
     confidences: Counter[str] = Counter()
     rules: Counter[str] = Counter()
@@ -630,7 +649,9 @@ def _cluster_autofix_hint(cluster: dict[str, Any]) -> str:
     return cluster_autofix_hint(cluster) or ""
 
 
-def _cluster_backlog_summary(name: str, cluster: dict[str, Any], member_count: int) -> str:
+def _cluster_backlog_summary(
+    name: str, cluster: dict[str, Any], member_count: int
+) -> str:
     description = str(cluster.get("description") or "").strip()
     if description:
         return description
@@ -646,7 +667,9 @@ def _confidence_sort_key(issue: dict[str, Any]) -> int:
     return order.get(confidence, 1)
 
 
-def _append_previously_dismissed_section(parts: list[str], dismissed_ids: list[str]) -> None:
+def _append_previously_dismissed_section(
+    parts: list[str], dismissed_ids: list[str]
+) -> None:
     if not dismissed_ids:
         return
     parts.append(f"## Previously dismissed ({len(dismissed_ids)})")
@@ -683,6 +706,7 @@ def build_triage_prompt(si: TriageInput) -> str:
     )
     _append_previously_dismissed_section(parts, si.previously_dismissed)
     return "\n".join(parts)
+
 
 __all__ = [
     "_TRIAGE_SYSTEM_PROMPT",

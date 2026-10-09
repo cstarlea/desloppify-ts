@@ -95,7 +95,9 @@ def preset_catalog() -> dict[str, str]:
     ensure_builtin_specs_loaded()
     catalog = {name: preset.description for name, preset in PRESETS.items()}
     for framework_id, spec in sorted(list_framework_specs(ecosystem="node").items()):
-        catalog.setdefault(framework_id, f"{spec.label} (framework; detected from package.json)")
+        catalog.setdefault(
+            framework_id, f"{spec.label} (framework; detected from package.json)"
+        )
     return catalog
 
 
@@ -106,8 +108,12 @@ def _configured(lang: LangRuntimeContract | None, key: str) -> Any:
 
 def active_presets(path: Path, lang: LangRuntimeContract | None) -> list[Preset]:
     """Presets the config selects, then those a dependency turns on."""
-    selected = [PRESETS[name] for name in _configured(lang, "presets") or () if name in PRESETS]
-    markers = [p for p in PRESETS.values() if p.marker_dependencies and p not in selected]
+    selected = [
+        PRESETS[name] for name in _configured(lang, "presets") or () if name in PRESETS
+    ]
+    markers = [
+        p for p in PRESETS.values() if p.marker_dependencies and p not in selected
+    ]
     if markers:
         package_root = detect_ecosystem_frameworks(path, lang, "node").package_root
         deps = package_dependency_names(package_root)
@@ -126,7 +132,9 @@ def _parse_layers(raw: object) -> tuple[Layer, ...]:
         if isinstance(paths, str):
             paths = [paths]
         if not isinstance(paths, list) or not paths:
-            logger.warning("languages.typescript.layers: layer %r has no paths", item.get("name"))
+            logger.warning(
+                "languages.typescript.layers: layer %r has no paths", item.get("name")
+            )
             continue
         cross = item.get("cross_import_dir")
         layers.append(

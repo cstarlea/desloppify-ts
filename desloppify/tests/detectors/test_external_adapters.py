@@ -62,7 +62,11 @@ class TestKnipAdapter:
         with patch(_KNIP_RUN, return_value=_knip_output('{"issues": []}')) as run:
             assert detect_with_knip(root / "src") == []
         argv = run.call_args.args[0]
-        assert argv == [str(root / "node_modules" / ".bin" / "knip"), "--reporter", "json"]
+        assert argv == [
+            str(root / "node_modules" / ".bin" / "knip"),
+            "--reporter",
+            "json",
+        ]
         assert run.call_args.kwargs["cwd"] == str(root.resolve())
 
     def test_monorepo_package_runs_from_workspace_root(self, tmp_path):
@@ -92,11 +96,18 @@ class TestKnipAdapter:
             "issues": [
                 {
                     "file": "src/lib.ts",
-                    "exports": [{"name": "deadHelper", "line": 2, "col": 14, "pos": 42}],
+                    "exports": [
+                        {"name": "deadHelper", "line": 2, "col": 14, "pos": 42}
+                    ],
                     "types": [{"name": "DeadType", "line": 3, "col": 13, "pos": 70}],
-                    "enumMembers": [{"namespace": "E", "name": "B", "line": 4, "pos": 108}],
+                    "enumMembers": [
+                        {"namespace": "E", "name": "B", "line": 4, "pos": 108}
+                    ],
                 },
-                {"file": "package.json", "dependencies": [{"name": "left-pad", "line": 10}]},
+                {
+                    "file": "package.json",
+                    "dependencies": [{"name": "left-pad", "line": 10}],
+                },
             ]
         }
         with patch(_KNIP_RUN, return_value=_knip_output(json.dumps(payload))):
@@ -113,7 +124,10 @@ class TestKnipAdapter:
         payload = {
             "issues": [
                 {"file": "scripts/tool.ts", "exports": [{"name": "gone", "line": 1}]},
-                {"file": "/other/path/file.ts", "exports": [{"name": "far", "line": 1}]},
+                {
+                    "file": "/other/path/file.ts",
+                    "exports": [{"name": "far", "line": 1}],
+                },
             ]
         }
         with patch(_KNIP_RUN, return_value=_knip_output(json.dumps(payload))):
@@ -139,12 +153,15 @@ class TestJscpdAdapter:
             assert detect_with_jscpd(tmp_path) is None
 
     def test_returns_none_on_timeout(self, tmp_path):
-        with patch(
-            "desloppify.engine.detectors.jscpd_adapter._resolve_jscpd_command",
-            return_value=["/usr/bin/npx", "--yes", "jscpd"],
-        ), patch(
-            "desloppify.engine.detectors.jscpd_adapter._run_jscpd_command",
-            side_effect=subprocess.TimeoutExpired("npx", 120),
+        with (
+            patch(
+                "desloppify.engine.detectors.jscpd_adapter._resolve_jscpd_command",
+                return_value=["/usr/bin/npx", "--yes", "jscpd"],
+            ),
+            patch(
+                "desloppify.engine.detectors.jscpd_adapter._run_jscpd_command",
+                side_effect=subprocess.TimeoutExpired("npx", 120),
+            ),
         ):
             assert detect_with_jscpd(tmp_path) is None
 
@@ -163,15 +180,19 @@ class TestJscpdAdapter:
                 return "", ""
 
         fake_proc = FakeProc()
-        with patch(
-            "desloppify.engine.detectors.jscpd_adapter.subprocess.Popen",
-            return_value=fake_proc,
-        ) as popen, patch(
-            "desloppify.engine.detectors.jscpd_adapter.os.getpgid",
-            return_value=9876,
-        ), patch(
-            "desloppify.engine.detectors.jscpd_adapter.os.killpg",
-        ) as killpg:
+        with (
+            patch(
+                "desloppify.engine.detectors.jscpd_adapter.subprocess.Popen",
+                return_value=fake_proc,
+            ) as popen,
+            patch(
+                "desloppify.engine.detectors.jscpd_adapter.os.getpgid",
+                return_value=9876,
+            ),
+            patch(
+                "desloppify.engine.detectors.jscpd_adapter.os.killpg",
+            ) as killpg,
+        ):
             with pytest.raises(subprocess.TimeoutExpired):
                 _run_jscpd_command(["jscpd"], timeout=1)
 
@@ -187,12 +208,16 @@ class TestJscpdAdapter:
     def test_returns_none_on_invalid_json_file(self, tmp_path):
         bad_report = tmp_path / "jscpd-report.json"
         bad_report.write_text("not-json")
-        with patch(
-            "desloppify.engine.detectors.jscpd_adapter._resolve_jscpd_command",
-            return_value=["/usr/bin/npx", "--yes", "jscpd"],
-        ), patch(
-            "desloppify.engine.detectors.jscpd_adapter._run_jscpd_command",
-        ), patch("tempfile.TemporaryDirectory") as mock_td:
+        with (
+            patch(
+                "desloppify.engine.detectors.jscpd_adapter._resolve_jscpd_command",
+                return_value=["/usr/bin/npx", "--yes", "jscpd"],
+            ),
+            patch(
+                "desloppify.engine.detectors.jscpd_adapter._run_jscpd_command",
+            ),
+            patch("tempfile.TemporaryDirectory") as mock_td,
+        ):
             mock_td.return_value.__enter__.return_value = str(tmp_path)
             mock_td.return_value.__exit__.return_value = None
             result = detect_with_jscpd(tmp_path)
@@ -343,21 +368,25 @@ class TestJscpdAdapter:
             assert "**/node_modules/**" in ignore_value
             return MagicMock(returncode=0, stdout="", stderr="")
 
-        with patch(
-            "desloppify.engine.detectors.jscpd_adapter._resolve_jscpd_command",
-            return_value=["/usr/bin/npx", "--yes", "jscpd"],
-        ), patch(
-            "desloppify.engine.detectors.jscpd_adapter._run_jscpd_command",
-            side_effect=_fake_run,
-        ), patch(
-            "desloppify.engine.detectors.jscpd_adapter.collect_exclude_dirs",
-            return_value=fake_dirs,
-        ), patch(
-            "desloppify.engine.detectors.jscpd_adapter.get_exclusions",
-            return_value=(),
-        ), patch(
-            "tempfile.TemporaryDirectory"
-        ) as mock_td:
+        with (
+            patch(
+                "desloppify.engine.detectors.jscpd_adapter._resolve_jscpd_command",
+                return_value=["/usr/bin/npx", "--yes", "jscpd"],
+            ),
+            patch(
+                "desloppify.engine.detectors.jscpd_adapter._run_jscpd_command",
+                side_effect=_fake_run,
+            ),
+            patch(
+                "desloppify.engine.detectors.jscpd_adapter.collect_exclude_dirs",
+                return_value=fake_dirs,
+            ),
+            patch(
+                "desloppify.engine.detectors.jscpd_adapter.get_exclusions",
+                return_value=(),
+            ),
+            patch("tempfile.TemporaryDirectory") as mock_td,
+        ):
             mock_td.return_value.__enter__.return_value = str(tmp_path)
             mock_td.return_value.__exit__.return_value = None
             result = detect_with_jscpd(tmp_path)
@@ -372,16 +401,12 @@ from desloppify.base.discovery.source import collect_exclude_dirs  # noqa: E402
 
 class TestCollectExcludeDirs:
     def test_returns_absolute_paths(self, tmp_path):
-        with patch(
-            "desloppify.base.discovery.source.get_exclusions", return_value=()
-        ):
+        with patch("desloppify.base.discovery.source.get_exclusions", return_value=()):
             result = collect_exclude_dirs(tmp_path)
         assert all(p.startswith(str(tmp_path)) for p in result)
 
     def test_includes_default_non_glob_entries(self, tmp_path):
-        with patch(
-            "desloppify.base.discovery.source.get_exclusions", return_value=()
-        ):
+        with patch("desloppify.base.discovery.source.get_exclusions", return_value=()):
             result = collect_exclude_dirs(tmp_path)
         basenames = {Path(p).name for p in result}
         assert "node_modules" in basenames
@@ -391,9 +416,7 @@ class TestCollectExcludeDirs:
         assert "venv" in basenames
 
     def test_excludes_glob_patterns(self, tmp_path):
-        with patch(
-            "desloppify.base.discovery.source.get_exclusions", return_value=()
-        ):
+        with patch("desloppify.base.discovery.source.get_exclusions", return_value=()):
             result = collect_exclude_dirs(tmp_path)
         # *.egg-info and .venv* are glob patterns and should be excluded
         assert not any("*" in p for p in result)

@@ -158,7 +158,9 @@ def extract_ts_functions(filepath: str) -> list[FunctionInfo]:
         source = parsed.source
         start = source.rfind(b"\n", 0, definition.start) + 1
         end = source.find(b"\n", covered_until)
-        body = source[start : len(source) if end == -1 else end].decode("utf-8", "replace")
+        body = source[start : len(source) if end == -1 else end].decode(
+            "utf-8", "replace"
+        )
         normalized = normalize_ts_body(body)
         if len(normalized.splitlines()) < 3:
             continue
@@ -172,7 +174,9 @@ def extract_ts_functions(filepath: str) -> list[FunctionInfo]:
                 loc=end_line - definition.line + 1,
                 body=body,
                 normalized=normalized,
-                body_hash=hashlib.md5(normalized.encode(), usedforsecurity=False).hexdigest(),
+                body_hash=hashlib.md5(
+                    normalized.encode(), usedforsecurity=False
+                ).hexdigest(),
                 params=_param_names(parsed, info),
                 default_export=info.default_export,
                 object_member=definition.object_member,
@@ -195,7 +199,9 @@ def _param_names(parsed: ParsedSource, info: SyntaxFunctionInfo) -> list[str]:
     names: list[str] = []
     for param in info.params:
         node = param.node
-        pattern = node.child_by_field_name("pattern") if node.type in PARAMETERS else node  # type: ignore[attr-defined]
+        pattern = (
+            node.child_by_field_name("pattern") if node.type in PARAMETERS else node
+        )  # type: ignore[attr-defined]
         if pattern is None or pattern.type == "this":
             continue
         if pattern.type in ("object_pattern", "array_pattern"):
@@ -207,11 +213,17 @@ def _param_names(parsed: ParsedSource, info: SyntaxFunctionInfo) -> list[str]:
 
 
 def _extract_ts_functions_regex(filepath: str) -> list[FunctionInfo]:
-    p = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
+    p = (
+        Path(filepath)
+        if Path(filepath).is_absolute()
+        else get_project_root() / filepath
+    )
     try:
         content = read_code_text(p)
     except (OSError, UnicodeDecodeError) as exc:
-        logger.debug("Skipping unreadable TS file %s in function extraction: %s", filepath, exc)
+        logger.debug(
+            "Skipping unreadable TS file %s in function extraction: %s", filepath, exc
+        )
         return []
 
     lines = split_lines(content)

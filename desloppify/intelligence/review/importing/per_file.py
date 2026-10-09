@@ -136,9 +136,7 @@ def import_review_issues(
 
     # Build accepted-file set from successfully imported issues only,
     # not from all issues_list entries (which may include invalid dimensions).
-    valid_reviewed_files_abs = {
-        issue["file"] for issue in review_issues
-    }
+    valid_reviewed_files_abs = {issue["file"] for issue in review_issues}
     valid_reviewed_files = valid_reviewed_files_abs
     reviewed_files_rel = {
         str(file_path).strip()

@@ -11,9 +11,10 @@ from desloppify.engine._state.scope import issue_in_scan_scope
 
 def _all_open_issues(state: StateModel) -> list[dict[str, Any]]:
     """Return every open issue in state, suppressed or out of scope included."""
-    issues = (state.get("work_items") or state.get("issues", {}))
+    issues = state.get("work_items") or state.get("issues", {})
     return [
-        finding for finding in issues.values()
+        finding
+        for finding in issues.values()
         if isinstance(finding, dict) and finding.get("status") == "open"
     ]
 
@@ -22,7 +23,8 @@ def _open_issues(state: StateModel) -> list[dict[str, Any]]:
     """Return the open issues the score counts: not suppressed, in the scan's scope."""
     scan_path = state.get("scan_path")
     return [
-        finding for finding in _all_open_issues(state)
+        finding
+        for finding in _all_open_issues(state)
         if not finding.get("suppressed")
         and issue_in_scan_scope(str(finding.get("file", "")), scan_path)
     ]

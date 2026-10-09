@@ -38,13 +38,22 @@ def _write(root: Path, name: str, text: str = "") -> Path:
 
 
 def _message(rule, line, col=1, severity=2, message="msg", **extra):
-    return {"ruleId": rule, "line": line, "column": col, "severity": severity, "message": message, **extra}
+    return {
+        "ruleId": rule,
+        "line": line,
+        "column": col,
+        "severity": severity,
+        "message": message,
+        **extra,
+    }
 
 
 def _output(results: dict[Path, list[dict]], meta: dict | None = None) -> str:
     return json.dumps(
         {
-            "results": [{"filePath": str(f), "messages": m} for f, m in results.items()],
+            "results": [
+                {"filePath": str(f), "messages": m} for f, m in results.items()
+            ],
             "metadata": {"rulesMeta": meta or {}},
         }
     )
@@ -58,13 +67,26 @@ def project(tmp_path, monkeypatch):
     _write(tmp_path, "node_modules/.bin/eslint", "#!/bin/sh\n")
     calls: list[list[str]] = []
 
-    def fake(stdout="", *, returncode=1, stderr="", config=None, raises=None, by_linter=None, rules=()):
+    def fake(
+        stdout="",
+        *,
+        returncode=1,
+        stderr="",
+        config=None,
+        raises=None,
+        by_linter=None,
+        rules=(),
+    ):
         def run(cmd, linter_config, timeout=300):
             calls.append(cmd)
             if any(arg.startswith("--print-config") for arg in cmd):
-                return SimpleNamespace(stdout=json.dumps(config or {}), stderr="", returncode=0)
+                return SimpleNamespace(
+                    stdout=json.dumps(config or {}), stderr="", returncode=0
+                )
             if "--rules" in cmd:
-                return SimpleNamespace(stdout=json.dumps(list(rules)), stderr="", returncode=0)
+                return SimpleNamespace(
+                    stdout=json.dumps(list(rules)), stderr="", returncode=0
+                )
             if raises is not None:
                 raise raises
             out = (by_linter or {}).get(linter_config.linter, stdout)
@@ -91,10 +113,25 @@ def project(tmp_path, monkeypatch):
         ("@stylistic/semi", "error", None, None),
         ("@typescript-eslint/no-unused-vars", "error", {"type": "problem"}, None),
         ("@typescript-eslint/no-explicit-any", "error", None, None),
-        ("@typescript-eslint/no-floating-promises", "error", {"type": "problem"}, "high"),
+        (
+            "@typescript-eslint/no-floating-promises",
+            "error",
+            {"type": "problem"},
+            "high",
+        ),
         ("@typescript-eslint/no-unsafe-call", "error", {"type": "problem"}, "medium"),
-        ("@typescript-eslint/no-unnecessary-type-assertion", "error", {"type": "suggestion"}, "low"),
-        ("@typescript-eslint/array-type", "error", {"docs": {"recommended": "stylistic"}}, "low"),
+        (
+            "@typescript-eslint/no-unnecessary-type-assertion",
+            "error",
+            {"type": "suggestion"},
+            "low",
+        ),
+        (
+            "@typescript-eslint/array-type",
+            "error",
+            {"docs": {"recommended": "stylistic"}},
+            "low",
+        ),
         ("unicorn/filename-case", "error", {"type": "suggestion"}, "low"),
         ("some-plugin/unknown", "warning", None, "low"),
     ],
@@ -123,7 +160,9 @@ def test_legacy_config_is_used_without_a_flat_config(tmp_path):
 
     (config,) = find_lint_configs(tmp_path / "pkg")
     assert config.legacy and config.path == tmp_path / "pkg/package.json"
-    assert find_lint_configs(tmp_path / "pkg") and not nested_config_dirs(tmp_path, tmp_path)
+    assert find_lint_configs(tmp_path / "pkg") and not nested_config_dirs(
+        tmp_path, tmp_path
+    )
 
 
 def test_no_config(tmp_path):
@@ -140,8 +179,18 @@ def test_parse_output_reads_rules_fixes_and_parse_errors(tmp_path):
         {
             a: [
                 _message("eqeqeq", 3, fix={"range": [0, 1], "text": "="}),
-                _message(None, 7, severity=1, message="Unused eslint-disable directive (no problems were reported)."),
-                _message(None, 0, severity=1, message="File ignored because of a matching ignore pattern."),
+                _message(
+                    None,
+                    7,
+                    severity=1,
+                    message="Unused eslint-disable directive (no problems were reported).",
+                ),
+                _message(
+                    None,
+                    0,
+                    severity=1,
+                    message="File ignored because of a matching ignore pattern.",
+                ),
             ],
             b: [_message(None, 2, fatal=True, message="Parsing error: ';' expected.")],
         },
@@ -186,14 +235,19 @@ def test_reports_findings_one_issue_per_rule_and_line(project):
     )
     result = detect_lint_result(root / "src")
 
-    assert [(e["rule"], e["line"], e["cols"], e["count"], e["confidence"]) for e in result.entries] == [
+    assert [
+        (e["rule"], e["line"], e["cols"], e["count"], e["confidence"])
+        for e in result.entries
+    ] == [
         ("@typescript-eslint/no-floating-promises", 4, [1], 1, "high"),
         ("eqeqeq", 3, [5, 12], 2, "medium"),
     ]
     assert result.checked_files == [str(a), str(root / "src/b.ts")]
     assert result.linters == ("eslint",) and result.coverage is None
     lint_call = calls[-1]
-    assert lint_call[1:3] == ["--format", "json-with-metadata"] and lint_call[-1] == "src"
+    assert (
+        lint_call[1:3] == ["--format", "json-with-metadata"] and lint_call[-1] == "src"
+    )
 
 
 def test_nested_config_is_left_out_and_named(project):
@@ -205,7 +259,9 @@ def test_nested_config_is_left_out_and_named(project):
     result = detect_lint_result(root)
 
     assert result.checked_files == [str(root / "src/a.ts")]
-    assert "2 files are under other lint configs (packages/p)" in result.coverage.summary
+    assert (
+        "2 files are under other lint configs (packages/p)" in result.coverage.summary
+    )
     assert "packages/p/**" in calls[-1]
 
 
@@ -244,12 +300,23 @@ def test_no_config_is_not_reduced_coverage(project):
     "kwargs,reason,summary",
     [
         (
-            {"returncode": 2, "stderr": "Oops! Something went wrong! :(\n\nESLint: 9.0.0\n\nCannot find package 'x'\n"},
+            {
+                "returncode": 2,
+                "stderr": "Oops! Something went wrong! :(\n\nESLint: 9.0.0\n\nCannot find package 'x'\n",
+            },
             "linter_failed",
             "Cannot find package 'x'",
         ),
-        ({"returncode": 134, "stderr": "FATAL ERROR: JavaScript heap out of memory"}, "linter_oom", "out of memory"),
-        ({"raises": subprocess.TimeoutExpired("eslint", 300)}, "linter_timeout", "over 300s"),
+        (
+            {"returncode": 134, "stderr": "FATAL ERROR: JavaScript heap out of memory"},
+            "linter_oom",
+            "out of memory",
+        ),
+        (
+            {"raises": subprocess.TimeoutExpired("eslint", 300)},
+            "linter_timeout",
+            "over 300s",
+        ),
     ],
 )
 def test_linter_failures_skip_cleanly(project, kwargs, reason, summary):
@@ -266,14 +333,26 @@ def test_type_aware_config_over_the_size_limit_is_skipped(project):
     root, fake = project
     for i in range(3):
         _write(root, f"src/f{i}.ts")
-    calls = fake(config={"languageOptions": {"parserOptions": {"projectService": True}}})
+    calls = fake(
+        config={"languageOptions": {"parserOptions": {"projectService": True}}}
+    )
 
     result = detect_lint_result(root / "src", type_aware_max_files=2)
-    assert result.checked_files is None and result.coverage.reason == "type_aware_too_large"
+    assert (
+        result.checked_files is None
+        and result.coverage.reason == "type_aware_too_large"
+    )
     assert len(calls) == 1  # only --print-config
 
-    fake(_output({root / "src/f0.ts": []}), returncode=0, config={"parserOptions": {"project": True}})
-    assert detect_lint_result(root / "src", type_aware_max_files=0).checked_files is not None
+    fake(
+        _output({root / "src/f0.ts": []}),
+        returncode=0,
+        config={"parserOptions": {"project": True}},
+    )
+    assert (
+        detect_lint_result(root / "src", type_aware_max_files=0).checked_files
+        is not None
+    )
 
 
 def test_unparsable_files_are_not_counted(project):
@@ -283,7 +362,10 @@ def test_unparsable_files_are_not_counted(project):
 
     result = detect_lint_result(root / "src")
     assert result.checked_files == [str(b)]
-    assert result.coverage.reason == "partial" and "could not be parsed" in result.coverage.summary
+    assert (
+        result.coverage.reason == "partial"
+        and "could not be parsed" in result.coverage.summary
+    )
 
 
 # phase
@@ -293,8 +375,17 @@ def test_phase_issue_ids_are_rule_and_line(project):
     root, fake = project
     a = _write(root, "src/a.ts")
     vendored = _write(root, "src/vendor/v.ts")
-    fake(_output({a: [_message("eqeqeq", 3, message="Expected '==='\nmore")], vendored: [_message("eqeqeq", 1)]}))
-    zone_map = SimpleNamespace(get=lambda path: Zone.VENDOR if "vendor" in path else Zone.PRODUCTION)
+    fake(
+        _output(
+            {
+                a: [_message("eqeqeq", 3, message="Expected '==='\nmore")],
+                vendored: [_message("eqeqeq", 1)],
+            }
+        )
+    )
+    zone_map = SimpleNamespace(
+        get=lambda path: Zone.VENDOR if "vendor" in path else Zone.PRODUCTION
+    )
     lang = SimpleNamespace(
         zone_map=zone_map,
         detector_coverage={},
@@ -337,9 +428,17 @@ def test_configs_found_per_linter(tmp_path):
     _write(tmp_path, "fmt/biome.json", '{"linter": {"enabled": false}}')
     _write(tmp_path, "fmt/package.json", "{}")
 
-    assert [c.linter for c in find_lint_configs(tmp_path / "src")] == ["xo", "biome", "oxlint"]
+    assert [c.linter for c in find_lint_configs(tmp_path / "src")] == [
+        "xo",
+        "biome",
+        "oxlint",
+    ]
     # a Biome config with its linter off is a formatter config, not a linter
-    assert [c.linter for c in find_lint_configs(tmp_path / "fmt")] == ["xo", "biome", "oxlint"]
+    assert [c.linter for c in find_lint_configs(tmp_path / "fmt")] == [
+        "xo",
+        "biome",
+        "oxlint",
+    ]
     assert nested_config_dirs(tmp_path, tmp_path) == []
 
 
@@ -361,9 +460,15 @@ def test_parse_biome_output(tmp_path):
             "description": "Use const",
             "location": {"path": "src/a.ts", "start": {"line": 1, "column": 1}},
         },
-        {"category": "parse", "severity": "error", "location": {"path": {"file": "src/b.ts"}, "span": [0, 0]}},
+        {
+            "category": "parse",
+            "severity": "error",
+            "location": {"path": {"file": "src/b.ts"}, "span": [0, 0]},
+        },
     ]
-    stdout = json.dumps({"summary": {"changed": 0, "unchanged": 2}, "diagnostics": diagnostics})
+    stdout = json.dumps(
+        {"summary": {"changed": 0, "unchanged": 2}, "diagnostics": diagnostics}
+    )
     files = {a, tmp_path / "src/b.ts"}
 
     assert parse_biome_output("unstable warning\n" + stdout, run, files)
@@ -372,13 +477,17 @@ def test_parse_biome_output(tmp_path):
         ("suspicious/noDoubleEquals", 2, 20, "error", True),
         ("style/useConst", 1, 1, "warning", False),
     ]
-    assert classify("suspicious/noDoubleEquals", "error", run.messages[0].meta) == "high"
+    assert (
+        classify("suspicious/noDoubleEquals", "error", run.messages[0].meta) == "high"
+    )
     assert classify("style/useConst", "error", run.messages[1].meta) == "low"
     assert classify("suspicious/noExplicitAny", "error", None) is None
     assert run.unparsed == {tmp_path / "src/b.ts"} and run.files == files
 
     broken = LinterRun(config=config)
-    bad = json.dumps({"diagnostics": [{"category": "configuration", "description": "bad key"}]})
+    bad = json.dumps(
+        {"diagnostics": [{"category": "configuration", "description": "bad key"}]}
+    )
     assert not parse_biome_output(bad, broken, files)
     assert broken.error == "bad key"
 
@@ -399,7 +508,12 @@ def test_parse_oxlint_output(tmp_path):
     diagnostics = [
         _ox("eslint(eqeqeq)", 1, filename="src/b.ts"),
         _ox("typescript(no-floating-promises)", 3, "warning", filename="src/b.ts"),
-        {"message": "Expected `)`", "severity": "error", "filename": "src/a.ts", "labels": []},
+        {
+            "message": "Expected `)`",
+            "severity": "error",
+            "filename": "src/a.ts",
+            "labels": [],
+        },
     ]
     stdout = json.dumps({"diagnostics": diagnostics, "number_of_files": 2})
     files = {tmp_path / "src/a.ts", tmp_path / "src/b.ts"}
@@ -414,7 +528,9 @@ def test_parse_oxlint_output(tmp_path):
     assert rule_name("eslint-plugin-react", "jsx-key") == "react/jsx-key"
 
     empty = LinterRun(config=config)
-    assert parse_oxlint_output(json.dumps({"diagnostics": [], "number_of_files": 0}), empty, files, {})
+    assert parse_oxlint_output(
+        json.dumps({"diagnostics": [], "number_of_files": 0}), empty, files, {}
+    )
     assert empty.files == set()
 
 
@@ -424,11 +540,19 @@ def test_every_configured_linter_runs_and_shared_rules_merge(project):
     _write(root, ".oxlintrc.json", "{}")
     _write(root, "node_modules/.bin/oxlint", "#!/bin/sh\n")
     oxlint_out = json.dumps(
-        {"diagnostics": [_ox("eslint(eqeqeq)", 3), _ox("eslint(no-debugger)", 4, "warning")], "number_of_files": 1}
+        {
+            "diagnostics": [
+                _ox("eslint(eqeqeq)", 3),
+                _ox("eslint(no-debugger)", 4, "warning"),
+            ],
+            "number_of_files": 1,
+        }
     )
     fake(
         by_linter={
-            "eslint": _output({a: [_message("eqeqeq", 3, 5)]}, {"eqeqeq": {"type": "suggestion"}}),
+            "eslint": _output(
+                {a: [_message("eqeqeq", 3, 5)]}, {"eqeqeq": {"type": "suggestion"}}
+            ),
             "oxlint": oxlint_out,
         },
         rules=[{"scope": "eslint", "value": "no-debugger", "category": "correctness"}],
@@ -436,7 +560,9 @@ def test_every_configured_linter_runs_and_shared_rules_merge(project):
 
     result = detect_lint_result(root / "src")
     assert result.linters == ("eslint", "oxlint")
-    assert [(e["rule"], e["line"], e["count"], e["confidence"]) for e in result.entries] == [
+    assert [
+        (e["rule"], e["line"], e["count"], e["confidence"]) for e in result.entries
+    ] == [
         ("eqeqeq", 3, 2, "medium"),
         ("no-debugger", 4, 1, "medium"),
     ]
@@ -445,12 +571,20 @@ def test_every_configured_linter_runs_and_shared_rules_merge(project):
 def test_xo_runs_with_its_own_flags(project):
     root, fake = project
     (root / "eslint.config.js").unlink()
-    _write(root, "package.json", '{"devDependencies": {"xo": "1"}, "xo": {"rules": {}}}')
+    _write(
+        root, "package.json", '{"devDependencies": {"xo": "1"}, "xo": {"rules": {}}}'
+    )
     _write(root, "node_modules/.bin/xo", "#!/bin/sh\n")
     a = _write(root, "src/a.ts")
-    calls = fake(json.dumps([{"filePath": str(a), "messages": [_message("max-depth", 2, severity=1)]}]))
+    calls = fake(
+        json.dumps(
+            [{"filePath": str(a), "messages": [_message("max-depth", 2, severity=1)]}]
+        )
+    )
 
     result = detect_lint_result(root / "src")
     assert calls[0][1] == f"--print-config={a}"
     assert calls[-1][1] == "--reporter=json"
-    assert [(e["rule"], e["confidence"]) for e in result.entries] == [("max-depth", "low")]
+    assert [(e["rule"], e["confidence"]) for e in result.entries] == [
+        ("max-depth", "low")
+    ]

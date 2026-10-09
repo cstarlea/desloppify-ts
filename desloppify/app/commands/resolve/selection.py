@@ -113,7 +113,9 @@ def _enforce_batch_wontfix_confirmation(
     )
     _emit_warning(f"Large wontfix batch detected ({preview_count} issues).")
     if strict_delta > 0:
-        _emit_warning(f"Estimated strict-score debt added now: {strict_delta:.1f} points.")
+        _emit_warning(
+            f"Estimated strict-score debt added now: {strict_delta:.1f} points."
+        )
     raise CommandError(
         "Re-run with --confirm-batch-wontfix if this debt is intentional."
     )

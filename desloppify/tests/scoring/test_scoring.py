@@ -205,9 +205,7 @@ class TestDetectorPassRate:
             _issue("unused", status="open"),
             _issue("unused", status="wontfix"),
         )
-        rate, issues, weighted = detector_pass_rate(
-            "unused", issues, 10, strict=False
-        )
+        rate, issues, weighted = detector_pass_rate("unused", issues, 10, strict=False)
         # Only "open" counts in lenient mode
         assert issues == 1
         assert weighted == 1.0
@@ -217,9 +215,7 @@ class TestDetectorPassRate:
             _issue("unused", status="open"),
             _issue("unused", status="wontfix"),
         )
-        rate, issues, weighted = detector_pass_rate(
-            "unused", issues, 10, strict=True
-        )
+        rate, issues, weighted = detector_pass_rate("unused", issues, 10, strict=True)
         # Both "open" and "wontfix" count in strict mode
         assert issues == 2
         assert weighted == 2.0
@@ -880,5 +876,3 @@ class TestReviewScoringExclusion:
 # ===================================================================
 # Subjective dimension scoring
 # ===================================================================
-
-

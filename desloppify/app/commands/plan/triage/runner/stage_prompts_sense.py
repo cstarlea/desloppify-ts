@@ -28,21 +28,21 @@ def _sense_check_fix_list() -> str:
         "   Fix: update the line range to match current file state.\n"
         "2. NAMES: Do the function/variable/type names in the step exist in the file?\n"
         "   Fix: correct the names.\n"
-        "3. COUNTS: \"Update the 3 imports\" — are there actually 3? Or 5?\n"
+        '3. COUNTS: "Update the 3 imports" — are there actually 3? Or 5?\n'
         "   Fix: correct the count.\n"
         "4. STALENESS: Is the problem the issue describes still present in the code?\n"
         "   If already fixed, note in your report.\n"
         "5. VAGUENESS: Could a developer with zero context execute this step without\n"
         "   asking a single question? If not:\n"
-        "   - Replace \"refactor X\" with the specific transformation\n"
-        "   - Replace \"update imports\" with the specific file list\n"
-        "   - Replace \"extract into new hook\" with the existing package/directory surface,\n"
+        '   - Replace "refactor X" with the specific transformation\n'
+        '   - Replace "update imports" with the specific file list\n'
+        '   - Replace "extract into new hook" with the existing package/directory surface,\n'
         "     function signature, and return type\n"
         "   - ONLY reference file paths that already exist on disk\n"
         "   - If a new file is warranted, name the existing parent directory or package and\n"
         "     describe the new module generically; do NOT invent a future filename\n"
-        "6. EFFORT TAGS: Does the tag match the actual scope? A one-line rename is \"trivial\",\n"
-        "   not \"small\". Decomposing a 400-line file is \"large\", not \"medium\".\n"
+        '6. EFFORT TAGS: Does the tag match the actual scope? A one-line rename is "trivial",\n'
+        '   not "small". Decomposing a 400-line file is "large", not "medium".\n'
         "7. DUPLICATES: If you notice this step does the same thing as a step in another\n"
         "   cluster, note it in your report.\n"
         "8. OVER-ENGINEERING: Would this change make the codebase *worse*? Flag steps that:\n"
@@ -69,7 +69,7 @@ def _sense_check_content_apply_block(
             "1. Inspect current state first:\n"
             f"   `{cli_command} plan cluster show {cluster_name}`\n"
             "2. Apply step corrections directly in this cluster:\n"
-            f"   `{cli_command} plan cluster update {cluster_name} --update-step N --detail \"...\" --effort <trivial|small|medium|large> --issue-refs <id...>`\n"
+            f'   `{cli_command} plan cluster update {cluster_name} --update-step N --detail "..." --effort <trivial|small|medium|large> --issue-refs <id...>`\n'
             f"   `{cli_command} plan cluster update {cluster_name} --remove-step N`\n"
             "3. Re-check the cluster after edits:\n"
             f"   `{cli_command} plan cluster show {cluster_name}`\n"
@@ -141,7 +141,7 @@ def _sense_check_structure_apply_block(*, mode: str, cli_command: str) -> str:
             f"Use the exact CLI prefix: `{cli_command}`\n"
             "Apply only structure-level mutations:\n"
             f"- Add dependency edges: `{cli_command} plan cluster update <name> --depends-on <other-cluster>`\n"
-            f"- Add missing cascade steps: `{cli_command} plan cluster update <name> --add-step \"...\" --detail \"...\" --effort <trivial|small|medium|large> --issue-refs <id...>`\n"
+            f'- Add missing cascade steps: `{cli_command} plan cluster update <name> --add-step "..." --detail "..." --effort <trivial|small|medium|large> --issue-refs <id...>`\n'
         )
     return ""
 
@@ -310,7 +310,9 @@ def build_sense_check_value_prompt(
     from ..stages.helpers import value_check_targets
 
     targets = value_check_targets(plan, state)
-    clusters = {name: c for name, c in plan.get("clusters", {}).items() if not c.get("auto")}
+    clusters = {
+        name: c for name, c in plan.get("clusters", {}).items() if not c.get("auto")
+    }
 
     parts: list[str] = []
     parts.append(
@@ -353,7 +355,7 @@ def build_sense_check_value_prompt(
             f"- `{cli_command} next --count 100` to inspect the current execution queue\n"
             f"- `{cli_command} plan cluster show <name>` to inspect cluster members and steps\n"
             f"- `{cli_command} show <issue-id-or-hash> --no-budget` to re-read the underlying finding\n"
-            f"- `{cli_command} plan cluster update <name> --update-step N --detail \"...\" --effort small`\n"
+            f'- `{cli_command} plan cluster update <name> --update-step N --detail "..." --effort small`\n'
             f'- `{cli_command} plan skip --permanent <pattern> --note "<why>"'
             ' --attest "I have reviewed this triage skip against the code and I am not gaming the score'
             ' by suppressing a real defect."`\n'
@@ -389,7 +391,9 @@ def build_sense_check_value_prompt(
             dimension = warning.get("dimension", "?")
             resolved = warning.get("resolved", warning.get("resolved_count", 0))
             new_open = warning.get("new_open", warning.get("new_open_count", 0))
-            lines.append(f"- Rework warning: {dimension} ({resolved} resolved, {new_open} new open)")
+            lines.append(
+                f"- Rework warning: {dimension} ({resolved} resolved, {new_open} new open)"
+            )
         anti_patterns = strategist_briefing.get("anti_patterns", [])
         for pattern in anti_patterns:
             if not isinstance(pattern, dict):

@@ -22,10 +22,30 @@ def test_list_open_review_issues_filters_and_sorts_by_weight(monkeypatch) -> Non
     )
     state = {
         "issues": {
-            "a": {"id": "review::a", "status": "open", "detector": "review", "weight": 2.0},
-            "b": {"id": "review::b", "status": "fixed", "detector": "review", "weight": 99.0},
-            "c": {"id": "review::c", "status": "open", "detector": "concerns", "weight": 50.0},
-            "d": {"id": "review::d", "status": "open", "detector": "review", "weight": 7.0},
+            "a": {
+                "id": "review::a",
+                "status": "open",
+                "detector": "review",
+                "weight": 2.0,
+            },
+            "b": {
+                "id": "review::b",
+                "status": "fixed",
+                "detector": "review",
+                "weight": 99.0,
+            },
+            "c": {
+                "id": "review::c",
+                "status": "open",
+                "detector": "concerns",
+                "weight": 50.0,
+            },
+            "d": {
+                "id": "review::d",
+                "status": "open",
+                "detector": "review",
+                "weight": 7.0,
+            },
         }
     }
 

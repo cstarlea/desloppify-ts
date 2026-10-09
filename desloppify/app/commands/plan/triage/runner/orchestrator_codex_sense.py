@@ -42,7 +42,9 @@ class SenseBatchConfig:
     prompt: str
 
 
-def _print_sense_header(total_content: int, *, apply_updates: bool, log: Callable[[str], None]) -> None:
+def _print_sense_header(
+    total_content: int, *, apply_updates: bool, log: Callable[[str], None]
+) -> None:
     if apply_updates:
         print(
             colorize(
@@ -52,7 +54,12 @@ def _print_sense_header(total_content: int, *, apply_updates: bool, log: Callabl
         )
         log(f"sense-check-sequenced content_batches={total_content} apply_updates=1")
         return
-    print(colorize(f"\n  Sense-check: {total_content} content batches + 1 structure batch + 1 value batch.", "bold"))
+    print(
+        colorize(
+            f"\n  Sense-check: {total_content} content batches + 1 structure batch + 1 value batch.",
+            "bold",
+        )
+    )
     log(f"sense-check-parallel content_batches={total_content}")
 
 
@@ -207,7 +214,9 @@ def _parallel_failure_result(
     *,
     log: Callable[[str], None],
 ) -> TriageStageRunResult:
-    print(colorize(f"  Sense-check: {len(failures)} batch(es) failed: {failures}", "red"))
+    print(
+        colorize(f"  Sense-check: {len(failures)} batch(es) failed: {failures}", "red")
+    )
     log(f"sense-check-parallel-failed failures={failures}")
     return TriageStageRunResult(
         exit_code=1,
@@ -227,7 +236,11 @@ def _reload_structure_plan(
         log("sense-check-plan-reloaded phase=structure")
         return reloaded
     except PLAN_LOAD_EXCEPTIONS as exc:  # pragma: no cover - defensive fallback
-        print(colorize("  Sense-check: failed to reload plan after content updates.", "red"))
+        print(
+            colorize(
+                "  Sense-check: failed to reload plan after content updates.", "red"
+            )
+        )
         log(f"sense-check-plan-reload-failed error={exc}")
         return None
 
@@ -238,7 +251,9 @@ def _merge_batch_outputs(batch_meta: list[tuple[str, Path]]) -> str:
         content = ""
         if output_file.exists():
             try:
-                content = output_file.read_text(encoding="utf-8", errors="replace").strip()
+                content = output_file.read_text(
+                    encoding="utf-8", errors="replace"
+                ).strip()
             except OSError:
                 content = "(output missing)"
         if not content:
@@ -344,13 +359,23 @@ def run_sense_check(
 
     if dry_run:
         if apply_updates:
-            print(colorize("  [dry-run] Would execute sequenced sense-check batches.", "dim"))
+            print(
+                colorize(
+                    "  [dry-run] Would execute sequenced sense-check batches.", "dim"
+                )
+            )
         else:
-            print(colorize("  [dry-run] Would execute parallel sense-check batches.", "dim"))
+            print(
+                colorize(
+                    "  [dry-run] Would execute parallel sense-check batches.", "dim"
+                )
+            )
         return TriageStageRunResult(exit_code=0, reason="dry_run", dry_run=True)
 
     if content_tasks:
-        content_failures = _content_failures(tasks=content_tasks, clusters=clusters, log=_log)
+        content_failures = _content_failures(
+            tasks=content_tasks, clusters=clusters, log=_log
+        )
         if content_failures:
             return _parallel_failure_result(content_failures, log=_log)
 
@@ -436,7 +461,12 @@ def run_sense_check(
             return _parallel_failure_result(value_failures, log=_log)
 
     merged = _merge_batch_outputs(batch_meta)
-    print(colorize(f"  Sense-check: merged {total} batch outputs ({len(merged)} chars).", "green"))
+    print(
+        colorize(
+            f"  Sense-check: merged {total} batch outputs ({len(merged)} chars).",
+            "green",
+        )
+    )
     _log(f"sense-check-parallel-done merged_chars={len(merged)}")
     return TriageStageRunResult(
         exit_code=0,

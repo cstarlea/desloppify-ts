@@ -75,11 +75,7 @@ def _ensure_frontmatter_first(content: str) -> str:
         return content  # malformed frontmatter, leave untouched
 
     # Reassemble: frontmatter first, then the prefix lines, then the rest.
-    reordered = (
-        lines[fm_start : fm_end + 1]
-        + prefix_lines
-        + lines[fm_end + 1 :]
-    )
+    reordered = lines[fm_start : fm_end + 1] + prefix_lines + lines[fm_end + 1 :]
     return "\n".join(reordered)
 
 
@@ -108,7 +104,7 @@ def _replace_section(file_content: str, new_section: str) -> str:
         return file_content.rstrip() + "\n\n" + new_section
 
     before = file_content[:begin]
-    after = file_content[end + len(SKILL_END):]
+    after = file_content[end + len(SKILL_END) :]
     before = before.rstrip() + "\n\n" if before.strip() else ""
     after = "\n" + after.lstrip("\n") if after.strip() else "\n"
     return before + new_section + after

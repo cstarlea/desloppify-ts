@@ -92,9 +92,7 @@ def validate_and_build_issues(
             )
             continue
         if issue is None:
-            raise ValueError(
-                "review issue payload missing after validation succeeded"
-            )
+            raise ValueError("review issue payload missing after validation succeeded")
 
         if issue.get("concern_verdict") == "dismissed":
             fingerprint = issue.get("concern_fingerprint", "")
@@ -190,7 +188,7 @@ def collect_imported_dimensions(
         if normalized in valid_dimensions:
             imported_dimensions.add(normalized)
 
-    for raw_dim in (assessments or {}):
+    for raw_dim in assessments or {}:
         normalized = normalize_dimension_name(str(raw_dim))
         if normalized in valid_dimensions:
             imported_dimensions.add(normalized)

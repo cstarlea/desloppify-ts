@@ -34,7 +34,9 @@ from desloppify.languages.typescript.detectors.type_errors import _imports_compo
 from desloppify.languages.typescript.syntax.tree import get_parser, grammar_for
 from desloppify.languages.typescript.syntax.validation import count_syntax_errors
 
-needs_treesitter = pytest.mark.skipif(get_parser("tsx") is None, reason="needs tree-sitter")
+needs_treesitter = pytest.mark.skipif(
+    get_parser("tsx") is None, reason="needs tree-sitter"
+)
 
 
 def _codes(text: str, suffix: str) -> list[str]:
@@ -46,7 +48,7 @@ def _codes(text: str, suffix: str) -> list[str]:
 
 def test_vue_script_and_script_setup_with_attributes_in_any_order():
     text = (
-        "<template>\n  <div :a=\"x > 1\">{{ y }}</div>\n</template>\n"
+        '<template>\n  <div :a="x > 1">{{ y }}</div>\n</template>\n'
         "<script lang=\"ts\">\nexport default { name: 'A' }\n</script>\n"
         "<script setup\n  lang='ts' generic=\"T extends string\">\nconst a = 1\n</script>\n"
         "<style scoped>\n.a { color: red }\n</style>\n"
@@ -59,7 +61,7 @@ def test_vue_script_and_script_setup_with_attributes_in_any_order():
 def test_vue_skips_scripts_in_template_comments_and_custom_blocks():
     text = (
         "<!-- <script>bad()</script> -->\n"
-        "<template>\n  <template v-if=\"ok\"><script>bad()</script></template>\n"
+        '<template>\n  <template v-if="ok"><script>bad()</script></template>\n'
         "  <p>a</p>\n</template>\n"
         "<docs>\n```html\n<script>bad()</script>\n```\n</docs>\n"
         "<script setup>\ngood()\n</script>\n"
@@ -68,20 +70,26 @@ def test_vue_skips_scripts_in_template_comments_and_custom_blocks():
 
 
 def test_src_scripts_have_no_code_and_keep_their_src():
-    blocks = script_blocks('<template><p/></template>\n<script src="./logic.ts" lang="ts"></script>\n', ".vue")
+    blocks = script_blocks(
+        '<template><p/></template>\n<script src="./logic.ts" lang="ts"></script>\n',
+        ".vue",
+    )
     assert [(b.src, b.start == b.end) for b in blocks] == [("./logic.ts", True)]
 
 
 def test_svelte_module_and_instance_scripts():
     text = (
         '<script context="module" lang="ts">\nexport const prerender = true\n</script>\n'
-        "<script lang=\"ts\" {...rest}>\nlet { a } = $props()\n</script>\n"
+        '<script lang="ts" {...rest}>\nlet { a } = $props()\n</script>\n'
         "<svelte:head><script>window.analytics = 1</script></svelte:head>\n"
         "{#if a<b}<p>{a}</p>{/if}\n"
     )
     blocks = script_blocks(text, ".svelte")
     assert [(b.kind, b.lang) for b in blocks] == [("module", "ts"), ("script", "ts")]
-    assert script_blocks("<script module>\nlet x\n</script>", ".svelte")[0].kind == "module"
+    assert (
+        script_blocks("<script module>\nlet x\n</script>", ".svelte")[0].kind
+        == "module"
+    )
 
 
 def test_astro_frontmatter_and_scripts():
@@ -93,10 +101,16 @@ def test_astro_frontmatter_and_scripts():
         '<script type="application/ld+json">{"a": 1}</script>\n'
     )
     blocks = script_blocks(text, ".astro")
-    assert [(b.kind, b.lang) for b in blocks] == [("frontmatter", "ts"), ("client", "ts"), ("client", "js")]
+    assert [(b.kind, b.lang) for b in blocks] == [
+        ("frontmatter", "ts"),
+        ("client", "ts"),
+        ("client", "js"),
+    ]
     assert _codes(text, ".astro")[0].startswith("import Layout")
     crlf = "﻿" + text.replace("\n", "\r\n")
-    assert [code.replace("\r\n", "\n") for code in _codes(crlf, ".astro")] == _codes(text, ".astro")
+    assert [code.replace("\r\n", "\n") for code in _codes(crlf, ".astro")] == _codes(
+        text, ".astro"
+    )
 
 
 def test_other_languages_and_unterminated_scripts_are_not_code():
@@ -106,11 +120,13 @@ def test_other_languages_and_unterminated_scripts_are_not_code():
 
 
 def test_code_view_keeps_every_line_and_column():
-    text = "<template>\n  <p>é {{ a }}</p>\r\n</template>\n<script setup lang=\"ts\">const a = 1\nconst b = a as any\n</script>\n"
+    text = '<template>\n  <p>é {{ a }}</p>\r\n</template>\n<script setup lang="ts">const a = 1\nconst b = a as any\n</script>\n'
     view = code_text(text, "Comp.vue")
     assert len(view) == len(text)
     assert view.splitlines() == [
-        " " * len(line) if "const" not in line else line.replace('<script setup lang="ts">', " " * 24)
+        " " * len(line)
+        if "const" not in line
+        else line.replace('<script setup lang="ts">', " " * 24)
         for line in text.splitlines()
     ]
     assert view.splitlines()[4] == text.splitlines()[4] == "const b = a as any"
@@ -133,7 +149,9 @@ def test_view_edits_carry_over_only_inside_script_blocks():
     component = sfc_code(text, "A.vue")
     lines = component.view.splitlines(keepends=True)
     inside = "".join(line for line in lines if "[B]" not in line)
-    assert apply_view_change(component, inside, "A.vue") == text.replace("console.log('[B]')\n", "")
+    assert apply_view_change(component, inside, "A.vue") == text.replace(
+        "console.log('[B]')\n", ""
+    )
     # Removing the whole first line would take the <script setup> tag with it.
     reaching = "".join(line for line in lines if "[A]" not in line)
     assert apply_view_change(component, reaching, "A.vue") is None
@@ -141,13 +159,25 @@ def test_view_edits_carry_over_only_inside_script_blocks():
 
 @needs_treesitter
 def test_syntax_errors_are_counted_in_the_script_code():
-    assert count_syntax_errors("<template><p>{{ a b }}</p></template>\n<script>\nlet a = 1\n</script>\n", "A.vue") == 0
+    assert (
+        count_syntax_errors(
+            "<template><p>{{ a b }}</p></template>\n<script>\nlet a = 1\n</script>\n",
+            "A.vue",
+        )
+        == 0
+    )
     assert count_syntax_errors("<script>\nlet = = 1\n</script>\n", "A.vue")
 
 
 def test_tsc_cannot_find_module_for_a_component_is_not_a_type_error():
     def diagnostic(specifier: str) -> TscDiagnostic:
-        return TscDiagnostic("src/main.ts", 1, 1, "TS2307", f"Cannot find module '{specifier}' or its type declarations.")
+        return TscDiagnostic(
+            "src/main.ts",
+            1,
+            1,
+            "TS2307",
+            f"Cannot find module '{specifier}' or its type declarations.",
+        )
 
     assert _imports_component(diagnostic("./App.vue"))
     assert not _imports_component(diagnostic("./missing"))
@@ -181,7 +211,10 @@ const value = helper() as any
 
 @needs_treesitter
 def test_smells_report_the_line_in_the_component(tmp_path, set_project_root):
-    _write(tmp_path, {"src/Comp.vue": _VUE, "src/helper.ts": "export const helper = () => 1\n"})
+    _write(
+        tmp_path,
+        {"src/Comp.vue": _VUE, "src/helper.ts": "export const helper = () => 1\n"},
+    )
     assert "src/Comp.vue" in iter_typescript_sources(tmp_path)
     entries, _ = detect_smells(tmp_path)
     matches = [m for e in entries if e["id"] == "as_any_cast" for m in e["matches"]]
@@ -200,17 +233,20 @@ def _orphans(root: Path, graph: dict) -> list[str]:
         graph,
         extensions=[".ts", ".vue", ".svelte", ".astro"],
         options=OrphanedDetectionOptions(
-            entry_files=auto_import_entries(root), entry_conventions=framework_entry_conventions()
+            entry_files=auto_import_entries(root),
+            entry_conventions=framework_entry_conventions(),
         ),
     )
-    return sorted(Path(e["file"]).relative_to(root.resolve()).as_posix() for e in entries)
+    return sorted(
+        Path(e["file"]).relative_to(root.resolve()).as_posix() for e in entries
+    )
 
 
 _FILLER = "\n".join(f"export const v{i} = {i}" for i in range(12)) + "\n"
 
 
 def _component(script: str) -> str:
-    return f"<template><p>x</p></template>\n<script setup lang=\"ts\">\n{script}\n{_FILLER}</script>\n"
+    return f'<template><p>x</p></template>\n<script setup lang="ts">\n{script}\n{_FILLER}</script>\n'
 
 
 def test_components_are_graph_nodes_and_importers(tmp_path, set_project_root):
@@ -218,9 +254,12 @@ def test_components_are_graph_nodes_and_importers(tmp_path, set_project_root):
         tmp_path,
         {
             "src/main.ts": "import App from './App.vue'\nexport default App\n",
-            "src/App.vue": _component("import Child from './Child.vue'\nimport { u } from './util'"),
+            "src/App.vue": _component(
+                "import Child from './Child.vue'\nimport { u } from './util'"
+            ),
             "src/Child.vue": _component("const c = 1"),
-            "src/Logic.vue": '<template><p/></template>\n<script src="./logic.ts"></script>\n' + "\n" * 10,
+            "src/Logic.vue": '<template><p/></template>\n<script src="./logic.ts"></script>\n'
+            + "\n" * 10,
             "src/logic.ts": _FILLER,
             "src/util.ts": "export const u = 1\n" + _FILLER,
             "src/Dead.vue": _component("const dead = 1"),
@@ -245,12 +284,16 @@ def test_components_follow_the_framework_conventions(tmp_path, set_project_root)
             "nuxt/nuxt.config.ts": "export default {}\n",
             "nuxt/app/app.vue": _component("const a = 1"),
             "nuxt/app/components/Card.vue": _component("const c = 1"),
-            "nuxt/app/pages/index.vue": _component("import { LIST } from '~/constants/lists'"),
+            "nuxt/app/pages/index.vue": _component(
+                "import { LIST } from '~/constants/lists'"
+            ),
             "nuxt/app/constants/lists.ts": _FILLER,
             "nuxt/app/legacy/Old.vue": _component("const o = 1"),
             "kit/package.json": '{"devDependencies": {"@sveltejs/kit": "^2.0.0"}}',
             "kit/svelte.config.js": "export default {}\n",
-            "kit/src/routes/+page.svelte": _component("import { api } from '$lib/api'\nimport { page } from '$app/state'"),
+            "kit/src/routes/+page.svelte": _component(
+                "import { api } from '$lib/api'\nimport { page } from '$app/state'"
+            ),
             "kit/src/routes/(app)/+layout@.svelte": _component("const l = 1"),
             "kit/src/lib/api.ts": _FILLER,
             "kit/src/lib/Unused.svelte": _component("const u = 1"),
@@ -283,8 +326,14 @@ def test_components_follow_the_framework_conventions(tmp_path, set_project_root)
             entry_conventions=framework_entry_conventions(),
         ),
     )
-    orphans = sorted(Path(e["file"]).relative_to(tmp_path.resolve()).as_posix() for e in entries)
-    assert orphans == ["astro/src/components/Old.astro", "kit/src/lib/Unused.svelte", "nuxt/app/legacy/Old.vue"]
+    orphans = sorted(
+        Path(e["file"]).relative_to(tmp_path.resolve()).as_posix() for e in entries
+    )
+    assert orphans == [
+        "astro/src/components/Old.astro",
+        "kit/src/lib/Unused.svelte",
+        "nuxt/app/legacy/Old.vue",
+    ]
 
 
 @needs_treesitter
@@ -297,8 +346,13 @@ def test_debug_logs_fixer_edits_only_the_script(tmp_path, set_project_root):
     _write(tmp_path, {"src/A.vue": vue, "src/B.svelte": inline})
     fixer = get_ts_fixers()["debug-logs"]
     entries = fixer.detect(tmp_path)
-    assert sorted((e["file"], e["line"]) for e in entries) == [("src/A.vue", 6), ("src/B.svelte", 1)]
+    assert sorted((e["file"], e["line"]) for e in entries) == [
+        ("src/A.vue", 6),
+        ("src/B.svelte", 1),
+    ]
     fixer.fix(entries, dry_run=False)
-    assert (tmp_path / "src/A.vue").read_text() == vue.replace("console.log('[Debug] gone', a)\n", "")
+    assert (tmp_path / "src/A.vue").read_text() == vue.replace(
+        "console.log('[Debug] gone', a)\n", ""
+    )
     # The log shares its line with the <script> tag: the edit would remove the tag.
     assert (tmp_path / "src/B.svelte").read_text() == inline

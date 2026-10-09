@@ -11,6 +11,7 @@ import desloppify.app.commands.plan.commit_log.dispatch as commit_log_mod
 # Helpers — realistic plan/state builders
 # ---------------------------------------------------------------------------
 
+
 def _git_context(
     *,
     available: bool = True,
@@ -71,8 +72,11 @@ def _history_args(*, top: int = 10) -> argparse.Namespace:
 # cmd_commit_log_dispatch
 # ---------------------------------------------------------------------------
 
+
 def test_dispatch_warns_when_disabled(monkeypatch, capsys) -> None:
-    monkeypatch.setattr(commit_log_mod, "load_config", lambda: {"commit_tracking_enabled": False})
+    monkeypatch.setattr(
+        commit_log_mod, "load_config", lambda: {"commit_tracking_enabled": False}
+    )
     monkeypatch.setattr(commit_log_mod, "colorize", lambda t, _s: t)
 
     commit_log_mod.cmd_commit_log_dispatch(argparse.Namespace(commit_log_action=None))
@@ -108,7 +112,11 @@ def test_dispatch_routes_record_action(monkeypatch, capsys) -> None:
     monkeypatch.setattr(commit_log_mod, "colorize", lambda t, _s: t)
 
     args = argparse.Namespace(
-        commit_log_action="record", sha=None, branch=None, note=None, only=None,
+        commit_log_action="record",
+        sha=None,
+        branch=None,
+        note=None,
+        only=None,
     )
     commit_log_mod.cmd_commit_log_dispatch(args)
 
@@ -121,6 +129,7 @@ def test_dispatch_routes_record_action(monkeypatch, capsys) -> None:
 # ---------------------------------------------------------------------------
 # _cmd_commit_log_status
 # ---------------------------------------------------------------------------
+
 
 def test_status_shows_git_info(monkeypatch, capsys) -> None:
     monkeypatch.setattr(commit_log_mod, "detect_git_context", lambda: _git_context())
@@ -137,7 +146,9 @@ def test_status_shows_git_info(monkeypatch, capsys) -> None:
 
 
 def test_status_git_not_available(monkeypatch, capsys) -> None:
-    monkeypatch.setattr(commit_log_mod, "detect_git_context", lambda: _git_context(available=False))
+    monkeypatch.setattr(
+        commit_log_mod, "detect_git_context", lambda: _git_context(available=False)
+    )
     monkeypatch.setattr(commit_log_mod, "load_config", lambda: {})
     monkeypatch.setattr(commit_log_mod, "colorize", lambda t, _s: t)
 
@@ -163,10 +174,12 @@ def test_status_shows_committed_summary(monkeypatch, capsys) -> None:
     monkeypatch.setattr(commit_log_mod, "load_config", lambda: {})
     monkeypatch.setattr(commit_log_mod, "colorize", lambda t, _s: t)
 
-    plan = _base_plan(commit_log=[
-        {"sha": "aaa", "issue_ids": ["x::1", "x::2"]},
-        {"sha": "bbb", "issue_ids": ["y::1"]},
-    ])
+    plan = _base_plan(
+        commit_log=[
+            {"sha": "aaa", "issue_ids": ["x::1", "x::2"]},
+            {"sha": "bbb", "issue_ids": ["y::1"]},
+        ]
+    )
     commit_log_mod._cmd_commit_log_status(plan)
 
     out = capsys.readouterr().out
@@ -187,6 +200,7 @@ def test_status_empty_shows_hint(monkeypatch, capsys) -> None:
 # ---------------------------------------------------------------------------
 # _cmd_commit_log_record — plan mutation
 # ---------------------------------------------------------------------------
+
 
 def test_record_all_uncommitted(monkeypatch, capsys) -> None:
     """Record without --only moves all uncommitted issues to commit_log."""
@@ -212,7 +226,9 @@ def test_record_all_uncommitted(monkeypatch, capsys) -> None:
 
 def test_record_with_only_filter(monkeypatch, capsys) -> None:
     """Record with --only only records matching issues."""
-    plan = _base_plan(uncommitted=["smells::a.py::fn", "unused::b.py::x", "smells::c.py::g"])
+    plan = _base_plan(
+        uncommitted=["smells::a.py::fn", "unused::b.py::x", "smells::c.py::g"]
+    )
     saved: list[dict] = []
 
     monkeypatch.setattr(commit_log_mod, "detect_git_context", lambda: _git_context())
@@ -221,7 +237,8 @@ def test_record_with_only_filter(monkeypatch, capsys) -> None:
     monkeypatch.setattr(commit_log_mod, "colorize", lambda t, _s: t)
 
     commit_log_mod._cmd_commit_log_record(
-        _record_args(only=["smells::*"]), plan,
+        _record_args(only=["smells::*"]),
+        plan,
     )
 
     out = capsys.readouterr().out
@@ -230,7 +247,10 @@ def test_record_with_only_filter(monkeypatch, capsys) -> None:
     # Verify plan mutation: only smells issues recorded
     assert plan["uncommitted_issues"] == ["unused::b.py::x"]
     assert len(plan["commit_log"]) == 1
-    assert set(plan["commit_log"][0]["issue_ids"]) == {"smells::a.py::fn", "smells::c.py::g"}
+    assert set(plan["commit_log"][0]["issue_ids"]) == {
+        "smells::a.py::fn",
+        "smells::c.py::g",
+    }
 
 
 def test_record_no_uncommitted_warns(monkeypatch, capsys) -> None:
@@ -255,7 +275,8 @@ def test_record_only_no_match_warns(monkeypatch, capsys) -> None:
     monkeypatch.setattr(commit_log_mod, "colorize", lambda t, _s: t)
 
     commit_log_mod._cmd_commit_log_record(
-        _record_args(only=["nonexistent::*"]), plan,
+        _record_args(only=["nonexistent::*"]),
+        plan,
     )
 
     out = capsys.readouterr().out
@@ -268,13 +289,16 @@ def test_record_explicit_sha_and_branch(monkeypatch, capsys) -> None:
     plan = _base_plan(uncommitted=["a::1"])
     saved: list[dict] = []
 
-    monkeypatch.setattr(commit_log_mod, "detect_git_context", lambda: _git_context(available=False))
+    monkeypatch.setattr(
+        commit_log_mod, "detect_git_context", lambda: _git_context(available=False)
+    )
     monkeypatch.setattr(commit_log_mod, "save_plan", lambda p: saved.append(p))
     monkeypatch.setattr(commit_log_mod, "load_config", lambda: {"commit_pr": 0})
     monkeypatch.setattr(commit_log_mod, "colorize", lambda t, _s: t)
 
     commit_log_mod._cmd_commit_log_record(
-        _record_args(sha="deadbeef", branch="manual-branch"), plan,
+        _record_args(sha="deadbeef", branch="manual-branch"),
+        plan,
     )
 
     assert plan["commit_log"][0]["sha"] == "deadbeef"
@@ -317,7 +341,9 @@ def test_record_no_git_no_sha_warns(monkeypatch, capsys) -> None:
     """Without git and without --sha, record warns and does nothing."""
     plan = _base_plan(uncommitted=["a::1"])
 
-    monkeypatch.setattr(commit_log_mod, "detect_git_context", lambda: _git_context(available=False))
+    monkeypatch.setattr(
+        commit_log_mod, "detect_git_context", lambda: _git_context(available=False)
+    )
     monkeypatch.setattr(commit_log_mod, "colorize", lambda t, _s: t)
 
     commit_log_mod._cmd_commit_log_record(_record_args(), plan)
@@ -331,6 +357,7 @@ def test_record_no_git_no_sha_warns(monkeypatch, capsys) -> None:
 # _cmd_commit_log_history
 # ---------------------------------------------------------------------------
 
+
 def test_history_empty(monkeypatch, capsys) -> None:
     monkeypatch.setattr(commit_log_mod, "colorize", lambda t, _s: t)
 
@@ -343,22 +370,24 @@ def test_history_empty(monkeypatch, capsys) -> None:
 def test_history_shows_records(monkeypatch, capsys) -> None:
     monkeypatch.setattr(commit_log_mod, "colorize", lambda t, _s: t)
 
-    plan = _base_plan(commit_log=[
-        {
-            "sha": "abc1234567890",
-            "branch": "feat/cleanup",
-            "issue_ids": ["smells::a.py::fn", "unused::b.py::x"],
-            "note": "first batch",
-            "recorded_at": "2026-03-04T10:00:00Z",
-        },
-        {
-            "sha": "def5678901234",
-            "branch": "feat/cleanup",
-            "issue_ids": ["smells::c.py::g"],
-            "note": "",
-            "recorded_at": "2026-03-04T11:00:00Z",
-        },
-    ])
+    plan = _base_plan(
+        commit_log=[
+            {
+                "sha": "abc1234567890",
+                "branch": "feat/cleanup",
+                "issue_ids": ["smells::a.py::fn", "unused::b.py::x"],
+                "note": "first batch",
+                "recorded_at": "2026-03-04T10:00:00Z",
+            },
+            {
+                "sha": "def5678901234",
+                "branch": "feat/cleanup",
+                "issue_ids": ["smells::c.py::g"],
+                "note": "",
+                "recorded_at": "2026-03-04T11:00:00Z",
+            },
+        ]
+    )
     commit_log_mod._cmd_commit_log_history(_history_args(), plan)
 
     out = capsys.readouterr().out
@@ -377,7 +406,13 @@ def test_history_top_limits(monkeypatch, capsys) -> None:
     monkeypatch.setattr(commit_log_mod, "colorize", lambda t, _s: t)
 
     records = [
-        {"sha": f"sha{i:010d}", "branch": "main", "issue_ids": [f"x::{i}"], "note": "", "recorded_at": ""}
+        {
+            "sha": f"sha{i:010d}",
+            "branch": "main",
+            "issue_ids": [f"x::{i}"],
+            "note": "",
+            "recorded_at": "",
+        }
         for i in range(5)
     ]
     plan = _base_plan(commit_log=records)
@@ -399,6 +434,7 @@ def test_history_top_limits(monkeypatch, capsys) -> None:
 # _cmd_commit_log_pr — PR body generation
 # ---------------------------------------------------------------------------
 
+
 def test_pr_body_no_commits(monkeypatch, capsys) -> None:
     monkeypatch.setattr(commit_log_mod, "load_state", lambda: {"issues": {}})
 
@@ -409,21 +445,27 @@ def test_pr_body_no_commits(monkeypatch, capsys) -> None:
 
 
 def test_pr_body_with_commits(monkeypatch, capsys) -> None:
-    monkeypatch.setattr(commit_log_mod, "load_state", lambda: {
-        "issues": {
-            "smells::a.py::fn": {"summary": "Long function in parser"},
+    monkeypatch.setattr(
+        commit_log_mod,
+        "load_state",
+        lambda: {
+            "issues": {
+                "smells::a.py::fn": {"summary": "Long function in parser"},
+            },
         },
-    })
+    )
 
-    plan = _base_plan(commit_log=[
-        {
-            "sha": "abc1234567890",
-            "branch": "main",
-            "issue_ids": ["smells::a.py::fn"],
-            "note": "cleanup",
-            "recorded_at": "2026-03-04T10:00:00Z",
-        },
-    ])
+    plan = _base_plan(
+        commit_log=[
+            {
+                "sha": "abc1234567890",
+                "branch": "main",
+                "issue_ids": ["smells::a.py::fn"],
+                "note": "cleanup",
+                "recorded_at": "2026-03-04T10:00:00Z",
+            },
+        ]
+    )
     commit_log_mod._cmd_commit_log_pr(plan)
 
     out = capsys.readouterr().out
@@ -437,11 +479,15 @@ def test_pr_body_with_commits(monkeypatch, capsys) -> None:
 
 def test_pr_body_state_load_failure(monkeypatch, capsys) -> None:
     """If load_state fails, PR body still renders with empty state."""
-    monkeypatch.setattr(commit_log_mod, "load_state", lambda: (_ for _ in ()).throw(OSError("no state")))
+    monkeypatch.setattr(
+        commit_log_mod, "load_state", lambda: (_ for _ in ()).throw(OSError("no state"))
+    )
 
-    plan = _base_plan(commit_log=[
-        {"sha": "aaa", "issue_ids": ["x::1"], "note": "", "recorded_at": ""},
-    ])
+    plan = _base_plan(
+        commit_log=[
+            {"sha": "aaa", "issue_ids": ["x::1"], "note": "", "recorded_at": ""},
+        ]
+    )
     commit_log_mod._cmd_commit_log_pr(plan)
 
     out = capsys.readouterr().out

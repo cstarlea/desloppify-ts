@@ -62,7 +62,11 @@ class PendingImportScoresMeta:
             normalized_import_file=str(raw.get("normalized_import_file", "")).strip(),
             packet_sha256=str(raw.get("packet_sha256", "")).strip(),
         )
-        return meta if any((meta.timestamp, meta.import_file, meta.packet_sha256)) else None
+        return (
+            meta
+            if any((meta.timestamp, meta.import_file, meta.packet_sha256))
+            else None
+        )
 
     def to_dict(self) -> dict[str, str]:
         return {
@@ -181,7 +185,10 @@ def import_scores_meta_matches(
     expected_file = normalized_meta.normalized_import_file
     current_file = _normalize_match_path(import_file) or ""
     if expected_file and current_file and current_file != expected_file:
-        return False, f"expected import file {normalized_meta.import_file}, got {import_file}"
+        return (
+            False,
+            f"expected import file {normalized_meta.import_file}, got {import_file}",
+        )
 
     return True, ""
 
@@ -245,7 +252,8 @@ def _no_unscored(
     if policy is not None:
         return not policy.unscored_ids
     return not stale_policy_mod.current_unscored_ids(
-        state, subjective_prefix=SUBJECTIVE_PREFIX,
+        state,
+        subjective_prefix=SUBJECTIVE_PREFIX,
     )
 
 

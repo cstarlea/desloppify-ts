@@ -223,11 +223,7 @@ def _validate_badge_path(raw: str) -> str:
     """Require badge_path to point to a filename (root or nested path)."""
     value = raw.strip()
     path = Path(value)
-    if (
-        not value
-        or value.endswith(("/", "\\"))
-        or path.name in {"", ".", ".."}
-    ):
+    if not value or value.endswith(("/", "\\")) or path.name in {"", ".", ".."}:
         raise ValueError(
             "Expected file path for badge_path "
             f"(example: scorecard.png or assets/scorecard.png), got: {raw}"

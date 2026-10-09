@@ -66,7 +66,11 @@ def _print_fix_summary(
                 symbols += f" (+{len(removed) - 5})"
         else:
             symbols = result.get("summary", "fixed")
-        extra = f"  ({result['lines_removed']} lines)" if result.get("lines_removed") else ""
+        extra = (
+            f"  ({result['lines_removed']} lines)"
+            if result.get("lines_removed")
+            else ""
+        )
         print(f"  {rel(result['file'])}{extra}  →  {symbols}")
     if len(results) > 30:
         print(f"  ... and {len(results) - 30} more files")
@@ -107,7 +111,9 @@ def _apply_and_report(
     )
     typecheck_cmd = getattr(lang, "typecheck_cmd", "")
     if typecheck_cmd:
-        next_action = f"Run `{typecheck_cmd}` to verify, then `desloppify scan` to update state"
+        next_action = (
+            f"Run `{typecheck_cmd}` to verify, then `desloppify scan` to update state"
+        )
     else:
         next_action = "Run `desloppify scan` to update state"
 
@@ -129,7 +135,9 @@ def _apply_and_report(
             "narrative": narrative,
         }
     )
-    _print_fix_retro(fixer_name, len(entries), total_items, len(resolved_ids), skip_reasons)
+    _print_fix_retro(
+        fixer_name, len(entries), total_items, len(resolved_ids), skip_reasons
+    )
 
 
 def _report_dry_run(

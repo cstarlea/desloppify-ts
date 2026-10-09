@@ -26,7 +26,9 @@ def score_gate_from_args(args: object) -> ScoreGate | None:
     threshold = getattr(args, "fail_under", None)
     if threshold is None:
         return None
-    return ScoreGate(str(getattr(args, "fail_score", None) or "objective"), float(threshold))
+    return ScoreGate(
+        str(getattr(args, "fail_score", None) or "objective"), float(threshold)
+    )
 
 
 def _fmt(value: float | None) -> str:
@@ -37,7 +39,8 @@ def _mechanical_rows(dim_scores: dict[str, Any]) -> list[tuple[str, dict[str, An
     return sorted(
         (name, data)
         for name, data in dim_scores.items()
-        if isinstance(data, dict) and "subjective_assessment" not in data.get("detectors", {})
+        if isinstance(data, dict)
+        and "subjective_assessment" not in data.get("detectors", {})
     )
 
 

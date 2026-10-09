@@ -143,9 +143,7 @@ def unskip_items(
     return count, need_reopen, protected_kept
 
 
-def resurface_stale_skips(
-    plan: PlanModel, current_scan_count: int
-) -> list[str]:
+def resurface_stale_skips(plan: PlanModel, current_scan_count: int) -> list[str]:
     """Move temporary skips past their review_after threshold back to queue.
 
     Returns list of resurfaced issue IDs.

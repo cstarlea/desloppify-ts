@@ -55,7 +55,9 @@ class StageRunContext:
     state: Any = None
 
 
-def load_prior_reports_from_plan(plan: Mapping[str, Any], stages: list[str]) -> dict[str, str]:
+def load_prior_reports_from_plan(
+    plan: Mapping[str, Any], stages: list[str]
+) -> dict[str, str]:
     """Seed prior stage reports from the current live triage state."""
     triage_stages = plan.get("epic_triage_meta", {}).get("triage_stages", {})
     prior_reports: dict[str, str] = {}

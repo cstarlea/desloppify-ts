@@ -58,9 +58,9 @@ def _is_artifact_path(rel_path: str) -> bool:
 
 def _is_build_mirror_pair(first_rel: str, second_rel: str) -> bool:
     if first_rel.startswith(_BUILD_MIRROR_PREFIX):
-        return first_rel[len(_BUILD_MIRROR_PREFIX):] == second_rel
+        return first_rel[len(_BUILD_MIRROR_PREFIX) :] == second_rel
     if second_rel.startswith(_BUILD_MIRROR_PREFIX):
-        return second_rel[len(_BUILD_MIRROR_PREFIX):] == first_rel
+        return second_rel[len(_BUILD_MIRROR_PREFIX) :] == first_rel
     return False
 
 
@@ -195,7 +195,9 @@ def _terminate_process_tree(proc: subprocess.Popen[str]) -> None:
         return
 
 
-def _run_jscpd_command(cmd: list[str], *, timeout: int) -> subprocess.CompletedProcess[str]:
+def _run_jscpd_command(
+    cmd: list[str], *, timeout: int
+) -> subprocess.CompletedProcess[str]:
     proc = subprocess.Popen(  # nosec B603
         cmd,
         stdout=subprocess.PIPE,
@@ -210,7 +212,9 @@ def _run_jscpd_command(cmd: list[str], *, timeout: int) -> subprocess.CompletedP
     except subprocess.TimeoutExpired as exc:
         _terminate_process_tree(proc)
         stdout, stderr = proc.communicate()
-        raise subprocess.TimeoutExpired(cmd, timeout, output=stdout, stderr=stderr) from exc
+        raise subprocess.TimeoutExpired(
+            cmd, timeout, output=stdout, stderr=stderr
+        ) from exc
     result = subprocess.CompletedProcess(cmd, proc.returncode, stdout, stderr)
     if proc.returncode:
         raise subprocess.CalledProcessError(

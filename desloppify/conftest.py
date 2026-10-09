@@ -34,8 +34,12 @@ def _isolate_project_root(tmp_path_factory, monkeypatch):
     yield
     after = _state_dir_snapshot()
     if after != before:
-        changed = sorted(k for k in before.keys() | after.keys() if before.get(k) != after.get(k))
-        pytest.fail(f"test wrote to {_REPO_STATE_DIR}: {', '.join(changed)}", pytrace=False)
+        changed = sorted(
+            k for k in before.keys() | after.keys() if before.get(k) != after.get(k)
+        )
+        pytest.fail(
+            f"test wrote to {_REPO_STATE_DIR}: {', '.join(changed)}", pytrace=False
+        )
 
 
 @pytest.fixture()

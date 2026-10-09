@@ -306,7 +306,9 @@ def test_scan_phase_workflow_ids_resolve_to_scan(workflow_id: str) -> None:
     plan["queue_order"] = [workflow_id]
     plan["plan_start_scores"] = {"strict": 80.0}
 
-    result = reconcile_plan(plan, {"issues": {}, "work_items": {}, "scan_count": 1}, target_strict=95.0)
+    result = reconcile_plan(
+        plan, {"issues": {}, "work_items": {}, "scan_count": 1}, target_strict=95.0
+    )
 
     assert result.lifecycle_phase == LIFECYCLE_PHASE_SCAN
 

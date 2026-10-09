@@ -13,6 +13,7 @@ from desloppify.engine._plan.schema import empty_plan
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _state_with_issues(*ids: str, dimension: str = "naming") -> dict:
     issues = {}
     for fid in ids:
@@ -102,13 +103,17 @@ def _fake_services(plan, state, save_plan_fn=None):
         command_runtime=lambda args: _fake_runtime(state),
         load_plan=lambda *a, **kw: plan,
         save_plan=save_plan_fn or (lambda p, *a, **kw: None),
-        collect_triage_input=lambda p, s: type("TI", (), {
-            "open_issues": s.get("issues", {}),
-            "resolved_issues": {},
-            "new_since_last": [],
-            "resolved_since_last": [],
-            "existing_clusters": {},
-        })(),
+        collect_triage_input=lambda p, s: type(
+            "TI",
+            (),
+            {
+                "open_issues": s.get("issues", {}),
+                "resolved_issues": {},
+                "new_since_last": [],
+                "resolved_since_last": [],
+                "existing_clusters": {},
+            },
+        )(),
         detect_recurring_patterns=lambda _a, _b: {},
         append_log_entry=lambda *a, **kw: None,
         extract_issue_citations=lambda text, ids: set(),
@@ -119,7 +124,8 @@ def _fake_services(plan, state, save_plan_fn=None):
 def _patch_triage(monkeypatch, plan, state, save_plan_fn=None):
     """Apply standard triage monkeypatches."""
     monkeypatch.setattr(
-        triage_mod, "default_triage_services",
+        triage_mod,
+        "default_triage_services",
         lambda: _fake_services(plan, state, save_plan_fn),
     )
     monkeypatch.setattr(triage_mod, "require_issue_inventory", lambda s: True)
@@ -128,6 +134,7 @@ def _patch_triage(monkeypatch, plan, state, save_plan_fn=None):
 # ---------------------------------------------------------------------------
 # Tests: reflect auto-confirms observe
 # ---------------------------------------------------------------------------
+
 
 class TestReflectFoldConfirmObserve:
     def test_reflect_auto_confirms_observe_with_attestation(self, monkeypatch, capsys):
@@ -162,7 +169,9 @@ class TestReflectFoldConfirmObserve:
         out = capsys.readouterr().out
         assert "auto-confirmed" in out.lower()
 
-    def test_reflect_blocks_without_attestation_when_observe_unconfirmed(self, monkeypatch, capsys):
+    def test_reflect_blocks_without_attestation_when_observe_unconfirmed(
+        self, monkeypatch, capsys
+    ):
         """Without --attestation, reflect is blocked when observe isn't confirmed."""
         plan = _plan_with_stages("observe", confirmed=False)
         state = _state_with_issues("r1", "r2", "r3")
@@ -214,11 +223,13 @@ class TestReflectFoldConfirmObserve:
 # Tests: organize auto-confirms reflect
 # ---------------------------------------------------------------------------
 
+
 class TestOrganizeFoldConfirmReflect:
     def test_organize_auto_confirms_reflect_with_attestation(self, monkeypatch, capsys):
         """When reflect is unconfirmed, --stage organize with --attestation auto-confirms reflect."""
         plan = _plan_with_enriched_clusters(
-            ["observe", "reflect"], confirmed=False,
+            ["observe", "reflect"],
+            confirmed=False,
         )
         # Manually confirm observe (needed for reflect->organize flow)
         stages = plan["epic_triage_meta"]["triage_stages"]
@@ -260,11 +271,15 @@ class TestOrganizeFoldConfirmReflect:
 # Tests: complete auto-confirms organize
 # ---------------------------------------------------------------------------
 
+
 class TestCompleteFoldConfirmOrganize:
-    def test_complete_auto_confirms_organize_with_attestation(self, monkeypatch, capsys):
+    def test_complete_auto_confirms_organize_with_attestation(
+        self, monkeypatch, capsys
+    ):
         """When organize is unconfirmed, --complete with --attestation auto-confirms organize."""
         plan = _plan_with_enriched_clusters(
-            ["observe", "reflect", "organize"], confirmed=False,
+            ["observe", "reflect", "organize"],
+            confirmed=False,
         )
         stages = plan["epic_triage_meta"]["triage_stages"]
         stages["observe"]["confirmed_at"] = "2025-06-01T00:01:00Z"
@@ -307,6 +322,7 @@ class TestCompleteFoldConfirmOrganize:
 # Tests: existing confirm path still works
 # ---------------------------------------------------------------------------
 
+
 class TestExistingConfirmPathUnchanged:
     def test_existing_confirm_path_still_works(self, monkeypatch, capsys):
         """The explicit --confirm observe path still works as before."""
@@ -332,15 +348,24 @@ class TestExistingConfirmPathUnchanged:
 # Tests: completion archives stages
 # ---------------------------------------------------------------------------
 
+
 class TestCompleteArchivesStages:
     def test_complete_archives_stages(self, monkeypatch, capsys):
         """After --complete, last_triage contains the stage data."""
         plan = _plan_with_enriched_clusters(
-            ["observe", "reflect", "organize", "enrich", "sense-check"], confirmed=True,
+            ["observe", "reflect", "organize", "enrich", "sense-check"],
+            confirmed=True,
         )
         # Add review issues to queue_order and cluster so coverage check works
-        plan["queue_order"] = [*TRIAGE_STAGE_IDS, "review::test.py::r1", "review::test.py::r2"]
-        plan["clusters"]["fix-naming"]["issue_ids"] = ["review::test.py::r1", "review::test.py::r2"]
+        plan["queue_order"] = [
+            *TRIAGE_STAGE_IDS,
+            "review::test.py::r1",
+            "review::test.py::r2",
+        ]
+        plan["clusters"]["fix-naming"]["issue_ids"] = [
+            "review::test.py::r1",
+            "review::test.py::r2",
+        ]
         state = _state_with_issues("review::test.py::r1", "review::test.py::r2")
 
         _patch_triage(monkeypatch, plan, state)

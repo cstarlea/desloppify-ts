@@ -58,7 +58,7 @@ def gather_mechanical_evidence(
     allowed_files: set[str] | list[str] | tuple[str, ...] | None = None,
 ) -> dict[str, Any]:
     """Aggregate open issues into evidence clusters for holistic review."""
-    issues = (state.get("work_items") or state.get("issues", {}))
+    issues = state.get("work_items") or state.get("issues", {})
     if not issues:
         return {}
     allowed_scope = _normalize_allowed_files(allowed_files)
@@ -74,7 +74,9 @@ def gather_mechanical_evidence(
         if issue.get("status") != "open":
             continue
         filepath = issue.get("file", "")
-        normalized_file = filepath.strip().replace("\\", "/") if isinstance(filepath, str) else ""
+        normalized_file = (
+            filepath.strip().replace("\\", "/") if isinstance(filepath, str) else ""
+        )
         if allowed_scope is not None and normalized_file not in allowed_scope:
             continue
         det = issue.get("detector", "")
@@ -197,12 +199,14 @@ def _build_package_size_census(
     results = []
     for pkg, loc in sorted(pkg_loc.items(), key=lambda kv: -kv[1]):
         pct = round(100 * loc / total_loc, 1)
-        results.append({
-            "package": pkg,
-            "loc": loc,
-            "pct_of_total": pct,
-            "disproportionate": pct > 15,
-        })
+        results.append(
+            {
+                "package": pkg,
+                "loc": loc,
+                "pct_of_total": pct,
+                "disproportionate": pct > 15,
+            }
+        )
     return results
 
 
@@ -215,7 +219,9 @@ def type_strictness_evidence(state: StateModel) -> list[dict[str, str]]:
     return [
         {"config": str(issue.get("file", "")), "summary": str(issue.get("summary", ""))}
         for issue in issues.values()
-        if isinstance(issue, dict) and issue.get("detector") == "tsconfig_health" and issue.get("status") == "open"
+        if isinstance(issue, dict)
+        and issue.get("detector") == "tsconfig_health"
+        and issue.get("status") == "open"
     ]
 
 
@@ -227,7 +233,11 @@ def dependency_manifest_evidence(state: StateModel) -> list[dict[str, str]]:
     issues = state.get("work_items") or state.get("issues", {})
     found = []
     for issue in issues.values():
-        if not isinstance(issue, dict) or issue.get("detector") != "dependencies" or issue.get("status") != "open":
+        if (
+            not isinstance(issue, dict)
+            or issue.get("detector") != "dependencies"
+            or issue.get("status") != "open"
+        ):
             continue
         detail = issue.get("detail") if isinstance(issue.get("detail"), dict) else {}
         found.append(
@@ -240,4 +250,8 @@ def dependency_manifest_evidence(state: StateModel) -> list[dict[str, str]]:
     return sorted(found, key=lambda d: (d["manifest"], d["kind"], d["package"]))[:30]
 
 
-__all__ = ["dependency_manifest_evidence", "gather_mechanical_evidence", "type_strictness_evidence"]
+__all__ = [
+    "dependency_manifest_evidence",
+    "gather_mechanical_evidence",
+    "type_strictness_evidence",
+]

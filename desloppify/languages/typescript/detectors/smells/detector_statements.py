@@ -30,7 +30,9 @@ def _detect_statement_smells(ctx, smell_counts: dict[str, list[dict]]) -> None:
 
 
 def _statement_smells(parsed: ParsedSource):
-    for node in descendants(parsed.root, ("catch_clause", "call_expression", "expression_statement")):
+    for node in descendants(
+        parsed.root, ("catch_clause", "call_expression", "expression_statement")
+    ):
         if node.type == "catch_clause":
             body = node.child_by_field_name("body")
             if body is not None and not body.named_children:
@@ -60,7 +62,12 @@ def _voided_name(statement) -> bool:
     unary = named[0]
     operator = unary.child_by_field_name("operator")
     argument = unary.child_by_field_name("argument")
-    return operator is not None and operator.type == "void" and argument is not None and argument.type == "identifier"
+    return (
+        operator is not None
+        and operator.type == "void"
+        and argument is not None
+        and argument.type == "identifier"
+    )
 
 
 __all__ = ["_detect_statement_smells"]

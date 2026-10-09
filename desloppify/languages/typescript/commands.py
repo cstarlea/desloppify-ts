@@ -110,8 +110,12 @@ cmd_facade = make_cmd_facade(
 
 def cmd_gods(args: argparse.Namespace) -> None:
     path = Path(args.path)
-    components, _ = gods_detector_mod.detect_gods(extract_ts_components(path), TS_GOD_RULES)
-    god_classes, _ = gods_detector_mod.detect_gods(extract_ts_classes(path), TS_CLASS_GOD_RULES)
+    components, _ = gods_detector_mod.detect_gods(
+        extract_ts_components(path), TS_GOD_RULES
+    )
+    god_classes, _ = gods_detector_mod.detect_gods(
+        extract_ts_classes(path), TS_CLASS_GOD_RULES
+    )
     entries = sorted(components + god_classes, key=lambda e: -e["loc"])
     display_entries(
         args,
@@ -167,7 +171,12 @@ def cmd_orphaned(args: argparse.Namespace) -> None:
         print(colorize("\nNo orphaned files found.", "green"))
         return
     total_loc = sum(e["loc"] for e in entries)
-    print(colorize(f"\nOrphaned files: {plural(len(entries), 'file')}, {total_loc} LOC\n", "bold"))
+    print(
+        colorize(
+            f"\nOrphaned files: {plural(len(entries), 'file')}, {total_loc} LOC\n",
+            "bold",
+        )
+    )
     top = getattr(args, "top", 20)
     rows = [[rel(e["file"]), str(e["loc"])] for e in entries[:top]]
     print_table(["File", "LOC"], rows, [80, 6])
@@ -265,7 +274,11 @@ def cmd_coupling(args: argparse.Namespace) -> None:
         )
         return
     top = getattr(args, "top", 20)
-    print(colorize(f"\nLayers (top first): {' > '.join(layer.name for layer in layers)}", "dim"))
+    print(
+        colorize(
+            f"\nLayers (top first): {' > '.join(layer.name for layer in layers)}", "dim"
+        )
+    )
     if violations:
         print(colorize(f"\nLayer violations: {len(violations)}\n", "bold"))
         rows = [

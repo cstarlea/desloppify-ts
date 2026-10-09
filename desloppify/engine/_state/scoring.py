@@ -11,7 +11,9 @@ __all__ = [
 
 from desloppify.engine._state.schema import StateModel
 
-_SUPPRESSION_FIELDS = frozenset({"ignored", "raw_issues", "suppressed_pct", "ignore_patterns"})
+_SUPPRESSION_FIELDS = frozenset(
+    {"ignored", "raw_issues", "suppressed_pct", "ignore_patterns"}
+)
 
 
 def _has_suppression_fields(finding: dict) -> bool:
@@ -46,7 +48,9 @@ def _empty_suppression_metrics() -> dict[str, int | float]:
     }
 
 
-def suppression_metrics(state: StateModel, *, window: int = 5) -> dict[str, int | float]:
+def suppression_metrics(
+    state: StateModel, *, window: int = 5
+) -> dict[str, int | float]:
     """Summarize ignore suppression from recent scan history."""
     history = state.get("scan_history", [])
     if not history:

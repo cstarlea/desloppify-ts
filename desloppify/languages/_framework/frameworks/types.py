@@ -36,7 +36,9 @@ class ScannerRule:
 
     id: str
     requires: tuple[str, ...] = ()
-    scan: Callable[[Path, LangRuntimeContract], tuple[list[dict[str, Any]], int]] | None = None
+    scan: (
+        Callable[[Path, LangRuntimeContract], tuple[list[dict[str, Any]], int]] | None
+    ) = None
     issue_factory: Callable[[dict[str, Any]], Issue] | None = None
     log_message: Callable[[int], str] | None = None
 

@@ -8,7 +8,9 @@ import desloppify.languages.typescript.detectors.deprecated as deprecated_detect
 from desloppify.languages.typescript.detectors.deps.resolver import clear_resolver_cache
 from desloppify.languages.typescript.syntax.tree import get_parser
 
-needs_treesitter = pytest.mark.skipif(get_parser("tsx") is None, reason="needs tree-sitter with the tsx grammar")
+needs_treesitter = pytest.mark.skipif(
+    get_parser("tsx") is None, reason="needs tree-sitter with the tsx grammar"
+)
 
 
 @pytest.fixture(autouse=True)
@@ -121,7 +123,9 @@ class TestExtractDeprecatedSymbol:
             ("interface Config {\n  shotImageEntryId?: string; // @deprecated\n}\n"),
         )
         symbol, kind = deprecated_detector_mod._extract_deprecated_symbol(
-            _lines(tmp_path, "types.ts"), 2, "  shotImageEntryId?: string; // @deprecated"
+            _lines(tmp_path, "types.ts"),
+            2,
+            "  shotImageEntryId?: string; // @deprecated",
         )
         assert symbol == "shotImageEntryId"
         assert kind == "property"
@@ -218,12 +222,7 @@ class TestDetectDeprecated:
         _write(
             tmp_path,
             "legacy.ts",
-            (
-                "/**\n"
-                " * @Deprecated Use newFunc\n"
-                " */\n"
-                "export function oldFunc() {}\n"
-            ),
+            ("/**\n * @Deprecated Use newFunc\n */\nexport function oldFunc() {}\n"),
         )
         entries, _ = _detect(tmp_path)
         symbols = {e["symbol"] for e in entries}
@@ -267,7 +266,11 @@ class TestDeprecatedMarkersAndExports:
         assert by_symbol["dead"]["same_file_uses"] == 0
 
     def test_declaration_files_are_skipped(self, tmp_path):
-        _write(tmp_path, "types.d.ts", "/** @deprecated */\nexport declare function old(): void;\n")
+        _write(
+            tmp_path,
+            "types.d.ts",
+            "/** @deprecated */\nexport declare function old(): void;\n",
+        )
         entries, count = _detect(tmp_path)
         assert entries == [] and count == 0
 
@@ -306,18 +309,38 @@ class TestDeprecatedOnSyntaxTree:
         }
 
     def test_line_is_the_tag_line(self, tmp_path):
-        _write(tmp_path, "a.ts", "/**\n * Text.\n *\n * @deprecated\n */\nexport function f() {}\n")
+        _write(
+            tmp_path,
+            "a.ts",
+            "/**\n * Text.\n *\n * @deprecated\n */\nexport function f() {}\n",
+        )
         assert _by_symbol(tmp_path)[("a.ts", "f")]["line"] == 4
 
     def test_importers_follow_the_import_graph(self, tmp_path):
-        _write(tmp_path, "lib/old.ts", "/** @deprecated */\nexport function old() {}\nexport type T = 1;\nold();\n")
+        _write(
+            tmp_path,
+            "lib/old.ts",
+            "/** @deprecated */\nexport function old() {}\nexport type T = 1;\nold();\n",
+        )
         _write(tmp_path, "lib/index.ts", "export * from './old';\n")
         _write(tmp_path, "direct.ts", "import { old } from './lib/old';\nold();\n")
-        _write(tmp_path, "barrel.ts", "import { old as renamed } from './lib';\nrenamed();\n")
+        _write(
+            tmp_path,
+            "barrel.ts",
+            "import { old as renamed } from './lib';\nrenamed();\n",
+        )
         _write(tmp_path, "ns.ts", "import * as lib from './lib';\nlib.old();\n")
-        _write(tmp_path, "types.ts", "import type { old } from './lib';\nlet x: typeof old;\n")
-        _write(tmp_path, "unused-ns.ts", "import * as lib from './lib';\nlet y: lib.T;\n")
-        _write(tmp_path, "other.ts", "export function old() {}\nold();\n")  # same name, other symbol
+        _write(
+            tmp_path,
+            "types.ts",
+            "import type { old } from './lib';\nlet x: typeof old;\n",
+        )
+        _write(
+            tmp_path, "unused-ns.ts", "import * as lib from './lib';\nlet y: lib.T;\n"
+        )
+        _write(
+            tmp_path, "other.ts", "export function old() {}\nold();\n"
+        )  # same name, other symbol
         _write(tmp_path, "mention.ts", "// old() is old\nconst old = 1;\n")
         entry = _by_symbol(tmp_path)[("old.ts", "old")]
         assert entry["importers"] == 4
@@ -326,7 +349,9 @@ class TestDeprecatedOnSyntaxTree:
 
     def test_importers_through_object_spreads(self, tmp_path):
         _write(tmp_path, "lib/old.ts", "/** @deprecated */\nexport function old() {}\n")
-        _write(tmp_path, "lib/iso.ts", "/** @deprecated */\nexport function legacy() {}\n")
+        _write(
+            tmp_path, "lib/iso.ts", "/** @deprecated */\nexport function legacy() {}\n"
+        )
         _write(
             tmp_path,
             "local.ts",
@@ -339,15 +364,25 @@ class TestDeprecatedOnSyntaxTree:
         assert found[("iso.ts", "legacy")]["importers"] == 1
 
     def test_deprecated_reexport_alias(self, tmp_path):
-        _write(tmp_path, "impl.ts", "export function current() {}\nexport type Shape = {};\n")
+        _write(
+            tmp_path,
+            "impl.ts",
+            "export function current() {}\nexport type Shape = {};\n",
+        )
         _write(
             tmp_path,
             "index.ts",
             "export {\n  current,\n  /** @deprecated use current */\n  current as legacy,\n} from './impl';\n"
             "export type {\n  /** @deprecated */\n  Shape,\n} from './impl';\n",
         )
-        _write(tmp_path, "uses-legacy.ts", "import { legacy } from './index';\nlegacy();\n")
-        _write(tmp_path, "uses-current.ts", "import { current } from './index';\ncurrent();\n")
+        _write(
+            tmp_path, "uses-legacy.ts", "import { legacy } from './index';\nlegacy();\n"
+        )
+        _write(
+            tmp_path,
+            "uses-current.ts",
+            "import { current } from './index';\ncurrent();\n",
+        )
         found = _by_symbol(tmp_path)
         assert set(found) == {("index.ts", "legacy"), ("index.ts", "Shape")}
         assert found[("index.ts", "legacy")]["importers"] == 1
@@ -377,11 +412,17 @@ class TestDeprecatedOnSyntaxTree:
         assert kinds == ["property", "top-level"]
 
     def test_commonjs_export_is_not_unused(self, tmp_path):
-        _write(tmp_path, "cjs.js", "/** @deprecated */\nfunction old() {}\nmodule.exports = { old };\n")
+        _write(
+            tmp_path,
+            "cjs.js",
+            "/** @deprecated */\nfunction old() {}\nmodule.exports = { old };\n",
+        )
         assert _by_symbol(tmp_path)[("cjs.js", "old")]["exported"] is True
 
     def test_each_file_is_parsed_a_bounded_number_of_times(self, tmp_path, monkeypatch):
-        decls = "".join(f"/** @deprecated */\nexport function f{i}() {{}}\n" for i in range(10))
+        decls = "".join(
+            f"/** @deprecated */\nexport function f{i}() {{}}\n" for i in range(10)
+        )
         _write(tmp_path, "many.ts", decls)
         _write(tmp_path, "user.ts", "import { f1, f2 } from './many';\nf1(); f2();\n")
         calls: dict[str, int] = {}

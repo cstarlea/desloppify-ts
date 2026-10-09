@@ -13,7 +13,8 @@ from desloppify.languages.typescript.detectors.deps.resolver import clear_resolv
 from desloppify.languages.typescript.syntax.tree import get_parser
 
 needs_treesitter = pytest.mark.skipif(
-    get_parser("typescript") is None, reason="needs tree-sitter with the typescript grammar"
+    get_parser("typescript") is None,
+    reason="needs tree-sitter with the typescript grammar",
 )
 
 
@@ -235,11 +236,7 @@ def test_abstractions_context_regex_wrappers_without_tree(tmp_path, monkeypatch)
 @needs_treesitter
 def test_abstractions_context_includes_economy_sub_axes(tmp_path):
     """With TypeScript files parsed, every sub-axis is scored from real data."""
-    content = (
-        "export function load(opts: Record<string, any>) {\n"
-        "  return opts;\n"
-        "}\n"
-    )
+    content = "export function load(opts: Record<string, any>) {\n  return opts;\n}\n"
     context = budget_mod._abstractions_context({str(tmp_path / "mod.ts"): content})
     sub = context["sub_axes"]
     assert sub["delegation_density"] == 100
@@ -292,10 +289,14 @@ def test_definition_directness_skips_published_entry_barrels(tmp_path, private):
     """A barrel a published package's ``exports`` points at is its public API, not a facade."""
     manifest = {"name": "lib", "exports": {".": "./dist/index.js"}, "private": private}
     (tmp_path / "package.json").write_text(json.dumps(manifest))
-    (tmp_path / "tsconfig.json").write_text(json.dumps({"compilerOptions": {"outDir": "dist", "rootDir": "src"}}))
+    (tmp_path / "tsconfig.json").write_text(
+        json.dumps({"compilerOptions": {"outDir": "dist", "rootDir": "src"}})
+    )
     (tmp_path / "src" / "inner").mkdir(parents=True)
     files = {
-        str(tmp_path / "src" / "index.ts"): "export * from './a';\nexport * from './inner/index';\n",
+        str(
+            tmp_path / "src" / "index.ts"
+        ): "export * from './a';\nexport * from './inner/index';\n",
         str(tmp_path / "src" / "inner" / "index.ts"): "export * from './b';\n",
     }
     for path, text in files.items():

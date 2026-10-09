@@ -96,4 +96,7 @@ def test_postflight_progresses_review_then_workflow() -> None:
     assert current_lifecycle_phase(plan) == "plan"
     assert workflow_snapshot.phase == LIFECYCLE_PHASE_WORKFLOW_POSTFLIGHT
     assert not any(fid.startswith("subjective::") for fid in plan["queue_order"])
-    assert all(item["id"].startswith("workflow::") for item in workflow_snapshot.execution_items)
+    assert all(
+        item["id"].startswith("workflow::")
+        for item in workflow_snapshot.execution_items
+    )

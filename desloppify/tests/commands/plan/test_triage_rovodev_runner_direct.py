@@ -119,7 +119,9 @@ def test_run_rovodev_pipeline_overrides_then_restores_runner(tmp_path: Path) -> 
         captured["runner"] = override_mod._STAGE_RUNNER_OVERRIDE
         captured["label"] = override_mod._RUNNER_NAME_OVERRIDE
 
-    with patch.object(codex_pipeline_mod, "run_codex_pipeline", side_effect=fake_pipeline):
+    with patch.object(
+        codex_pipeline_mod, "run_codex_pipeline", side_effect=fake_pipeline
+    ):
         rovodev_pipeline_mod.run_rovodev_pipeline(
             args, stages_to_run=["observe"], services=MagicMock()
         )
@@ -156,9 +158,7 @@ def test_triage_parser_accepts_rovodev_runner() -> None:
     from desloppify.cli import create_parser
 
     parser = create_parser()
-    args = parser.parse_args(
-        ["plan", "triage", "--run-stages", "--runner", "rovodev"]
-    )
+    args = parser.parse_args(["plan", "triage", "--run-stages", "--runner", "rovodev"])
     assert args.runner == "rovodev"
     assert args.run_stages is True
 
@@ -181,8 +181,13 @@ def test_triage_runner_commands_includes_rovodev() -> None:
 def test_triage_run_stages_command_with_only_stages_for_rovodev() -> None:
     from desloppify.engine._plan.triage.playbook import triage_run_stages_command
 
-    cmd = triage_run_stages_command(runner="rovodev", only_stages=["observe", "reflect"])
-    assert cmd == "desloppify plan triage --run-stages --runner rovodev --only-stages observe,reflect"
+    cmd = triage_run_stages_command(
+        runner="rovodev", only_stages=["observe", "reflect"]
+    )
+    assert (
+        cmd
+        == "desloppify plan triage --run-stages --runner rovodev --only-stages observe,reflect"
+    )
 
 
 def test_workflow_dispatches_rovodev_runner() -> None:
@@ -196,11 +201,11 @@ def test_workflow_dispatches_rovodev_runner() -> None:
         dry_run=True,
     )
     services = MagicMock()
-    with patch.object(workflow_mod, "run_rovodev_pipeline") as mock_rovodev, patch.object(
-        workflow_mod, "run_codex_pipeline"
-    ) as mock_codex, patch.object(
-        workflow_mod, "run_claude_orchestrator"
-    ) as mock_claude:
+    with (
+        patch.object(workflow_mod, "run_rovodev_pipeline") as mock_rovodev,
+        patch.object(workflow_mod, "run_codex_pipeline") as mock_codex,
+        patch.object(workflow_mod, "run_claude_orchestrator") as mock_claude,
+    ):
         workflow_mod._run_staged_runner(args, services=services)
 
     mock_rovodev.assert_called_once()

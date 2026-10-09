@@ -64,7 +64,10 @@ def test_triage_guardrail_messages_use_pending_copy_when_triage_is_deferred() ->
         state=_pending_triage_state(),
     )
 
-    assert any("activate after the current objective backlog is clear" in msg for msg in messages)
+    assert any(
+        "activate after the current objective backlog is clear" in msg
+        for msg in messages
+    )
     assert any(msg.startswith("TRIAGE PENDING") for msg in messages)
     assert not any("Run the staged triage runner" in msg for msg in messages)
 
@@ -90,4 +93,6 @@ def test_require_triage_current_blocks_review_resolve_while_pending() -> None:
             attest="",
         )
 
-    assert "triage is pending behind the current objective backlog" in str(exc_info.value)
+    assert "triage is pending behind the current objective backlog" in str(
+        exc_info.value
+    )

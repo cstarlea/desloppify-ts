@@ -108,9 +108,7 @@ def _plan_dimension_table(state: PlanState) -> list[str]:
     static_names: set[str] = set()
     rendered_names: set[str] = set()
     loc_weighted = False
-    subjective_display_names = {
-        display.lower() for display in DISPLAY_NAMES.values()
-    }
+    subjective_display_names = {display.lower() for display in DISPLAY_NAMES.values()}
 
     def _looks_subjective(name: str, data: dict) -> bool:
         detectors = data.get("detectors", {})
@@ -198,7 +196,9 @@ def _plan_dimension_table(state: PlanState) -> list[str]:
             )
 
     if loc_weighted:
-        lines.extend(["", "\\* files weighted by √LOC (max 50 each), not a count of checks"])
+        lines.extend(
+            ["", "\\* files weighted by √LOC (max 50 each), not a count of checks"]
+        )
     lines.append("")
     return lines
 
@@ -236,6 +236,7 @@ def generate_plan_md(state: PlanState, plan: dict | None = None) -> str:
     if plan is None:
         try:
             from desloppify.engine.plan_state import load_plan
+
             plan = load_plan()
         except PLAN_LOAD_EXCEPTIONS:
             plan = {}
@@ -247,11 +248,7 @@ def generate_plan_md(state: PlanState, plan: dict | None = None) -> str:
 
     has_plan = bool(
         plan
-        and (
-            plan.get("queue_order")
-            or plan.get("skipped")
-            or plan.get("clusters")
-        )
+        and (plan.get("queue_order") or plan.get("skipped") or plan.get("clusters"))
     )
 
     lines = _plan_header(state, stats)

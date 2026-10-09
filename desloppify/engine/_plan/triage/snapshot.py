@@ -57,7 +57,9 @@ def coverage_open_ids(plan: PlanModel, state: StateModel) -> set[str]:
     return review_ids
 
 
-def active_triage_issue_ids(plan: PlanModel, state: StateModel | None = None) -> set[str]:
+def active_triage_issue_ids(
+    plan: PlanModel, state: StateModel | None = None
+) -> set[str]:
     """Return the frozen review issue set for the current triage run."""
     meta = plan.get("epic_triage_meta", {})
     active_ids = _normalized_issue_id_list(meta.get("active_triage_issue_ids"))
@@ -73,7 +75,9 @@ def _explicit_active_triage_issue_ids(plan: PlanModel) -> set[str]:
     return set(_normalized_issue_id_list(meta.get("active_triage_issue_ids")))
 
 
-def live_active_triage_issue_ids(plan: PlanModel, state: StateModel | None = None) -> set[str]:
+def live_active_triage_issue_ids(
+    plan: PlanModel, state: StateModel | None = None
+) -> set[str]:
     """Return frozen triage IDs that are still open review issues in state."""
     frozen_ids = active_triage_issue_ids(plan, state)
     if state is None or not frozen_ids:
@@ -81,7 +85,9 @@ def live_active_triage_issue_ids(plan: PlanModel, state: StateModel | None = Non
     return frozen_ids & open_review_ids(state)
 
 
-def undispositioned_triage_issue_ids(plan: PlanModel, state: StateModel | None = None) -> list[str]:
+def undispositioned_triage_issue_ids(
+    plan: PlanModel, state: StateModel | None = None
+) -> list[str]:
     """Return frozen triage issues still lacking cluster/skip/dismiss coverage."""
     target_ids = live_active_triage_issue_ids(plan, state)
     if not target_ids:
@@ -116,7 +122,9 @@ def triage_coverage(
     all_cluster_ids: set[str] = set()
     for cluster in clusters.values():
         all_cluster_ids.update(_cluster_issue_ids(cluster))
-    review_ids = list(open_review_ids) if open_review_ids is not None else plan_review_ids(plan)
+    review_ids = (
+        list(open_review_ids) if open_review_ids is not None else plan_review_ids(plan)
+    )
     organized = sum(1 for issue_id in review_ids if issue_id in all_cluster_ids)
     return organized, len(review_ids), clusters
 

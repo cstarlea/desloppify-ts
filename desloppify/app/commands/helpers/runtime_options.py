@@ -50,7 +50,9 @@ def resolve_lang_runtime_options(args, lang) -> dict[str, object]:
         ) from exc
 
 
-def print_lang_runtime_options_error(exc: LangRuntimeOptionsError, *, lang_name: str) -> None:
+def print_lang_runtime_options_error(
+    exc: LangRuntimeOptionsError, *, lang_name: str
+) -> None:
     """Render a runtime-option parse/validation error."""
     print(colorize(f"  {exc}", "red"), file=sys.stderr)
     hint = ", ".join(exc.supported_options) if exc.supported_options else "(none)"

@@ -143,7 +143,9 @@ def test_import_config_allows_clean_config_only_path(tmp_path):
 
     parsed = load_import_issues_data(
         str(issues_path),
-        config=ImportLoadConfig(manual_override=True, manual_attest="manual override ok"),
+        config=ImportLoadConfig(
+            manual_override=True, manual_attest="manual override ok"
+        ),
     )
     assert parsed["assessments"]["naming_quality"] == 95
 
@@ -197,7 +199,9 @@ def test_import_attested_external_rejects_untrusted_provenance(tmp_path, capsys)
 
 def test_import_attested_external_accepts_claude_blind_provenance(tmp_path):
     blind_packet = tmp_path / "review_packet_blind.json"
-    blind_packet.write_text(json.dumps({"command": "review", "dimensions": ["naming_quality"]}))
+    blind_packet.write_text(
+        json.dumps({"command": "review", "dimensions": ["naming_quality"]})
+    )
     packet_hash = hashlib.sha256(blind_packet.read_bytes()).hexdigest()
 
     payload = {
@@ -232,7 +236,9 @@ def test_import_attested_external_accepts_claude_blind_provenance(tmp_path):
 
 def test_import_attested_external_rejects_non_claude_runner(tmp_path, capsys):
     blind_packet = tmp_path / "review_packet_blind.json"
-    blind_packet.write_text(json.dumps({"command": "review", "dimensions": ["naming_quality"]}))
+    blind_packet.write_text(
+        json.dumps({"command": "review", "dimensions": ["naming_quality"]})
+    )
     packet_hash = hashlib.sha256(blind_packet.read_bytes()).hexdigest()
 
     payload = {
@@ -267,7 +273,9 @@ def test_import_attested_external_rejects_non_claude_runner(tmp_path, capsys):
 
 def test_import_external_opencode_provenance_still_defaults_to_issues_only(tmp_path):
     blind_packet = tmp_path / "review_packet_blind.json"
-    blind_packet.write_text(json.dumps({"command": "review", "dimensions": ["naming_quality"]}))
+    blind_packet.write_text(
+        json.dumps({"command": "review", "dimensions": ["naming_quality"]})
+    )
     packet_hash = hashlib.sha256(blind_packet.read_bytes()).hexdigest()
 
     payload = {
@@ -277,7 +285,9 @@ def test_import_external_opencode_provenance_still_defaults_to_issues_only(tmp_p
                 "identifier": "process_data",
                 "summary": "Function name is generic for a payment-reconciliation path.",
                 "related_files": ["src/service.ts"],
-                "evidence": ["Name does not describe side effects or domain operation."],
+                "evidence": [
+                    "Name does not describe side effects or domain operation."
+                ],
                 "suggestion": "Rename to reconcile_customer_payment.",
                 "confidence": "high",
             }
@@ -328,7 +338,9 @@ def test_import_attested_external_rejects_allow_partial_combo(tmp_path, capsys):
 
 def test_import_external_trusted_provenance_still_defaults_to_issues_only(tmp_path):
     blind_packet = tmp_path / "review_packet_blind.json"
-    blind_packet.write_text(json.dumps({"command": "review", "dimensions": ["naming_quality"]}))
+    blind_packet.write_text(
+        json.dumps({"command": "review", "dimensions": ["naming_quality"]})
+    )
     packet_hash = hashlib.sha256(blind_packet.read_bytes()).hexdigest()
 
     payload = {
@@ -338,7 +350,9 @@ def test_import_external_trusted_provenance_still_defaults_to_issues_only(tmp_pa
                 "identifier": "process_data",
                 "summary": "Function name is generic for a payment-reconciliation path.",
                 "related_files": ["src/service.ts"],
-                "evidence": ["Name does not describe side effects or domain operation."],
+                "evidence": [
+                    "Name does not describe side effects or domain operation."
+                ],
                 "suggestion": "Rename to reconcile_customer_payment.",
                 "confidence": "high",
             }
@@ -631,4 +645,3 @@ def test_import_trusted_internal_accepts_low_score_with_issue(tmp_path):
         ),
     )
     assert parsed["assessments"]["naming_quality"] == 80
-

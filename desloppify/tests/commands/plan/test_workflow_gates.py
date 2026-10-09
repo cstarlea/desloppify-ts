@@ -26,6 +26,7 @@ from desloppify.engine._plan.schema import empty_plan
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _plan_with_workflow_item(
     wid: str = WORKFLOW_SCORE_CHECKPOINT_ID,
     *,
@@ -44,7 +45,10 @@ def _plan_with_workflow_item(
             "last_completed_at": "2025-01-01T00:00:00Z",
             "last_triage": {
                 "stages": {
-                    stage: {"report": f"test {stage}", "timestamp": "2025-01-01T00:00:00Z"}
+                    stage: {
+                        "report": f"test {stage}",
+                        "timestamp": "2025-01-01T00:00:00Z",
+                    }
                     for stage in ("observe", "reflect", "organize")
                 },
                 "strategy": "test strategy",
@@ -101,7 +105,9 @@ def _mock_plan_io(monkeypatch, plan):
     monkeypatch.setattr(misc_mod, "load_plan", lambda *a, **kw: plan)
     saved = []
     monkeypatch.setattr(resolve_mod, "save_plan", lambda p, *a, **kw: saved.append(p))
-    monkeypatch.setattr(resolve_workflow_mod, "save_plan", lambda p, *a, **kw: saved.append(p))
+    monkeypatch.setattr(
+        resolve_workflow_mod, "save_plan", lambda p, *a, **kw: saved.append(p)
+    )
     monkeypatch.setattr(misc_mod, "save_plan", lambda p, *a, **kw: saved.append(p))
     return saved
 
@@ -109,11 +115,14 @@ def _mock_plan_io(monkeypatch, plan):
 def _mock_state(monkeypatch, state):
     """Patch state_path and load_state to return our spoofed state."""
     import desloppify.state as state_mod_real
+
     monkeypatch.setattr(resolve_workflow_mod, "state_path", lambda args: None)
     monkeypatch.setattr(misc_mod, "state_path", lambda args: None)
     monkeypatch.setattr(state_mod_real, "load_state", lambda path=None: state)
     # Also patch the module-level import used in the split modules
-    monkeypatch.setattr(resolve_workflow_mod.state_mod, "load_state", lambda path=None: state)
+    monkeypatch.setattr(
+        resolve_workflow_mod.state_mod, "load_state", lambda path=None: state
+    )
     monkeypatch.setattr(misc_mod, "load_state", lambda path=None: state)
 
 
@@ -190,11 +199,13 @@ class TestTriageGateBlocksWorkflow:
         plan = _plan_with_workflow_item(triage_complete=False)
         _mock_plan_io(monkeypatch, plan)
 
-        resolve_mod.cmd_plan_resolve(_args(
-            force_resolve=True,
-            note="too short",
-            confirm=True,
-        ))
+        resolve_mod.cmd_plan_resolve(
+            _args(
+                force_resolve=True,
+                note="too short",
+                confirm=True,
+            )
+        )
 
         out = capsys.readouterr().out
         assert "min 50 chars" in out
@@ -210,11 +221,13 @@ class TestTriageGateBlocksWorkflow:
         _mock_state(monkeypatch, state)
 
         long_note = "Skipping triage because I manually reviewed all findings in the previous session"
-        resolve_mod.cmd_plan_resolve(_args(
-            force_resolve=True,
-            note=long_note,
-            confirm=True,
-        ))
+        resolve_mod.cmd_plan_resolve(
+            _args(
+                force_resolve=True,
+                note=long_note,
+                confirm=True,
+            )
+        )
 
         out = capsys.readouterr().out
         assert "WARNING" in out
@@ -302,11 +315,13 @@ class TestScanGateBlocksWorkflow:
         _mock_state(monkeypatch, state)
 
         long_note = "Forcing resolution because scan results were already reviewed manually in detail"
-        resolve_mod.cmd_plan_resolve(_args(
-            force_resolve=True,
-            note=long_note,
-            confirm=True,
-        ))
+        resolve_mod.cmd_plan_resolve(
+            _args(
+                force_resolve=True,
+                note=long_note,
+                confirm=True,
+            )
+        )
 
         out = capsys.readouterr().out
         # force-resolve bypasses both triage (already complete) and scan gate

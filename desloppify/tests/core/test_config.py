@@ -266,7 +266,10 @@ class TestAddIgnorePattern:
             note="Intentional migration noise",
             added_at="2026-02-16T00:00:00Z",
         )
-        assert cfg["ignore_metadata"]["smells::*::debug"]["note"] == "Intentional migration noise"
+        assert (
+            cfg["ignore_metadata"]["smells::*::debug"]["note"]
+            == "Intentional migration noise"
+        )
 
 
 # ===========================================================================

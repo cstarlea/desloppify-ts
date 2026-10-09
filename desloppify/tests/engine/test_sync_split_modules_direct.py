@@ -33,18 +33,29 @@ def test_sync_context_helpers_cover_policy_and_fallback_paths() -> None:
         }
     }
     assert sync_context_mod.has_objective_backlog(state, policy=None) is True
-    assert sync_context_mod.is_mid_cycle({"plan_start_scores": {"strict": 75.0}}) is True
-    assert sync_context_mod.is_mid_cycle({"plan_start_scores": {"reset": True}}) is False
+    assert (
+        sync_context_mod.is_mid_cycle({"plan_start_scores": {"strict": 75.0}}) is True
+    )
+    assert (
+        sync_context_mod.is_mid_cycle({"plan_start_scores": {"reset": True}}) is False
+    )
 
 
-def test_triage_start_policy_decisions_cover_inject_defer_and_active(monkeypatch) -> None:
+def test_triage_start_policy_decisions_cover_inject_defer_and_active(
+    monkeypatch,
+) -> None:
     plan = {"queue_order": []}
     monkeypatch.setattr(triage_start_policy_mod, "is_mid_cycle", lambda _plan: False)
-    assert triage_start_policy_mod.decide_triage_start(plan, state={"issues": {}}).action == "inject"
+    assert (
+        triage_start_policy_mod.decide_triage_start(plan, state={"issues": {}}).action
+        == "inject"
+    )
 
     active_plan = {"queue_order": ["triage::observe"]}
     assert (
-        triage_start_policy_mod.decide_triage_start(active_plan, state={"issues": {}}).action
+        triage_start_policy_mod.decide_triage_start(
+            active_plan, state={"issues": {}}
+        ).action
         == "already_active"
     )
 
@@ -115,8 +126,12 @@ def test_reconcile_review_import_sync_result(monkeypatch) -> None:
     plan = {"queue_order": ["id1"], "epic_triage_meta": {"triaged_ids": ["id1"]}}
     state = {"issues": {}}
 
-    monkeypatch.setattr(reconcile_import_mod, "compute_open_issue_ids", lambda _s: set())
-    monkeypatch.setattr(reconcile_import_mod, "compute_new_issue_ids", lambda _p, _s: {"id2", "id3"})
+    monkeypatch.setattr(
+        reconcile_import_mod, "compute_open_issue_ids", lambda _s: set()
+    )
+    monkeypatch.setattr(
+        reconcile_import_mod, "compute_new_issue_ids", lambda _p, _s: {"id2", "id3"}
+    )
     monkeypatch.setattr(
         reconcile_import_mod,
         "sync_triage_needed",
@@ -126,7 +141,9 @@ def test_reconcile_review_import_sync_result(monkeypatch) -> None:
         ),
     )
 
-    result = reconcile_import_mod.sync_plan_after_review_import(plan, state, policy=None)
+    result = reconcile_import_mod.sync_plan_after_review_import(
+        plan, state, policy=None
+    )
     assert result is not None
     assert result.new_ids == {"id2", "id3"}
     assert result.added_to_queue == ["id2", "id3"]
@@ -137,12 +154,18 @@ def test_reconcile_review_import_sync_result(monkeypatch) -> None:
     assert plan["queue_order"] == ["id1", "id2", "id3"]
 
 
-def test_reconcile_review_import_sync_uses_open_ids_without_triage_baseline(monkeypatch) -> None:
+def test_reconcile_review_import_sync_uses_open_ids_without_triage_baseline(
+    monkeypatch,
+) -> None:
     plan = {"queue_order": []}
     state = {"issues": {}}
 
-    monkeypatch.setattr(reconcile_import_mod, "compute_open_issue_ids", lambda _s: {"rid::a"})
-    monkeypatch.setattr(reconcile_import_mod, "compute_new_issue_ids", lambda _p, _s: set())
+    monkeypatch.setattr(
+        reconcile_import_mod, "compute_open_issue_ids", lambda _s: {"rid::a"}
+    )
+    monkeypatch.setattr(
+        reconcile_import_mod, "compute_new_issue_ids", lambda _p, _s: set()
+    )
     monkeypatch.setattr(
         reconcile_import_mod,
         "sync_triage_needed",
@@ -152,7 +175,9 @@ def test_reconcile_review_import_sync_uses_open_ids_without_triage_baseline(monk
         ),
     )
 
-    result = reconcile_import_mod.sync_plan_after_review_import(plan, state, policy=None)
+    result = reconcile_import_mod.sync_plan_after_review_import(
+        plan, state, policy=None
+    )
     assert result is not None
     assert result.new_ids == {"rid::a"}
     assert result.added_to_queue == ["rid::a"]
@@ -177,15 +202,21 @@ def test_reconcile_review_import_prunes_stale_review_ids_even_without_new_ids(
     }
     state = {"issues": {}}
 
-    monkeypatch.setattr(reconcile_import_mod, "compute_open_issue_ids", lambda _s: {"review::live"})
-    monkeypatch.setattr(reconcile_import_mod, "compute_new_issue_ids", lambda _p, _s: set())
+    monkeypatch.setattr(
+        reconcile_import_mod, "compute_open_issue_ids", lambda _s: {"review::live"}
+    )
+    monkeypatch.setattr(
+        reconcile_import_mod, "compute_new_issue_ids", lambda _p, _s: set()
+    )
     monkeypatch.setattr(
         reconcile_import_mod,
         "sync_triage_needed",
         lambda _p, _s, policy=None: SimpleNamespace(injected=[], deferred=False),
     )
 
-    result = reconcile_import_mod.sync_plan_after_review_import(plan, state, policy=None)
+    result = reconcile_import_mod.sync_plan_after_review_import(
+        plan, state, policy=None
+    )
 
     assert result is not None
     assert result.new_ids == set()
@@ -215,15 +246,21 @@ def test_reconcile_review_import_prunes_stale_triage_recovery_metadata(
     }
     state = {"issues": {}}
 
-    monkeypatch.setattr(reconcile_import_mod, "compute_open_issue_ids", lambda _s: {"review::live"})
-    monkeypatch.setattr(reconcile_import_mod, "compute_new_issue_ids", lambda _p, _s: set())
+    monkeypatch.setattr(
+        reconcile_import_mod, "compute_open_issue_ids", lambda _s: {"review::live"}
+    )
+    monkeypatch.setattr(
+        reconcile_import_mod, "compute_new_issue_ids", lambda _p, _s: set()
+    )
     monkeypatch.setattr(
         reconcile_import_mod,
         "sync_triage_needed",
         lambda _p, _s, policy=None: SimpleNamespace(injected=[], deferred=False),
     )
 
-    result = reconcile_import_mod.sync_plan_after_review_import(plan, state, policy=None)
+    result = reconcile_import_mod.sync_plan_after_review_import(
+        plan, state, policy=None
+    )
 
     assert result is not None
     assert result.stale_pruned_from_queue == ["review::stale"]
@@ -319,7 +356,11 @@ def test_auto_cluster_grouping_filters_to_open_unsuppressed_non_manual_items(
     monkeypatch.setattr(
         auto_cluster_sync_mod,
         "DETECTORS",
-        {"unused": SimpleNamespace(name="unused", needs_judgment=False, auto_queue=True)},
+        {
+            "unused": SimpleNamespace(
+                name="unused", needs_judgment=False, auto_queue=True
+            )
+        },
     )
 
     issues = {
@@ -338,7 +379,9 @@ def test_auto_cluster_grouping_filters_to_open_unsuppressed_non_manual_items(
     assert set(issue_data) == {"open-1", "open-2"}
 
 
-def test_auto_cluster_sync_helpers_cover_create_update_and_user_modified_paths() -> None:
+def test_auto_cluster_sync_helpers_cover_create_update_and_user_modified_paths() -> (
+    None
+):
     plan = {"overrides": {"id-a": {"issue_id": "id-a", "created_at": "t0"}}}
     clusters = {"manual/keep": {"issue_ids": ["id-a"]}}
 
@@ -436,13 +479,23 @@ def test_sync_issue_clusters_handles_name_collisions_and_user_modified_clusters(
             issues,
         ),
     )
-    monkeypatch.setattr(auto_cluster_sync_mod, "_cluster_name_from_key", lambda _k: "auto/shared")
-    monkeypatch.setattr(auto_cluster_sync_mod, "_generate_description", lambda *_a, **_k: "desc")
-    monkeypatch.setattr(auto_cluster_sync_mod, "_generate_action", lambda *_a, **_k: "act")
+    monkeypatch.setattr(
+        auto_cluster_sync_mod, "_cluster_name_from_key", lambda _k: "auto/shared"
+    )
+    monkeypatch.setattr(
+        auto_cluster_sync_mod, "_generate_description", lambda *_a, **_k: "desc"
+    )
+    monkeypatch.setattr(
+        auto_cluster_sync_mod, "_generate_action", lambda *_a, **_k: "act"
+    )
     monkeypatch.setattr(
         auto_cluster_sync_mod,
         "DETECTORS",
-        {"unused": SimpleNamespace(name="unused", needs_judgment=False, auto_queue=True)},
+        {
+            "unused": SimpleNamespace(
+                name="unused", needs_judgment=False, auto_queue=True
+            )
+        },
     )
 
     changes = auto_cluster_sync_mod.sync_issue_clusters(
@@ -484,11 +537,17 @@ def test_sync_workflow_helpers_inject_expected_items(monkeypatch) -> None:
         import_payload={
             "issues": [],
             "assessments": {"naming_quality": 80},
-            "provenance": {"packet_sha256": "abc123", "packet_path": "/tmp/review_packet_blind.json"},
+            "provenance": {
+                "packet_sha256": "abc123",
+                "packet_path": "/tmp/review_packet_blind.json",
+            },
         },
     )
     assert r3.injected == ["workflow::import-scores"]
-    assert plan["refresh_state"]["pending_import_scores"]["import_file"] == "/tmp/review/issues.json"
+    assert (
+        plan["refresh_state"]["pending_import_scores"]["import_file"]
+        == "/tmp/review/issues.json"
+    )
     assert plan["refresh_state"]["pending_import_scores"]["packet_sha256"] == "abc123"
 
     plan = {"queue_order": []}
@@ -501,7 +560,11 @@ def test_sync_workflow_helpers_inject_expected_items(monkeypatch) -> None:
     assert plan["queue_order"] == []
     assert plan["previous_plan_start_scores"] == {}
 
-    monkeypatch.setattr(sync_workflow_mod.stale_policy_mod, "current_unscored_ids", lambda *_a, **_k: {"s"})
+    monkeypatch.setattr(
+        sync_workflow_mod.stale_policy_mod,
+        "current_unscored_ids",
+        lambda *_a, **_k: {"s"},
+    )
     assert sync_workflow_mod._no_unscored(state, policy=None) is False
 
 
@@ -530,14 +593,18 @@ def test_sync_import_scores_prunes_stale_workflow_after_trusted_import() -> None
         ]
     }
 
-    result = sync_workflow_mod.sync_import_scores_needed(plan, state, assessment_mode=None)
+    result = sync_workflow_mod.sync_import_scores_needed(
+        plan, state, assessment_mode=None
+    )
 
     assert result.pruned == ["workflow::import-scores"]
     assert plan["queue_order"] == ["review::x"]
     assert plan["refresh_state"] == {}
 
 
-def test_sync_import_scores_updates_metadata_on_consecutive_issues_only_import() -> None:
+def test_sync_import_scores_updates_metadata_on_consecutive_issues_only_import() -> (
+    None
+):
     """A second issues_only import should update pending metadata to the latest batch."""
     plan: dict = {"queue_order": []}
     state: dict = {
@@ -616,7 +683,9 @@ def test_pending_import_scores_meta_ignores_malformed_refresh_state() -> None:
     assert meta.packet_sha256 == "hash-from-audit"
 
 
-def test_sync_communicate_score_reinjects_after_trusted_score_import_when_sentinel_cleared() -> None:
+def test_sync_communicate_score_reinjects_after_trusted_score_import_when_sentinel_cleared() -> (
+    None
+):
     plan = {
         "queue_order": ["triage::observe"],
         "plan_start_scores": {
@@ -668,7 +737,9 @@ def test_sync_communicate_score_defers_when_subjective_items_still_queued() -> N
     assert "previous_plan_start_scores" not in plan
 
 
-def test_sync_communicate_score_still_auto_resolves_when_no_subjective_items_queued() -> None:
+def test_sync_communicate_score_still_auto_resolves_when_no_subjective_items_queued() -> (
+    None
+):
     plan = {
         "queue_order": ["triage::observe"],
         "plan_start_scores": {"strict": 70.0},
@@ -691,7 +762,9 @@ def test_sync_communicate_score_still_auto_resolves_when_no_subjective_items_que
     assert plan["previous_plan_start_scores"]["strict"] == 70.0
 
 
-def test_sync_communicate_score_default_behavior_ignores_subjective_queue_contents() -> None:
+def test_sync_communicate_score_default_behavior_ignores_subjective_queue_contents() -> (
+    None
+):
     plan = {
         "queue_order": ["subjective::naming_quality", "triage::observe"],
         "plan_start_scores": {"strict": 70.0},
@@ -774,13 +847,17 @@ def test_queue_snapshot_enforces_phase_boundaries() -> None:
                 "score": 0.0,
                 "strict": 0.0,
                 "failing": 0,
-                "detectors": {"subjective_assessment": {"dimension_key": "naming_quality"}},
+                "detectors": {
+                    "subjective_assessment": {"dimension_key": "naming_quality"}
+                },
             }
         },
     }
     initial = snapshot_mod.build_queue_snapshot(state, plan=None)
     assert initial.phase == refresh_lifecycle_mod.LIFECYCLE_PHASE_REVIEW_INITIAL
-    assert [item["id"] for item in initial.execution_items] == ["subjective::naming_quality"]
+    assert [item["id"] for item in initial.execution_items] == [
+        "subjective::naming_quality"
+    ]
 
     execute = snapshot_mod.build_queue_snapshot(
         {
@@ -790,14 +867,17 @@ def test_queue_snapshot_enforces_phase_boundaries() -> None:
                     "score": 70.0,
                     "strict": 70.0,
                     "failing": 1,
-                    "detectors": {"subjective_assessment": {"dimension_key": "naming_quality"}},
+                    "detectors": {
+                        "subjective_assessment": {"dimension_key": "naming_quality"}
+                    },
                 }
             },
-            "subjective_assessments": {
-                "naming_quality": {"score": 70.0}
-            },
+            "subjective_assessments": {"naming_quality": {"score": 70.0}},
         },
-        plan={"queue_order": ["subjective::naming_quality"], "plan_start_scores": {"strict": 75.0}},
+        plan={
+            "queue_order": ["subjective::naming_quality"],
+            "plan_start_scores": {"strict": 75.0},
+        },
     )
     assert execute.phase == refresh_lifecycle_mod.LIFECYCLE_PHASE_SCAN
     assert [item["id"] for item in execute.execution_items] == ["workflow::run-scan"]
@@ -805,7 +885,9 @@ def test_queue_snapshot_enforces_phase_boundaries() -> None:
     assert "unused::a" in backlog_ids
 
 
-def test_queue_snapshot_keeps_executing_real_queue_items_before_postflight_scan() -> None:
+def test_queue_snapshot_keeps_executing_real_queue_items_before_postflight_scan() -> (
+    None
+):
     state = {
         "issues": {
             "unused::a": {
@@ -832,7 +914,9 @@ def test_queue_snapshot_keeps_executing_real_queue_items_before_postflight_scan(
     assert [item["id"] for item in snapshot.execution_items] == ["unused::a"]
 
 
-def test_queue_snapshot_does_not_execute_autofix_cluster_without_queue_ownership() -> None:
+def test_queue_snapshot_does_not_execute_autofix_cluster_without_queue_ownership() -> (
+    None
+):
     state = {
         "issues": {
             "unused::a": {
@@ -868,7 +952,9 @@ def test_queue_snapshot_does_not_execute_autofix_cluster_without_queue_ownership
     assert "unused::a" in {item["id"] for item in snapshot.backlog_items}
 
 
-def test_queue_snapshot_legacy_autofix_cluster_stays_backlog_without_queue_ownership() -> None:
+def test_queue_snapshot_legacy_autofix_cluster_stays_backlog_without_queue_ownership() -> (
+    None
+):
     state = {
         "issues": {
             "unused::a": {
@@ -903,7 +989,9 @@ def test_queue_snapshot_legacy_autofix_cluster_stays_backlog_without_queue_owner
     assert "unused::a" in {item["id"] for item in snapshot.backlog_items}
 
 
-def test_queue_snapshot_non_autofix_auto_cluster_does_not_execute_without_queueing() -> None:
+def test_queue_snapshot_non_autofix_auto_cluster_does_not_execute_without_queueing() -> (
+    None
+):
     state = {
         "issues": {
             "dict_keys::a": {
@@ -1001,7 +1089,9 @@ def test_queue_snapshot_orders_scan_assessment_workflow_and_triage_postflight() 
     }
     scan_snapshot = snapshot_mod.build_queue_snapshot(review_state, plan=scan_plan)
     assert scan_snapshot.phase == refresh_lifecycle_mod.LIFECYCLE_PHASE_SCAN
-    assert [item["id"] for item in scan_snapshot.execution_items] == ["workflow::run-scan"]
+    assert [item["id"] for item in scan_snapshot.execution_items] == [
+        "workflow::run-scan"
+    ]
 
     review_plan = {
         "queue_order": ["workflow::communicate-score", "triage::observe"],
@@ -1009,9 +1099,16 @@ def test_queue_snapshot_orders_scan_assessment_workflow_and_triage_postflight() 
         "refresh_state": {"postflight_scan_completed_at_scan_count": 1},
     }
     review_snapshot = snapshot_mod.build_queue_snapshot(review_state, plan=review_plan)
-    assert review_snapshot.phase == refresh_lifecycle_mod.LIFECYCLE_PHASE_WORKFLOW_POSTFLIGHT
-    assert [item["id"] for item in review_snapshot.execution_items] == ["workflow::communicate-score"]
-    assert "review::src/a.py::naming" in {item["id"] for item in review_snapshot.backlog_items}
+    assert (
+        review_snapshot.phase
+        == refresh_lifecycle_mod.LIFECYCLE_PHASE_WORKFLOW_POSTFLIGHT
+    )
+    assert [item["id"] for item in review_snapshot.execution_items] == [
+        "workflow::communicate-score"
+    ]
+    assert "review::src/a.py::naming" in {
+        item["id"] for item in review_snapshot.backlog_items
+    }
 
     triage_snapshot = snapshot_mod.build_queue_snapshot(
         review_state,
@@ -1021,8 +1118,12 @@ def test_queue_snapshot_orders_scan_assessment_workflow_and_triage_postflight() 
             "refresh_state": {"postflight_scan_completed_at_scan_count": 1},
         },
     )
-    assert triage_snapshot.phase == refresh_lifecycle_mod.LIFECYCLE_PHASE_TRIAGE_POSTFLIGHT
-    assert [item["id"] for item in triage_snapshot.execution_items] == ["triage::observe"]
+    assert (
+        triage_snapshot.phase == refresh_lifecycle_mod.LIFECYCLE_PHASE_TRIAGE_POSTFLIGHT
+    )
+    assert [item["id"] for item in triage_snapshot.execution_items] == [
+        "triage::observe"
+    ]
 
     assessment_with_review_snapshot = snapshot_mod.build_queue_snapshot(
         assessment_state,
@@ -1050,11 +1151,7 @@ def test_queue_snapshot_orders_scan_assessment_workflow_and_triage_postflight() 
     }
 
     assessment_only_snapshot = snapshot_mod.build_queue_snapshot(
-        {
-            key: value
-            for key, value in assessment_state.items()
-            if key != "issues"
-        }
+        {key: value for key, value in assessment_state.items() if key != "issues"}
         | {
             "issues": {
                 "subjective_review::naming_quality": assessment_state["issues"][
@@ -1089,8 +1186,13 @@ def test_queue_snapshot_orders_scan_assessment_workflow_and_triage_postflight() 
             "epic_triage_meta": {"triaged_ids": ["review::src/a.py::naming"]},
         },
     )
-    assert post_triage_snapshot.phase == refresh_lifecycle_mod.LIFECYCLE_PHASE_REVIEW_POSTFLIGHT
-    assert [item["id"] for item in post_triage_snapshot.execution_items] == ["review::src/a.py::naming"]
+    assert (
+        post_triage_snapshot.phase
+        == refresh_lifecycle_mod.LIFECYCLE_PHASE_REVIEW_POSTFLIGHT
+    )
+    assert [item["id"] for item in post_triage_snapshot.execution_items] == [
+        "review::src/a.py::naming"
+    ]
 
     workflow_snapshot = snapshot_mod.build_queue_snapshot(
         {
@@ -1117,8 +1219,13 @@ def test_queue_snapshot_orders_scan_assessment_workflow_and_triage_postflight() 
             "refresh_state": {"postflight_scan_completed_at_scan_count": 1},
         },
     )
-    assert workflow_snapshot.phase == refresh_lifecycle_mod.LIFECYCLE_PHASE_WORKFLOW_POSTFLIGHT
-    assert [item["id"] for item in workflow_snapshot.execution_items] == ["workflow::communicate-score"]
+    assert (
+        workflow_snapshot.phase
+        == refresh_lifecycle_mod.LIFECYCLE_PHASE_WORKFLOW_POSTFLIGHT
+    )
+    assert [item["id"] for item in workflow_snapshot.execution_items] == [
+        "workflow::communicate-score"
+    ]
 
     assessment_beats_workflow_snapshot = snapshot_mod.build_queue_snapshot(
         assessment_state,
@@ -1139,7 +1246,9 @@ def test_queue_snapshot_orders_scan_assessment_workflow_and_triage_postflight() 
     )
 
 
-def test_build_subjective_items_suppresses_same_cycle_review_refresh_during_workflow() -> None:
+def test_build_subjective_items_suppresses_same_cycle_review_refresh_during_workflow() -> (
+    None
+):
     items = synthetic_mod.build_subjective_items(
         {
             "assessment_import_audit": [
@@ -1200,7 +1309,9 @@ def test_queue_snapshot_prefers_deferred_disposition_over_run_scan() -> None:
     }
     snapshot = snapshot_mod.build_queue_snapshot(state, plan=plan)
     assert snapshot.phase == refresh_lifecycle_mod.LIFECYCLE_PHASE_SCAN
-    assert [item["id"] for item in snapshot.execution_items] == ["workflow::deferred-disposition"]
+    assert [item["id"] for item in snapshot.execution_items] == [
+        "workflow::deferred-disposition"
+    ]
 
 
 def test_lifecycle_phase_constants_are_canonical() -> None:
@@ -1215,9 +1326,12 @@ def test_triage_playbook_commands_cover_runner_and_stage_validation() -> None:
     assert triage_playbook_mod.triage_run_stages_command() == (
         "desloppify plan triage --run-stages --runner codex"
     )
-    assert triage_playbook_mod.triage_run_stages_command(
-        runner="claude", only_stages=("observe", "reflect")
-    ) == "desloppify plan triage --run-stages --runner claude --only-stages observe,reflect"
+    assert (
+        triage_playbook_mod.triage_run_stages_command(
+            runner="claude", only_stages=("observe", "reflect")
+        )
+        == "desloppify plan triage --run-stages --runner claude --only-stages observe,reflect"
+    )
 
     try:
         triage_playbook_mod.triage_run_stages_command(runner="other")

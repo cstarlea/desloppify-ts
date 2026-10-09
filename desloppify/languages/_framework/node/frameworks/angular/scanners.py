@@ -22,7 +22,9 @@ from desloppify.languages._framework.node.js_text import code_text
 
 logger = logging.getLogger(__name__)
 
-_SKIP_DIRS = frozenset({"node_modules", "dist", ".git", ".angular", ".nx", "tmp", "coverage"})
+_SKIP_DIRS = frozenset(
+    {"node_modules", "dist", ".git", ".angular", ".nx", "tmp", "coverage"}
+)
 _SOURCE_SUFFIXES = (".ts", ".tsx", ".js", ".mjs", ".cjs", ".mts")
 _NON_MODULE_MARKERS = (".spec.", ".test.", "/__tests__/", "/__mocks__/")
 _DECLARABLES = frozenset({"Component", "Directive", "Pipe"})
@@ -43,7 +45,9 @@ def _config_files(package_root: Path) -> Iterator[Path]:
     if angular.is_file():
         yield angular
     for directory, dirnames, filenames in os.walk(package_root):
-        dirnames[:] = [d for d in dirnames if d not in _SKIP_DIRS and not d.startswith(".")]
+        dirnames[:] = [
+            d for d in dirnames if d not in _SKIP_DIRS and not d.startswith(".")
+        ]
         if "project.json" in filenames:
             yield Path(directory) / "project.json"
 
@@ -61,7 +65,9 @@ def _string_leaves(value: object) -> Iterator[str]:
 
 def _target_options(payload: dict) -> Iterator[object]:
     projects = payload.get("projects")
-    targets_holders = list(projects.values()) if isinstance(projects, dict) else [payload]
+    targets_holders = (
+        list(projects.values()) if isinstance(projects, dict) else [payload]
+    )
     for project in targets_holders:
         if not isinstance(project, dict):
             continue
@@ -91,7 +97,11 @@ def workspace_entries(package_root: Path) -> frozenset[str]:
             continue
         for options in _target_options(payload):
             for value in _string_leaves(options):
-                if not value.endswith(_SOURCE_SUFFIXES) or "*" in value or "://" in value:
+                if (
+                    not value.endswith(_SOURCE_SUFFIXES)
+                    or "*" in value
+                    or "://" in value
+                ):
                     continue
                 relative = value.removeprefix("./").replace("{projectRoot}/", "")
                 for base in (root, config.parent):
@@ -121,7 +131,11 @@ def _sources(path: Path) -> Iterator[_Source]:
             continue
         if any(marker in normalized for marker in _NON_MODULE_MARKERS):
             continue
-        full = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
+        full = (
+            Path(filepath)
+            if Path(filepath).is_absolute()
+            else get_project_root() / filepath
+        )
         try:
             text = full.read_text(encoding="utf-8", errors="replace")
         except OSError as exc:
@@ -175,7 +189,9 @@ def scan_missing_component_resources(path: Path) -> tuple[list[dict], int]:
 
 def angular_major(package_root: Path) -> int | None:
     try:
-        payload = json.loads((package_root / "package.json").read_text(encoding="utf-8"))
+        payload = json.loads(
+            (package_root / "package.json").read_text(encoding="utf-8")
+        )
     except (OSError, UnicodeDecodeError, ValueError):
         return None
     for key in ("dependencies", "devDependencies", "peerDependencies"):
@@ -218,7 +234,9 @@ def scan_standalone_mismatches(path: Path) -> tuple[list[dict], int]:
     for source in sources:
         for match in _ARRAY_RE.finditer(source.code):
             open_at = match.end() - 1
-            for start, end in split_top_level(source.code, open_at + 1, matching(source.code, open_at)):
+            for start, end in split_top_level(
+                source.code, open_at + 1, matching(source.code, open_at)
+            ):
                 name = source.code[start:end].strip()
                 if not _IDENT_RE.match(name) or name not in standalone:
                     continue

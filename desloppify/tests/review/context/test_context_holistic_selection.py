@@ -183,8 +183,12 @@ def test_naming_conventions_detects_snake_case_and_camel_case(tmp_path):
     d = tmp_path / "pkg"
     d.mkdir()
     files = {
-        str(d / "a.py"): "def get_user():\n    pass\ndef save_user():\n    pass\ndef handle_event():\n    pass\n",
-        str(d / "b.ts"): "function getUser() {}\nfunction saveUser() {}\nfunction handleEvent() {}\n",
+        str(
+            d / "a.py"
+        ): "def get_user():\n    pass\ndef save_user():\n    pass\ndef handle_event():\n    pass\n",
+        str(
+            d / "b.ts"
+        ): "function getUser() {}\nfunction saveUser() {}\nfunction handleEvent() {}\n",
     }
 
     context = selection_mod._naming_conventions_context(files)
@@ -214,7 +218,9 @@ def test_naming_conventions_detects_pascal_case(tmp_path):
     d = tmp_path / "components"
     d.mkdir()
     files = {
-        str(d / "a.tsx"): "function UserCard() {}\nfunction OrderList() {}\nfunction ProductView() {}\n",
+        str(
+            d / "a.tsx"
+        ): "function UserCard() {}\nfunction OrderList() {}\nfunction ProductView() {}\n",
     }
 
     context = selection_mod._naming_conventions_context(files)
@@ -230,11 +236,7 @@ def test_error_strategy_detects_try_catch_and_throws(tmp_path):
     d = tmp_path / "handlers"
     d.mkdir()
     content = (
-        "try {\n"
-        "    doSomething();\n"
-        "} catch (err) {\n"
-        "    throw new Error('fail');\n"
-        "}\n"
+        "try {\n    doSomething();\n} catch (err) {\n    throw new Error('fail');\n}\n"
     )
     files = {str(d / "a.ts"): content}
 

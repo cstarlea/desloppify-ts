@@ -109,9 +109,7 @@ def test_remediation_empty_plan_renders_scores_block():
     }
     content = render_empty_remediation_plan(state)
     assert "Holistic Review: Remediation Plan" in content
-    assert (
-        "desloppify review --prepare --path <src>" in content
-    )
+    assert "desloppify review --prepare --path <src>" in content
 
 
 def test_issues_render_builds_markdown_payload():

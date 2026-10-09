@@ -47,7 +47,9 @@ class DetectorPhase:
     """
 
     label: str
-    run: Callable[[Path, LangRuntimeContract], tuple[list[DetectorEntry], dict[str, int]]]
+    run: Callable[
+        [Path, LangRuntimeContract], tuple[list[DetectorEntry], dict[str, int]]
+    ]
     slow: bool = False
 
 

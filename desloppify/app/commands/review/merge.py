@@ -159,8 +159,7 @@ def _open_holistic_review_issues(
     return [
         issue
         for issue in items
-        if issue.get("detector") == "review"
-        and issue.get("detail", {}).get("holistic")
+        if issue.get("detector") == "review" and issue.get("detail", {}).get("holistic")
     ]
 
 
@@ -208,7 +207,9 @@ def _apply_merge_groups(
         )
         primary = ranked[0]
         duplicates = ranked[1:]
-        merged_pairs.append((primary.get("id", ""), [d.get("id", "") for d in duplicates]))
+        merged_pairs.append(
+            (primary.get("id", ""), [d.get("id", "") for d in duplicates])
+        )
         if dry_run:
             continue
         for duplicate in duplicates:

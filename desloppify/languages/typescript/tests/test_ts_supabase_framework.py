@@ -85,7 +85,11 @@ def test_detected_from_cli_config_without_dependency(tmp_path: Path):
 
 
 def test_framework_values_follow_detection(tmp_path: Path):
-    _write(tmp_path, "package.json", '{"dependencies": {"next": "15", "@supabase/ssr": "0.5"}}')
+    _write(
+        tmp_path,
+        "package.json",
+        '{"dependencies": {"next": "15", "@supabase/ssr": "0.5"}}',
+    )
     assert framework_values(tmp_path, None, "data_clients") == ("supabase",)
     assert framework_values(tmp_path, None, "public_env_prefixes") == ("NEXT_PUBLIC_",)
     _write(tmp_path, "package.json", '{"devDependencies": {"vite": "6"}}')
@@ -114,7 +118,11 @@ def test_public_table_without_rls(tmp_path: Path):
 
 
 def test_later_migrations_are_replayed(tmp_path: Path):
-    _migration(tmp_path, "001", "create table a (id int);\ncreate table b (id int);\ncreate table c (id int);\n")
+    _migration(
+        tmp_path,
+        "001",
+        "create table a (id int);\ncreate table b (id int);\ncreate table c (id int);\n",
+    )
     _migration(
         tmp_path,
         "002",
@@ -123,8 +131,12 @@ def test_later_migrations_are_replayed(tmp_path: Path):
         "alter table c rename to d;\n"
         "alter table d force row level security;\n",
     )
-    _migration(tmp_path, "003", "create table e (id int);\nalter table e enable row level security;\n"
-               "alter table e disable row level security;\n")
+    _migration(
+        tmp_path,
+        "003",
+        "create table e (id int);\nalter table e enable row level security;\n"
+        "alter table e disable row level security;\n",
+    )
     entries, _ = scan_rls_disabled_in_public(tmp_path)
     assert [e["table"] for e in entries] == ["public.e"]
 
@@ -168,16 +180,27 @@ def test_view_without_security_invoker(tmp_path: Path):
         "create materialized view mat as select 1;\n",
     )
     entries, _ = scan_security_definer_views(tmp_path)
-    assert [(e["view"], e["line"]) for e in entries] == [("public.off_view", 4), ("public.open_view", 1)]
+    assert [(e["view"], e["line"]) for e in entries] == [
+        ("public.off_view", 4),
+        ("public.open_view", 1),
+    ]
 
 
 # ── phase ────────────────────────────────────────────────────
 
 
 def test_supabase_phase_reports_both_rules(tmp_path: Path):
-    _write(tmp_path, "package.json", '{"dependencies": {"@supabase/supabase-js": "^2"}}')
-    _migration(tmp_path, "001", "create table todos (id int);\ncreate view v as select * from todos;\n")
-    phase = next(p for p in TypeScriptConfig().phases if p.label == "Supabase framework smells")
+    _write(
+        tmp_path, "package.json", '{"dependencies": {"@supabase/supabase-js": "^2"}}'
+    )
+    _migration(
+        tmp_path,
+        "001",
+        "create table todos (id int);\ncreate view v as select * from todos;\n",
+    )
+    phase = next(
+        p for p in TypeScriptConfig().phases if p.label == "Supabase framework smells"
+    )
     issues, potentials = phase.run(tmp_path, _FakeLang())
     assert {i["id"] for i in issues} == {
         "supabase::supabase/migrations/001.sql::rls_disabled_in_public::public.todos",
@@ -189,7 +212,9 @@ def test_supabase_phase_reports_both_rules(tmp_path: Path):
 def test_supabase_phase_is_off_without_supabase(tmp_path: Path):
     _write(tmp_path, "package.json", '{"name": "app"}')
     _migration(tmp_path, "001", "create table todos (id int);\n")
-    phase = next(p for p in TypeScriptConfig().phases if p.label == "Supabase framework smells")
+    phase = next(
+        p for p in TypeScriptConfig().phases if p.label == "Supabase framework smells"
+    )
     assert phase.run(tmp_path, _FakeLang()) == ([], {})
     issues, _ = phase.run(tmp_path, _FakeLang(presets=["supabase"]))
     assert len(issues) == 1
@@ -209,14 +234,18 @@ def test_edge_functions_are_entries(tmp_path: Path):
     body = "Deno.serve(() => new Response('ok'));\n" + "// pad\n" * 12
     entry = _write(tmp_path, "supabase/functions/hello/index.ts", body)
     shared = _write(tmp_path, "supabase/functions/_shared/cors.ts", body)
-    assert edge_function_entries(tmp_path) == frozenset({"supabase/functions/hello/index.ts"})
+    assert edge_function_entries(tmp_path) == frozenset(
+        {"supabase/functions/hello/index.ts"}
+    )
     assert SUPABASE_ENTRY_CONVENTIONS.applies_to(tmp_path)
     graph = {str(p): {"importer_count": 0, "import_count": 0} for p in (entry, shared)}
     entries, _ = detect_orphaned_files(
         tmp_path,
         graph,
         [".ts"],
-        options=OrphanedDetectionOptions(entry_conventions=(SUPABASE_ENTRY_CONVENTIONS,)),
+        options=OrphanedDetectionOptions(
+            entry_conventions=(SUPABASE_ENTRY_CONVENTIONS,)
+        ),
     )
     assert [e["file"] for e in entries] == [str(shared)]
 
@@ -239,11 +268,17 @@ def test_data_clients_come_from_detection_and_config(tmp_path: Path):
     entries, _ = detect_mixed_concerns(tmp_path, ())
     assert entries == []
 
-    _write(tmp_path, "package.json", '{"dependencies": {"@supabase/supabase-js": "^2"}}')
+    _write(
+        tmp_path, "package.json", '{"dependencies": {"@supabase/supabase-js": "^2"}}'
+    )
     clients = configured_data_clients(tmp_path, _FakeLang(data_clients=["db"]))
     assert clients == ("supabase", "db")
     entries, _ = detect_mixed_concerns(tmp_path, clients)
-    assert entries[0]["concerns"] == ["jsx_rendering", "data_fetching", "direct_supabase"]
+    assert entries[0]["concerns"] == [
+        "jsx_rendering",
+        "data_fetching",
+        "direct_supabase",
+    ]
 
 
 def test_expo_router_routes_are_entries(tmp_path: Path):
@@ -251,7 +286,9 @@ def test_expo_router_routes_are_entries(tmp_path: Path):
         EXPO_ROUTER_ENTRY_CONVENTIONS,
     )
 
-    _write(tmp_path, "package.json", '{"dependencies": {"expo": "54", "expo-router": "6"}}')
+    _write(
+        tmp_path, "package.json", '{"dependencies": {"expo": "54", "expo-router": "6"}}'
+    )
     body = "export default function Settings() { return null; }\n" + "// pad\n" * 12
     route = _write(tmp_path, "app/(app)/settings.tsx", body)
     orphan = _write(tmp_path, "lib/unused.ts", body)
@@ -261,6 +298,8 @@ def test_expo_router_routes_are_entries(tmp_path: Path):
         tmp_path,
         graph,
         [".ts", ".tsx"],
-        options=OrphanedDetectionOptions(entry_conventions=(EXPO_ROUTER_ENTRY_CONVENTIONS,)),
+        options=OrphanedDetectionOptions(
+            entry_conventions=(EXPO_ROUTER_ENTRY_CONVENTIONS,)
+        ),
     )
     assert [e["file"] for e in entries] == [str(orphan)]

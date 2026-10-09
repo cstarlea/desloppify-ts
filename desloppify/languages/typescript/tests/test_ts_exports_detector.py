@@ -15,9 +15,13 @@ import desloppify.languages.typescript.detectors.exports as exports_mod
 def test_detect_dead_exports_reports_reduced_coverage_when_knip_unavailable():
     """Knip not running is a coverage gap, not a clean result."""
     with patch.object(
-        exports_mod, "detect_with_knip_result", return_value=(None, "knip_not_installed")
+        exports_mod,
+        "detect_with_knip_result",
+        return_value=(None, "knip_not_installed"),
     ):
-        entries, total, coverage = exports_mod.detect_dead_exports_result(Path("/tmp/fake"))
+        entries, total, coverage = exports_mod.detect_dead_exports_result(
+            Path("/tmp/fake")
+        )
     assert entries == []
     assert total == 0
     assert coverage is not None
@@ -31,7 +35,9 @@ def test_detect_dead_exports_potential_counts_all_exports(tmp_path, set_project_
     (tmp_path / "a.ts").write_text("export const a = 1;\nexport function b() {}\n")
     (tmp_path / "c.ts").write_text("export type C = string;\nconst internal = 1;\n")
     fake_entries = [{"file": "a.ts", "name": "a", "line": 1, "kind": "export"}]
-    with patch.object(exports_mod, "detect_with_knip_result", return_value=(fake_entries, None)):
+    with patch.object(
+        exports_mod, "detect_with_knip_result", return_value=(fake_entries, None)
+    ):
         entries, total, coverage = exports_mod.detect_dead_exports_result(tmp_path)
     assert entries == fake_entries
     assert total == 3
@@ -57,7 +63,9 @@ def test_cmd_exports_json_output(capsys):
     fake_entries = [
         {"file": "src/utils.ts", "name": "unused1", "line": 10, "kind": "export"},
     ]
-    with patch.object(exports_mod, "detect_dead_exports", return_value=(fake_entries, 1)):
+    with patch.object(
+        exports_mod, "detect_dead_exports", return_value=(fake_entries, 1)
+    ):
         exports_mod.cmd_exports(_make_args(json_output=True))
 
     out = capsys.readouterr().out
@@ -84,7 +92,9 @@ def test_cmd_exports_table_output(capsys):
         {"file": "src/api.ts", "name": "oldFetch", "line": 5, "kind": "export"},
     ]
     with (
-        patch.object(exports_mod, "detect_dead_exports", return_value=(fake_entries, 3)),
+        patch.object(
+            exports_mod, "detect_dead_exports", return_value=(fake_entries, 3)
+        ),
         patch.object(exports_mod, "rel", side_effect=lambda p: p),
         patch.object(exports_mod, "print_table") as mock_table,
     ):
@@ -111,7 +121,9 @@ def test_cmd_exports_table_respects_top_limit(capsys):
         for i in range(5)
     ]
     with (
-        patch.object(exports_mod, "detect_dead_exports", return_value=(fake_entries, 5)),
+        patch.object(
+            exports_mod, "detect_dead_exports", return_value=(fake_entries, 5)
+        ),
         patch.object(exports_mod, "rel", side_effect=lambda p: p),
         patch.object(exports_mod, "print_table") as mock_table,
     ):
@@ -129,7 +141,9 @@ def test_cmd_exports_truncates_export_names_over_five(capsys):
         for i in range(8)
     ]
     with (
-        patch.object(exports_mod, "detect_dead_exports", return_value=(fake_entries, 8)),
+        patch.object(
+            exports_mod, "detect_dead_exports", return_value=(fake_entries, 8)
+        ),
         patch.object(exports_mod, "rel", side_effect=lambda p: p),
         patch.object(exports_mod, "print_table") as mock_table,
     ):

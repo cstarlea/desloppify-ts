@@ -48,6 +48,7 @@ def load_import_issues_data(
         options=options or config,
     )
 
+
 __all__ = [
     "ImportLoadConfig",
     "ImportPayloadLoadError",

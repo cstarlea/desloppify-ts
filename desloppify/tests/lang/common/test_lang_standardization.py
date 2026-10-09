@@ -11,6 +11,7 @@ from desloppify.languages.framework import get_lang
 def _full_langs() -> list[str]:
     return ["typescript"]
 
+
 TOP_LEVEL_MODULES = (
     "extractors",
     "review",
@@ -60,9 +61,7 @@ def test_each_language_has_review_data_payloads():
     for lang in _full_langs():
         review_mod = importlib.import_module(f"desloppify.languages.{lang}.review")
         lang_dir = Path(review_mod.__file__).resolve().parent
-        assert (
-            lang_dir / "review_data" / "dimensions.override.json"
-        ).is_file()
+        assert (lang_dir / "review_data" / "dimensions.override.json").is_file()
 
 
 def test_detect_command_keys_use_canonical_snake_case():

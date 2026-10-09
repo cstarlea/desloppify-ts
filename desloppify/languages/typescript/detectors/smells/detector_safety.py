@@ -46,9 +46,12 @@ def _detect_catch_return_default(ctx, smell_counts: dict[str, list[dict]]) -> No
     for clause in _catch_clauses(parsed):
         body = clause.child_by_field_name("body")
         if body is not None and any(
-            _default_fields(parsed, value) >= _CATCH_DEFAULT_FIELD_THRESHOLD for value in _returned_objects(body)
+            _default_fields(parsed, value) >= _CATCH_DEFAULT_FIELD_THRESHOLD
+            for value in _returned_objects(body)
         ):
-            _emit(smell_counts, "catch_return_default", ctx, *_node_line(parsed, clause))
+            _emit(
+                smell_counts, "catch_return_default", ctx, *_node_line(parsed, clause)
+            )
 
 
 def _returned_objects(body):
@@ -58,12 +61,18 @@ def _returned_objects(body):
         node = stack.pop()
         if node.type == "return_statement":
             value = node.named_children[0] if node.named_children else None
-            while value is not None and value.type == "parenthesized_expression" and value.named_children:
+            while (
+                value is not None
+                and value.type == "parenthesized_expression"
+                and value.named_children
+            ):
                 value = value.named_children[0]
             if value is not None and value.type == "object":
                 yield value
             continue
-        stack.extend(child for child in node.named_children if child.type not in FUNCTIONS)
+        stack.extend(
+            child for child in node.named_children if child.type not in FUNCTIONS
+        )
 
 
 def _default_fields(parsed: ParsedSource, obj) -> int:
@@ -104,7 +113,9 @@ def _catch_return_default_regex(ctx, smell_counts: dict[str, list[dict]]) -> Non
             continue
 
         noop_count = len(re.findall(r"\(\)\s*=>\s*\{\s*\}", obj_content))
-        false_count = len(re.findall(r":\s*(?:false|null|undefined|0|''|\"\")\b", obj_content))
+        false_count = len(
+            re.findall(r":\s*(?:false|null|undefined|0|''|\"\")\b", obj_content)
+        )
         if noop_count + false_count >= _CATCH_DEFAULT_FIELD_THRESHOLD:
             line_no, snippet = _content_line_info(ctx.content, match.start())
             _emit(smell_counts, "catch_return_default", ctx, line_no, snippet)
@@ -146,7 +157,9 @@ def _dead_effects_tree(parsed: ParsedSource) -> list[tuple[int, str]]:
             continue
         body = statements(callback.body_node)
         if not body or (
-            len(body) == 1 and body[0].type == "return_statement" and not body[0].named_children
+            len(body) == 1
+            and body[0].type == "return_statement"
+            and not body[0].named_children
         ):
             found[call.line - 1] = parsed.line_text(call.node)
     return sorted(found.items())
@@ -181,7 +194,9 @@ def _is_console_log(parsed: ParsedSource, statement) -> bool:
     if statement.type != "expression_statement" or not statement.named_children:
         return False
     call = statement.named_children[0]
-    function = call.child_by_field_name("function") if call.type == "call_expression" else None
+    function = (
+        call.child_by_field_name("function") if call.type == "call_expression" else None
+    )
     return function is not None and parsed.text(function) in _CONSOLE_LOGGERS
 
 
@@ -222,14 +237,19 @@ def _detect_switch_no_default(ctx, smell_counts: dict[str, list[dict]]) -> None:
         if body is None:
             continue
         kinds = [child.type for child in body.named_children]
-        if kinds.count("switch_case") >= _SWITCH_CASE_MINIMUM and "switch_default" not in kinds:
+        if (
+            kinds.count("switch_case") >= _SWITCH_CASE_MINIMUM
+            and "switch_default" not in kinds
+        ):
             _emit(smell_counts, "switch_no_default", ctx, *_node_line(parsed, switch))
 
 
 def _switch_no_default_regex(ctx, smell_counts: dict[str, list[dict]]) -> None:
     switch_re = re.compile(r"\bswitch\s*\([^)]*\)\s*\{")
     for match in switch_re.finditer(ctx.source.code):
-        body = _extract_block_body(ctx.source.code, match.end() - 1, _MAX_SWITCH_BODY_SCAN)
+        body = _extract_block_body(
+            ctx.source.code, match.end() - 1, _MAX_SWITCH_BODY_SCAN
+        )
         if body is None:
             continue
 
@@ -255,7 +275,13 @@ _WINDOW_GLOBAL_RE = re.compile(
 def _detect_window_globals(ctx, smell_counts: dict[str, list[dict]]) -> None:
     """Find ``window.__*`` assignments used as global escape hatches."""
     for index, _match in ctx.source.line_matches(_WINDOW_GLOBAL_RE):
-        _emit(smell_counts, "window_global", ctx, index + 1, ctx.lines[index].strip()[:100])
+        _emit(
+            smell_counts,
+            "window_global",
+            ctx,
+            index + 1,
+            ctx.lines[index].strip()[:100],
+        )
 
 
 __all__ = [

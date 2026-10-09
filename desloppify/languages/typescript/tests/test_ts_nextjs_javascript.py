@@ -33,7 +33,9 @@ class _FakeLang(SimpleNamespace):
 
 def _nextjs_phase():
     cfg = get_lang("typescript")
-    return next(p for p in cfg.phases if getattr(p, "label", "") == "Next.js framework smells")
+    return next(
+        p for p in cfg.phases if getattr(p, "label", "") == "Next.js framework smells"
+    )
 
 
 def test_nextjs_smells_phase_scans_javascript_client_files(tmp_path: Path):
@@ -50,7 +52,9 @@ def test_nextjs_smells_phase_scans_javascript_client_files(tmp_path: Path):
 
     issues, potentials = _nextjs_phase().run(tmp_path, _FakeLang())
     assert potentials.get("nextjs", 0) >= 1
-    assert any("server_import_in_client" in str(issue.get("id", "")) for issue in issues)
+    assert any(
+        "server_import_in_client" in str(issue.get("id", "")) for issue in issues
+    )
 
 
 def test_nextjs_smells_phase_scans_jsx_error_and_js_middleware(tmp_path: Path):
@@ -59,7 +63,9 @@ def test_nextjs_smells_phase_scans_jsx_error_and_js_middleware(tmp_path: Path):
         "package.json",
         '{"dependencies": {"next": "14.0.0", "react": "18.3.0"}}\n',
     )
-    _write(tmp_path, "app/error.jsx", "export default function Error(){ return null }\n")
+    _write(
+        tmp_path, "app/error.jsx", "export default function Error(){ return null }\n"
+    )
     _write(
         tmp_path,
         "middleware.js",

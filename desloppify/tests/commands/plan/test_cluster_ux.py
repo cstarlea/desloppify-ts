@@ -12,6 +12,7 @@ from desloppify.engine._plan.schema import empty_plan
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _state_with_issues(*ids: str) -> dict:
     issues = {}
     for fid in ids:
@@ -72,7 +73,9 @@ class TestPatternHints:
             "description": "test",
         }
 
-        monkeypatch.setattr(cluster_mod, "command_runtime", lambda args: _fake_runtime(state))
+        monkeypatch.setattr(
+            cluster_mod, "command_runtime", lambda args: _fake_runtime(state)
+        )
         monkeypatch.setattr(cluster_mod, "require_issue_inventory", lambda s: True)
         monkeypatch.setattr(cluster_mod, "load_plan", lambda *a, **kw: plan)
 
@@ -93,7 +96,9 @@ class TestPatternHints:
             "description": "test",
         }
 
-        monkeypatch.setattr(cluster_mod, "command_runtime", lambda args: _fake_runtime(state))
+        monkeypatch.setattr(
+            cluster_mod, "command_runtime", lambda args: _fake_runtime(state)
+        )
         monkeypatch.setattr(cluster_mod, "require_issue_inventory", lambda s: True)
         monkeypatch.setattr(cluster_mod, "load_plan", lambda *a, **kw: plan)
 
@@ -125,7 +130,9 @@ class TestOverlapWarning:
             "description": "second cluster",
         }
 
-        monkeypatch.setattr(cluster_mod, "command_runtime", lambda args: _fake_runtime(state))
+        monkeypatch.setattr(
+            cluster_mod, "command_runtime", lambda args: _fake_runtime(state)
+        )
         monkeypatch.setattr(cluster_mod, "require_issue_inventory", lambda s: True)
         monkeypatch.setattr(cluster_mod, "load_plan", lambda *a, **kw: plan)
         monkeypatch.setattr(cluster_mod, "save_plan", lambda p, *a, **kw: None)
@@ -152,7 +159,9 @@ class TestOverlapWarning:
             "description": "manual",
         }
 
-        monkeypatch.setattr(cluster_mod, "command_runtime", lambda args: _fake_runtime(state))
+        monkeypatch.setattr(
+            cluster_mod, "command_runtime", lambda args: _fake_runtime(state)
+        )
         monkeypatch.setattr(cluster_mod, "require_issue_inventory", lambda s: True)
         monkeypatch.setattr(cluster_mod, "load_plan", lambda *a, **kw: plan)
         monkeypatch.setattr(cluster_mod, "save_plan", lambda p, *a, **kw: None)
@@ -179,7 +188,9 @@ class TestStepCountFeedback:
 
         monkeypatch.setattr(cluster_update_mod, "load_plan", lambda: plan)
         monkeypatch.setattr(cluster_update_mod, "save_plan", lambda p: None)
-        monkeypatch.setattr(cluster_update_mod, "append_log_entry", lambda *a, **kw: None)
+        monkeypatch.setattr(
+            cluster_update_mod, "append_log_entry", lambda *a, **kw: None
+        )
 
         args = _fake_args(
             cluster_name="my-cluster",
@@ -202,9 +213,13 @@ class TestStepCountFeedback:
 
         monkeypatch.setattr(cluster_update_mod, "load_plan", lambda: plan)
         monkeypatch.setattr(cluster_update_mod, "save_plan", lambda p: None)
-        monkeypatch.setattr(cluster_update_mod, "append_log_entry", lambda *a, **kw: None)
+        monkeypatch.setattr(
+            cluster_update_mod, "append_log_entry", lambda *a, **kw: None
+        )
 
-        args = _fake_args(cluster_name="my-cluster", add_step="New step", detail="Some detail")
+        args = _fake_args(
+            cluster_name="my-cluster", add_step="New step", detail="Some detail"
+        )
         cluster_mod._cmd_cluster_update(args)
         out = capsys.readouterr().out
         assert "Added step 2: New step" in out
@@ -237,7 +252,9 @@ class TestOverlapScoping:
             "description": "second cluster",
         }
 
-        monkeypatch.setattr(cluster_mod, "command_runtime", lambda args: _fake_runtime(state))
+        monkeypatch.setattr(
+            cluster_mod, "command_runtime", lambda args: _fake_runtime(state)
+        )
         monkeypatch.setattr(cluster_mod, "require_issue_inventory", lambda s: True)
         monkeypatch.setattr(cluster_mod, "load_plan", lambda *a, **kw: plan)
         monkeypatch.setattr(cluster_mod, "save_plan", lambda p, *a, **kw: None)
@@ -267,7 +284,9 @@ class TestStepDisplayNumbering:
 
         monkeypatch.setattr(cluster_update_mod, "load_plan", lambda: plan)
         monkeypatch.setattr(cluster_update_mod, "save_plan", lambda p: None)
-        monkeypatch.setattr(cluster_update_mod, "append_log_entry", lambda *a, **kw: None)
+        monkeypatch.setattr(
+            cluster_update_mod, "append_log_entry", lambda *a, **kw: None
+        )
 
         args = _fake_args(
             cluster_name="my-cluster",

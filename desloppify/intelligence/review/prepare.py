@@ -81,6 +81,7 @@ class HolisticReviewPrepareOptions:
     issue_history_max_issues: int = 30
     issue_history_max_batch_items: int = 20
 
+
 def _rel_list(s: set[str] | list[str]) -> list[str]:
     """Normalize a set or list of paths to sorted relative paths (max 10)."""
     if isinstance(s, set):

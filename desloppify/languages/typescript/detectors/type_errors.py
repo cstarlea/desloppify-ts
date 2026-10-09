@@ -174,7 +174,9 @@ class _Collected:
     """What the tsc runs found, merged: the first run to report a key keeps it."""
 
     checked: set[Path] = field(default_factory=set)
-    grouped: dict[tuple[Path, str, int], list[TscDiagnostic]] = field(default_factory=dict)
+    grouped: dict[tuple[Path, str, int], list[TscDiagnostic]] = field(
+        default_factory=dict
+    )
     environment: set[Path] = field(default_factory=set)
 
 
@@ -255,11 +257,16 @@ def detect_type_errors_result(
         )
     tsconfig = find_nearest_tsconfig(path)
     if tsconfig is None:
-        return _skipped("No tsconfig.json found; type errors not checked", reason="no_tsconfig")
+        return _skipped(
+            "No tsconfig.json found; type errors not checked", reason="no_tsconfig"
+        )
     project_root = get_project_root()
     run = run_tsc(project_root, tsconfig, cache=cache)
     if run.failure == "tsc_missing":
-        return _skipped(f"tsc unavailable ({run.error}); type errors not checked", reason="tsc_missing")
+        return _skipped(
+            f"tsc unavailable ({run.error}); type errors not checked",
+            reason="tsc_missing",
+        )
     if run.failure is not None:
         return _skipped(
             f"tsc did not run correctly ({run.failure}); type errors not checked",
@@ -286,9 +293,17 @@ def detect_type_errors_result(
     foreign = _collect(run, tsconfig.resolve(), scan_root, owners, collected)
     packages = None
     if monorepo is not None:
-        projects = _package_projects(ts_files, project_root, scan_root, tsconfig.resolve(), owners)
+        projects = _package_projects(
+            ts_files, project_root, scan_root, tsconfig.resolve(), owners
+        )
         packages = _check_packages(
-            projects, project_root, scan_root, owners, collected, cache=cache, budget=monorepo
+            projects,
+            project_root,
+            scan_root,
+            owners,
+            collected,
+            cache=cache,
+            budget=monorepo,
         )
         foreign = {}
 
@@ -315,7 +330,12 @@ def detect_type_errors_result(
         )
     checked_files = sorted(str(file) for file in collected.checked - environment)
     coverage = _coverage(
-        foreign, environment, hidden, tsconfig, unchecked_components_note(path), packages
+        foreign,
+        environment,
+        hidden,
+        tsconfig,
+        unchecked_components_note(path),
+        packages,
     )
     return TypeErrorResult(entries, checked_files, coverage, packages)
 
@@ -416,7 +436,9 @@ def _check_packages(
     budget: Budget,
 ) -> list[PackageCheck]:
     workspace_names = frozenset(
-        package.name for package in discover_packages(scan_root, project_root) if package.name
+        package.name
+        for package in discover_packages(scan_root, project_root)
+        if package.name
     )
     checks = []
     for owner_config, files in projects.items():
@@ -439,12 +461,16 @@ def _check_packages(
         if skipped is None:
             for run in runs:
                 _collect(run, owner_config, scan_root, owners, collected)
-        checks.append(PackageCheck(owner_config, files, skipped, tuple(sorted(unbuilt))))
+        checks.append(
+            PackageCheck(owner_config, files, skipped, tuple(sorted(unbuilt)))
+        )
     return checks
 
 
 def _shown(configs: list[str]) -> str:
-    return ", ".join(configs[:3]) + (f" and {len(configs) - 3} more" if len(configs) > 3 else "")
+    return ", ".join(configs[:3]) + (
+        f" and {len(configs) - 3} more" if len(configs) > 3 else ""
+    )
 
 
 def _packages_note(packages: list[PackageCheck]) -> str | None:
@@ -462,7 +488,8 @@ def _packages_note(packages: list[PackageCheck]) -> str | None:
         return f"{text} ({_shown(unbuilt)})" if reason == "workspace_unbuilt" else text
 
     reasons = "; ".join(
-        f"{label(reason)}: {_shown(configs)}" for reason, configs in sorted(by_reason.items())
+        f"{label(reason)}: {_shown(configs)}"
+        for reason, configs in sorted(by_reason.items())
     )
     files = sum(p.files for p in skipped)
     return (
@@ -499,7 +526,9 @@ def _coverage(
             f"{files} files belong to other tsconfigs ({shown}) and were not type-checked"
             f" with {_display(tsconfig, root)}"
         )
-        remediation.append("Scan a package's directory to type-check it with its own tsconfig.")
+        remediation.append(
+            "Scan a package's directory to type-check it with its own tsconfig."
+        )
     if environment:
         notes.append(
             f"{len(environment)} files can't resolve a package or its types (dependencies not"
@@ -509,7 +538,10 @@ def _coverage(
     if not notes:
         return None
     return _reduced(
-        "; ".join(notes), reason="partial", confidence=0.7, remediation=" ".join(remediation)
+        "; ".join(notes),
+        reason="partial",
+        confidence=0.7,
+        remediation=" ".join(remediation),
     )
 
 

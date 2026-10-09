@@ -110,7 +110,9 @@ def is_file_cache_enabled(*, runtime: RuntimeContext | None = None) -> bool:
     return resolve_runtime_context(runtime).cache_enabled
 
 
-def read_file_text(filepath: str, *, runtime: RuntimeContext | None = None) -> str | None:
+def read_file_text(
+    filepath: str, *, runtime: RuntimeContext | None = None
+) -> str | None:
     """Read a file as text, with optional caching.
 
     Relative paths (as the source finders return) are relative to the project
@@ -215,8 +217,8 @@ def _find_source_files_cached(
     if not root.is_absolute():
         root = resolved_project_root / root
     all_exclusions = (
-        (resolved_options.exclusions or ()) + resolved_options.extra_exclusions
-    )
+        resolved_options.exclusions or ()
+    ) + resolved_options.extra_exclusions
     ext_set = set(extensions)
     files: list[str] = []
     for dirpath, dirnames, filenames in os.walk(root):
@@ -326,7 +328,9 @@ def find_tsx_and_jsx_files(
     return _sources(path, (".tsx", ".jsx"), runtime)
 
 
-def find_py_files(path: str | Path, *, runtime: RuntimeContext | None = None) -> list[str]:
+def find_py_files(
+    path: str | Path, *, runtime: RuntimeContext | None = None
+) -> list[str]:
     if runtime is None:
         return find_source_files(path, [".py"])
     return find_source_files(path, [".py"], runtime=runtime)

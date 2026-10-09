@@ -88,7 +88,11 @@ def rovodev_batch_command(*, prompt: str, repo_root: Path) -> list[str]:
     executable = os.environ.get("DESLOPPIFY_ROVODEV_EXECUTABLE", "").strip() or "acli"
     prefix = _resolve_executable(executable)
     cmd: list[str] = [*prefix, "rovodev", "run"]
-    if os.environ.get("DESLOPPIFY_ROVODEV_NO_YOLO", "").strip() not in {"1", "true", "yes"}:
+    if os.environ.get("DESLOPPIFY_ROVODEV_NO_YOLO", "").strip() not in {
+        "1",
+        "true",
+        "yes",
+    }:
         cmd.append("--yolo")
     schema = os.environ.get("DESLOPPIFY_ROVODEV_OUTPUT_SCHEMA", "").strip()
     if schema:

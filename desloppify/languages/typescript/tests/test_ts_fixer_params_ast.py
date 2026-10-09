@@ -124,7 +124,12 @@ def test_prefix_unused_params(source, targets, expected):
             "f(({ a: _a = 1 }) => 0);\n",
             id="lone-with-default",
         ),
-        pytest.param("f(([x]) => 0);\n", ("x", 1, 4), "f(([_x]) => 0);\n", id="lone-array-element"),
+        pytest.param(
+            "f(([x]) => 0);\n",
+            ("x", 1, 4),
+            "f(([_x]) => 0);\n",
+            id="lone-array-element",
+        ),
         pytest.param(
             "f(({ a: { b } }) => 0);\n",
             ("b", 1, 4),
@@ -148,14 +153,18 @@ def test_lone_pattern_element_reported_at_pattern(source, target, expected):
 @pytest.mark.parametrize(
     ("source", "target", "reason"),
     [
-        pytest.param("function C({ a }: P) {}\n", ("zzz", 1, 12), "not_found", id="other-name"),
+        pytest.param(
+            "function C({ a }: P) {}\n", ("zzz", 1, 12), "not_found", id="other-name"
+        ),
         pytest.param(
             "function C({\n  a,\n  b,\n}: P) { return b; }\n",
             ("a", 1, 12),
             "not_found",
             id="two-elements",
         ),
-        pytest.param("const { a } = o;\n", ("a", 1, 7), "not_a_parameter", id="variable-pattern"),
+        pytest.param(
+            "const { a } = o;\n", ("a", 1, 7), "not_a_parameter", id="variable-pattern"
+        ),
     ],
 )
 def test_pattern_position_skips(source, target, reason):
@@ -203,7 +212,9 @@ def test_pattern_position_skips(source, target, reason):
     ],
 )
 def test_all_destructured_renames_every_name(source, col, expected):
-    text, fixed, skipped = _fix(source, ("(all destructured elements)", 1, col), path="c.tsx")
+    text, fixed, skipped = _fix(
+        source, ("(all destructured elements)", 1, col), path="c.tsx"
+    )
     assert (text, fixed, skipped) == (expected, ["(all destructured elements)"], [])
 
 
@@ -211,7 +222,9 @@ def test_all_destructured_renames_every_name(source, col, expected):
 @pytest.mark.parametrize(
     ("source", "line", "col", "reason"),
     [
-        pytest.param("const { a, b } = o;\n", 1, 7, "not_a_parameter", id="variable-pattern"),
+        pytest.param(
+            "const { a, b } = o;\n", 1, 7, "not_a_parameter", id="variable-pattern"
+        ),
         pytest.param(
             "const _b = 1;\nfunction k({ a, b }: P) { return _b; }\n",
             2,
@@ -227,9 +240,15 @@ def test_all_destructured_renames_every_name(source, col, expected):
             id="one-name-in-signature",
         ),
         pytest.param(
-            "class C { constructor(private x: number) {} }\n", 1, 24, "not_found", id="not-a-pattern"
+            "class C { constructor(private x: number) {} }\n",
+            1,
+            24,
+            "not_found",
+            id="not-a-pattern",
         ),
-        pytest.param("function k({ a, b }: P) {}\n", 1, 99, "not_found", id="bad-column"),
+        pytest.param(
+            "function k({ a, b }: P) {}\n", 1, 99, "not_found", id="bad-column"
+        ),
     ],
 )
 def test_all_destructured_skips_whole_pattern(source, line, col, reason):
@@ -245,7 +264,10 @@ def test_jsx_component_props():
         path="c.tsx",
     )
     assert fixed == ["onClose"]
-    assert text == "const C = ({ title, onClose: _onClose }: Props) => <div>{title}</div>;\n"
+    assert (
+        text
+        == "const C = ({ title, onClose: _onClose }: Props) => <div>{title}</div>;\n"
+    )
 
 
 @needs_treesitter
@@ -253,9 +275,14 @@ def test_jsx_component_props():
     ("source", "target", "reason"),
     [
         pytest.param("const v = 1;\n", ("v", 1, 7), "not_a_parameter", id="variable"),
-        pytest.param("function k<T>(a: T) {}\n", ("T", 1, 12), "not_a_parameter", id="type-param"),
         pytest.param(
-            "f((a = g()) => 0);\n", ("g", 1, 8), "not_a_parameter", id="name-in-default-value"
+            "function k<T>(a: T) {}\n", ("T", 1, 12), "not_a_parameter", id="type-param"
+        ),
+        pytest.param(
+            "f((a = g()) => 0);\n",
+            ("g", 1, 8),
+            "not_a_parameter",
+            id="name-in-default-value",
         ),
         pytest.param(
             "class C { constructor(private x: number) {} }\n",
@@ -270,7 +297,10 @@ def test_jsx_component_props():
             id="would-shadow-outer-name",
         ),
         pytest.param(
-            "function k(a, _a) { return _a; }\n", ("a", 1, 12), "name_taken", id="would-collide"
+            "function k(a, _a) { return _a; }\n",
+            ("a", 1, 12),
+            "name_taken",
+            id="would-collide",
         ),
         pytest.param(
             "function isA(x: unknown): x is A { return true; }\n",
@@ -290,7 +320,9 @@ def test_jsx_component_props():
             "used_in_signature",
             id="typeof-in-later-param",
         ),
-        pytest.param("function k(_a) {}\n", ("_a", 1, 12), "not_found", id="already-prefixed"),
+        pytest.param(
+            "function k(_a) {}\n", ("_a", 1, 12), "not_found", id="already-prefixed"
+        ),
         pytest.param("function k(a) {}\n", ("zzz", 1, 12), "not_found", id="stale"),
     ],
 )
@@ -308,12 +340,21 @@ def test_fix_unused_params_writes_and_reports(tmp_path):
 
     result = fix_unused_params(
         [
-            {"file": str(ts_file), "name": "a", "line": 1, "col": 19, "issue_id": "u::a.ts::a:1"},
+            {
+                "file": str(ts_file),
+                "name": "a",
+                "line": 1,
+                "col": 19,
+                "issue_id": "u::a.ts::a:1",
+            },
             {"file": str(ts_file), "name": "v", "line": 2, "col": 7},
         ]
     )
 
-    assert ts_file.read_text() == "export function h(_a: number, b: number) {}\nconst v = 1;\n"
+    assert (
+        ts_file.read_text()
+        == "export function h(_a: number, b: number) {}\nconst v = 1;\n"
+    )
     [entry] = result.entries
     assert entry["fixed_issue_ids"] == ["u::a.ts::a:1"]
     assert result.skip_reasons == {"not_a_parameter": 1}

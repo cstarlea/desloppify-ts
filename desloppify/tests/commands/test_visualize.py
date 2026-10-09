@@ -208,7 +208,9 @@ class TestScanRootLabel:
     def test_project_root_uses_its_directory_name(self, set_project_root):
         assert scan_root_label(set_project_root) == (".", set_project_root.name)
 
-    def test_outside_project_root_uses_its_directory_name(self, set_project_root, tmp_path_factory):
+    def test_outside_project_root_uses_its_directory_name(
+        self, set_project_root, tmp_path_factory
+    ):
         outside = tmp_path_factory.mktemp("elsewhere")
         assert scan_root_label(outside) == (".", outside.name)
 
@@ -232,7 +234,9 @@ class TestTreeTextRoot:
         assert "  blog/" in text
         assert "src/" not in text
 
-    def test_project_root_scan_is_labelled_with_the_project_name(self, set_project_root):
+    def test_project_root_scan_is_labelled_with_the_project_name(
+        self, set_project_root
+    ):
         root = set_project_root
         self._write(root, "src/main.ts")
         self._write(root, "vite.config.ts")
@@ -242,13 +246,17 @@ class TestTreeTextRoot:
         assert any(line.startswith("  src/  (1 file,") for line in lines)
         assert any(line.strip().startswith("vite.config.ts") for line in lines)
 
-    def test_focus_accepts_scan_relative_and_project_relative_paths(self, set_project_root):
+    def test_focus_accepts_scan_relative_and_project_relative_paths(
+        self, set_project_root
+    ):
         root = set_project_root
         self._write(root, "packages/ui/src/button.tsx")
         lang = self._lang(["packages/ui/src/button.tsx"])
         scan = root / "packages" / "ui"
         for focus in ("src", "packages/ui/src"):
-            text = generate_tree_text(scan, options=TreeTextOptions(focus=focus), lang=lang)
+            text = generate_tree_text(
+                scan, options=TreeTextOptions(focus=focus), lang=lang
+            )
             assert text.splitlines()[0].startswith("src/  (1 file,"), focus
 
 

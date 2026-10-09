@@ -106,7 +106,6 @@ def _read_stage_output(output_file: Path) -> str:
     return read_stage_output_impl(output_file)
 
 
-
 def _write_desloppify_cli_helper(run_dir: Path) -> Path:
     """Create an exact CLI wrapper so codex subagents use this checkout + interpreter."""
     package_root = Path(desloppify.__file__).resolve().parent.parent
@@ -114,11 +113,13 @@ def _write_desloppify_cli_helper(run_dir: Path) -> Path:
     script = (
         "#!/bin/sh\n"
         f"export PYTHONPATH={shlex.quote(str(package_root))}${{PYTHONPATH:+:$PYTHONPATH}}\n"
-        f"exec {shlex.quote(sys.executable)} -m desloppify.cli \"$@\"\n"
+        f'exec {shlex.quote(sys.executable)} -m desloppify.cli "$@"\n'
     )
     safe_write_text(script_path, script)
     os.chmod(script_path, 0o700)
     return script_path
+
+
 def _stage_execution_dependencies(
     stage_runner_fn=None,
 ) -> StageExecutionDependencies:
@@ -172,7 +173,9 @@ def _run_stage_sequence(
 
         if stage in triage_stages and triage_stages[stage].get("confirmed_at"):
             print(colorize(f"  Stage {stage}: already confirmed, skipping.", "green"))
-            pipeline_context.append_run_log(f"stage-skip stage={stage} reason=already_confirmed")
+            pipeline_context.append_run_log(
+                f"stage-skip stage={stage} reason=already_confirmed"
+            )
             stage_results[stage] = {"status": "skipped"}
             report = triage_stages[stage].get("report", "")
             if report:
@@ -182,10 +185,14 @@ def _run_stage_sequence(
         stage_start = time.monotonic()
         pipeline_context.append_run_log(f"stage-start stage={stage}")
 
-        si = pipeline_context.services.collect_triage_input(plan, pipeline_context.state)
+        si = pipeline_context.services.collect_triage_input(
+            plan, pipeline_context.state
+        )
         if stage == "sense-check":
             si.value_check_targets = value_check_targets(plan, pipeline_context.state)
-            pipeline_context.args.sense_check_value_targets = list(si.value_check_targets)
+            pipeline_context.args.sense_check_value_targets = list(
+                si.value_check_targets
+            )
         last_triage_input = si
         execution_result = execute_stage_impl(
             StageRunContext(
@@ -255,7 +262,9 @@ def _finalize_pipeline_run(
     last_triage_input: dict | None,
 ) -> None:
     if pipeline_context.dry_run:
-        print(colorize("\n  [dry-run] All prompts generated. No stages executed.", "cyan"))
+        print(
+            colorize("\n  [dry-run] All prompts generated. No stages executed.", "cyan")
+        )
         write_triage_run_summary(
             pipeline_context.run_dir,
             pipeline_context.stamp,
@@ -270,12 +279,11 @@ def _finalize_pipeline_run(
     stages_data = meta.get("triage_stages", {})
     strategy = build_completion_strategy(stages_data)
 
-    should_auto_complete = (
-        is_full_stage_run(pipeline_context.stages_to_run)
-        and all_stage_results_successful(
-            stages_to_run=pipeline_context.stages_to_run,
-            stage_results=stage_results,
-        )
+    should_auto_complete = is_full_stage_run(
+        pipeline_context.stages_to_run
+    ) and all_stage_results_successful(
+        stages_to_run=pipeline_context.stages_to_run,
+        stage_results=stage_results,
     )
     total_elapsed = int(time.monotonic() - pipeline_start)
     if not should_auto_complete:
@@ -322,7 +330,9 @@ def _finalize_pipeline_run(
         return
 
     print(colorize(f"\n  Triage pipeline complete ({total_elapsed}s).", "green"))
-    pipeline_context.append_run_log(f"run-finished elapsed={total_elapsed}s finalized=true")
+    pipeline_context.append_run_log(
+        f"run-finished elapsed={total_elapsed}s finalized=true"
+    )
     write_triage_run_summary(
         pipeline_context.run_dir,
         pipeline_context.stamp,

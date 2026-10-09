@@ -30,7 +30,9 @@ def gather_migration_signals_by_name(
     try:
         lang_cfg = get_lang(lang_name)
     except (ImportError, ValueError, TypeError, AttributeError) as exc:
-        raise ValueError(f"Unsupported language for migration signals: {lang_name}") from exc
+        raise ValueError(
+            f"Unsupported language for migration signals: {lang_name}"
+        ) from exc
     return gather_migration_signals_by_config(file_contents, lang_cfg, rel_fn=rel_fn)
 
 

@@ -66,11 +66,14 @@ def test_secret_name_entries_skip_placeholder_and_flag_real_secret():
 
 
 def test_insecure_random_entries_require_security_context():
-    assert rules_mod._insecure_random_entries(
-        filepath="src/nonce.py",
-        line_num=4,
-        line="value = random.random()",
-    ) == []
+    assert (
+        rules_mod._insecure_random_entries(
+            filepath="src/nonce.py",
+            line_num=4,
+            line="value = random.random()",
+        )
+        == []
+    )
 
     issues = rules_mod._insecure_random_entries(
         filepath="src/nonce.py",
@@ -232,4 +235,3 @@ class TestSecretNameFalsePositives:
         )
         assert len(entries) == 1
         assert entries[0]["detail"]["kind"] == "hardcoded_secret_name"
-

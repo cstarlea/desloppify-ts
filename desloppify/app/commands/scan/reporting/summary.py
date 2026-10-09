@@ -20,9 +20,7 @@ from desloppify.engine._state.schema import StateModel
 logger = logging.getLogger(__name__)
 
 
-def _consecutive_subjective_integrity_status(
-    state: StateModel, status: str
-) -> int:
+def _consecutive_subjective_integrity_status(state: StateModel, status: str) -> int:
     """Return consecutive trailing scans with the given subjective-integrity status."""
     history = state.get("scan_history", [])
     if not isinstance(history, list):
@@ -63,7 +61,9 @@ def _show_score_reveal(
     old_strict = float(plan_start["strict"])
     new_strict = float(new.strict or 0)
     delta = round(new_strict - old_strict, 1)
-    delta_str = f" ({'+' if delta > 0 else ''}{delta:.1f})" if abs(delta) >= 0.05 else ""
+    delta_str = (
+        f" ({'+' if delta > 0 else ''}{delta:.1f})" if abs(delta) >= 0.05 else ""
+    )
 
     bar = "=" * 50
     print(colorize(f"  {bar}", "cyan"))
@@ -73,7 +73,12 @@ def _show_score_reveal(
     if target_strict is not None:
         target_gap = round(target_strict - new_strict, 1)
         if target_gap > 0:
-            print(colorize(f"  Target:     {target_strict:.1f} (+{target_gap:.1f} to go)", "dim"))
+            print(
+                colorize(
+                    f"  Target:     {target_strict:.1f} (+{target_gap:.1f} to go)",
+                    "dim",
+                )
+            )
         else:
             print(colorize(f"  Target:     {target_strict:.1f} — reached!", "green"))
     print(colorize(f"  {bar}", "cyan"))
@@ -121,7 +126,12 @@ def _unscored_subjective_callout(state: StateModel) -> None:
     if unscored_subj == 0 or total_subj == 0:
         return
 
-    print(colorize(_unscored_subjective_message(dim_scores, total_subj, unscored_subj), "yellow"))
+    print(
+        colorize(
+            _unscored_subjective_message(dim_scores, total_subj, unscored_subj),
+            "yellow",
+        )
+    )
 
 
 def _subjective_unscored_counts(dim_scores: dict[str, Any]) -> tuple[int, int]:
@@ -163,9 +173,7 @@ def _unscored_subjective_message(
 
     subject_word = "dimensions" if unscored_subj != 1 else "dimension"
     verb = "are" if unscored_subj != 1 else "is"
-    msg = (
-        f"  ⚠ {unscored_subj} subjective {subject_word} {verb} unassessed (scored as 0). "
-    )
+    msg = f"  ⚠ {unscored_subj} subjective {subject_word} {verb} unassessed (scored as 0). "
     subj_pct = _subjective_fraction_percent(dim_scores)
     if subj_pct:
         msg += (
@@ -177,10 +185,26 @@ def _unscored_subjective_message(
 
 def _print_score_guide() -> None:
     print(colorize("  Score guide:", "dim"))
-    print(colorize("    overall  = 25% mechanical + 75% subjective (lenient — ignores wontfix)", "dim"))
-    print(colorize("    objective = mechanical detectors only (no subjective review)", "dim"))
-    print(colorize("    strict   = like overall, but wontfix counts against you  <-- your north star", "dim"))
-    print(colorize("    verified = strict, but only credits scan-verified fixes", "dim"))
+    print(
+        colorize(
+            "    overall  = 25% mechanical + 75% subjective (lenient — ignores wontfix)",
+            "dim",
+        )
+    )
+    print(
+        colorize(
+            "    objective = mechanical detectors only (no subjective review)", "dim"
+        )
+    )
+    print(
+        colorize(
+            "    strict   = like overall, but wontfix counts against you  <-- your north star",
+            "dim",
+        )
+    )
+    print(
+        colorize("    verified = strict, but only credits scan-verified fixes", "dim")
+    )
 
 
 def _print_subjective_integrity_warning(
@@ -281,7 +305,9 @@ def _print_score_quartet(
         )
     )
     if isinstance(non_comparable_reason, str) and non_comparable_reason.strip():
-        print(colorize(f"  Δ non-comparable: {non_comparable_reason.strip()}", "yellow"))
+        print(
+            colorize(f"  Δ non-comparable: {non_comparable_reason.strip()}", "yellow")
+        )
 
 
 def _print_wontfix_gap(
@@ -343,7 +369,11 @@ def show_score_delta(
 
     _print_provisional_headline(state)
     _print_score_quartet(
-        new, prev_overall, prev_objective, prev_strict, prev_verified,
+        new,
+        prev_overall,
+        prev_objective,
+        prev_strict,
+        prev_verified,
         non_comparable_reason,
     )
 
@@ -385,4 +415,9 @@ def show_strict_target_progress(
     return target, gap
 
 
-__all__ = ["show_concern_count", "show_diff_summary", "show_score_delta", "show_strict_target_progress"]
+__all__ = [
+    "show_concern_count",
+    "show_diff_summary",
+    "show_score_delta",
+    "show_strict_target_progress",
+]

@@ -41,6 +41,7 @@ class TestFixerInit:
         ]
         assert set(__all__) == set(expected)
 
+
 # =====================================================================
 # common.py — find_balanced_end, extract_body_between_braces, apply_fixer,
 #              collapse_blank_lines
@@ -843,13 +844,18 @@ class TestFixerWritePreservation:
         import stat
 
         target = tmp_path / "a.ts"
-        target.write_bytes(b"\xef\xbb\xbfimport { a } from './a';\r\nconst DROP = 1;\r\nexport {};\r\n")
+        target.write_bytes(
+            b"\xef\xbb\xbfimport { a } from './a';\r\nconst DROP = 1;\r\nexport {};\r\n"
+        )
         os.chmod(target, 0o644)
 
         results = apply_fixer([{"file": str(target)}], self._drop_marked)
 
         assert results and results[0]["removed"] == ["DROP"]
-        assert target.read_bytes() == b"\xef\xbb\xbfimport { a } from './a';\r\nexport {};\r\n"
+        assert (
+            target.read_bytes()
+            == b"\xef\xbb\xbfimport { a } from './a';\r\nexport {};\r\n"
+        )
         if sys.platform != "win32":
             assert stat.S_IMODE(target.stat().st_mode) == 0o644
 

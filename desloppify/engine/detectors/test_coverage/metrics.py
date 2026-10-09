@@ -42,7 +42,9 @@ def _importer_count(graph: dict, filepath: str) -> int:
     importers = node.get("importers")
     if importers is None:
         return node.get("importer_count", 0)
-    return sum(1 for importer in importers if not str(importer).endswith(_DOCS_SUFFIXES))
+    return sum(
+        1 for importer in importers if not str(importer).endswith(_DOCS_SUFFIXES)
+    )
 
 
 def _loc_weight(loc: int) -> float:

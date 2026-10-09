@@ -69,7 +69,9 @@ subcommands:
     )
     p_plan.add_argument("--state", type=str, default=None, help="Path to state file")
     p_plan.add_argument(
-        "--output", type=str, metavar="FILE",
+        "--output",
+        type=str,
+        metavar="FILE",
         help="Write to file instead of stdout (refuses to overwrite existing files)",
     )
 

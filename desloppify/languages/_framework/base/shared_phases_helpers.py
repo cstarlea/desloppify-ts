@@ -183,7 +183,9 @@ def _record_detector_coverage(
         return
     existing = lang.detector_coverage.get(detector)
     if isinstance(existing, dict):
-        lang.detector_coverage[detector] = _merge_detector_coverage(existing, normalized)
+        lang.detector_coverage[detector] = _merge_detector_coverage(
+            existing, normalized
+        )
     else:
         lang.detector_coverage[detector] = normalized
 

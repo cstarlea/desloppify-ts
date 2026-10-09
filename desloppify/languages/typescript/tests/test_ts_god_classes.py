@@ -29,10 +29,20 @@ def _write(tmp_path: Path, name: str, content: str) -> str:
 
 def _metrics(tmp_path: Path, name: str, content: str) -> dict[str, dict]:
     filepath = _write(tmp_path, name, content)
-    return {c.name: {**c.metrics, "loc": c.loc} for c in extract_ts_classes(tmp_path, [filepath])}
+    return {
+        c.name: {**c.metrics, "loc": c.loc}
+        for c in extract_ts_classes(tmp_path, [filepath])
+    }
 
 
-def _class(name: str, *, methods: int = 0, deps: int = 0, filler: int = 0, route_decorators: int = 0) -> str:
+def _class(
+    name: str,
+    *,
+    methods: int = 0,
+    deps: int = 0,
+    filler: int = 0,
+    route_decorators: int = 0,
+) -> str:
     params = ", ".join(f"private readonly d{i}: D{i}" for i in range(deps))
     body = [f"  constructor({params}) {{}}"]
     for i in range(methods):
@@ -62,25 +72,32 @@ export class UsersController {
 }
 """,
     )
-    assert metrics["UsersController"] == {
-        "methods": 3,  # find, create and the arrow field; accessors and overloads don't count
-        "constructor_deps": 3,  # a, b and inject(HttpClient)
-        "decorators": 4,  # @Injectable, @Inject, @Get, @Param; field decorators don't count
-        "loc": 11,
-    }
+    assert (
+        metrics["UsersController"]
+        == {
+            "methods": 3,  # find, create and the arrow field; accessors and overloads don't count
+            "constructor_deps": 3,  # a, b and inject(HttpClient)
+            "decorators": 4,  # @Injectable, @Inject, @Get, @Param; field decorators don't count
+            "loc": 11,
+        }
+    )
 
 
 def test_metrics_skip_anonymous_classes_and_declaration_files(tmp_path):
-    assert _metrics(tmp_path, "src/a.ts", "export default class { m() {} }\nconst X = class { m() {} };\n") == {
-        "X": {"methods": 1, "constructor_deps": 0, "decorators": 0, "loc": 1}
-    }
+    assert _metrics(
+        tmp_path,
+        "src/a.ts",
+        "export default class { m() {} }\nconst X = class { m() {} };\n",
+    ) == {"X": {"methods": 1, "constructor_deps": 0, "decorators": 0, "loc": 1}}
     filepath = _write(tmp_path, "src/b.d.ts", "export declare class Y { m(): void; }\n")
     assert extract_ts_classes(tmp_path, [filepath]) == []
 
 
 def _gods(tmp_path: Path, source: str) -> list[str]:
     filepath = _write(tmp_path, "src/x.ts", source)
-    entries, _ = detect_gods(extract_ts_classes(tmp_path, [filepath]), TS_CLASS_GOD_RULES, min_reasons=2)
+    entries, _ = detect_gods(
+        extract_ts_classes(tmp_path, [filepath]), TS_CLASS_GOD_RULES, min_reasons=2
+    )
     return [e["name"] for e in entries]
 
 
@@ -114,9 +131,15 @@ class _Lang:
 
 
 def test_structural_signal_names_god_classes_per_file(tmp_path):
-    a = _write(tmp_path, "src/a.ts", _class("Big", methods=20, filler=14) + _class("Bigger", methods=21, filler=14))
+    a = _write(
+        tmp_path,
+        "src/a.ts",
+        _class("Big", methods=20, filler=14) + _class("Bigger", methods=21, filler=14),
+    )
     b = _write(tmp_path, "src/b.ts", _class("Small", methods=3))
-    issues, _ = phases_structural_mod._detect_structural_signals(tmp_path, _Lang([a, b]))
+    issues, _ = phases_structural_mod._detect_structural_signals(
+        tmp_path, _Lang([a, b])
+    )
     assert [issue["id"] for issue in issues] == ["structural::src/a.ts"]
     issue = issues[0]
     assert issue["summary"] == "Large file: god classes Big, Bigger"

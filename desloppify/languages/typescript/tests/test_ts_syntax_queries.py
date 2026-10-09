@@ -57,7 +57,11 @@ def test_function_declaration_flags_and_params():
         "export async function* load<T>(a: T, b?: number, c = 2, ...rest: string[]) {\n  yield a;\n}\n"
     )["load"]
     assert (fn.kind, fn.is_async, fn.is_generator, fn.exported, fn.default_export) == (
-        "declaration", True, True, True, False
+        "declaration",
+        True,
+        True,
+        True,
+        False,
     )
     assert [(p.name, p.type, p.optional, p.rest, p.default) for p in fn.params] == [
         ("a", "T", False, False, None),
@@ -72,29 +76,39 @@ def test_function_declaration_flags_and_params():
 
 def test_default_export_functions():
     # The grammar reads an anonymous ``export default function`` as an expression.
-    fns = functions(_parse("export default function () {}\nexport default async () => 1;\n"))
-    assert [(f.name, f.kind, f.exported, f.default_export, f.is_async) for f in fns] == [
+    fns = functions(
+        _parse("export default function () {}\nexport default async () => 1;\n")
+    )
+    assert [
+        (f.name, f.kind, f.exported, f.default_export, f.is_async) for f in fns
+    ] == [
         (None, "expression", True, True, False),
         (None, "arrow", True, True, True),
     ]
 
 
 def test_named_default_and_local_exports():
-    fns = _functions("function a() {}\nconst b = () => {};\nfunction c() {}\nexport { a };\nexport default b;\n")
+    fns = _functions(
+        "function a() {}\nconst b = () => {};\nfunction c() {}\nexport { a };\nexport default b;\n"
+    )
     assert (fns["a"].exported, fns["a"].default_export) == (True, False)
     assert (fns["b"].exported, fns["b"].default_export) == (True, True)
     assert not fns["c"].exported
 
 
 def test_multi_line_params():
-    fn = _functions("function f(\n  a: string,\n  { b, c }: Opts,\n  [d]: number[],\n) {\n  return a;\n}\n")["f"]
+    fn = _functions(
+        "function f(\n  a: string,\n  { b, c }: Opts,\n  [d]: number[],\n) {\n  return a;\n}\n"
+    )["f"]
     assert [p.name for p in fn.params] == ["a", "{ b, c }", "[d]"]
     assert fn.params[1].type == "Opts"
     assert (fn.span.start_line, fn.span.end_line) == (1, 7)
 
 
 def test_concise_and_block_arrows():
-    fns = _functions("const one = x => x * 2;\nconst two = async (a, b) => ({ a, b });\nconst three = () => {\n};\n")
+    fns = _functions(
+        "const one = x => x * 2;\nconst two = async (a, b) => ({ a, b });\nconst three = () => {\n};\n"
+    )
     assert fns["one"].expression_body and [p.name for p in fns["one"].params] == ["x"]
     assert fns["two"].expression_body and fns["two"].is_async
     assert not fns["three"].expression_body
@@ -125,7 +139,10 @@ def test_methods_and_class_fields():
         "}\n"
     )
     fns = functions(_parse(source))
-    assert [(f.name, f.kind, f.accessor, f.is_static, f.is_async, f.is_generator) for f in fns] == [
+    assert [
+        (f.name, f.kind, f.accessor, f.is_static, f.is_async, f.is_generator)
+        for f in fns
+    ] == [
         ("constructor", "method", None, False, False, False),
         ("v", "method", "get", False, False, False),
         ("v", "method", "set", False, False, False),
@@ -147,7 +164,10 @@ def test_overloads_are_signatures():
         "interface I { n(): void }\n"
     )
     parsed = _parse(source)
-    assert [(f.name, f.kind) for f in functions(parsed)] == [("f", "declaration"), ("m", "method")]
+    assert [(f.name, f.kind) for f in functions(parsed)] == [
+        ("f", "declaration"),
+        ("m", "method"),
+    ]
     every = functions(parsed, signatures=True)
     assert [(f.name, f.kind, f.body is None) for f in every] == [
         ("f", "signature", True),
@@ -162,12 +182,21 @@ def test_overloads_are_signatures():
 
 
 def test_nested_functions_in_source_order():
-    names = [f.name for f in functions(_parse("function outer() {\n  function inner() {}\n  const x = () => 1;\n}\n"))]
+    names = [
+        f.name
+        for f in functions(
+            _parse(
+                "function outer() {\n  function inner() {}\n  const x = () => 1;\n}\n"
+            )
+        )
+    ]
     assert names == ["outer", "inner", "x"]
 
 
 def _definitions(source: str, path: str = "a.ts"):
-    return [(d.name, d.line, d.object_member) for d in definitions(_parse(source, path))]
+    return [
+        (d.name, d.line, d.object_member) for d in definitions(_parse(source, path))
+    ]
 
 
 def test_definitions_name_object_members_by_their_path():
@@ -219,7 +248,11 @@ def test_function_info_for_a_callback():
     parsed = _parse("useEffect(async function () {}, []);\nuseEffect(1);\n", "a.tsx")
     first, second = calls(parsed, {"useEffect"})
     info = function_info(parsed, first.arguments[0])
-    assert info is not None and (info.kind, info.name, info.is_async) == ("expression", None, True)
+    assert info is not None and (info.kind, info.name, info.is_async) == (
+        "expression",
+        None,
+        True,
+    )
     assert function_info(parsed, second.arguments[0]) is None
 
 
@@ -243,12 +276,24 @@ def test_class_heritage_and_members():
     )
     (cls,) = classes(_parse(source))
     assert (cls.name, cls.kind, cls.is_abstract, cls.exported, cls.default_export) == (
-        "C", "declaration", True, True, False
+        "C",
+        "declaration",
+        True,
+        True,
+        False,
     )
     assert cls.extends == "Base<T>"
     assert cls.implements == ("I", "J<T>")
     members = [
-        (m.name, m.kind, m.is_static, m.is_abstract, m.is_readonly, m.is_optional, m.accessibility)
+        (
+            m.name,
+            m.kind,
+            m.is_static,
+            m.is_abstract,
+            m.is_readonly,
+            m.is_optional,
+            m.accessibility,
+        )
         for m in cls.members
     ]
     assert members == [
@@ -268,8 +313,14 @@ def test_class_heritage_and_members():
 
 
 def test_class_expressions_and_default_export():
-    found = classes(_parse("const A = class extends B {};\nexport default class {}\nclass D {}\nexport { D };\n"))
-    assert [(c.name, c.kind, c.extends, c.exported, c.default_export) for c in found] == [
+    found = classes(
+        _parse(
+            "const A = class extends B {};\nexport default class {}\nclass D {}\nexport { D };\n"
+        )
+    )
+    assert [
+        (c.name, c.kind, c.extends, c.exported, c.default_export) for c in found
+    ] == [
         ("A", "expression", "B", False, False),
         (None, "expression", None, True, True),
         ("D", "declaration", None, True, False),
@@ -292,11 +343,26 @@ def test_every_import_form():
     )
     found = imports(_parse(source))
     summary = [
-        (i.source, i.kind, i.type_only, [(b.imported, b.local, b.type_only) for b in i.bindings])
+        (
+            i.source,
+            i.kind,
+            i.type_only,
+            [(b.imported, b.local, b.type_only) for b in i.bindings],
+        )
         for i in found
     ]
     assert summary == [
-        ("./m", "static", False, [("default", "D", False), ("a", "a", False), ("b", "c", False), ("T", "T", True)]),
+        (
+            "./m",
+            "static",
+            False,
+            [
+                ("default", "D", False),
+                ("a", "a", False),
+                ("b", "c", False),
+                ("T", "T", True),
+            ],
+        ),
         ("./n", "static", False, [("*", "ns", False)]),
         ("./u", "static", True, [("U", "U", False)]),
         ("./side.css", "side_effect", False, []),
@@ -310,7 +376,9 @@ def test_every_import_form():
 
 
 def test_import_alias_is_not_an_import():
-    assert imports(_parse("namespace N { export const a = 1; }\nimport A = N.a;\n")) == []
+    assert (
+        imports(_parse("namespace N { export const a = 1; }\nimport A = N.a;\n")) == []
+    )
 
 
 # ── Exports ─────────────────────────────────────────────────
@@ -318,7 +386,14 @@ def test_import_alias_is_not_an_import():
 
 def _exports(source: str):
     return [
-        (e.kind, e.source, e.type_only, e.star, e.is_default, [(b.name, b.exported, b.type_only) for b in e.bindings])
+        (
+            e.kind,
+            e.source,
+            e.type_only,
+            e.star,
+            e.is_default,
+            [(b.name, b.exported, b.type_only) for b in e.bindings],
+        )
         for e in exports(_parse(source))
     ]
 
@@ -337,8 +412,22 @@ def test_reexport_forms():
         ("reexport", "./nn", False, True, False, [("*", "nn", False)]),
         ("reexport", "./v", True, False, False, [("V", "V", True)]),
         ("reexport", "./w", True, True, False, []),
-        ("reexport", "./m", False, False, False, [("T", "TT", True), ("b", "b", False), ("default", "default", False)]),
-        ("reexport", "./multi", False, False, False, [("a", "a", False), ("c", "d", False)]),
+        (
+            "reexport",
+            "./m",
+            False,
+            False,
+            False,
+            [("T", "TT", True), ("b", "b", False), ("default", "default", False)],
+        ),
+        (
+            "reexport",
+            "./multi",
+            False,
+            False,
+            False,
+            [("a", "a", False), ("c", "d", False)],
+        ),
     ]
     assert not any(e.has_error for e in exports(_parse(source)))
 
@@ -365,7 +454,14 @@ def test_local_and_declaration_exports():
         ("default", None, False, False, True, [("D", "default", False)]),
         ("default", None, False, False, True, []),
         ("declaration", None, False, False, True, [("f", "default", False)]),
-        ("declaration", None, False, False, False, [("k", "k", False), ("l", "l", False), ("n", "n", False)]),
+        (
+            "declaration",
+            None,
+            False,
+            False,
+            False,
+            [("k", "k", False), ("l", "l", False), ("n", "n", False)],
+        ),
         ("declaration", None, False, False, False, [("Q", "Q", False)]),
         ("declaration", None, False, False, False, [("R", "R", False)]),
         ("declaration", None, False, False, False, [("E", "E", False)]),
@@ -385,7 +481,11 @@ def test_broken_export_has_error():
 
 def test_module_statements_enter_declared_modules():
     parsed = _parse("declare global { export function g(): void; }\nconst a = 1;\n")
-    assert [n.type for n in module_statements(parsed)] == ["ambient_declaration", "export_statement", "lexical_declaration"]
+    assert [n.type for n in module_statements(parsed)] == [
+        "ambient_declaration",
+        "export_statement",
+        "lexical_declaration",
+    ]
 
 
 # ── JSX ─────────────────────────────────────────────────────
@@ -394,7 +494,7 @@ def test_module_statements_enter_declared_modules():
 def test_jsx_elements_and_attributes():
     source = (
         "export const App = () => (\n"
-        "  <Layout.Main title=\"t\" {...rest} count={2} disabled on:click={f}>\n"
+        '  <Layout.Main title="t" {...rest} count={2} disabled on:click={f}>\n'
         "    <Item key={i} />\n"
         "    <>text</>\n"
         "  </Layout.Main>\n"
@@ -420,14 +520,18 @@ def test_jsx_elements_and_attributes():
 
 def test_jsx_needs_the_tsx_grammar():
     assert jsx_elements(_parse("const a = <T>value;\n", "a.ts")) == []
-    assert [e.name for e in jsx_elements(_parse("const a = <div />;\n", "a.js"))] == ["div"]
+    assert [e.name for e in jsx_elements(_parse("const a = <div />;\n", "a.js"))] == [
+        "div"
+    ]
 
 
 # ── Calls and walks ─────────────────────────────────────────
 
 
 def test_calls_filter_by_callee():
-    parsed = _parse("useEffect(() => {}, /* deps */ []);\nReact.useEffect(f);\nother();\n", "a.tsx")
+    parsed = _parse(
+        "useEffect(() => {}, /* deps */ []);\nReact.useEffect(f);\nother();\n", "a.tsx"
+    )
     found = calls(parsed, {"useEffect", "React.useEffect"})
     assert [(c.callee, c.line, len(c.arguments)) for c in found] == [
         ("useEffect", 1, 2),
@@ -438,7 +542,11 @@ def test_calls_filter_by_callee():
 
 def test_descendants_in_source_order():
     parsed = _parse("a(); b(c());\n")
-    assert [parsed.text(n) for n in descendants(parsed.root, {"call_expression"})] == ["a()", "b(c())", "c()"]
+    assert [parsed.text(n) for n in descendants(parsed.root, {"call_expression"})] == [
+        "a()",
+        "b(c())",
+        "c()",
+    ]
 
 
 # ── Type declarations ───────────────────────────────────────
@@ -453,10 +561,20 @@ def test_type_declarations():
     found = {d.name: d for d in type_declarations(parsed)}
     assert list(found) == ["A", "D", "E"]
     a, d = found["A"], found["D"]
-    assert (a.kind, a.type_parameters, a.exported, a.line) == ("interface", ("T", "U"), True, 1)
+    assert (a.kind, a.type_parameters, a.exported, a.line) == (
+        "interface",
+        ("T", "U"),
+        True,
+        1,
+    )
     assert [parsed.text(n) for n in a.extends] == ["B<T>", "C"]
     assert a.value.type == "interface_body"
-    assert (d.kind, d.exported, d.extends, d.value.type) == ("alias", False, (), "intersection_type")
+    assert (d.kind, d.exported, d.extends, d.value.type) == (
+        "alias",
+        False,
+        (),
+        "intersection_type",
+    )
     assert a.span.start_byte == 0  # from ``export``
 
 
@@ -485,11 +603,7 @@ def parse_counter(monkeypatch):
 
 
 def test_parsed_file_parses_once_per_scan(tmp_path, set_project_root, parse_counter):
-    source = (
-        "import { a } from './a';\n"
-        "export { a };\n"
-        "export * from './b';\n"
-    )
+    source = "import { a } from './a';\nexport { a };\nexport * from './b';\n"
     target = tmp_path / "index.tsx"
     target.write_text(source)
     enable_parse_cache()
@@ -534,20 +648,26 @@ def test_parsed_file_without_a_scan_reparses(tmp_path, set_project_root, parse_c
     assert parse_counter == {"typescript": 2}
 
 
-def test_parsed_file_missing_or_without_tree_sitter(tmp_path, set_project_root, monkeypatch):
+def test_parsed_file_missing_or_without_tree_sitter(
+    tmp_path, set_project_root, monkeypatch
+):
     assert parsed_file(tmp_path / "missing.ts") is None
     (tmp_path / "a.ts").write_text("let a = 1;\n")
     monkeypatch.setattr(tree_mod, "get_parser", lambda grammar: None)
     assert parsed_file(tmp_path / "a.ts") is None
 
 
-def test_cohesion_and_imports_share_the_parse(tmp_path, set_project_root, parse_counter):
+def test_cohesion_and_imports_share_the_parse(
+    tmp_path, set_project_root, parse_counter
+):
     # cohesion gets project-relative paths, deps/imports absolute ones; a
     # ``.ts`` file is parsed once, with the typescript grammar, for both.
     (tmp_path / "a.ts").write_text("import { b } from './b';\nconst x = <T>b;\n")
     enable_parse_cache()
     try:
-        _entries, checked = detect_responsibility_cohesion(["a.ts"], TYPESCRIPT_SPEC, min_loc=1)
+        _entries, checked = detect_responsibility_cohesion(
+            ["a.ts"], TYPESCRIPT_SPEC, min_loc=1
+        )
         refs = ImportExtractor().extract(str(tmp_path / "a.ts"))
         assert not parsed_file(tmp_path / "a.ts").root.has_error
     finally:

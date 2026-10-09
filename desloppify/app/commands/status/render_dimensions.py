@@ -12,7 +12,9 @@ from desloppify.engine.planning.scorecard_projection import (
 from desloppify.engine.scoring import DIMENSIONS, is_loc_weighted_dimension
 
 
-def scorecard_subjective_entries_for_status(state: dict, dim_scores: dict) -> list[dict]:
+def scorecard_subjective_entries_for_status(
+    state: dict, dim_scores: dict
+) -> list[dict]:
     """Return subjective entries aligned to scorecard labels and ordering."""
     return scorecard_subjective_entries(
         state,
@@ -45,7 +47,7 @@ def find_lowest_dimension(
 
 def open_review_issue_counts(state: dict) -> dict[str, int]:
     """Count open review issues grouped by subjective dimension key."""
-    issues = (state.get("work_items") or state.get("issues", {}))
+    issues = state.get("work_items") or state.get("issues", {})
     if not isinstance(issues, dict):
         return {}
 
@@ -84,7 +86,9 @@ def render_objective_dimensions(
 
         bar = dimension_bar(score_val, colorize_fn=colorize, bar_len=bar_len)
         focus = colorize(" ←", "yellow") if dim.name == lowest_name else "  "
-        checks_str = f"{checks:>6,}*" if is_loc_weighted_dimension(ds) else f"{checks:>7,}"
+        checks_str = (
+            f"{checks:>6,}*" if is_loc_weighted_dimension(ds) else f"{checks:>7,}"
+        )
         action = dimension_action_type(dim.name)
         print(
             f"  {dim.name:<22} {checks_str}  {score_val:5.1f}%  {strict_val:5.1f}%  {bar}  T{dim.tier}  {action}{focus}"
@@ -132,7 +136,11 @@ def render_subjective_dimensions(
             issue_count = int(sum(review_issue_counts.get(key, 0) for key in cli_keys))
         else:
             issue_count = 0
-        issue_style = "yellow" if strict_val < DEFAULT_TARGET_STRICT_SCORE and issue_count == 0 else "dim"
+        issue_style = (
+            "yellow"
+            if strict_val < DEFAULT_TARGET_STRICT_SCORE and issue_count == 0
+            else "dim"
+        )
         issue_tag = colorize(f" [open issues: {issue_count}]", issue_style)
         print(
             f"  {name:<22} {checks_str}  {score_val:5.1f}%  {strict_val:5.1f}%  {bar}  T{tier}  {'review'}{focus}{stale_tag}"

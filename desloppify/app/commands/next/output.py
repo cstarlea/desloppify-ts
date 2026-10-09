@@ -149,18 +149,18 @@ def build_query_payload(
     }
 
     if plan and (
-        plan.get("queue_order")
-        or plan.get("skipped")
-        or plan.get("clusters")
+        plan.get("queue_order") or plan.get("skipped") or plan.get("clusters")
     ):
         clusters_summary = []
         for name, cluster in plan.get("clusters", {}).items():
             member_ids = set(cluster.get("issue_ids", []))
-            clusters_summary.append({
-                "name": name,
-                "description": cluster.get("description"),
-                "item_count": len(member_ids),
-            })
+            clusters_summary.append(
+                {
+                    "name": name,
+                    "description": cluster.get("description"),
+                    "item_count": len(member_ids),
+                }
+            )
         payload["plan"] = {
             "active": True,
             "focus": plan.get("active_cluster"),
@@ -196,10 +196,12 @@ def render_markdown_for_command(
         lines.append(queue_explanation)
         lines.append("```")
         lines.append("")
-    lines.extend([
-        "| Kind | Confidence | Summary | Command |",
-        "|------|------------|---------|---------|",
-    ])
+    lines.extend(
+        [
+            "| Kind | Confidence | Summary | Command |",
+            "|------|------------|---------|---------|",
+        ]
+    )
     for item in items:
         kind = item.get("kind", "issue")
         conf = item.get("confidence", "medium")
@@ -241,9 +243,13 @@ def emit_non_terminal_output(
     queue_explanation = payload.get("queue_explanation")
     renderers = {
         "json": lambda: print(json.dumps(payload, indent=2)),
-        "md": lambda: print(render_markdown_for_command(
-            items, command=command, queue_explanation=queue_explanation,
-        )),
+        "md": lambda: print(
+            render_markdown_for_command(
+                items,
+                command=command,
+                queue_explanation=queue_explanation,
+            )
+        ),
     }
     renderer = renderers.get(output_format)
     if renderer is None:

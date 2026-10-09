@@ -37,7 +37,7 @@ if TYPE_CHECKING:
 
 # Minimum thresholds to analyze a file.
 _MIN_FUNCTIONS = 8  # Don't flag files with few functions.
-_MIN_CLUSTERS = 5   # Minimum disconnected clusters to flag.
+_MIN_CLUSTERS = 5  # Minimum disconnected clusters to flag.
 _MIN_NON_SINGLETON_CLUSTERS = 3  # Minimum multi-function clusters to flag.
 
 
@@ -63,7 +63,9 @@ def detect_responsibility_cohesion(
         source, tree = parsed
         query = queries.get(tree.language)
         if query is None:
-            query = queries[tree.language] = _make_query(tree.language, spec.function_query)
+            query = queries[tree.language] = _make_query(
+                tree.language, spec.function_query
+            )
         checked += 1
 
         loc = source.count(b"\n") + 1
@@ -79,7 +81,7 @@ def detect_responsibility_cohesion(
             if not func_node or not name_node:
                 continue
             name = _node_text(name_node)
-            body = source[func_node.start_byte:func_node.end_byte]
+            body = source[func_node.start_byte : func_node.end_byte]
             functions[name] = body.decode("utf-8", errors="replace")
 
         if len(functions) < _MIN_FUNCTIONS:
@@ -95,7 +97,7 @@ def detect_responsibility_cohesion(
                     continue
                 # Check if the function body references the other function name.
                 # Use word boundary matching to avoid substring false positives.
-                if re.search(r'\b' + re.escape(other_name) + r'\b', body):
+                if re.search(r"\b" + re.escape(other_name) + r"\b", body):
                     adjacency[fn_name].add(other_name)
                     adjacency[other_name].add(fn_name)
 
@@ -134,14 +136,16 @@ def detect_responsibility_cohesion(
 
             families = [c[0] for c in components[:8]]  # Top 8 cluster names.
 
-            entries.append({
-                "file": filepath,
-                "loc": loc,
-                "function_count": len(functions),
-                "component_count": len(components),
-                "component_sizes": [len(c) for c in components],
-                "families": families,
-            })
+            entries.append(
+                {
+                    "file": filepath,
+                    "loc": loc,
+                    "function_count": len(functions),
+                    "component_count": len(components),
+                    "component_sizes": [len(c) for c in components],
+                    "families": families,
+                }
+            )
 
     entries.sort(key=lambda e: -e["component_count"])
     return entries, checked
@@ -150,7 +154,9 @@ def detect_responsibility_cohesion(
 def make_cohesion_phase(spec: TreeSitterLangSpec) -> DetectorPhase:
     """Create a responsibility cohesion phase."""
 
-    def run(path: Path, lang: LangRuntimeContract) -> tuple[list[Issue], dict[str, int]]:
+    def run(
+        path: Path, lang: LangRuntimeContract
+    ) -> tuple[list[Issue], dict[str, int]]:
         file_list = lang.file_finder(path)
         issues: list[Issue] = []
         potentials: dict[str, int] = {}
@@ -158,20 +164,24 @@ def make_cohesion_phase(spec: TreeSitterLangSpec) -> DetectorPhase:
         entries, _checked = detect_responsibility_cohesion(file_list, spec)
         for e in entries:
             families = ", ".join(e["families"][:4])
-            issues.append(make_issue(
-                "responsibility_cohesion", e["file"],
-                f"cohesion::{e['file']}",
-                tier=3, confidence="medium",
-                summary=(
-                    f"{e['component_count']} disconnected function clusters "
-                    f"({e['function_count']} functions) — likely mixed responsibilities"
-                ),
-                detail={
-                    "cluster_count": e["component_count"],
-                    "family": families,
-                    "families": e["families"],
-                },
-            ))
+            issues.append(
+                make_issue(
+                    "responsibility_cohesion",
+                    e["file"],
+                    f"cohesion::{e['file']}",
+                    tier=3,
+                    confidence="medium",
+                    summary=(
+                        f"{e['component_count']} disconnected function clusters "
+                        f"({e['function_count']} functions) — likely mixed responsibilities"
+                    ),
+                    detail={
+                        "cluster_count": e["component_count"],
+                        "family": families,
+                        "families": e["families"],
+                    },
+                )
+            )
         if entries:
             potentials["responsibility_cohesion"] = len(entries)
             log(f"         low-cohesion files: {len(entries)}")

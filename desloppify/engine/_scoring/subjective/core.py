@@ -48,7 +48,8 @@ def _dimension_weight(dim_name: str, *, lang_name: str | None) -> float:
 
 
 def _compute_dimension_score(
-    assessment: dict | None, has_assessment: bool,
+    assessment: dict | None,
+    has_assessment: bool,
 ) -> tuple[float, float, float]:
     """Compute (score, pass_rate, assessment_score) for a dimension."""
     assessment_score = (
@@ -139,7 +140,11 @@ def _normalized_assessments(
         dim = _normalize_dimension_key(raw_dim)
         if not dim:
             continue
-        if _placeholder_assessment(payload) and allowed is not None and dim not in allowed:
+        if (
+            _placeholder_assessment(payload)
+            and allowed is not None
+            and dim not in allowed
+        ):
             continue
         assessed[dim] = payload
     return assessed

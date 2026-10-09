@@ -34,21 +34,31 @@ ColorizeFn = Callable[[str, str], str]
 @dataclass(frozen=True)
 class EnrichStageDeps:
     has_triage_in_queue: Callable[[dict], bool] = has_triage_in_queue
-    require_organize_stage_for_enrich: Callable[[dict], bool] = _require_organize_stage_for_enrich
-    underspecified_steps: Callable[[dict], list[tuple[str, int, int]]] = _underspecified_steps
-    steps_with_bad_paths: Callable[[dict, Path], list[tuple[str, int, list[str]]]] = _steps_with_bad_paths
-    steps_without_effort: Callable[[dict], list[tuple[str, int, int]]] = _steps_without_effort
-    enrich_report_or_error: Callable[[str | None], str | None] = _enrich_report_or_error
-    resolve_reusable_report: Callable[[str | None, dict | None], tuple[str | None, bool]] = (
-        resolve_reusable_report
+    require_organize_stage_for_enrich: Callable[[dict], bool] = (
+        _require_organize_stage_for_enrich
     )
+    underspecified_steps: Callable[[dict], list[tuple[str, int, int]]] = (
+        _underspecified_steps
+    )
+    steps_with_bad_paths: Callable[[dict, Path], list[tuple[str, int, list[str]]]] = (
+        _steps_with_bad_paths
+    )
+    steps_without_effort: Callable[[dict], list[tuple[str, int, int]]] = (
+        _steps_without_effort
+    )
+    enrich_report_or_error: Callable[[str | None], str | None] = _enrich_report_or_error
+    resolve_reusable_report: Callable[
+        [str | None, dict | None], tuple[str | None, bool]
+    ] = resolve_reusable_report
     record_enrich_stage: Callable[..., list[str]] = record_enrich_stage
     count_log_activity_since: Callable[[dict, str | None], dict[str, int]] = (
         count_log_activity_since
     )
     colorize: ColorizeFn = colorize
     print_user_message: Callable[[str], None] = print_user_message
-    print_cascade_clear_feedback: Callable[[list[str], dict], None] = print_cascade_clear_feedback
+    print_cascade_clear_feedback: Callable[[list[str], dict], None] = (
+        print_cascade_clear_feedback
+    )
     default_triage_services: Callable[[], TriageServices] = default_triage_services
     get_project_root: Callable[[], Path] | None = None
     auto_confirm_organize_for_complete: Callable[..., bool] | None = None
@@ -90,7 +100,11 @@ def _require_confirmed_organize_stage(
     if not attestation:
         print(deps.colorize("  Cannot enrich: organize stage not confirmed.", "red"))
         print(deps.colorize("  Run: desloppify plan triage --confirm organize", "dim"))
-        print(deps.colorize("  Or pass --attestation to auto-confirm organize inline.", "dim"))
+        print(
+            deps.colorize(
+                "  Or pass --attestation to auto-confirm organize inline.", "dim"
+            )
+        )
         return False
 
     auto_confirm_organize_for_complete = deps.auto_confirm_organize_for_complete
@@ -166,7 +180,9 @@ def _print_underspecified_step_error(
         )
     )
     for name, bare, total in underspec:
-        print(deps.colorize(f"    {name}: {bare}/{total} steps need enrichment", "yellow"))
+        print(
+            deps.colorize(f"    {name}: {bare}/{total} steps need enrichment", "yellow")
+        )
     print()
     print(
         deps.colorize(
@@ -203,7 +219,11 @@ def _print_enrich_warnings(
             )
         )
         for name, step_num, paths in bad_paths.rows[:5]:
-            print(deps.colorize(f"    {name} step {step_num}: {', '.join(paths[:3])}", "yellow"))
+            print(
+                deps.colorize(
+                    f"    {name} step {step_num}: {', '.join(paths[:3])}", "yellow"
+                )
+            )
         print(
             deps.colorize(
                 "  Fix paths before confirming enrich (confirmation will block on bad paths).",
@@ -213,7 +233,11 @@ def _print_enrich_warnings(
 
     untagged = report.warning("missing_effort")
     if untagged:
-        print(deps.colorize(f"  Note: {untagged.total} step(s) have no effort tag.", "yellow"))
+        print(
+            deps.colorize(
+                f"  Note: {untagged.total} step(s) have no effort tag.", "yellow"
+            )
+        )
         print(
             deps.colorize(
                 "  Consider: desloppify plan cluster update <name> --update-step N --effort small",
@@ -230,14 +254,20 @@ def run_stage_enrich(
 ) -> None:
     """Record the ENRICH stage with validation and optional auto-confirm."""
     resolved_deps = deps or EnrichStageDeps()
-    resolved_services, plan, state, stages, report, attestation = _resolve_enrich_stage_context(
-        args=args,
-        services=services,
-        deps=resolved_deps,
+    resolved_services, plan, state, stages, report, attestation = (
+        _resolve_enrich_stage_context(
+            args=args,
+            services=services,
+            deps=resolved_deps,
+        )
     )
 
     if not resolved_deps.has_triage_in_queue(plan):
-        print(resolved_deps.colorize("  No planning stages in the queue — nothing to enrich.", "yellow"))
+        print(
+            resolved_deps.colorize(
+                "  No planning stages in the queue — nothing to enrich.", "yellow"
+            )
+        )
         return
 
     existing_stage = stages.get("enrich")
@@ -326,7 +356,9 @@ def run_stage_enrich(
             resolved_deps.print_cascade_clear_feedback(cleared, stages)
     else:
         print(resolved_deps.colorize("  Now confirm the enrichment.", "yellow"))
-        print(resolved_deps.colorize("    desloppify plan triage --confirm enrich", "dim"))
+        print(
+            resolved_deps.colorize("    desloppify plan triage --confirm enrich", "dim")
+        )
 
     resolved_deps.print_user_message(
         "Enrich recorded. Before confirming — check the subagent's"

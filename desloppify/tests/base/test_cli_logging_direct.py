@@ -123,7 +123,8 @@ def test_other_libraries_are_left_alone(capsys):
     configure_cli_logging()
     assert _cli_handlers()
     assert not any(
-        isinstance(h, cli_logging_mod._StderrHandler) for h in logging.getLogger().handlers
+        isinstance(h, cli_logging_mod._StderrHandler)
+        for h in logging.getLogger().handlers
     )
 
 

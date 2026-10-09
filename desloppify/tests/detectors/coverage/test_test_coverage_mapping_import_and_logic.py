@@ -53,7 +53,6 @@ def _reset_read_warning_cache():
 
 
 class TestNamingBasedMapping:
-
     def test_typescript_test_marker(self):
         test_files = {"src/utils.test.ts"}
         production_files = {"src/utils.ts"}
@@ -813,9 +812,10 @@ class TestHasTestableLogic:
     def test_supabase_entrypoint_classified_separately(self, tmp_path):
         """Supabase edge index.ts should use runtime_entrypoint_no_direct_tests."""
         prod = _write_file(
-            tmp_path, "supabase/functions/stripe-webhook/index.ts",
-            "import { serve } from \"https://deno.land/std/http/server.ts\";\n"
-            "serve((_req) => new Response(\"ok\"));\n"
+            tmp_path,
+            "supabase/functions/stripe-webhook/index.ts",
+            'import { serve } from "https://deno.land/std/http/server.ts";\n'
+            'serve((_req) => new Response("ok"));\n'
             "// padding\n" * 8,
         )
         zone_map = _make_zone_map([prod])
@@ -828,9 +828,10 @@ class TestHasTestableLogic:
     def test_deno_serve_file_classified_as_runtime_entrypoint(self, tmp_path):
         """Deno serve entrypoint should not be classified as untested_module."""
         prod = _write_file(
-            tmp_path, "edge/handler.ts",
-            "import { serve } from \"jsr:@std/http/server\";\n"
-            "serve((_req) => new Response(\"ok\"));\n"
+            tmp_path,
+            "edge/handler.ts",
+            'import { serve } from "jsr:@std/http/server";\n'
+            'serve((_req) => new Response("ok"));\n'
             "// padding\n" * 8,
         )
         zone_map = _make_zone_map([prod])
@@ -858,7 +859,9 @@ class TestTypeScriptAssertionRecognition:
     def test_assertion_styles(self, line):
         assert any(pattern.search(line) for pattern in ts_cov.ASSERT_PATTERNS)
 
-    @pytest.mark.parametrize("line", ["t.context.server = server;", "item.is(x)", "const t = 1;"])
+    @pytest.mark.parametrize(
+        "line", ["t.context.server = server;", "item.is(x)", "const t = 1;"]
+    )
     def test_non_assertions(self, line):
         assert not any(pattern.search(line) for pattern in ts_cov.ASSERT_PATTERNS)
 

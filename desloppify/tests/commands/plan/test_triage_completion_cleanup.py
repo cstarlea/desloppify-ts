@@ -242,13 +242,19 @@ class TestApplyCompletionClearsTriageState:
 
         apply_completion(args, plan, "Test strategy", services=services)
 
-        assert "postflight_scan_completed_at_scan_count" not in plan.get("refresh_state", {})
+        assert "postflight_scan_completed_at_scan_count" not in plan.get(
+            "refresh_state", {}
+        )
 
-    def test_confirm_existing_rewrites_strategy_summary_to_explicit_reuse_message(self, capsys):
+    def test_confirm_existing_rewrites_strategy_summary_to_explicit_reuse_message(
+        self, capsys
+    ):
         """Confirm-existing completion should not leave the stale prior strategy summary in place."""
         state = _state_with_review_issues("r1")
         plan = _plan_with_triage_and_workflow("r1")
-        plan["epic_triage_meta"]["strategy_summary"] = "Legacy sequencing summary from an older triage run."
+        plan["epic_triage_meta"]["strategy_summary"] = (
+            "Legacy sequencing summary from an older triage run."
+        )
         services = _make_services(state)
         args = argparse.Namespace()
 
@@ -264,7 +270,10 @@ class TestApplyCompletionClearsTriageState:
         meta = plan["epic_triage_meta"]
         assert meta["trigger"] == "confirm_existing"
         assert meta["last_completion_mode"] == "confirm_existing"
-        assert meta["last_completion_note"] == "Existing enriched manual clusters still cover [r1]."
+        assert (
+            meta["last_completion_note"]
+            == "Existing enriched manual clusters still cover [r1]."
+        )
         assert meta["strategy_summary"].startswith(
             "Reused the existing enriched cluster plan after re-review"
         )
@@ -273,6 +282,12 @@ class TestApplyCompletionClearsTriageState:
         last = meta["last_triage"]
         assert last["completion_mode"] == "confirm_existing"
         assert last["reused_existing_plan"] is True
-        assert last["completion_note"] == "Existing enriched manual clusters still cover [r1]."
-        assert last["previous_strategy_summary"] == "Legacy sequencing summary from an older triage run."
+        assert (
+            last["completion_note"]
+            == "Existing enriched manual clusters still cover [r1]."
+        )
+        assert (
+            last["previous_strategy_summary"]
+            == "Legacy sequencing summary from an older triage run."
+        )
         assert last["strategy"] == meta["strategy_summary"]

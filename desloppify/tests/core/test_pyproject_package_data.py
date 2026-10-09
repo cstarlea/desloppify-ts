@@ -10,7 +10,9 @@ def _package_data() -> dict[str, list[str]]:
     pyproject_path = Path(__file__).resolve().parents[3] / "pyproject.toml"
     data = tomllib.loads(pyproject_path.read_text(encoding="utf-8"))
     package_data = data.get("tool", {}).get("setuptools", {}).get("package-data", {})
-    assert isinstance(package_data, dict), "tool.setuptools.package-data must be a table"
+    assert isinstance(package_data, dict), (
+        "tool.setuptools.package-data must be a table"
+    )
     return package_data
 
 

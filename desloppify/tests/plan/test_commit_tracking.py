@@ -77,4 +77,3 @@ def test_generate_pr_body_includes_score_delta(monkeypatch) -> None:
     assert "Code Health Improvements" in body
     assert "Score: 90.0 → 95.0 strict (+5.0)" in body
     assert "Remove dead code" in body
-

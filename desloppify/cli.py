@@ -71,9 +71,7 @@ def _apply_persisted_exclusions(
         )
         return
     print(
-        colorize(
-            f"  Excluding (from config): {', '.join(combined)}", "dim"
-        ),
+        colorize(f"  Excluding (from config): {', '.join(combined)}", "dim"),
         file=sys.stderr,
     )
 
@@ -107,7 +105,7 @@ def _is_submodule_checkout(directory: Path) -> bool:
         return False
     if not first.startswith("gitdir:"):
         return False
-    gitdir = Path(first[len("gitdir:"):].strip())
+    gitdir = Path(first[len("gitdir:") :].strip())
     return gitdir.parent.name != "worktrees" and "modules" in gitdir.parts
 
 
@@ -211,7 +209,9 @@ def _looks_like_desloppify_checkout(root: Path) -> bool:
         text = pyproject.read_text(encoding="utf-8")
     except OSError:
         return False
-    return bool(re.search(r"""^name\s*=\s*["']desloppify(-ts)?["']""", text, re.MULTILINE))
+    return bool(
+        re.search(r"""^name\s*=\s*["']desloppify(-ts)?["']""", text, re.MULTILINE)
+    )
 
 
 def _running_installed_package_from_checkout(

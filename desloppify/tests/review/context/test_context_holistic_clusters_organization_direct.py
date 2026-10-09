@@ -17,7 +17,11 @@ def test_build_flat_dir_issues_uses_fallback_fields_sorts_and_limits() -> None:
             },
             {
                 "file": "src/b/",
-                "detail": {"reason": "too_many_files", "file_count": 9, "combined_score": 33},
+                "detail": {
+                    "reason": "too_many_files",
+                    "file_count": 9,
+                    "combined_score": 33,
+                },
             },
         ]
     }
@@ -38,7 +42,12 @@ def test_build_flat_dir_issues_uses_fallback_fields_sorts_and_limits() -> None:
         "file_count": 11,
         "combined_score": 45,
     }
-    assert {"directory": "src/b/", "kind": "too_many_files", "file_count": 9, "combined_score": 33} in rows
+    assert {
+        "directory": "src/b/",
+        "kind": "too_many_files",
+        "file_count": 9,
+        "combined_score": 33,
+    } in rows
 
 
 def test_build_large_file_distribution_reads_loc_quantiles_and_handles_empty() -> None:
@@ -57,4 +66,9 @@ def test_build_large_file_distribution_reads_loc_quantiles_and_handles_empty() -
         "p99_loc": 1000,
     }
 
-    assert _build_large_file_distribution({"structural": [{"detail": {"signals": {"loc": 0}}}]}) is None
+    assert (
+        _build_large_file_distribution(
+            {"structural": [{"detail": {"signals": {"loc": 0}}}]}
+        )
+        is None
+    )

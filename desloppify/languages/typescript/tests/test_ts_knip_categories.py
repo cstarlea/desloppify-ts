@@ -44,7 +44,9 @@ def project(tmp_path):
 
     def report(*rows: dict, prefix: str = ""):
         stdout = prefix + json.dumps({"issues": list(rows)}) + "\n"
-        return patch(_RUN, return_value=SimpleNamespace(stdout=stdout, stderr="", returncode=1))
+        return patch(
+            _RUN, return_value=SimpleNamespace(stdout=stdout, stderr="", returncode=1)
+        )
 
     with runtime_scope(RuntimeContext(project_root=tmp_path)):
         clear_source_file_cache_for_tests()
@@ -73,7 +75,9 @@ def test_one_knip_run_serves_every_reader(project):
 def test_report_after_plugin_log_lines_is_parsed(project):
     """A plugin loading the project's config can print to stdout before the report."""
     root, report = project
-    with report(_row("src/a.ts", exports=[{"name": "x", "line": 1}]), prefix="Using base URL\n") as _:
+    with report(
+        _row("src/a.ts", exports=[{"name": "x", "line": 1}]), prefix="Using base URL\n"
+    ) as _:
         entries, reason = knip_mod.detect_with_knip_result(root)
     assert reason is None
     assert [e["name"] for e in entries] == ["x"]
@@ -81,7 +85,9 @@ def test_report_after_plugin_log_lines_is_parsed(project):
 
 def test_crash_without_report_is_a_failure(project):
     root, _report = project
-    output = SimpleNamespace(stdout="Using base URL\n", stderr="TypeError: boom", returncode=2)
+    output = SimpleNamespace(
+        stdout="Using base URL\n", stderr="TypeError: boom", returncode=2
+    )
     with patch(_RUN, return_value=output):
         assert knip_mod.run_knip(root).failure == "knip_bad_output"
 
@@ -129,7 +135,10 @@ def test_deprecated_alias_is_not_a_duplicate(project):
         "src/link.ts",
         "export const link = () => 1;\n/**\n * @deprecated use {@link link}\n */\nexport const oldLink = link;\n",
     )
-    rows = _row("src/link.ts", duplicates=[[{"name": "link", "line": 1}, {"name": "oldLink", "line": 5}]])
+    rows = _row(
+        "src/link.ts",
+        duplicates=[[{"name": "link", "line": 1}, {"name": "oldLink", "line": 5}]],
+    )
     with report(rows):
         entries, _ = knip_mod.detect_with_knip_result(root)
     assert entries == []
@@ -139,7 +148,10 @@ def test_deprecated_alias_is_not_a_duplicate(project):
 
 
 def _orphans(root: Path, *names: str, confidence: str = "medium") -> list[dict]:
-    return [{"file": str(root / name), "loc": 20, "confidence": confidence} for name in names]
+    return [
+        {"file": str(root / name), "loc": 20, "confidence": confidence}
+        for name in names
+    ]
 
 
 def test_knip_agreeing_raises_and_disagreeing_lowers_orphans(project):
@@ -148,7 +160,10 @@ def test_knip_agreeing_raises_and_disagreeing_lowers_orphans(project):
     entries = _orphans(root, "src/dead.ts", "src/story.ts")
     with report(_row("src/dead.ts", files=[{"name": "src/dead.ts"}])):
         corroborate_orphans_with_knip(entries, root, lang)
-    assert [(e["confidence"], e["knip"]) for e in entries] == [("high", "unused"), ("low", "reachable")]
+    assert [(e["confidence"], e["knip"]) for e in entries] == [
+        ("high", "unused"),
+        ("low", "reachable"),
+    ]
 
 
 def test_orphan_stays_low_while_knip_cannot_resolve_its_importer(project):
@@ -178,7 +193,9 @@ def test_orphans_unchanged_when_knip_does_not_run(tmp_path):
 def test_package_name():
     assert package_name("@scope/pkg/sub") == "@scope/pkg"
     assert package_name("lodash/fp") == "lodash"
-    assert [package_name(s) for s in ("./a", "node:fs", "~/x", "#internal")] == [None] * 4
+    assert [package_name(s) for s in ("./a", "node:fs", "~/x", "#internal")] == [
+        None
+    ] * 4
 
 
 def test_unused_unlisted_and_binaries(project):
@@ -202,7 +219,10 @@ def test_unused_unlisted_and_binaries(project):
         _row(
             "package.json",
             dependencies=[{"name": "left-pad", "line": 3}],
-            devDependencies=[{"name": "prettier-plugin-x", "line": 6}, {"name": "@types/bench", "line": 7}],
+            devDependencies=[
+                {"name": "prettier-plugin-x", "line": 6},
+                {"name": "@types/bench", "line": 7},
+            ],
             binaries=[{"name": "tsx"}],
         ),
         _row("src/app.ts", unlisted=[{"name": "zod", "line": 2}]),
@@ -237,16 +257,31 @@ def test_dependency_a_script_or_manifest_key_uses_is_not_unused(project):
         json.dumps(
             {
                 "name": "app",
-                "scripts": {"prepare": "nub exec --node husky", "check": "runner attw --pack ."},
+                "scripts": {
+                    "prepare": "nub exec --node husky",
+                    "check": "runner attw --pack .",
+                },
                 "lint-staged": {"*.ts": "biome check"},
-                "devDependencies": {"husky": "9", "@arethetypeswrong/cli": "1", "lint-staged": "16", "globby": "16"},
+                "devDependencies": {
+                    "husky": "9",
+                    "@arethetypeswrong/cli": "1",
+                    "lint-staged": "16",
+                    "globby": "16",
+                },
             }
         ),
     )
     _install(root, "husky", "lint-staged", "globby")
-    _write(root, "node_modules/@arethetypeswrong/cli/package.json", json.dumps({"bin": {"attw": "x.js"}}))
+    _write(
+        root,
+        "node_modules/@arethetypeswrong/cli/package.json",
+        json.dumps({"bin": {"attw": "x.js"}}),
+    )
     _write(root, "src/app.ts", "export const a = 1;\n")
-    unused = [{"name": n, "line": 1} for n in ("husky", "@arethetypeswrong/cli", "lint-staged", "globby")]
+    unused = [
+        {"name": n, "line": 1}
+        for n in ("husky", "@arethetypeswrong/cli", "lint-staged", "globby")
+    ]
     with report(_row("package.json", devDependencies=unused)):
         result = detect_dependencies(root)
     assert [e["name"] for e in result.entries] == ["globby"]
@@ -254,16 +289,27 @@ def test_dependency_a_script_or_manifest_key_uses_is_not_unused(project):
 
 def test_uninstalled_package_skips_unused_and_binaries(project):
     root, report = project
-    _write(root, "package.json", json.dumps({"name": "app", "dependencies": {"next": "16"}}))
+    _write(
+        root,
+        "package.json",
+        json.dumps({"name": "app", "dependencies": {"next": "16"}}),
+    )
     _write(root, "src/app.ts", "import { x } from 'zod';\n")
     rows = (
-        _row("package.json", dependencies=[{"name": "next", "line": 3}], binaries=[{"name": "next"}]),
+        _row(
+            "package.json",
+            dependencies=[{"name": "next", "line": 3}],
+            binaries=[{"name": "next"}],
+        ),
         _row("src/app.ts", unlisted=[{"name": "zod", "line": 1}]),
     )
     with report(*rows):
         result = detect_dependencies(root)
     assert [(e["kind"], e["name"]) for e in result.entries] == [("unlisted", "zod")]
-    assert result.coverage is not None and result.coverage.reason == "dependencies_not_installed"
+    assert (
+        result.coverage is not None
+        and result.coverage.reason == "dependencies_not_installed"
+    )
     assert result.population_size == 1
 
 
@@ -272,4 +318,6 @@ def test_no_potential_when_knip_does_not_run(tmp_path):
     with runtime_scope(RuntimeContext(project_root=tmp_path)):
         result = detect_dependencies(tmp_path)
     assert result.population_size is None
-    assert result.coverage is not None and result.coverage.reason == "knip_not_installed"
+    assert (
+        result.coverage is not None and result.coverage.reason == "knip_not_installed"
+    )

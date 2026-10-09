@@ -211,7 +211,9 @@ def _decorate_reminder_metadata(reminders: list[dict]) -> list[dict]:
         clone.setdefault("priority", priority)
         clone.setdefault("severity", severity)
         decorated.append(clone)
-    decorated.sort(key=lambda item: (int(item.get("priority", 3)), str(item.get("type", ""))))
+    decorated.sort(
+        key=lambda item: (int(item.get("priority", 3)), str(item.get("type", "")))
+    )
     return decorated
 
 
@@ -232,7 +234,9 @@ def _report_scores_reminder(command: str | None) -> list[dict]:
     ]
 
 
-def _apply_decay(reminders: list[dict], reminder_history: dict) -> tuple[list[dict], dict]:
+def _apply_decay(
+    reminders: list[dict], reminder_history: dict
+) -> tuple[list[dict], dict]:
     filtered: list[dict] = []
     for reminder in reminders:
         if reminder.get("no_decay"):

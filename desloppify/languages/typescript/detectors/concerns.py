@@ -43,7 +43,9 @@ def detect_mixed_concerns(
     Returns (entries, total_files_checked).
     """
     clients = [name for name in data_clients if name]
-    fetch_re = re.compile(_FETCH_RE + "".join(rf"|\b{re.escape(name)}\." for name in clients))
+    fetch_re = re.compile(
+        _FETCH_RE + "".join(rf"|\b{re.escape(name)}\." for name in clients)
+    )
     direct_res = [
         (name, re.compile(rf"\b{re.escape(name)}\.\w+\.\w+\.\w+")) for name in clients
     ]
@@ -75,7 +77,9 @@ def detect_mixed_concerns(
                 concerns.append("data_fetching")
 
             # Query chains on a data client (should be in hooks/services)
-            concerns.extend(f"direct_{name}" for name, regex in direct_res if regex.search(content))
+            concerns.extend(
+                f"direct_{name}" for name, regex in direct_res if regex.search(content)
+            )
 
             # Heavy data transformation
             transform_patterns = len(

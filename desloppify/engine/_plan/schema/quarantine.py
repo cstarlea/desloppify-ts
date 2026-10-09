@@ -62,7 +62,13 @@ def _quarantine_wrong_containers(
         if value is None or isinstance(value, expected_type):
             continue
         expected = "a list" if expected_type is list else "an object"
-        _record(quarantine, key, None, f"{key} is a {_type_name(value)}, not {expected}", value)
+        _record(
+            quarantine,
+            key,
+            None,
+            f"{key} is a {_type_name(value)}, not {expected}",
+            value,
+        )
         plan[key] = expected_type()
 
 
@@ -220,12 +226,16 @@ def quarantine_malformed_entries(
     Runs before the schema upgrades, which assume these shapes.
     """
     _quarantine_wrong_containers(plan, quarantine)
-    _quarantine_list_entries(plan, "queue_order", _id_problem("queue entry"), quarantine)
+    _quarantine_list_entries(
+        plan, "queue_order", _id_problem("queue entry"), quarantine
+    )
     _quarantine_dict_entries(plan, "skipped", _skip_problem, quarantine)
     _quarantine_dict_entries(plan, "clusters", _cluster_problem, quarantine)
     _quarantine_dict_entries(plan, "overrides", _override_problem, quarantine)
     _quarantine_dict_entries(plan, "superseded", _superseded_problem, quarantine)
-    _quarantine_list_entries(plan, "promoted_ids", _id_problem("promoted ID"), quarantine)
+    _quarantine_list_entries(
+        plan, "promoted_ids", _id_problem("promoted ID"), quarantine
+    )
     _quarantine_list_entries(
         plan, "uncommitted_issues", _id_problem("uncommitted ID"), quarantine
     )

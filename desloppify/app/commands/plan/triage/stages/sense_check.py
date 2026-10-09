@@ -28,19 +28,31 @@ from .records import record_sense_check_stage, resolve_reusable_report
 @dataclass(frozen=True)
 class SenseCheckStageDeps:
     has_triage_in_queue: Callable[[dict], bool] = has_triage_in_queue
-    resolve_reusable_report: Callable[[str | None, dict | None], tuple[str | None, bool]] = (
-        resolve_reusable_report
-    )
+    resolve_reusable_report: Callable[
+        [str | None, dict | None], tuple[str | None, bool]
+    ] = resolve_reusable_report
     record_sense_check_stage: Callable[..., list[str]] = record_sense_check_stage
     colorize: ColorizeFn = colorize
     default_triage_services: Callable[[], TriageServices] = default_triage_services
-    print_cascade_clear_feedback: Callable[[list[str], dict], None] = print_cascade_clear_feedback
+    print_cascade_clear_feedback: Callable[[list[str], dict], None] = (
+        print_cascade_clear_feedback
+    )
     get_project_root: Callable[[], Path] | None = None
-    underspecified_steps: Callable[[dict], list[tuple[str, int, int]]] = _underspecified_steps
-    steps_missing_issue_refs: Callable[[dict], list[tuple[str, int, int]]] = _steps_missing_issue_refs
-    steps_with_bad_paths: Callable[[dict, Path], list[tuple[str, int, list[str]]]] = _steps_with_bad_paths
-    steps_with_vague_detail: Callable[[dict, Path], list[tuple[str, int, str]]] = _steps_with_vague_detail
-    steps_without_effort: Callable[[dict], list[tuple[str, int, int]]] = _steps_without_effort
+    underspecified_steps: Callable[[dict], list[tuple[str, int, int]]] = (
+        _underspecified_steps
+    )
+    steps_missing_issue_refs: Callable[[dict], list[tuple[str, int, int]]] = (
+        _steps_missing_issue_refs
+    )
+    steps_with_bad_paths: Callable[[dict, Path], list[tuple[str, int, list[str]]]] = (
+        _steps_with_bad_paths
+    )
+    steps_with_vague_detail: Callable[[dict, Path], list[tuple[str, int, str]]] = (
+        _steps_with_vague_detail
+    )
+    steps_without_effort: Callable[[dict], list[tuple[str, int, int]]] = (
+        _steps_without_effort
+    )
 
 
 def _sense_check_report(
@@ -103,7 +115,11 @@ def _report_length_ok(report: str | None, *, colorize_fn: ColorizeFn) -> bool:
         )
         return False
     if len(report) < 100:
-        print(colorize_fn(f"  Report too short: {len(report)} chars (minimum 100).", "red"))
+        print(
+            colorize_fn(
+                f"  Report too short: {len(report)} chars (minimum 100).", "red"
+            )
+        )
         return False
     return True
 
@@ -126,7 +142,9 @@ def _sense_check_evidence_failures(
 
     cluster_names = manual_clusters_with_issues(plan)
     if cluster_names:
-        failures.extend(validate_report_references_clusters(report, cluster_names) or [])
+        failures.extend(
+            validate_report_references_clusters(report, cluster_names) or []
+        )
 
     blocking = [failure for failure in failures if failure.blocking]
     advisory = [failure for failure in failures if not failure.blocking]
@@ -144,7 +162,9 @@ def _print_evidence_failures(
 
     if not failures:
         return
-    print(colorize_fn(format_evidence_failures(failures, stage_label=stage_label), style))
+    print(
+        colorize_fn(format_evidence_failures(failures, stage_label=stage_label), style)
+    )
 
 
 def run_stage_sense_check(
@@ -162,7 +182,11 @@ def run_stage_sense_check(
     state = resolved_services.command_runtime(args).state
 
     if not resolved_deps.has_triage_in_queue(plan):
-        print(resolved_deps.colorize("  No planning stages in the queue — nothing to sense-check.", "yellow"))
+        print(
+            resolved_deps.colorize(
+                "  No planning stages in the queue — nothing to sense-check.", "yellow"
+            )
+        )
         return
 
     meta = plan.get("epic_triage_meta", {})
@@ -174,8 +198,16 @@ def run_stage_sense_check(
     )
 
     if not stages.get("enrich", {}).get("confirmed_at"):
-        print(resolved_deps.colorize("  Cannot sense-check: enrich stage not confirmed.", "red"))
-        print(resolved_deps.colorize("  Run: desloppify plan triage --confirm enrich", "dim"))
+        print(
+            resolved_deps.colorize(
+                "  Cannot sense-check: enrich stage not confirmed.", "red"
+            )
+        )
+        print(
+            resolved_deps.colorize(
+                "  Run: desloppify plan triage --confirm enrich", "dim"
+            )
+        )
         return
 
     problems = _sense_check_quality_problems(plan, state, deps=resolved_deps)
@@ -183,12 +215,18 @@ def run_stage_sense_check(
         _print_sense_check_problems(problems, colorize_fn=resolved_deps.colorize)
         return
 
-    print(resolved_deps.colorize("  All enrich-level checks pass after sense-check.", "green"))
+    print(
+        resolved_deps.colorize(
+            "  All enrich-level checks pass after sense-check.", "green"
+        )
+    )
 
     if not _report_length_ok(report, colorize_fn=resolved_deps.colorize):
         return
 
-    blocking_ev, advisory_ev = _sense_check_evidence_failures(report, plan=plan, state=state)
+    blocking_ev, advisory_ev = _sense_check_evidence_failures(
+        report, plan=plan, state=state
+    )
     if blocking_ev:
         _print_evidence_failures(
             blocking_ev,
@@ -232,12 +270,18 @@ def run_stage_sense_check(
 
     print(resolved_deps.colorize("  Sense-check stage recorded.", "green"))
     if is_reuse:
-        print(resolved_deps.colorize("  Sense-check data preserved (no changes).", "dim"))
+        print(
+            resolved_deps.colorize("  Sense-check data preserved (no changes).", "dim")
+        )
         if cleared:
             resolved_deps.print_cascade_clear_feedback(cleared, stages)
     else:
         print(resolved_deps.colorize("  Now confirm the sense-check.", "yellow"))
-        print(resolved_deps.colorize("    desloppify plan triage --confirm sense-check", "dim"))
+        print(
+            resolved_deps.colorize(
+                "    desloppify plan triage --confirm sense-check", "dim"
+            )
+        )
 
 
 def cmd_stage_sense_check(

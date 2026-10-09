@@ -12,8 +12,14 @@ def test_issue_facade_aliases_point_to_underlying_helpers() -> None:
     assert issues_mod._generate_issues is gen_mod.generate_issues
     assert issues_mod._quality_issue_item is quality_mod.quality_issue_item
     assert issues_mod._quality_issue_rank is quality_mod.quality_issue_rank
-    assert issues_mod._select_direct_test_quality_issue is quality_mod.select_direct_test_quality_issue
-    assert issues_mod._transitive_coverage_gap_issue is gaps_mod.transitive_coverage_gap_issue
+    assert (
+        issues_mod._select_direct_test_quality_issue
+        is quality_mod.select_direct_test_quality_issue
+    )
+    assert (
+        issues_mod._transitive_coverage_gap_issue
+        is gaps_mod.transitive_coverage_gap_issue
+    )
     assert issues_mod._untested_module_issue is gaps_mod.untested_module_issue
 
 
@@ -28,7 +34,9 @@ def test_quality_issue_alias_helpers_generate_expected_issue() -> None:
     assert issue is not None
     assert issue["name"].startswith("assertion_free::")
     assert issue["detail"]["kind"] == "assertion_free_test"
-    assert issues_mod._quality_issue_rank("assertion_free") > issues_mod._quality_issue_rank("smoke")
+    assert issues_mod._quality_issue_rank(
+        "assertion_free"
+    ) > issues_mod._quality_issue_rank("smoke")
 
 
 def test_gap_issue_alias_helpers_build_expected_payloads() -> None:

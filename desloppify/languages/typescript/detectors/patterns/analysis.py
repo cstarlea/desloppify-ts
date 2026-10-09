@@ -31,8 +31,7 @@ def _build_census(
 
     compiled: dict[str, dict[str, re.Pattern]] = {
         family_name: {
-            name: re.compile(regex)
-            for name, regex in family["patterns"].items()
+            name: re.compile(regex) for name, regex in family["patterns"].items()
         }
         for family_name, family in families.items()
     }
@@ -40,10 +39,16 @@ def _build_census(
     for filepath in files:
         try:
             area = get_area(filepath)
-            p = Path(filepath) if Path(filepath).is_absolute() else Path(resolve_path(filepath))
+            p = (
+                Path(filepath)
+                if Path(filepath).is_absolute()
+                else Path(resolve_path(filepath))
+            )
             content = file_code_text(p.read_text(encoding="utf-8"), p)
         except (OSError, UnicodeDecodeError) as exc:
-            log_best_effort_failure(logger, f"read TypeScript pattern candidate {filepath}", exc)
+            log_best_effort_failure(
+                logger, f"read TypeScript pattern candidate {filepath}", exc
+            )
             continue
 
         for family_name, patterns in compiled.items():
@@ -66,7 +71,9 @@ def _build_census(
     }
 
 
-def detect_pattern_anomalies(path: Path, families: dict[str, dict]) -> DetectorResult[dict]:
+def detect_pattern_anomalies(
+    path: Path, families: dict[str, dict]
+) -> DetectorResult[dict]:
     """Detect areas with competing pattern fragmentation."""
     if not families:
         return DetectorResult(entries=[], population_kind="areas", population_size=0)
@@ -76,12 +83,12 @@ def detect_pattern_anomalies(path: Path, families: dict[str, dict]) -> DetectorR
 
     total_areas = len(census)
     if total_areas < 5:
-        return DetectorResult(entries=[], population_kind="areas", population_size=total_areas)
+        return DetectorResult(
+            entries=[], population_kind="areas", population_size=total_areas
+        )
 
     competing_families = {
-        name: fam
-        for name, fam in families.items()
-        if fam["type"] == "competing"
+        name: fam for name, fam in families.items() if fam["type"] == "competing"
     }
 
     pattern_adoption: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
@@ -143,7 +150,9 @@ def detect_pattern_anomalies(path: Path, families: dict[str, dict]) -> DetectorR
             )
 
     return DetectorResult(
-        entries=sorted(anomalies, key=lambda a: (-a["pattern_count"], a["area"], a["family"])),
+        entries=sorted(
+            anomalies, key=lambda a: (-a["pattern_count"], a["area"], a["family"])
+        ),
         population_kind="areas",
         population_size=total_areas,
     )

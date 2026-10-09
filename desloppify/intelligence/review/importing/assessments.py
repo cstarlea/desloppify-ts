@@ -77,7 +77,11 @@ def store_assessments(
             continue
 
         existing = store.get(dimension_key)
-        if isinstance(existing, dict) and existing.get("source") == "holistic" and source == "per_file":
+        if (
+            isinstance(existing, dict)
+            and existing.get("source") == "holistic"
+            and source == "per_file"
+        ):
             continue
 
         cleaned_components: list[str] = []
@@ -127,7 +131,9 @@ def store_context_updates(
     if not context_updates:
         return
 
-    all_contexts: dict[str, DimensionContext] = state.setdefault("dimension_contexts", {})
+    all_contexts: dict[str, DimensionContext] = state.setdefault(
+        "dimension_contexts", {}
+    )
     now = utc_now_fn()
 
     for dim_name, updates in context_updates.items():

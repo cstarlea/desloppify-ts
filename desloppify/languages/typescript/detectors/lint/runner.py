@@ -22,7 +22,9 @@ _proc_runtime = subprocess
 
 LINT_TIMEOUT = 300
 # Set while monorepo mode lints a package: its runs go through run_bounded.
-_LIMITS: contextvars.ContextVar[RunLimits | None] = contextvars.ContextVar("lint_limits", default=None)
+_LIMITS: contextvars.ContextVar[RunLimits | None] = contextvars.ContextVar(
+    "lint_limits", default=None
+)
 
 
 @contextlib.contextmanager
@@ -92,12 +94,16 @@ def _error_summary(stderr: str) -> str:
     """The first informative stderr line of a crashed linter."""
     for line in stderr.splitlines():
         text = line.strip(" ×✖\t")
-        if text and not text.startswith(("Oops! Something went wrong", "ESLint: ", "(node:")):
+        if text and not text.startswith(
+            ("Oops! Something went wrong", "ESLint: ", "(node:")
+        ):
             return text[:300]
     return ""
 
 
-def failure_of(result: subprocess.CompletedProcess[str], config: LinterConfig) -> tuple[str, str]:
+def failure_of(
+    result: subprocess.CompletedProcess[str], config: LinterConfig
+) -> tuple[str, str]:
     stderr = result.stderr or ""
     if "heap out of memory" in stderr:
         return "linter_oom", f"{config.label} ran out of memory"
@@ -112,7 +118,10 @@ def run_linter(
     try:
         result = run_process(cmd, run.config)
     except subprocess.TimeoutExpired as exc:
-        run.failure, run.error = "linter_timeout", f"{label} took over {exc.timeout:.0f}s"
+        run.failure, run.error = (
+            "linter_timeout",
+            f"{label} took over {exc.timeout:.0f}s",
+        )
         return run
     except MemoryLimitExceeded as exc:
         run.failure, run.error = "linter_oom", f"{label} went {exc}"

@@ -21,7 +21,11 @@ from desloppify.base.exception_sets import CommandError
 def test_cluster_steps_print_step_variants(capsys) -> None:
     cluster_steps_mod.print_step(
         1,
-        {"title": "Structured", "detail": "line one\nline two", "issue_refs": ["x", "y"]},
+        {
+            "title": "Structured",
+            "detail": "line one\nline two",
+            "issue_refs": ["x", "y"],
+        },
         colorize_fn=lambda text, _tone: text,
     )
     cluster_steps_mod.print_step(
@@ -97,7 +101,12 @@ def test_cluster_display_helpers_and_renderers(monkeypatch, capsys) -> None:
                 "issue_ids": ["i1"],
                 "action_steps": [{"title": "Do work", "issue_refs": ["i1"]}],
             },
-            "beta": {"issue_ids": ["i2"], "description": "Secondary", "priority": 2, "auto": True},
+            "beta": {
+                "issue_ids": ["i2"],
+                "description": "Secondary",
+                "priority": 2,
+                "auto": True,
+            },
         },
     }
 
@@ -139,7 +148,9 @@ def test_cluster_display_helpers_and_renderers(monkeypatch, capsys) -> None:
     assert pos_map["alpha"] == 0
 
 
-def test_cluster_manage_create_export_import_merge(monkeypatch, tmp_path, capsys) -> None:
+def test_cluster_manage_create_export_import_merge(
+    monkeypatch, tmp_path, capsys
+) -> None:
     plan = {"clusters": {}, "queue_order": []}
 
     def _create(plan_data, name, description, action=None):
@@ -155,14 +166,15 @@ def test_cluster_manage_create_export_import_merge(monkeypatch, tmp_path, capsys
     monkeypatch.setattr(cluster_manage_mod, "create_cluster", _create)
     monkeypatch.setattr(cluster_manage_mod, "append_log_entry", lambda *_a, **_k: None)
     monkeypatch.setattr(cluster_manage_mod, "save_plan", lambda *_a, **_k: None)
-    monkeypatch.setattr(cluster_manage_mod, "parse_steps_file", lambda _text: [{"title": "step"}])
+    monkeypatch.setattr(
+        cluster_manage_mod, "parse_steps_file", lambda _text: [{"title": "step"}]
+    )
     monkeypatch.setattr(
         cluster_manage_mod,
         "_import_yaml_module",
         lambda: SimpleNamespace(
             dump=lambda data, **_kwargs: (
-                "clusters:\n"
-                f"- name: {data['clusters'][0]['name']}\n"
+                f"clusters:\n- name: {data['clusters'][0]['name']}\n"
             ),
             safe_load=lambda _text: {
                 "clusters": [
@@ -265,7 +277,9 @@ def test_cluster_manage_yaml_dependency_hint(monkeypatch, tmp_path, capsys) -> N
     assert "desloppify-ts[plan-yaml]" in out_import
 
 
-def test_cluster_reorder_item_position_and_whole_cluster_paths(monkeypatch, capsys) -> None:
+def test_cluster_reorder_item_position_and_whole_cluster_paths(
+    monkeypatch, capsys
+) -> None:
     no_move = cluster_reorder_mod._resolve_item_position(
         "top",
         None,
@@ -312,7 +326,9 @@ def test_cluster_reorder_item_position_and_whole_cluster_paths(monkeypatch, caps
     }
     monkeypatch.setattr(cluster_reorder_mod, "load_plan", lambda: plan)
     monkeypatch.setattr(cluster_reorder_mod, "resolve_target", lambda _p, t, _pos: t)
-    monkeypatch.setattr(cluster_reorder_mod, "move_items", lambda _p, items, *_a, **_k: len(items))
+    monkeypatch.setattr(
+        cluster_reorder_mod, "move_items", lambda _p, items, *_a, **_k: len(items)
+    )
     monkeypatch.setattr(cluster_reorder_mod, "append_log_entry", lambda *_a, **_k: None)
     monkeypatch.setattr(cluster_reorder_mod, "save_plan", lambda *_a, **_k: None)
 
@@ -341,7 +357,9 @@ def test_cluster_reorder_item_position_and_whole_cluster_paths(monkeypatch, caps
     assert "--item requires exactly one cluster name" in out_item
 
 
-def test_cluster_dispatch_suggest_close_matches_supports_hash_and_slug(monkeypatch, capsys) -> None:
+def test_cluster_dispatch_suggest_close_matches_supports_hash_and_slug(
+    monkeypatch, capsys
+) -> None:
     monkeypatch.setattr(cluster_dispatch_mod, "colorize", lambda text, _tone: text)
     state = {
         "issues": {
@@ -474,7 +492,9 @@ def test_cluster_update_steps_file_parse_failure_raises_command_error(tmp_path) 
         load_plan_fn=lambda: plan,
         save_plan_fn=lambda _payload: None,
         append_log_entry_fn=lambda *_a, **_k: None,
-        parse_steps_file_fn=lambda _text: (_ for _ in ()).throw(ValueError("invalid format")),
+        parse_steps_file_fn=lambda _text: (_ for _ in ()).throw(
+            ValueError("invalid format")
+        ),
         normalize_step_fn=lambda step: {"title": str(step)},
         step_summary_fn=lambda step: str(step),
         utc_now_fn=lambda: "2026-03-09T00:00:00+00:00",

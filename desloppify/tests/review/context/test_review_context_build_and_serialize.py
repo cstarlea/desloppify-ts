@@ -43,7 +43,8 @@ class TestBuildReviewContext:
         comment_heavy = "# comment\n" * 8 + "x = 1\n" * 2
 
         with patch(
-            "desloppify.intelligence.review.context.read_file_text", return_value=comment_heavy
+            "desloppify.intelligence.review.context.read_file_text",
+            return_value=comment_heavy,
         ):
             ctx = build_review_context(
                 Path("/project"),
@@ -65,7 +66,8 @@ class TestBuildReviewContext:
         """)
 
         with patch(
-            "desloppify.intelligence.review.context.read_file_text", return_value=route_content
+            "desloppify.intelligence.review.context.read_file_text",
+            return_value=route_content,
         ):
             ctx = build_review_context(
                 Path("/project"),
@@ -90,7 +92,8 @@ class TestBuildReviewContext:
         """)
 
         with patch(
-            "desloppify.intelligence.review.context.read_file_text", return_value=throw_content
+            "desloppify.intelligence.review.context.read_file_text",
+            return_value=throw_content,
         ):
             ctx = build_review_context(
                 Path("/project"),
@@ -143,7 +146,8 @@ class TestBuildHolisticContext:
         """)
 
         with patch(
-            "desloppify.intelligence.review.context_holistic.readers.read_file_text", return_value=content
+            "desloppify.intelligence.review.context_holistic.readers.read_file_text",
+            return_value=content,
         ):
             ctx = build_holistic_context(
                 Path("/project"),
@@ -176,7 +180,8 @@ class TestBuildHolisticContext:
         content = "@deprecated\ndef old(): pass\n"
 
         with patch(
-            "desloppify.intelligence.review.context_holistic.readers.read_file_text", return_value=content
+            "desloppify.intelligence.review.context_holistic.readers.read_file_text",
+            return_value=content,
         ):
             ctx = build_holistic_context(
                 Path("/project"),
@@ -192,7 +197,8 @@ class TestBuildHolisticContext:
         content = "def helper():\n    return 42\n"
 
         with patch(
-            "desloppify.intelligence.review.context_holistic.readers.read_file_text", return_value=content
+            "desloppify.intelligence.review.context_holistic.readers.read_file_text",
+            return_value=content,
         ):
             ctx = build_holistic_context(
                 Path("/project"),
@@ -212,7 +218,8 @@ class TestBuildHolisticContext:
         """)
 
         with patch(
-            "desloppify.intelligence.review.context_holistic.readers.read_file_text", return_value=content
+            "desloppify.intelligence.review.context_holistic.readers.read_file_text",
+            return_value=content,
         ):
             ctx = build_holistic_context(
                 Path("/project"),
@@ -231,7 +238,8 @@ class TestBuildHolisticContext:
         content = "const admin = createClient(url, service_role);"
 
         with patch(
-            "desloppify.intelligence.review.context_holistic.readers.read_file_text", return_value=content
+            "desloppify.intelligence.review.context_holistic.readers.read_file_text",
+            return_value=content,
         ):
             ctx = build_holistic_context(
                 Path("/project"),
@@ -249,7 +257,8 @@ class TestBuildHolisticContext:
         content = "def add(a, b):\n    return a + b\n"
 
         with patch(
-            "desloppify.intelligence.review.context_holistic.readers.read_file_text", return_value=content
+            "desloppify.intelligence.review.context_holistic.readers.read_file_text",
+            return_value=content,
         ):
             ctx = build_holistic_context(
                 Path("/project"),
@@ -266,7 +275,8 @@ class TestBuildHolisticContext:
         content = "x = 1\n"
 
         with patch(
-            "desloppify.intelligence.review.context_holistic.readers.read_file_text", return_value=content
+            "desloppify.intelligence.review.context_holistic.readers.read_file_text",
+            return_value=content,
         ):
             ctx = build_holistic_context(
                 Path("/project"),

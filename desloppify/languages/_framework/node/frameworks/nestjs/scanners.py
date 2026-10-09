@@ -24,16 +24,27 @@ from desloppify.languages._framework.node.js_text import code_text
 
 logger = logging.getLogger(__name__)
 
-_NON_MODULE_MARKERS = (".spec.", ".test.", ".e2e-spec.", "/__tests__/", "/__mocks__/", "/test/")
+_NON_MODULE_MARKERS = (
+    ".spec.",
+    ".test.",
+    ".e2e-spec.",
+    "/__tests__/",
+    "/__mocks__/",
+    "/test/",
+)
 _ARRAY_RE = re.compile(r"\b(?P<key>controllers|providers)\s*:\s*\[")
 _IDENT_RE = re.compile(r"[A-Za-z_$][\w$]*\Z")
 _USE_CLASS_RE = re.compile(r"\buseClass\s*:\s*([A-Za-z_$][\w$]*)")
-_INJECT_PARAM_RE = re.compile(r"^\s*@(?:Inject|InjectRepository|InjectModel|InjectConnection|InjectDataSource|InjectEntityManager|InjectQueue|InjectRedis)\b")
+_INJECT_PARAM_RE = re.compile(
+    r"^\s*@(?:Inject|InjectRepository|InjectModel|InjectConnection|InjectDataSource|InjectEntityManager|InjectQueue|InjectRedis)\b"
+)
 
 
 @dataclass
 class _Package:
-    classes: list[tuple[str, str, ClassDecl]] = field(default_factory=list)  # file, code, class
+    classes: list[tuple[str, str, ClassDecl]] = field(
+        default_factory=list
+    )  # file, code, class
     controllers: set[str] = field(default_factory=set)
     providers: set[str] = field(default_factory=set)
     # A controllers array holding something other than class names (a spread,
@@ -48,7 +59,11 @@ def _is_test_file(filepath: str) -> bool:
 
 
 def _read(filepath: str) -> str | None:
-    full = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
+    full = (
+        Path(filepath)
+        if Path(filepath).is_absolute()
+        else get_project_root() / filepath
+    )
     try:
         return full.read_text(encoding="utf-8", errors="replace")
     except OSError as exc:
@@ -59,7 +74,11 @@ def _read(filepath: str) -> str | None:
 def _collect(path: Path) -> _Package:
     package = _Package()
     for filepath in find_ts_and_js_files(path):
-        if "node_modules" in filepath or filepath.endswith(".d.ts") or _is_test_file(filepath):
+        if (
+            "node_modules" in filepath
+            or filepath.endswith(".d.ts")
+            or _is_test_file(filepath)
+        ):
             continue
         content = _read(filepath)
         if content is None:
@@ -74,7 +93,11 @@ def _collect(path: Path) -> _Package:
             for start, end in items:
                 item = code[start:end].strip()
                 if _IDENT_RE.match(item):
-                    target = package.controllers if match.group("key") == "controllers" else package.providers
+                    target = (
+                        package.controllers
+                        if match.group("key") == "controllers"
+                        else package.providers
+                    )
                     target.add(item)
                 elif match.group("key") == "controllers":
                     package.opaque_controllers = True

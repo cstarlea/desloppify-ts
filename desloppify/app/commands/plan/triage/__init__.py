@@ -15,4 +15,5 @@ def cmd_plan_triage(args: argparse.Namespace) -> None:
 
     _cmd_plan_triage(args)
 
+
 __all__ = ["cmd_plan_triage"]

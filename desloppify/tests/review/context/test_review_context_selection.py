@@ -50,12 +50,11 @@ class TestBuildReviewContext:
         assert ctx.error_conventions.get("returns_null") == 1
         assert ctx.error_conventions.get("throws") == 1
 
-    def test_existing_issues_in_context(
-        self, mock_lang, state_with_issues, tmp_path
-    ):
+    def test_existing_issues_in_context(self, mock_lang, state_with_issues, tmp_path):
         (tmp_path / "foo.ts").write_text("x")
         mock_lang.file_finder = MagicMock(return_value=[str(tmp_path / "foo.ts")])
         with patch("desloppify.intelligence.review.context.rel") as mock_rel:
+
             def _fake_rel(value: str) -> str:
                 text = str(value).replace("\\", "/")
                 if text == str(tmp_path / "foo.ts").replace("\\", "/"):
@@ -73,6 +72,7 @@ class TestBuildReviewContext:
         (tmp_path / "foo.ts").write_text("x")
         mock_lang.file_finder = MagicMock(return_value=[str(tmp_path / "foo.ts")])
         with patch("desloppify.intelligence.review.context.rel") as mock_rel:
+
             def _fake_rel(value: str) -> str:
                 text = str(value).replace("\\", "/")
                 if text == str(tmp_path / "foo.ts").replace("\\", "/"):
@@ -177,7 +177,9 @@ class TestSelectFilesForReview:
         mock_lang.file_finder = MagicMock(return_value=[str(real_file)])
         state = dict(empty_state)
         # Patch rel() to return a stable path
-        with patch("desloppify.intelligence.review.selection.rel", return_value="cached.ts"):
+        with patch(
+            "desloppify.intelligence.review.selection.rel", return_value="cached.ts"
+        ):
             state["review_cache"] = {
                 "files": {
                     "cached.ts": {
@@ -206,7 +208,9 @@ class TestSelectFilesForReview:
 
         mock_lang.file_finder = MagicMock(return_value=[str(real_file)])
         state = dict(empty_state)
-        with patch("desloppify.intelligence.review.selection.rel", return_value="stale.ts"):
+        with patch(
+            "desloppify.intelligence.review.selection.rel", return_value="stale.ts"
+        ):
             state["review_cache"] = {
                 "files": {
                     "stale.ts": {
@@ -234,7 +238,9 @@ class TestSelectFilesForReview:
 
         mock_lang.file_finder = MagicMock(return_value=[str(real_file)])
         state = dict(empty_state)
-        with patch("desloppify.intelligence.review.selection.rel", return_value="changed.ts"):
+        with patch(
+            "desloppify.intelligence.review.selection.rel", return_value="changed.ts"
+        ):
             state["review_cache"] = {
                 "files": {
                     "changed.ts": {
@@ -261,7 +267,9 @@ class TestSelectFilesForReview:
 
         mock_lang.file_finder = MagicMock(return_value=[str(real_file)])
         state = dict(empty_state)
-        with patch("desloppify.intelligence.review.selection.rel", return_value="cached.ts"):
+        with patch(
+            "desloppify.intelligence.review.selection.rel", return_value="cached.ts"
+        ):
             state["review_cache"] = {
                 "files": {
                     "cached.ts": {
@@ -355,7 +363,9 @@ class TestPrepareReview:
 
         with (
             patch("desloppify.intelligence.review.context.rel", return_value="foo.ts"),
-            patch("desloppify.intelligence.review.selection.rel", return_value="foo.ts"),
+            patch(
+                "desloppify.intelligence.review.selection.rel", return_value="foo.ts"
+            ),
             patch("desloppify.intelligence.review.prepare.rel", return_value="foo.ts"),
         ):
             data = prepare_review(tmp_path, mock_lang, empty_state)

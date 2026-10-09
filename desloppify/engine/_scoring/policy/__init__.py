@@ -1,2 +1,1 @@
 """Scoring policy internals."""
-

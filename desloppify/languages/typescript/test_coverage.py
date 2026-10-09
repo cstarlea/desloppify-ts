@@ -112,7 +112,9 @@ logger = logging.getLogger(__name__)
 def _relative_if_under_root(path_str: str) -> str:
     """Return project-relative path when possible; else return original."""
     try:
-        return str(Path(resolve_path(path_str)).relative_to(get_project_root())).replace("\\", "/")
+        return str(
+            Path(resolve_path(path_str)).relative_to(get_project_root())
+        ).replace("\\", "/")
     except (OSError, ValueError):
         return path_str
 
@@ -142,19 +144,34 @@ def has_testable_logic(filepath: str, content: str) -> bool:
         return False
     parsed = parse_text(content, filepath)
     if parsed is not None:
-        return any(_is_runtime_statement(parsed, node) for node in parsed.root.named_children)
+        return any(
+            _is_runtime_statement(parsed, node) for node in parsed.root.named_children
+        )
     return _has_testable_logic_lines(content)
 
 
 _CLASS_DECLARATIONS = frozenset({"class_declaration", "abstract_class_declaration"})
 _LITERALS = frozenset(
-    {"string", "number", "true", "false", "null", "undefined", "regex", "template_string"}
+    {
+        "string",
+        "number",
+        "true",
+        "false",
+        "null",
+        "undefined",
+        "regex",
+        "template_string",
+    }
 )
 
 
-_FUNCTIONS = frozenset({"arrow_function", "function_expression", "function", "generator_function"})
+_FUNCTIONS = frozenset(
+    {"arrow_function", "function_expression", "function", "generator_function"}
+)
 # ``@Type(() => Number)``: a thunk naming a type, not logic.
-_THUNK_BODIES = frozenset({"identifier", "member_expression", "nested_identifier", "array"})
+_THUNK_BODIES = frozenset(
+    {"identifier", "member_expression", "nested_identifier", "array"}
+)
 
 
 def _is_shape_class(statement, node) -> bool:
@@ -179,7 +196,11 @@ def _is_shape_class(statement, node) -> bool:
             return False
     for function in descendants(statement, _FUNCTIONS):
         thunk = function.child_by_field_name("body")
-        if function.type != "arrow_function" or thunk is None or thunk.type not in _THUNK_BODIES:
+        if (
+            function.type != "arrow_function"
+            or thunk is None
+            or thunk.type not in _THUNK_BODIES
+        ):
             return False
     return True
 
@@ -195,7 +216,9 @@ def _is_runtime_statement(parsed: ParsedSource, node) -> bool:
         return False  # re-export
     declaration = node.child_by_field_name("declaration")
     if declaration is not None:
-        return declaration.type not in _TYPE_ONLY_STATEMENTS and not _is_shape_class(node, declaration)
+        return declaration.type not in _TYPE_ONLY_STATEMENTS and not _is_shape_class(
+            node, declaration
+        )
     # ``export { a }`` forwards a binding; ``export default <expr>`` / ``export =`` run code.
     return node.child_by_field_name("value") is not None or not any(
         child.type == "export_clause" for child in node.named_children
@@ -297,9 +320,16 @@ def is_runtime_entrypoint(filepath: str, content: str) -> bool:
 def public_entry_files(production_files: set[str]) -> set[str]:
     """Production files a workspace package exposes (``exports``, ``main``, ``types``...)."""
     root = get_project_root()
-    candidates = sorted(str(root / path) if not os.path.isabs(path) else path for path in production_files)
+    candidates = sorted(
+        str(root / path) if not os.path.isabs(path) else path
+        for path in production_files
+    )
     entries = workspace_entries(project_resolver(root).packages, candidates)
-    return {key for path in entries.public if (key := _production_key(path, production_files))}
+    return {
+        key
+        for path in entries.public
+        if (key := _production_key(path, production_files))
+    }
 
 
 def resolve_import_spec(
@@ -359,7 +389,10 @@ def resolve_barrel_reexports(filepath: str, production_files: set[str]) -> set[s
 def follows_reexport_names() -> bool:
     """True when ``imported_definitions`` can parse, so name-blind barrel and
     facade expansion is unnecessary."""
-    return get_parser(grammar_for("x.ts")) is not None and get_parser(grammar_for("x.tsx")) is not None
+    return (
+        get_parser(grammar_for("x.ts")) is not None
+        and get_parser(grammar_for("x.tsx")) is not None
+    )
 
 
 def imported_definitions(test_path: str, production_files: set[str]) -> set[str]:
@@ -401,7 +434,9 @@ def imported_definitions(test_path: str, production_files: set[str]) -> set[str]
     return {key for path in found if (key := _production_key(path, production_files))}
 
 
-def _namespace_members(parsed: ParsedSource, names: set[str]) -> set[tuple[str, tuple[str, ...]]]:
+def _namespace_members(
+    parsed: ParsedSource, names: set[str]
+) -> set[tuple[str, tuple[str, ...]]]:
     """``(ns, ("a", "b"))`` for each ``ns.a.b`` member chain on a namespace binding."""
     chains: set[tuple[str, tuple[str, ...]]] = set()
     if not names:
@@ -497,7 +532,9 @@ def map_test_to_source(test_path: str, production_set: set[str]) -> str | None:
     test_parts = Path(dirname).parts
     return max(
         sorted(matches),
-        key=lambda prod: len(os.path.commonprefix([Path(prod).parent.parts, test_parts])),
+        key=lambda prod: len(
+            os.path.commonprefix([Path(prod).parent.parts, test_parts])
+        ),
     )
 
 
@@ -532,9 +569,7 @@ def _normalize_tautology_token(token: str) -> str | None:
     return None
 
 
-def is_placeholder_test(
-    content: str, *, assertions: int, test_functions: int
-) -> bool:
+def is_placeholder_test(content: str, *, assertions: int, test_functions: int) -> bool:
     """Heuristic for synthetic coverage-smoke tests with tautological assertions."""
     if assertions <= 0 or test_functions <= 0:
         return False
@@ -557,7 +592,9 @@ def is_placeholder_test(
 
     has_placeholder_label = any(p.search(content) for p in PLACEHOLDER_LABEL_PATTERNS)
     if tautological > 0:
-        if tautological >= assertions and (has_placeholder_label or assertions <= test_functions):
+        if tautological >= assertions and (
+            has_placeholder_label or assertions <= test_functions
+        ):
             return True
         if has_placeholder_label and (tautological / max(assertions, 1)) >= 0.5:
             return True

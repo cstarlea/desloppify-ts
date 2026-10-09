@@ -26,14 +26,14 @@ def test_render_single_item_resolution_hint_for_auto_fix(monkeypatch, capsys) ->
 
     nudges_mod.render_single_item_resolution_hint(
         [
-                {
-                    "id": "smells::src/a.py::x",
-                    "kind": "issue",
-                    "detector": "smells",
-                    "primary_command": "desloppify autofix debug-logs --dry-run",
-                }
-            ]
-        )
+            {
+                "id": "smells::src/a.py::x",
+                "kind": "issue",
+                "detector": "smells",
+                "primary_command": "desloppify autofix debug-logs --dry-run",
+            }
+        ]
+    )
 
     out = capsys.readouterr().out
     assert "Fix with:" in out
@@ -43,7 +43,9 @@ def test_render_single_item_resolution_hint_for_auto_fix(monkeypatch, capsys) ->
 
 def test_render_followup_nudges_prints_subjective_summary(monkeypatch, capsys) -> None:
     monkeypatch.setattr(nudges_mod, "colorize", lambda text, _style: text)
-    monkeypatch.setattr(nudges_mod, "scorecard_subjective", lambda *_args, **_kwargs: [{"stale": True}])
+    monkeypatch.setattr(
+        nudges_mod, "scorecard_subjective", lambda *_args, **_kwargs: [{"stale": True}]
+    )
     monkeypatch.setattr(
         nudges_mod,
         "build_subjective_followup",
@@ -53,10 +55,14 @@ def test_render_followup_nudges_prints_subjective_summary(monkeypatch, capsys) -
         ),
     )
     monkeypatch.setattr(
-        nudges_mod, "unassessed_subjective_dimensions", lambda *_args, **_kwargs: ["logic_clarity"]
+        nudges_mod,
+        "unassessed_subjective_dimensions",
+        lambda *_args, **_kwargs: ["logic_clarity"],
     )
     monkeypatch.setattr(
-        nudges_mod, "subjective_coverage_breakdown", lambda *_args, **_kwargs: (2, [], [])
+        nudges_mod,
+        "subjective_coverage_breakdown",
+        lambda *_args, **_kwargs: (2, [], []),
     )
 
     nudges_mod.render_followup_nudges(

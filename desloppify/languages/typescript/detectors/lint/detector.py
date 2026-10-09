@@ -88,7 +88,9 @@ def _dependencies_missing(directory: Path) -> bool:
                 manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             except (OSError, ValueError):
                 return False
-            return isinstance(manifest, dict) and any(manifest.get(f) for f in _DEPENDENCY_FIELDS)
+            return isinstance(manifest, dict) and any(
+                manifest.get(f) for f in _DEPENDENCY_FIELDS
+            )
     return False
 
 
@@ -100,32 +102,56 @@ def _skip_reason(
     binary = find_local_bin(config.linter, config.directory)
     if binary is None:
         if _dependencies_missing(config.directory):
-            return None, "deps_not_installed", (
-                f"Dependencies are not installed (no node_modules); {label} ({name}) not run"
-            ), "Install the project's dependencies and rerun scan."
-        return None, "linter_missing", (
-            f"{label} is configured ({name}) but not installed in node_modules; lint not run"
-        ), f"Install {label} in the project and rerun scan."
+            return (
+                None,
+                "deps_not_installed",
+                (
+                    f"Dependencies are not installed (no node_modules); {label} ({name}) not run"
+                ),
+                "Install the project's dependencies and rerun scan.",
+            )
+        return (
+            None,
+            "linter_missing",
+            (
+                f"{label} is configured ({name}) but not installed in node_modules; lint not run"
+            ),
+            f"Install {label} in the project and rerun scan.",
+        )
     if config.linter not in ("eslint", "xo"):
         return binary, "", "", ""
     sample = next((f for f in files if f.suffix in _TS_SUFFIXES), files[0])
-    type_aware, failure, error = eslint_mod.uses_type_information(binary, config, sample)
+    type_aware, failure, error = eslint_mod.uses_type_information(
+        binary, config, sample
+    )
     if failure is not None:
-        return binary, failure, f"{label} could not load {name} ({error}); lint not run", (
-            f"Fix the {label} config or its plugins (`{config.linter} --print-config <file>`) and rerun scan."
+        return (
+            binary,
+            failure,
+            f"{label} could not load {name} ({error}); lint not run",
+            (
+                f"Fix the {label} config or its plugins (`{config.linter} --print-config <file>`) and rerun scan."
+            ),
         )
     if type_aware and 0 < type_aware_max_files < len(files):
-        return binary, "type_aware_too_large", (
-            f"{name} uses type information and the scan has {len(files)} files to lint"
-            f" (limit {type_aware_max_files} for a type-aware run); lint not run"
-        ), (
-            "Scan a package directory, or raise languages.typescript.lint_type_aware_max_files"
-            " in config.json (0 = no limit)."
+        return (
+            binary,
+            "type_aware_too_large",
+            (
+                f"{name} uses type information and the scan has {len(files)} files to lint"
+                f" (limit {type_aware_max_files} for a type-aware run); lint not run"
+            ),
+            (
+                "Scan a package directory, or raise languages.typescript.lint_type_aware_max_files"
+                " in config.json (0 = no limit)."
+            ),
         )
     return binary, "", "", ""
 
 
-def _ignore_patterns(config_dir: Path, scan_root: Path, nested: list[Path]) -> list[str]:
+def _ignore_patterns(
+    config_dir: Path, scan_root: Path, nested: list[Path]
+) -> list[str]:
     patterns = []
     excluded = [Path(p) for p in collect_exclude_dirs(scan_root) if Path(p).is_dir()]
     for directory in [*nested, *excluded]:
@@ -135,7 +161,11 @@ def _ignore_patterns(config_dir: Path, scan_root: Path, nested: list[Path]) -> l
 
 
 def _run(
-    config: LinterConfig, binary: Path, scan_root: Path, nested: list[Path], files: set[Path]
+    config: LinterConfig,
+    binary: Path,
+    scan_root: Path,
+    nested: list[Path],
+    files: set[Path],
 ) -> LinterRun:
     targets = [os.path.relpath(scan_root, config.directory).replace(os.sep, "/")]
     ignores = _ignore_patterns(config.directory, scan_root, nested)
@@ -203,11 +233,13 @@ def detect_lint_result(
     if foreign and monorepo is None:
         shown = ", ".join(_display(d) for d in nested[:3])
         more = f" and {len(nested) - 3} more" if len(nested) > 3 else ""
-        notes.append((
-            "partial",
-            f"{foreign} files are under other lint configs ({shown}{more}) and were not linted",
-            "Scan a package's directory to lint it with its own config.",
-        ))
+        notes.append(
+            (
+                "partial",
+                f"{foreign} files are under other lint configs ({shown}{more}) and were not linted",
+                "Scan a package's directory to lint it with its own config.",
+            )
+        )
     if not in_scope and monorepo is None:
         return LintResult([], [], _coverage(notes, ran=True))
 
@@ -251,13 +283,17 @@ def detect_lint_result(
             owner.setdefault(file, unit)
     checked = set(owner)
     unparsed = {f for run, unit in runs for f in run.unparsed if owner.get(f) == unit}
-    messages = [m for run, unit in runs for m in run.messages if owner.get(m.file) == unit]
+    messages = [
+        m for run, unit in runs for m in run.messages if owner.get(m.file) == unit
+    ]
     if unparsed:
-        notes.append((
-            "partial",
-            f"{len(unparsed)} files could not be parsed by the linter and were not counted",
-            "Run the linter on those files to see the parse errors.",
-        ))
+        notes.append(
+            (
+                "partial",
+                f"{len(unparsed)} files could not be parsed by the linter and were not counted",
+                "Run the linter on those files to see the parse errors.",
+            )
+        )
     checked -= unparsed
     messages = [m for m in messages if m.file in checked]
     return LintResult(
@@ -329,18 +365,22 @@ def _lint(
     runs: list[LinterRun] = []
     reasons: list[str] = []
     for config in unit.configs:
-        binary, reason, summary, remediation = _skip_reason(config, unit.files, type_aware_max_files)
+        binary, reason, summary, remediation = _skip_reason(
+            config, unit.files, type_aware_max_files
+        )
         if reason or binary is None:
             notes.append((reason, summary, remediation))
             reasons.append(reason)
             continue
         run = _run(config, binary, unit.root, unit.ignored, set(unit.files))
         if run.failure is not None:
-            notes.append((
-                run.failure,
-                f"{config.label} did not run correctly ({run.error}); lint not run",
-                f"Run `{config.linter}` in {_display(config.directory)} to see the error, fix it and rerun scan.",
-            ))
+            notes.append(
+                (
+                    run.failure,
+                    f"{config.label} did not run correctly ({run.error}); lint not run",
+                    f"Run `{config.linter}` in {_display(config.directory)} to see the error, fix it and rerun scan.",
+                )
+            )
             reasons.append(run.failure)
             continue
         runs.append(run)
@@ -384,21 +424,30 @@ def _split_units(
         package.directory
         for package in discover_packages(scan_root, project_root)
         if scan_root in package.directory.parents
-        and not any(d == package.directory or d in package.directory.parents for d in base.ignored)
+        and not any(
+            d == package.directory or d in package.directory.parents
+            for d in base.ignored
+        )
     )
     units = []
     for directory in packages:
         inner = [p for p in packages if directory in p.parents]
         files = _files_under(base.files, directory, inner)
         if files:
-            units.append(_Unit(configs, directory, [*base.ignored, *inner], files, directory))
+            units.append(
+                _Unit(configs, directory, [*base.ignored, *inner], files, directory)
+            )
     rest = [f for f in base.files if not any(p in f.parents for p in packages)]
     if rest:
-        units.append(_Unit(configs, scan_root, [*base.ignored, *packages], rest, scan_root))
+        units.append(
+            _Unit(configs, scan_root, [*base.ignored, *packages], rest, scan_root)
+        )
     return units
 
 
-def _coverage(notes: list[tuple[str, str, str]], *, ran: bool) -> DetectorCoverageStatus | None:
+def _coverage(
+    notes: list[tuple[str, str, str]], *, ran: bool
+) -> DetectorCoverageStatus | None:
     if not notes:
         return None
     reasons = [reason for reason, _, _ in notes]
@@ -411,4 +460,9 @@ def _coverage(notes: list[tuple[str, str, str]], *, ran: bool) -> DetectorCovera
     )
 
 
-__all__ = ["DEFAULT_TYPE_AWARE_MAX_FILES", "LintResult", "PackageLint", "detect_lint_result"]
+__all__ = [
+    "DEFAULT_TYPE_AWARE_MAX_FILES",
+    "LintResult",
+    "PackageLint",
+    "detect_lint_result",
+]

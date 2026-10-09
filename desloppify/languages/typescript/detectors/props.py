@@ -78,10 +78,18 @@ def detect_prop_interface_bloat(
 
 
 def _entry(filepath: str, name: str, count: int, line: int, kind: str) -> dict:
-    return {"file": filepath, "interface": name, "prop_count": count, "line": line, "kind": kind}
+    return {
+        "file": filepath,
+        "interface": name,
+        "prop_count": count,
+        "line": line,
+        "kind": kind,
+    }
 
 
-def _tree_file(filepath: str, index: "_TypeIndex", threshold: int) -> tuple[list[dict], int]:
+def _tree_file(
+    filepath: str, index: "_TypeIndex", threshold: int
+) -> tuple[list[dict], int]:
     module = index.module(resolve_path(filepath))
     if module is None:
         return [], 0
@@ -100,7 +108,9 @@ def _tree_file(filepath: str, index: "_TypeIndex", threshold: int) -> tuple[list
     return entries, total
 
 
-def _renames_checked_type(index: "_TypeIndex", module: "_Module", decl: TypeDeclaration) -> bool:
+def _renames_checked_type(
+    index: "_TypeIndex", module: "_Module", decl: TypeDeclaration
+) -> bool:
     """``type ProviderContext = TRPCContextState<T>``: the named type is checked itself."""
     value = decl.value
     if decl.kind != "alias" or value.type not in ("type_identifier", "generic_type"):  # type: ignore[attr-defined]
@@ -111,7 +121,9 @@ def _renames_checked_type(index: "_TypeIndex", module: "_Module", decl: TypeDecl
     target = module.parsed.text(name_node)
     if target in _WRAPPERS or _bloat_kind(target) is None:
         return False
-    return target in module.declarations or index.import_target(module, target) is not None
+    return (
+        target in module.declarations or index.import_target(module, target) is not None
+    )
 
 
 class _Module:
@@ -180,7 +192,9 @@ class _TypeIndex:
             self._members[key] = names
         return names
 
-    def import_target(self, module: _Module, name: str, seen: frozenset | set = frozenset()) -> tuple[_Module, str] | None:
+    def import_target(
+        self, module: _Module, name: str, seen: frozenset | set = frozenset()
+    ) -> tuple[_Module, str] | None:
         """The module declaring the imported or re-exported ``name``, and its name there."""
         imported = module.imported.get(name)
         if imported is not None:
@@ -207,14 +221,17 @@ class _TypeIndex:
             return None
         return self.module(path) if path is not None else None
 
-    def _type_members(self, module: _Module, node, params: set[str], seen: set) -> set[str]:
+    def _type_members(
+        self, module: _Module, node, params: set[str], seen: set
+    ) -> set[str]:
         parsed = module.parsed
         kind = node.type
         if kind in ("object_type", "interface_body"):
             return {
                 _member_name(parsed, member)
                 for member in node.named_children
-                if member.type in _MEMBER_TYPES and member.child_by_field_name("name") is not None
+                if member.type in _MEMBER_TYPES
+                and member.child_by_field_name("name") is not None
             }
         if kind == "intersection_type":
             names: set[str] = set()
@@ -222,11 +239,16 @@ class _TypeIndex:
                 names |= self._type_members(module, part, params, seen)
             return names
         if kind == "union_type":
-            variants = [self._type_members(module, part, params, seen) for part in node.named_children]
+            variants = [
+                self._type_members(module, part, params, seen)
+                for part in node.named_children
+            ]
             return max(variants, key=len, default=set())
         if kind == "parenthesized_type":
             inner = node.named_children
-            return self._type_members(module, inner[0], params, seen) if inner else set()
+            return (
+                self._type_members(module, inner[0], params, seen) if inner else set()
+            )
         if kind == "type_identifier":
             name = parsed.text(node)
             return set() if name in params else self.members(module, name, seen)
@@ -234,7 +256,9 @@ class _TypeIndex:
             return self._generic_members(module, node, params, seen)
         return set()
 
-    def _generic_members(self, module: _Module, node, params: set[str], seen: set) -> set[str]:
+    def _generic_members(
+        self, module: _Module, node, params: set[str], seen: set
+    ) -> set[str]:
         parsed = module.parsed
         name_node = node.child_by_field_name("name") or node.named_children[0]
         args_node = node.child_by_field_name("type_arguments")
@@ -269,7 +293,11 @@ def _literal_keys(parsed, node) -> set[str] | None:
                 return None
             keys |= inner
             continue
-        literal = part.named_children[0] if part.type == "literal_type" and part.named_children else None
+        literal = (
+            part.named_children[0]
+            if part.type == "literal_type" and part.named_children
+            else None
+        )
         if literal is None or literal.type != "string":
             return None
         keys.add(string_value(parsed, literal))
@@ -281,10 +309,16 @@ def _regex_file(filepath: str, threshold: int) -> tuple[list[dict], int]:
     entries: list[dict] = []
     total = 0
     try:
-        p = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
+        p = (
+            Path(filepath)
+            if Path(filepath).is_absolute()
+            else get_project_root() / filepath
+        )
         content = p.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError) as exc:
-        log_best_effort_failure(logger, f"read TypeScript interface file {filepath}", exc)
+        log_best_effort_failure(
+            logger, f"read TypeScript interface file {filepath}", exc
+        )
         return entries, total
     for m in _INTERFACE_RE.finditer(content):
         name = m.group(1)
@@ -303,12 +337,22 @@ def _regex_file(filepath: str, threshold: int) -> tuple[list[dict], int]:
                 brace_depth -= 1
             elif ch == "\n" and brace_depth == 1:
                 line_end = content.find("\n", pos + 1)
-                line = content[pos + 1 : line_end if line_end != -1 else len(content)].strip()
+                line = content[
+                    pos + 1 : line_end if line_end != -1 else len(content)
+                ].strip()
                 if line and not line.startswith(("//", "*", "/**")) and line != "}":
                     prop_count += 1
             pos += 1
         if prop_count > threshold:
-            entries.append(_entry(filepath, name, prop_count, content[: m.start()].count("\n") + 1, kind))
+            entries.append(
+                _entry(
+                    filepath,
+                    name,
+                    prop_count,
+                    content[: m.start()].count("\n") + 1,
+                    kind,
+                )
+            )
     return entries, total
 
 

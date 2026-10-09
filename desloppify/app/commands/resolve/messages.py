@@ -68,7 +68,11 @@ def _hermes_reset_and_instruct(
 
 def print_no_match_warning(args: argparse.Namespace) -> None:
     status_label = "resolved" if args.status == "open" else "open"
-    print(colorize(f"No {status_label} issues matching: {' '.join(args.patterns)}", "yellow"))
+    print(
+        colorize(
+            f"No {status_label} issues matching: {' '.join(args.patterns)}", "yellow"
+        )
+    )
 
 
 def print_fixed_next_user_message(

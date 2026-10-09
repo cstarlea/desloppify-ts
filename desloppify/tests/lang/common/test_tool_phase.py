@@ -28,7 +28,9 @@ def _parse_lines(output: str, _scan_path: Path) -> list[dict]:
     for line in output.splitlines():
         m = _LINE_RE.match(line.strip())
         if m:
-            entries.append({"file": m.group(1), "line": int(m.group(2)), "message": m.group(3)})
+            entries.append(
+                {"file": m.group(1), "line": int(m.group(2)), "message": m.group(3)}
+            )
     return entries
 
 
@@ -51,7 +53,9 @@ def _lines_parser():
 
 class TestMakeToolPhase:
     def test_missing_tool_returns_no_issues(self):
-        phase = make_tool_phase("test", "nonexistent_tool_xyz_123", "lines", "test_id", 2)
+        phase = make_tool_phase(
+            "test", "nonexistent_tool_xyz_123", "lines", "test_id", 2
+        )
         with patch("subprocess.run", side_effect=FileNotFoundError):
             issues, signals = phase.run(Path("."), None)
         assert issues == []
@@ -65,7 +69,9 @@ class TestMakeToolPhase:
         assert signals == {}
 
     def test_missing_tool_records_coverage_degradation(self):
-        phase = make_tool_phase("test", "nonexistent_tool_xyz_123", "lines", "test_id", 2)
+        phase = make_tool_phase(
+            "test", "nonexistent_tool_xyz_123", "lines", "test_id", 2
+        )
         lang = SimpleNamespace(detector_coverage={}, coverage_warnings=[])
         with patch("subprocess.run", side_effect=FileNotFoundError):
             issues, signals = phase.run(Path("."), lang)
@@ -121,7 +127,9 @@ class TestMakeToolPhase:
         assert result.entries == []
 
     def test_run_tool_result_distinguishes_empty_vs_error(self, tmp_path):
-        clean = subprocess.CompletedProcess(args="fake", returncode=0, stdout="", stderr="")
+        clean = subprocess.CompletedProcess(
+            args="fake", returncode=0, stdout="", stderr=""
+        )
         empty_result = run_tool_result(
             "fake",
             tmp_path,
@@ -131,7 +139,9 @@ class TestMakeToolPhase:
         assert empty_result.status == "empty"
         assert empty_result.error_kind is None
 
-        failed = subprocess.CompletedProcess(args="fake", returncode=2, stdout="", stderr="")
+        failed = subprocess.CompletedProcess(
+            args="fake", returncode=2, stdout="", stderr=""
+        )
         failed_result = run_tool_result(
             "fake",
             tmp_path,

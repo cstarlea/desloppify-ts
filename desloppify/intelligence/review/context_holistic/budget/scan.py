@@ -142,7 +142,11 @@ def _scan_file(
             }
         )
 
-    parsed = parse_text(content, filepath) if Path(filepath).suffix.lower() in _TS_SUFFIXES else None
+    parsed = (
+        parse_text(content, filepath)
+        if Path(filepath).suffix.lower() in _TS_SUFFIXES
+        else None
+    )
     if parsed is not None:
         col.parsed_files[rpath] = parsed
         col.total_function_signatures += len(definitions(parsed))
@@ -276,4 +280,10 @@ def _abstractions_context(file_contents: dict[str, str]) -> dict:
     )
 
 
-__all__ = ["_AbstractionsCollector", "_abstractions_context", "_derive_post_scan_results", "_scan_file", "_sort_and_trim"]
+__all__ = [
+    "_AbstractionsCollector",
+    "_abstractions_context",
+    "_derive_post_scan_results",
+    "_scan_file",
+    "_sort_and_trim",
+]

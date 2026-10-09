@@ -3,6 +3,7 @@
 Exercises every rendering surface with mixed statuses (open, deferred, triaged_out,
 fixed, wontfix, false_positive) to verify the full data flow.
 """
+
 from __future__ import annotations
 
 from desloppify.base.enums import (
@@ -34,6 +35,7 @@ from desloppify.engine.planning.render_sections import summary_lines
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _issue(
     fid: str,
@@ -113,6 +115,7 @@ def _plan_with_skipped() -> dict:
 # A1: Enum membership
 # ---------------------------------------------------------------------------
 
+
 class TestEnumMembership:
     def test_deferred_in_canonical(self):
         assert "deferred" in _CANONICAL_ISSUE_STATUSES
@@ -141,6 +144,7 @@ class TestEnumMembership:
 # A2: Scoring policy
 # ---------------------------------------------------------------------------
 
+
 class TestScoringPolicy:
     def test_all_modes_include_deferred(self):
         for mode, statuses in FAILURE_STATUSES_BY_MODE.items():
@@ -151,6 +155,7 @@ class TestScoringPolicy:
 # ---------------------------------------------------------------------------
 # A3: Skip ↔ status mapping
 # ---------------------------------------------------------------------------
+
 
 class TestSkipStatusMapping:
     def test_temporary_maps_to_deferred(self):
@@ -168,6 +173,7 @@ class TestSkipStatusMapping:
 # A4: Backlog reopens deferred issues
 # ---------------------------------------------------------------------------
 
+
 class TestBacklogReopensDeferred:
     def test_backlog_removes_from_plan(self):
         plan = _plan_with_skipped()
@@ -183,6 +189,7 @@ class TestBacklogReopensDeferred:
 # A5: Triage dismiss sets state status
 # ---------------------------------------------------------------------------
 
+
 class TestTriageDismissSetsState:
     def test_triage_apply_sets_triaged_out_in_state(self):
         plan = empty_plan()
@@ -197,14 +204,16 @@ class TestTriageDismissSetsState:
         }
         triage = TriageResult(
             strategy_summary="test strategy",
-            epics=[{
-                "name": "epic_test",
-                "thesis": "test cluster",
-                "direction": "fix it",
-                "issue_ids": ["a"],
-                "dependency_order": 1,
-                "dismissed": [],
-            }],
+            epics=[
+                {
+                    "name": "epic_test",
+                    "thesis": "test cluster",
+                    "direction": "fix it",
+                    "issue_ids": ["a"],
+                    "dependency_order": 1,
+                    "dismissed": [],
+                }
+            ],
             dismissed_issues=[
                 DismissedIssue(issue_id="b", reason="not relevant"),
             ],
@@ -220,6 +229,7 @@ class TestTriageDismissSetsState:
 # ---------------------------------------------------------------------------
 # A6: Deferred issues NOT reopened on scan reappearance
 # ---------------------------------------------------------------------------
+
 
 class TestDeferredNotReopenedOnScan:
     def test_upsert_preserves_deferred(self):
@@ -240,6 +250,7 @@ class TestDeferredNotReopenedOnScan:
 # A7: Status icons
 # ---------------------------------------------------------------------------
 
+
 class TestStatusIcons:
     def test_render_deferred_icon(self):
         from desloppify.base.enums import canonical_issue_status
@@ -252,6 +263,7 @@ class TestStatusIcons:
 # ---------------------------------------------------------------------------
 # A8: Plan header and summary include deferred counts
 # ---------------------------------------------------------------------------
+
 
 class TestPlanReportingSurfaces:
     def test_summary_lines_counts_deferred(self):
@@ -281,6 +293,7 @@ class TestPlanReportingSurfaces:
 # ---------------------------------------------------------------------------
 # A9: Data migration via reconcile
 # ---------------------------------------------------------------------------
+
 
 class TestReconcileDataMigration:
     def test_reconcile_syncs_open_skipped_to_deferred(self):
@@ -343,6 +356,7 @@ class TestReconcileDataMigration:
 # B2: Historical focus grouping
 # ---------------------------------------------------------------------------
 
+
 class TestHistoricalFocusGrouping:
     def test_groups_by_status(self):
         from desloppify.app.commands.review.prompt_sections import (
@@ -376,12 +390,16 @@ class TestHistoricalFocusGrouping:
         )
 
         assert render_historical_focus({}) == ""
-        assert render_historical_focus({"historical_issue_focus": {"selected_count": 0}}) == ""
+        assert (
+            render_historical_focus({"historical_issue_focus": {"selected_count": 0}})
+            == ""
+        )
 
 
 # ---------------------------------------------------------------------------
 # B3: Dimension deferral context
 # ---------------------------------------------------------------------------
+
 
 class TestDimensionDeferralContext:
     def test_renders_deferral_cycles(self):
@@ -411,6 +429,7 @@ class TestDimensionDeferralContext:
 # ---------------------------------------------------------------------------
 # Unskip roundtrip: temporary skip → deferred → unskip → open
 # ---------------------------------------------------------------------------
+
 
 class TestFullLifecycleRoundtrip:
     def test_skip_unskip_roundtrip_with_state(self):

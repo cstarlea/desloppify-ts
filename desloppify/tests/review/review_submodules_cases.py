@@ -71,7 +71,9 @@ def _call_select_files_for_review(lang, path, state, **kwargs):
 
 
 def _call_prepare_review(path, lang, state, **kwargs):
-    return _prepare_review_impl(path, lang, state, options=ReviewPrepareOptions(**kwargs))
+    return _prepare_review_impl(
+        path, lang, state, options=ReviewPrepareOptions(**kwargs)
+    )
 
 
 def _call_prepare_holistic_review(path, lang, state, **kwargs):
@@ -146,7 +148,9 @@ class TestGetFileIssues:
                 "id": "f2",
             },
         }
-        with patch("desloppify.intelligence.review.selection.rel", side_effect=lambda x: x):
+        with patch(
+            "desloppify.intelligence.review.selection.rel", side_effect=lambda x: x
+        ):
             results = get_file_issues(empty_state, "src/foo.ts")
         assert len(results) == 1
         assert results[0]["summary"] == "bad smell"
@@ -155,16 +159,27 @@ class TestGetFileIssues:
 class TestComputeReviewPriority:
     def test_tiny_file_filtered(self, mock_lang, empty_state):
         with (
-            patch("desloppify.intelligence.review.selection.rel", return_value="tiny.ts"),
-            patch("desloppify.intelligence.review.selection.read_file_text", return_value="x\n" * 5),
+            patch(
+                "desloppify.intelligence.review.selection.rel", return_value="tiny.ts"
+            ),
+            patch(
+                "desloppify.intelligence.review.selection.read_file_text",
+                return_value="x\n" * 5,
+            ),
         ):
             assert _compute_review_priority("tiny.ts", mock_lang, empty_state) == -1
 
     def test_normal_file_gets_score(self, mock_lang, empty_state):
         content = "line\n" * 100
         with (
-            patch("desloppify.intelligence.review.selection.rel", return_value="src/app.ts"),
-            patch("desloppify.intelligence.review.selection.read_file_text", return_value=content),
+            patch(
+                "desloppify.intelligence.review.selection.rel",
+                return_value="src/app.ts",
+            ),
+            patch(
+                "desloppify.intelligence.review.selection.read_file_text",
+                return_value=content,
+            ),
         ):
             score = _compute_review_priority("src/app.ts", mock_lang, empty_state)
             assert score >= 0
@@ -173,7 +188,10 @@ class TestComputeReviewPriority:
         content = "line\n" * 100
         with (
             patch("desloppify.intelligence.review.selection.rel") as mock_rel,
-            patch("desloppify.intelligence.review.selection.read_file_text", return_value=content),
+            patch(
+                "desloppify.intelligence.review.selection.read_file_text",
+                return_value=content,
+            ),
         ):
             mock_rel.return_value = "src/types.ts"
             low_score = _compute_review_priority("src/types.ts", mock_lang, empty_state)
@@ -186,7 +204,9 @@ class TestComputeReviewPriority:
 
 class TestSelectFilesForReview:
     def test_empty_files(self, mock_lang, empty_state):
-        result = _call_select_files_for_review(mock_lang, Path("."), empty_state, files=[])
+        result = _call_select_files_for_review(
+            mock_lang, Path("."), empty_state, files=[]
+        )
         assert result == []
 
     def test_skips_cached_fresh(self, mock_lang, empty_state):
@@ -201,10 +221,16 @@ class TestSelectFilesForReview:
             }
         }
         with (
-            patch("desloppify.intelligence.review.selection.rel", return_value="src/a.ts"),
-            patch("desloppify.intelligence.review.selection.hash_file", return_value=content_hash),
             patch(
-                "desloppify.intelligence.review.selection._compute_review_priority", return_value=10
+                "desloppify.intelligence.review.selection.rel", return_value="src/a.ts"
+            ),
+            patch(
+                "desloppify.intelligence.review.selection.hash_file",
+                return_value=content_hash,
+            ),
+            patch(
+                "desloppify.intelligence.review.selection._compute_review_priority",
+                return_value=10,
             ),
         ):
             result = _call_select_files_for_review(
@@ -233,13 +259,17 @@ class TestLowValueNames:
 
 class TestRelList:
     def test_set_input(self):
-        with patch("desloppify.intelligence.review.prepare.rel", side_effect=lambda x: x):
+        with patch(
+            "desloppify.intelligence.review.prepare.rel", side_effect=lambda x: x
+        ):
             result = _rel_list({"b", "a", "c"})
             assert result == sorted(result)
             assert len(result) == 3
 
     def test_list_truncation(self):
-        with patch("desloppify.intelligence.review.prepare.rel", side_effect=lambda x: x):
+        with patch(
+            "desloppify.intelligence.review.prepare.rel", side_effect=lambda x: x
+        ):
             result = _rel_list(list(range(20)))
             assert len(result) == 10
 
@@ -248,10 +278,16 @@ class TestBuildFileRequests:
     def test_basic(self, mock_lang, empty_state):
         with (
             patch(
-                "desloppify.intelligence.review.prepare.read_file_text", return_value="line1\nline2"
+                "desloppify.intelligence.review.prepare.read_file_text",
+                return_value="line1\nline2",
             ),
-            patch("desloppify.intelligence.review.prepare.rel", return_value="src/a.ts"),
-            patch("desloppify.intelligence.review.prepare.abs_path", side_effect=lambda x: x),
+            patch(
+                "desloppify.intelligence.review.prepare.rel", return_value="src/a.ts"
+            ),
+            patch(
+                "desloppify.intelligence.review.prepare.abs_path",
+                side_effect=lambda x: x,
+            ),
         ):
             result = _build_file_requests(["src/a.ts"], mock_lang, empty_state)
         assert len(result) == 1
@@ -260,8 +296,14 @@ class TestBuildFileRequests:
 
     def test_skips_unreadable(self, mock_lang, empty_state):
         with (
-            patch("desloppify.intelligence.review.prepare.read_file_text", return_value=None),
-            patch("desloppify.intelligence.review.prepare.abs_path", side_effect=lambda x: x),
+            patch(
+                "desloppify.intelligence.review.prepare.read_file_text",
+                return_value=None,
+            ),
+            patch(
+                "desloppify.intelligence.review.prepare.abs_path",
+                side_effect=lambda x: x,
+            ),
         ):
             result = _build_file_requests(["missing.ts"], mock_lang, empty_state)
         assert result == []
@@ -313,10 +355,21 @@ class TestBuildInvestigationBatches:
 class TestPrepareReview:
     def test_returns_expected_keys(self, mock_lang, empty_state):
         with (
-            patch("desloppify.intelligence.review.prepare.build_review_context") as mock_ctx,
-            patch("desloppify.intelligence.review.prepare.select_files_for_review", return_value=[]),
-            patch("desloppify.intelligence.review.prepare._build_file_requests", return_value=[]),
-            patch("desloppify.intelligence.review.prepare.serialize_context", return_value={}),
+            patch(
+                "desloppify.intelligence.review.prepare.build_review_context"
+            ) as mock_ctx,
+            patch(
+                "desloppify.intelligence.review.prepare.select_files_for_review",
+                return_value=[],
+            ),
+            patch(
+                "desloppify.intelligence.review.prepare._build_file_requests",
+                return_value=[],
+            ),
+            patch(
+                "desloppify.intelligence.review.prepare.serialize_context",
+                return_value={},
+            ),
             patch("desloppify.intelligence.review.prepare.count_fresh", return_value=0),
             patch("desloppify.intelligence.review.prepare.count_stale", return_value=0),
         ):
@@ -332,9 +385,17 @@ class TestPrepareReview:
 class TestPrepareHolisticReview:
     def test_returns_expected_keys(self, mock_lang, empty_state):
         with (
-            patch("desloppify.intelligence.review.prepare.build_review_context") as mock_review_ctx,
-            patch("desloppify.intelligence.review.prepare.build_holistic_context", return_value={}),
-            patch("desloppify.intelligence.review.prepare.serialize_context", return_value={}),
+            patch(
+                "desloppify.intelligence.review.prepare.build_review_context"
+            ) as mock_review_ctx,
+            patch(
+                "desloppify.intelligence.review.prepare.build_holistic_context",
+                return_value={},
+            ),
+            patch(
+                "desloppify.intelligence.review.prepare.serialize_context",
+                return_value={},
+            ),
             patch(
                 "desloppify.intelligence.review.prepare._build_investigation_batches",
                 return_value=[],
@@ -397,7 +458,10 @@ class TestStoreAssessments:
     def test_stores_basic(self, empty_state):
         store_assessments(empty_state, {"naming_quality": 80}, "per_file")
         assert empty_state["subjective_assessments"]["naming_quality"]["score"] == 80
-        assert empty_state["subjective_assessments"]["naming_quality"]["source"] == "per_file"
+        assert (
+            empty_state["subjective_assessments"]["naming_quality"]["source"]
+            == "per_file"
+        )
 
     def test_holistic_overwrites_per_file(self, empty_state):
         store_assessments(empty_state, {"naming_quality": 60}, "per_file")

@@ -85,7 +85,11 @@ class TestBlockedTriageStages:
 
     def test_missing_queue_id_for_unconfirmed_stage_still_blocks_later_stage(self):
         plan = empty_plan()
-        plan["queue_order"] = ["triage::enrich", "triage::sense-check", "triage::commit"]
+        plan["queue_order"] = [
+            "triage::enrich",
+            "triage::sense-check",
+            "triage::commit",
+        ]
         plan["epic_triage_meta"] = {
             "triage_stages": {"organize": {"report": "cluster plan"}},
         }
@@ -103,7 +107,9 @@ def test_plan_resolve_rejects_blocked_triage_stage(monkeypatch, capsys):
     monkeypatch.setattr(override_workflow_mod, "load_plan", lambda *a, **kw: plan)
 
     saved_plans = []
-    monkeypatch.setattr(override_workflow_mod, "save_plan", lambda p, *a, **kw: saved_plans.append(p))
+    monkeypatch.setattr(
+        override_workflow_mod, "save_plan", lambda p, *a, **kw: saved_plans.append(p)
+    )
 
     args = _args(patterns=["triage::reflect"])
     override_mod.cmd_plan_resolve(args)
@@ -120,10 +126,14 @@ def test_plan_resolve_allows_unblocked_triage_stage(monkeypatch, capsys):
     plan = _plan_with_triage_stages("observe")  # observe confirmed
 
     monkeypatch.setattr(override_workflow_mod, "load_plan", lambda *a, **kw: plan)
-    monkeypatch.setattr(override_workflow_mod, "live_planned_queue_empty", lambda _plan: False)
+    monkeypatch.setattr(
+        override_workflow_mod, "live_planned_queue_empty", lambda _plan: False
+    )
 
     saved_plans = []
-    monkeypatch.setattr(override_workflow_mod, "save_plan", lambda p, *a, **kw: saved_plans.append(p))
+    monkeypatch.setattr(
+        override_workflow_mod, "save_plan", lambda p, *a, **kw: saved_plans.append(p)
+    )
 
     args = _args(patterns=["triage::reflect"])
     override_mod.cmd_plan_resolve(args)
@@ -138,10 +148,14 @@ def test_plan_resolve_force_resolve_overrides_block(monkeypatch, capsys):
     plan = _plan_with_triage_stages()  # nothing confirmed
 
     monkeypatch.setattr(override_workflow_mod, "load_plan", lambda *a, **kw: plan)
-    monkeypatch.setattr(override_workflow_mod, "live_planned_queue_empty", lambda _plan: False)
+    monkeypatch.setattr(
+        override_workflow_mod, "live_planned_queue_empty", lambda _plan: False
+    )
 
     saved_plans = []
-    monkeypatch.setattr(override_workflow_mod, "save_plan", lambda p, *a, **kw: saved_plans.append(p))
+    monkeypatch.setattr(
+        override_workflow_mod, "save_plan", lambda p, *a, **kw: saved_plans.append(p)
+    )
 
     args = _args(patterns=["triage::reflect"], force_resolve=True)
     override_mod.cmd_plan_resolve(args)
@@ -157,10 +171,14 @@ def test_plan_resolve_observe_requires_strategize(monkeypatch, capsys):
     plan = _plan_with_triage_stages()  # nothing confirmed
 
     monkeypatch.setattr(override_workflow_mod, "load_plan", lambda *a, **kw: plan)
-    monkeypatch.setattr(override_workflow_mod, "live_planned_queue_empty", lambda _plan: False)
+    monkeypatch.setattr(
+        override_workflow_mod, "live_planned_queue_empty", lambda _plan: False
+    )
 
     saved_plans = []
-    monkeypatch.setattr(override_workflow_mod, "save_plan", lambda p, *a, **kw: saved_plans.append(p))
+    monkeypatch.setattr(
+        override_workflow_mod, "save_plan", lambda p, *a, **kw: saved_plans.append(p)
+    )
 
     args = _args(patterns=["triage::observe"])
     override_mod.cmd_plan_resolve(args)

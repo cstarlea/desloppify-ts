@@ -148,8 +148,15 @@ def _print_completion_summary(
     completion_mode: str,
     effective_strategy_summary: str,
 ) -> None:
-    cluster_count = len([cluster for cluster in clusters.values() if cluster_issue_ids(cluster)])
-    print(colorize(f"  Triage complete: {organized}/{total} issues in {cluster_count} cluster(s).", "green"))
+    cluster_count = len(
+        [cluster for cluster in clusters.values() if cluster_issue_ids(cluster)]
+    )
+    print(
+        colorize(
+            f"  Triage complete: {organized}/{total} issues in {cluster_count} cluster(s).",
+            "green",
+        )
+    )
     if completion_mode == "confirm_existing":
         print(
             colorize(
@@ -245,7 +252,9 @@ def apply_completion(
             )
         )
     except Exception:
-        _logger.warning("Failed to append triage_complete progression event", exc_info=True)
+        _logger.warning(
+            "Failed to append triage_complete progression event", exc_info=True
+        )
 
     _print_completion_summary(
         clusters=clusters,

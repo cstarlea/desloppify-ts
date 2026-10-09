@@ -42,7 +42,9 @@ def test_runtime_modules_use_canonical_state_and_plan_surfaces() -> None:
         for token in required:
             assert token in source, f"missing canonical import {token!r} in {rel}"
         for token in forbidden:
-            assert token not in source, f"legacy import {token!r} still present in {rel}"
+            assert token not in source, (
+                f"legacy import {token!r} still present in {rel}"
+            )
 
 
 def _private_plan_import_offenders(package_rel: str) -> list[str]:

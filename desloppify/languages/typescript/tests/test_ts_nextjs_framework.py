@@ -48,7 +48,9 @@ class _FakeLang(SimpleNamespace):
 
 def test_detect_nextjs_present_when_next_dependency_and_app_present(tmp_path: Path):
     _write(tmp_path, "package.json", '{"dependencies": {"next": "14.0.0"}}\n')
-    _write(tmp_path, "app/page.tsx", "export default function Page() { return <div/> }\n")
+    _write(
+        tmp_path, "app/page.tsx", "export default function Page() { return <div/> }\n"
+    )
 
     detection = detect_ecosystem_frameworks(tmp_path, None, "node")
     assert detection.package_root == tmp_path.resolve()
@@ -59,7 +61,9 @@ def test_detect_nextjs_present_when_next_dependency_and_app_present(tmp_path: Pa
 
 def test_detect_nextjs_absent_when_only_app_tree_exists(tmp_path: Path):
     _write(tmp_path, "package.json", '{"dependencies": {"react": "18.3.0"}}\n')
-    _write(tmp_path, "app/page.tsx", "export default function Page() { return <div/> }\n")
+    _write(
+        tmp_path, "app/page.tsx", "export default function Page() { return <div/> }\n"
+    )
 
     detection = detect_ecosystem_frameworks(tmp_path, None, "node")
     assert "nextjs" not in detection.present
@@ -70,7 +74,9 @@ def test_detect_nextjs_package_root_for_external_scan_path(tmp_path: Path):
     external.mkdir(parents=True, exist_ok=True)
     (external / "package.json").write_text('{"dependencies": {"next": "14.0.0"}}\n')
     (external / "app").mkdir(parents=True, exist_ok=True)
-    (external / "app" / "page.tsx").write_text("export default function Page(){return <div/>}\n")
+    (external / "app" / "page.tsx").write_text(
+        "export default function Page(){return <div/>}\n"
+    )
 
     detection = detect_ecosystem_frameworks(external, None, "node")
     assert detection.package_root == external.resolve()
@@ -216,11 +222,15 @@ def test_nextjs_smells_phase_emits_issues_when_next_present(tmp_path: Path):
     )
 
     cfg = TypeScriptConfig()
-    phase = next(p for p in cfg.phases if getattr(p, "label", "") == "Next.js framework smells")
+    phase = next(
+        p for p in cfg.phases if getattr(p, "label", "") == "Next.js framework smells"
+    )
     issues, potentials = phase.run(tmp_path, _FakeLang())
     assert potentials.get("nextjs", 0) >= 1
     assert any(issue.get("detector") == "nextjs" for issue in issues)
-    assert any("next_router_in_app_router" in str(issue.get("id", "")) for issue in issues)
+    assert any(
+        "next_router_in_app_router" in str(issue.get("id", "")) for issue in issues
+    )
 
 
 def test_browser_globals_missing_use_client_skips_test_and_story_files(tmp_path: Path):
@@ -257,10 +267,20 @@ def test_browser_globals_missing_use_client_skips_test_and_story_files(tmp_path:
     ],
     ids=["react_hooks", "navigation_hooks"],
 )
-def test_hook_rules_missing_use_client_skip_test_and_story_files(tmp_path: Path, scanner, call):
+def test_hook_rules_missing_use_client_skip_test_and_story_files(
+    tmp_path: Path, scanner, call
+):
     _write(tmp_path, "package.json", '{"dependencies": {"next": "14.0.0"}}\n')
-    _write(tmp_path, "app/widget.tsx", f"export default function Widget(){{ {call}; return null }}\n")
-    for name in ("app/widget.test.tsx", "app/widget.stories.tsx", "app/__tests__/widget.tsx"):
+    _write(
+        tmp_path,
+        "app/widget.tsx",
+        f"export default function Widget(){{ {call}; return null }}\n",
+    )
+    for name in (
+        "app/widget.test.tsx",
+        "app/widget.stories.tsx",
+        "app/__tests__/widget.tsx",
+    ):
         _write(tmp_path, name, f"it('x', () => {{ renderHook(() => {call}) }})\n")
 
     info = nextjs_info_from_evidence(
@@ -300,7 +320,9 @@ _LEGACY_ROUTER = "import { useRouter } from 'next/router'\nexport default functi
 
 def _nextjs_phase():
     cfg = TypeScriptConfig()
-    return next(p for p in cfg.phases if getattr(p, "label", "") == "Next.js framework smells")
+    return next(
+        p for p in cfg.phases if getattr(p, "label", "") == "Next.js framework smells"
+    )
 
 
 def _router_issue_files(issues) -> list[str]:
@@ -308,9 +330,19 @@ def _router_issue_files(issues) -> list[str]:
 
 
 def test_nextjs_smells_phase_runs_on_workspace_packages(tmp_path: Path):
-    _write(tmp_path, "package.json", '{"private": true, "devDependencies": {"turbo": "2"}}\n')
-    _write(tmp_path, "pnpm-workspace.yaml", "packages:\n  - 'apps/*'\n  - 'packages/*'\n")
-    _write(tmp_path, "apps/web/package.json", '{"name": "web", "dependencies": {"next": "15"}}\n')
+    _write(
+        tmp_path,
+        "package.json",
+        '{"private": true, "devDependencies": {"turbo": "2"}}\n',
+    )
+    _write(
+        tmp_path, "pnpm-workspace.yaml", "packages:\n  - 'apps/*'\n  - 'packages/*'\n"
+    )
+    _write(
+        tmp_path,
+        "apps/web/package.json",
+        '{"name": "web", "dependencies": {"next": "15"}}\n',
+    )
     _write(tmp_path, "apps/web/app/legacy.tsx", _LEGACY_ROUTER)
     _write(tmp_path, "packages/ui/package.json", '{"name": "ui"}\n')
     _write(tmp_path, "packages/ui/app/legacy.tsx", _LEGACY_ROUTER)
@@ -328,14 +360,23 @@ def test_nextjs_smells_phase_dedupes_package_nested_in_a_next_root(tmp_path: Pat
         '{"workspaces": ["examples/*"], "dependencies": {"next": "15"}}\n',
     )
     _write(tmp_path, "app/legacy.tsx", _LEGACY_ROUTER)
-    _write(tmp_path, "examples/blog/package.json", '{"name": "blog", "dependencies": {"next": "15"}}\n')
+    _write(
+        tmp_path,
+        "examples/blog/package.json",
+        '{"name": "blog", "dependencies": {"next": "15"}}\n',
+    )
     _write(tmp_path, "examples/blog/app/legacy.tsx", _LEGACY_ROUTER)
 
     issues, potentials = _nextjs_phase().run(tmp_path, _FakeLang())
 
-    assert _router_issue_files(issues) == ["app/legacy.tsx", "examples/blog/app/legacy.tsx"]
+    assert _router_issue_files(issues) == [
+        "app/legacy.tsx",
+        "examples/blog/app/legacy.tsx",
+    ]
     assert len({i["id"] for i in issues}) == len(issues)
-    assert potentials == {"nextjs": 2}  # the root walk already counted the example's files
+    assert potentials == {
+        "nextjs": 2
+    }  # the root walk already counted the example's files
 
 
 def test_nextjs_smells_phase_scoped_to_a_package_skips_siblings(tmp_path: Path):
@@ -361,10 +402,16 @@ def test_env_leak_issue_per_variable_names_it(tmp_path: Path):
         "export const again = process.env.APP_URL;\n",
     )
     cfg = TypeScriptConfig()
-    phase = next(p for p in cfg.phases if getattr(p, "label", "") == "Next.js framework smells")
+    phase = next(
+        p for p in cfg.phases if getattr(p, "label", "") == "Next.js framework smells"
+    )
     issues, _ = phase.run(tmp_path, _FakeLang())
 
-    leaks = sorted((i["id"], i["detail"]["line"], i["summary"]) for i in issues if "env_leak" in i["id"])
+    leaks = sorted(
+        (i["id"], i["detail"]["line"], i["summary"])
+        for i in issues
+        if "env_leak" in i["id"]
+    )
     assert [(id_, line) for id_, line, _ in leaks] == [
         ("nextjs::app/providers.tsx::env_leak_in_client::APP_URL", 2),
         ("nextjs::app/providers.tsx::env_leak_in_client::PORT", 3),

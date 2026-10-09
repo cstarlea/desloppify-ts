@@ -13,7 +13,9 @@ def _build_security_hotspots(by_detector: dict[str, list[dict]]) -> list[dict]:
         if not filepath:
             continue
         detail = issue.get("detail", {})
-        severity = detail.get("severity", "medium") if isinstance(detail, dict) else "medium"
+        severity = (
+            detail.get("severity", "medium") if isinstance(detail, dict) else "medium"
+        )
         file_counts[filepath][severity] += 1
 
     results = []
@@ -77,4 +79,8 @@ def _build_systemic_patterns(
     return results[:20]
 
 
-__all__ = ["_build_security_hotspots", "_build_signal_density", "_build_systemic_patterns"]
+__all__ = [
+    "_build_security_hotspots",
+    "_build_signal_density",
+    "_build_systemic_patterns",
+]

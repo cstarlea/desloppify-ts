@@ -59,7 +59,9 @@ def _collect_enrich_level_confirmation_checks(
         missing_effort_severity="failure",
         include_missing_issue_refs=True,
         include_vague_detail=True,
-        stale_issue_refs_severity="warning" if include_stale_issue_ref_warning else None,
+        stale_issue_refs_severity="warning"
+        if include_stale_issue_ref_warning
+        else None,
         triage_issue_ids=triage_issue_ids,
     )
 
@@ -102,13 +104,17 @@ def _handle_enrich_failures(checks: _ConfirmationCheckReport) -> bool:
         issue=checks.failure("bad_paths"),
         header="\n  Cannot confirm: {total} file path(s) in step details don't exist on disk.",
         row_printer=_print_bad_path_rows,
-        hints=("  Fix paths with: desloppify plan cluster update <name> --update-step N --detail '...'",),
+        hints=(
+            "  Fix paths with: desloppify plan cluster update <name> --update-step N --detail '...'",
+        ),
     ):
         return True
     if _print_confirmation_failure(
         issue=checks.failure("missing_effort"),
         header="\n  Cannot confirm: {total} step(s) have no effort tag.",
-        row_printer=lambda issue: _print_missing_ratio_rows(issue, suffix="missing effort"),
+        row_printer=lambda issue: _print_missing_ratio_rows(
+            issue, suffix="missing effort"
+        ),
         hints=(
             "  Every step needs --effort (trivial/small/medium/large).",
             "  Fix: desloppify plan cluster update <name> --update-step N --effort small",
@@ -118,7 +124,9 @@ def _handle_enrich_failures(checks: _ConfirmationCheckReport) -> bool:
     if _print_confirmation_failure(
         issue=checks.failure("missing_issue_refs"),
         header="\n  Cannot confirm: {total} step(s) have no issue_refs.",
-        row_printer=lambda issue: _print_missing_ratio_rows(issue, suffix="missing refs"),
+        row_printer=lambda issue: _print_missing_ratio_rows(
+            issue, suffix="missing refs"
+        ),
         hints=(
             "  Every step needs --issue-refs linking it to the review issue(s) it addresses.",
             "  Fix: desloppify plan cluster update <name> --update-step N --issue-refs <hash1> <hash2>",
@@ -139,10 +147,20 @@ def _handle_enrich_failures(checks: _ConfirmationCheckReport) -> bool:
 def _print_stale_ref_warning(issue: _ConfirmationCheckIssue | None) -> None:
     if issue is None:
         return
-    print(colorize(f"\n  Warning: {issue.total} step issue_ref(s) point to skipped/wontfixed issues.", "yellow"))
+    print(
+        colorize(
+            f"\n  Warning: {issue.total} step issue_ref(s) point to skipped/wontfixed issues.",
+            "yellow",
+        )
+    )
     for name, step_num, ids in issue.rows[:5]:
         print(colorize(f"    {name} step {step_num}: {', '.join(ids[:3])}", "yellow"))
-    print(colorize("  Consider removing stale refs or removing the step if it's no longer needed.", "dim"))
+    print(
+        colorize(
+            "  Consider removing stale refs or removing the step if it's no longer needed.",
+            "dim",
+        )
+    )
 
 
 def _handle_sense_check_failures(checks: _ConfirmationCheckReport) -> bool:
@@ -186,7 +204,9 @@ def confirm_enrich(
         triage_issue_ids=active_triage_issue_ids(plan, state) or None,
     )
 
-    print(colorize("  Stage: ENRICH — Make steps executor-ready (detail, refs)", "bold"))
+    print(
+        colorize("  Stage: ENRICH — Make steps executor-ready (detail, refs)", "bold")
+    )
     print(colorize("  " + "─" * 54, "dim"))
 
     if _handle_enrich_failures(checks):
@@ -214,7 +234,7 @@ def confirm_enrich(
         return
     print_user_message(
         "Hey — enrich is confirmed. Run `desloppify plan triage"
-        " --stage sense-check --report \"...\"` to verify step"
+        ' --stage sense-check --report "..."` to verify step'
         " accuracy and cross-cluster dependencies."
     )
 
@@ -239,7 +259,9 @@ def confirm_sense_check(
         triage_issue_ids=active_triage_issue_ids(plan, state) or None,
     )
 
-    print(colorize("  Stage: SENSE-CHECK — Verify accuracy & cross-cluster deps", "bold"))
+    print(
+        colorize("  Stage: SENSE-CHECK — Verify accuracy & cross-cluster deps", "bold")
+    )
     print(colorize("  " + "─" * 57, "dim"))
 
     if _handle_sense_check_failures(checks):
@@ -267,7 +289,7 @@ def confirm_sense_check(
         return
     print_user_message(
         "Hey — sense-check is confirmed. Run `desloppify plan triage"
-        " --complete --strategy \"...\"` to finish triage."
+        ' --complete --strategy "..."` to finish triage.'
     )
 
 

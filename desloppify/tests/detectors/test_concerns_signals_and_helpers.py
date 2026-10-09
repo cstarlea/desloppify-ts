@@ -56,8 +56,13 @@ class TestExtractSignals:
     def test_structural_signals_extracted(self):
         issues = [
             _make_issue(
-                "structural", "f.py", "s",
-                detail={"loc": 200, "complexity_signals": ["10 params", "nesting depth 5"]},
+                "structural",
+                "f.py",
+                "s",
+                detail={
+                    "loc": 200,
+                    "complexity_signals": ["10 params", "nesting depth 5"],
+                },
             ),
         ]
         signals = _extract_signals(issues)
@@ -68,11 +73,15 @@ class TestExtractSignals:
     def test_structural_signals_take_max_across_issues(self):
         issues = [
             _make_issue(
-                "structural", "f.py", "s1",
+                "structural",
+                "f.py",
+                "s1",
                 detail={"loc": 100, "complexity_signals": ["5 params"]},
             ),
             _make_issue(
-                "structural", "f.py", "s2",
+                "structural",
+                "f.py",
+                "s2",
                 detail={"loc": 80, "complexity_signals": ["12 params"]},
             ),
         ]
@@ -83,7 +92,9 @@ class TestExtractSignals:
     def test_zero_and_negative_values_ignored(self):
         issues = [
             _make_issue(
-                "structural", "f.py", "s",
+                "structural",
+                "f.py",
+                "s",
                 detail={"loc": 0, "complexity_signals": ["0 params"]},
             ),
         ]
@@ -94,7 +105,9 @@ class TestExtractSignals:
     def test_empty_detail_ignored(self):
         issues = [
             _make_issue(
-                "structural", "f.py", "s",
+                "structural",
+                "f.py",
+                "s",
                 detail={},
             ),
         ]
@@ -104,7 +117,9 @@ class TestExtractSignals:
     def test_detail_not_a_dict_ignored(self):
         issues = [
             _make_issue(
-                "structural", "f.py", "s",
+                "structural",
+                "f.py",
+                "s",
                 detail={"complexity_signals": "not_a_list"},
             ),
         ]
@@ -114,8 +129,14 @@ class TestExtractSignals:
     def test_monster_function_extracted(self):
         issues = [
             _make_issue(
-                "smells", "f.py", "m",
-                detail={"smell_id": "monster_function", "function": "big_one", "loc": 300},
+                "smells",
+                "f.py",
+                "m",
+                detail={
+                    "smell_id": "monster_function",
+                    "function": "big_one",
+                    "loc": 300,
+                },
             ),
         ]
         signals = _extract_signals(issues)
@@ -125,11 +146,15 @@ class TestExtractSignals:
     def test_multiple_monster_functions_takes_max_loc(self):
         issues = [
             _make_issue(
-                "smells", "f.py", "m1",
+                "smells",
+                "f.py",
+                "m1",
                 detail={"smell_id": "monster_function", "function": "f1", "loc": 100},
             ),
             _make_issue(
-                "smells", "f.py", "m2",
+                "smells",
+                "f.py",
+                "m2",
                 detail={"smell_id": "monster_function", "function": "f2", "loc": 250},
             ),
         ]
@@ -140,7 +165,9 @@ class TestExtractSignals:
     def test_monster_without_function_name(self):
         issues = [
             _make_issue(
-                "smells", "f.py", "m",
+                "smells",
+                "f.py",
+                "m",
                 detail={"smell_id": "monster_function", "loc": 200},
             ),
         ]
@@ -151,7 +178,9 @@ class TestExtractSignals:
     def test_monster_without_loc(self):
         issues = [
             _make_issue(
-                "smells", "f.py", "m",
+                "smells",
+                "f.py",
+                "m",
                 detail={"smell_id": "monster_function", "function": "f"},
             ),
         ]
@@ -162,7 +191,9 @@ class TestExtractSignals:
     def test_non_monster_smells_produce_no_signals(self):
         issues = [
             _make_issue(
-                "smells", "f.py", "s",
+                "smells",
+                "f.py",
+                "s",
                 detail={"smell_id": "star_import"},
             ),
         ]
@@ -181,12 +212,20 @@ class TestExtractSignals:
     def test_mixed_structural_and_monster(self):
         issues = [
             _make_issue(
-                "structural", "f.py", "s",
+                "structural",
+                "f.py",
+                "s",
                 detail={"loc": 350, "complexity_signals": ["9 params"]},
             ),
             _make_issue(
-                "smells", "f.py", "m",
-                detail={"smell_id": "monster_function", "function": "do_all", "loc": 180},
+                "smells",
+                "f.py",
+                "m",
+                detail={
+                    "smell_id": "monster_function",
+                    "function": "do_all",
+                    "loc": 180,
+                },
             ),
         ]
         signals = _extract_signals(issues)
@@ -205,7 +244,9 @@ class TestHasElevatedSignals:
     def test_params_at_boundary_7_not_elevated(self):
         issues = [
             _make_issue(
-                "structural", "f.py", "s",
+                "structural",
+                "f.py",
+                "s",
                 detail={"complexity_signals": ["7 params"]},
             ),
         ]
@@ -214,7 +255,9 @@ class TestHasElevatedSignals:
     def test_params_at_boundary_8_is_elevated(self):
         issues = [
             _make_issue(
-                "structural", "f.py", "s",
+                "structural",
+                "f.py",
+                "s",
                 detail={"complexity_signals": ["8 params"]},
             ),
         ]
@@ -223,7 +266,9 @@ class TestHasElevatedSignals:
     def test_nesting_at_boundary_5_not_elevated(self):
         issues = [
             _make_issue(
-                "structural", "f.py", "s",
+                "structural",
+                "f.py",
+                "s",
                 detail={"complexity_signals": ["nesting depth 5"]},
             ),
         ]
@@ -232,7 +277,9 @@ class TestHasElevatedSignals:
     def test_nesting_at_boundary_6_is_elevated(self):
         issues = [
             _make_issue(
-                "structural", "f.py", "s",
+                "structural",
+                "f.py",
+                "s",
                 detail={"complexity_signals": ["nesting depth 6"]},
             ),
         ]
@@ -241,7 +288,9 @@ class TestHasElevatedSignals:
     def test_loc_at_boundary_299_not_elevated(self):
         issues = [
             _make_issue(
-                "structural", "f.py", "s",
+                "structural",
+                "f.py",
+                "s",
                 detail={"loc": 299},
             ),
         ]
@@ -250,7 +299,9 @@ class TestHasElevatedSignals:
     def test_loc_at_boundary_300_is_elevated(self):
         issues = [
             _make_issue(
-                "structural", "f.py", "s",
+                "structural",
+                "f.py",
+                "s",
                 detail={"loc": 300},
             ),
         ]
@@ -307,7 +358,9 @@ class TestClassify:
 
     def test_priority_three_detectors_beats_dupes(self):
         """3+ detectors wins even when dupes is present."""
-        assert _classify({"dupes", "naming", "coupling"}, {}) == "mixed_responsibilities"
+        assert (
+            _classify({"dupes", "naming", "coupling"}, {}) == "mixed_responsibilities"
+        )
 
 
 # ── Targeted _build_summary tests ────────────────────────────────────
@@ -323,7 +376,9 @@ class TestBuildSummary:
 
     def test_structural_complexity_monster(self):
         s = _build_summary(
-            "structural_complexity", {"smells"}, {"monster_loc": 200, "monster_funcs": ["f1", "f2"]}
+            "structural_complexity",
+            {"smells"},
+            {"monster_loc": 200, "monster_funcs": ["f1", "f2"]},
         )
         assert "200" in s
         assert "f1" in s
@@ -387,9 +442,7 @@ class TestBuildEvidence:
         assert "f4" not in monster_ev[0]
 
     def test_issue_summaries_capped_at_10(self):
-        issues = [
-            _make_issue("smells", "f.py", f"s{i}") for i in range(15)
-        ]
+        issues = [_make_issue("smells", "f.py", f"s{i}") for i in range(15)]
         evidence = _build_evidence(issues, {})
         summary_entries = [e for e in evidence if e.startswith("[")]
         assert len(summary_entries) == 10

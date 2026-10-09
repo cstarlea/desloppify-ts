@@ -15,11 +15,17 @@ from pathlib import Path
 from desloppify.languages._framework.node.js_text import strip_js_ts_comments
 
 ROUTE_MODULE_EXTENSIONS = (".tsx", ".ts", ".jsx", ".js", ".mts", ".mjs")
-_CONFIG_NAMES = ("react-router.config.ts", "react-router.config.js", "react-router.config.mjs")
+_CONFIG_NAMES = (
+    "react-router.config.ts",
+    "react-router.config.js",
+    "react-router.config.mjs",
+)
 _APP_DIRECTORY_RE = re.compile(r"""\bappDirectory\s*:\s*(['"])([^'"]+)\1""")
 _FILE_ARG_RES = (
     # route("path", "file") and route(null, "file")
-    re.compile(r"""\broute\s*\(\s*(?:(['"`])[^'"`]*\1|null|undefined)\s*,\s*(['"])(?P<file>[^'"]+)\2"""),
+    re.compile(
+        r"""\broute\s*\(\s*(?:(['"`])[^'"`]*\1|null|undefined)\s*,\s*(['"])(?P<file>[^'"]+)\2"""
+    ),
     # index("file"), layout("file", [...])
     re.compile(r"""\b(?:index|layout)\s*\(\s*(['"])(?P<file>[^'"]+)\1"""),
     # { path: "x", file: "file" }
@@ -90,7 +96,9 @@ def route_config(package_root: Path) -> RouteConfig:
     if config_file is None:
         return RouteConfig(app_dir=app_dir, config_file=None, files=())
     try:
-        text = (package_root / config_file).read_text(encoding="utf-8", errors="replace")
+        text = (package_root / config_file).read_text(
+            encoding="utf-8", errors="replace"
+        )
     except OSError:
         return RouteConfig(app_dir=app_dir, config_file=config_file, files=())
     code = strip_js_ts_comments(text)

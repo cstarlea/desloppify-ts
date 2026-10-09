@@ -76,14 +76,18 @@ def test_discover_scorable_and_tests_normalizes_extra_test_files(monkeypatch) ->
         }
     )
 
-    monkeypatch.setattr(discovery_mod, "_file_loc", lambda _path: discovery_mod._MIN_LOC + 1)
+    monkeypatch.setattr(
+        discovery_mod, "_file_loc", lambda _path: discovery_mod._MIN_LOC + 1
+    )
     monkeypatch.setattr(discovery_mod, "_has_testable_logic", lambda _path, _lang: True)
 
-    _production, tests, _scorable, _potential = discovery_mod._discover_scorable_and_tests(
-        graph={},
-        zone_map=zone_map,
-        lang_name="python",
-        extra_test_files={f"{root}/tests/test_a.py", "tests/test_b.py"},
+    _production, tests, _scorable, _potential = (
+        discovery_mod._discover_scorable_and_tests(
+            graph={},
+            zone_map=zone_map,
+            lang_name="python",
+            extra_test_files={f"{root}/tests/test_a.py", "tests/test_b.py"},
+        )
     )
 
     assert "tests/test_a.py" in tests

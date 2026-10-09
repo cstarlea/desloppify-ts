@@ -10,8 +10,12 @@ from desloppify.app.commands.helpers import transition_messages as mod
 @pytest.fixture()
 def _config_with_messages(monkeypatch):
     """Patch load_config to return transition messages."""
+
     def _make(messages: dict):
-        monkeypatch.setattr(mod, "load_config", lambda: {"transition_messages": messages})
+        monkeypatch.setattr(
+            mod, "load_config", lambda: {"transition_messages": messages}
+        )
+
     return _make
 
 
@@ -31,11 +35,15 @@ def test_emit_exact_fine_grained_phase(_config_with_messages, capsys):
     assert "entering plan mode" in out
 
 
-def test_exact_phase_takes_priority_over_postflight_generic(_config_with_messages, capsys):
-    _config_with_messages({
-        "review_initial": "Exact message.",
-        "postflight": "Generic message.",
-    })
+def test_exact_phase_takes_priority_over_postflight_generic(
+    _config_with_messages, capsys
+):
+    _config_with_messages(
+        {
+            "review_initial": "Exact message.",
+            "postflight": "Generic message.",
+        }
+    )
     assert mod.emit_transition_message("review_initial") is True
     out = capsys.readouterr().out
     assert "Exact message." in out
@@ -99,6 +107,8 @@ def test_exact_takes_priority_over_postflight(_config_with_messages, capsys):
 
 
 def test_config_load_failure_returns_false(monkeypatch, capsys):
-    monkeypatch.setattr(mod, "load_config", lambda: (_ for _ in ()).throw(OSError("nope")))
+    monkeypatch.setattr(
+        mod, "load_config", lambda: (_ for _ in ()).throw(OSError("nope"))
+    )
     assert mod.emit_transition_message("execute") is False
     assert capsys.readouterr().out == ""

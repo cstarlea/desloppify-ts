@@ -137,7 +137,9 @@ def _build_dimension_lookup() -> dict[str, list[str]]:
         # Find which dimension this belongs to via get_dimension_for_detector or direct name match
         for dim in DIMENSIONS:
             dim_lower = dim.name.lower()
-            if normalized_display == dim_lower or normalized_key == dim_lower.replace(" ", "_"):
+            if normalized_display == dim_lower or normalized_key == dim_lower.replace(
+                " ", "_"
+            ):
                 detectors = list(dim.detectors) if hasattr(dim, "detectors") else []
                 if normalized_key not in lookup:
                     lookup[normalized_key] = detectors
@@ -147,7 +149,8 @@ def _build_dimension_lookup() -> dict[str, list[str]]:
 
 
 def _lookup_dimension_score(
-    state: StateModel, display_name: str,
+    state: StateModel,
+    display_name: str,
 ) -> tuple[dict[str, Any], str]:
     """Find dimension_scores entry with case-insensitive fallback.
 

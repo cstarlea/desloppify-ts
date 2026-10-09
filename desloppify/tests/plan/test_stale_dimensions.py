@@ -10,6 +10,7 @@ from desloppify.engine._plan.sync.dimensions import sync_subjective_dimensions
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _plan_with_queue(*ids: str) -> dict:
     plan = empty_plan()
     plan["queue_order"] = list(ids)
@@ -132,6 +133,7 @@ def _state_with_mixed_dimensions(
 # ---------------------------------------------------------------------------
 # Unscored dimension sync
 # ---------------------------------------------------------------------------
+
 
 def test_unscored_injected_at_back():
     """Unscored IDs are appended after existing items."""
@@ -258,6 +260,7 @@ def test_unscored_sync_repairs_skipped_overlap():
 # ---------------------------------------------------------------------------
 # Injection: empty queue + stale dimensions
 # ---------------------------------------------------------------------------
+
 
 def test_injects_when_queue_empty():
     plan = _plan_with_queue()
@@ -399,6 +402,7 @@ def test_no_injection_when_no_dimension_scores():
 # Cleanup: prune resolved stale IDs
 # ---------------------------------------------------------------------------
 
+
 def test_prunes_resolved_dimension_ids():
     plan = _plan_with_queue(
         "subjective::design_coherence",
@@ -428,6 +432,7 @@ def test_prune_does_not_touch_real_issue_ids():
 # ---------------------------------------------------------------------------
 # Full lifecycle: inject → refresh → prune → re-inject
 # ---------------------------------------------------------------------------
+
 
 def test_full_lifecycle():
     plan = _plan_with_queue("some_issue::file.py::abc123")
@@ -486,6 +491,7 @@ def test_full_lifecycle():
 # Reconcile must not supersede synthetic IDs
 # ---------------------------------------------------------------------------
 
+
 def test_reconcile_ignores_synthetic_ids():
     """Reconciliation must not treat subjective::* IDs as dead issues."""
     plan = _plan_with_queue("subjective::design_coherence")
@@ -500,6 +506,7 @@ def test_reconcile_ignores_synthetic_ids():
 # ---------------------------------------------------------------------------
 # Injection: only subjective items in queue (relaxed condition)
 # ---------------------------------------------------------------------------
+
 
 def test_injection_when_only_subjective_in_queue():
     """New stale dims are injected when only subjective IDs remain in queue."""
@@ -518,6 +525,7 @@ def test_injection_when_only_subjective_in_queue():
 # ---------------------------------------------------------------------------
 # Auto-clustering of stale subjective dimensions
 # ---------------------------------------------------------------------------
+
 
 def test_stale_cluster_created():
     """When >=2 stale dims exist, auto_cluster_issues creates a cluster."""
@@ -587,11 +595,16 @@ def test_stale_cluster_updated():
     # A third dimension becomes stale — must also appear in state
     plan["queue_order"].append("subjective::convention_drift")
     state2 = _state_with_stale_dimensions(
-        "design_coherence", "error_consistency", "convention_drift",
+        "design_coherence",
+        "error_consistency",
+        "convention_drift",
     )
     changes = auto_cluster_issues(plan, state2)
     assert changes >= 1
-    assert "subjective::convention_drift" in plan["clusters"]["auto/stale-review"]["issue_ids"]
+    assert (
+        "subjective::convention_drift"
+        in plan["clusters"]["auto/stale-review"]["issue_ids"]
+    )
     assert "Re-review 3 stale" in plan["clusters"]["auto/stale-review"]["description"]
 
 
@@ -610,11 +623,12 @@ def test_single_stale_dim_no_cluster():
 # Category preservation: under_target kept when not evicting
 # ---------------------------------------------------------------------------
 
+
 def test_under_target_preserved_when_no_backlog():
     """Under-target IDs are preserved when no objective backlog exists."""
     plan = _plan_with_queue(
-        "subjective::design_coherence",   # unscored
-        "subjective::naming_quality",     # under_target
+        "subjective::design_coherence",  # unscored
+        "subjective::naming_quality",  # under_target
     )
     state = _state_with_mixed_dimensions(
         unscored=["design_coherence"],
@@ -631,8 +645,8 @@ def test_under_target_preserved_when_no_backlog():
 def test_under_target_evicted_mid_cycle_with_objective_backlog():
     """Mid-cycle with objective backlog, under_target IDs are evicted."""
     plan = _plan_with_queue(
-        "subjective::naming_quality",     # under_target
-        "some_issue::file.py::abc123",    # objective (makes it mid-cycle)
+        "subjective::naming_quality",  # under_target
+        "some_issue::file.py::abc123",  # objective (makes it mid-cycle)
     )
     plan["plan_start_scores"] = {"strict": 50.0}  # mark as mid-cycle
     state = _state_with_mixed_dimensions(
@@ -654,6 +668,7 @@ def test_under_target_evicted_mid_cycle_with_objective_backlog():
 # ---------------------------------------------------------------------------
 # Regression: full evict → clear backlog → re-injection cycle
 # ---------------------------------------------------------------------------
+
 
 def test_under_target_reinjected_after_objective_backlog_clears():
     """Under-target IDs evicted mid-cycle must reappear when objective backlog clears."""
@@ -726,4 +741,6 @@ def test_escalation_mid_cycle_reinserts_evicted_ids():
     objective_idx = plan["queue_order"].index("some_issue::file.py::abc123")
     subjective_idx = plan["queue_order"].index("subjective::naming_quality")
     assert subjective_idx < objective_idx
-    assert plan["subjective_defer_meta"]["force_visible_ids"] == ["subjective::naming_quality"]
+    assert plan["subjective_defer_meta"]["force_visible_ids"] == [
+        "subjective::naming_quality"
+    ]

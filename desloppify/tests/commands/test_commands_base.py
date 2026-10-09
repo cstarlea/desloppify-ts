@@ -66,7 +66,8 @@ class TestMakeCmdComplexity:
         cmd = make_cmd_complexity(file_finder=lambda p: [], signals=[])
 
         with patch(
-            "desloppify.engine.detectors.complexity.detect_complexity", return_value=([], 0)
+            "desloppify.engine.detectors.complexity.detect_complexity",
+            return_value=([], 0),
         ) as mock_detect:
             cmd(_make_args())
             mock_detect.assert_called_once()
@@ -75,24 +76,32 @@ class TestMakeCmdComplexity:
     @patch("desloppify.languages._framework.commands.base.display_entries")
     def test_uses_threshold_override_from_args(self, mock_display):
         """Command honors the detect CLI threshold override when provided."""
-        cmd = make_cmd_complexity(file_finder=lambda p: [], signals=[], default_threshold=15)
+        cmd = make_cmd_complexity(
+            file_finder=lambda p: [], signals=[], default_threshold=15
+        )
         args = SimpleNamespace(path="/tmp/test", threshold=33)
 
         with patch(
-            "desloppify.engine.detectors.complexity.detect_complexity", return_value=([], 0)
+            "desloppify.engine.detectors.complexity.detect_complexity",
+            return_value=([], 0),
         ) as mock_detect:
             cmd(args)
             assert mock_detect.call_args.kwargs["threshold"] == 33
             mock_display.assert_called_once()
 
     @patch("desloppify.languages._framework.commands.base.display_entries")
-    def test_falls_back_to_default_threshold_when_args_threshold_is_none(self, mock_display):
+    def test_falls_back_to_default_threshold_when_args_threshold_is_none(
+        self, mock_display
+    ):
         """Command uses the factory default when args.threshold exists but is None."""
-        cmd = make_cmd_complexity(file_finder=lambda p: [], signals=[], default_threshold=15)
+        cmd = make_cmd_complexity(
+            file_finder=lambda p: [], signals=[], default_threshold=15
+        )
         args = SimpleNamespace(path="/tmp/test", threshold=None)
 
         with patch(
-            "desloppify.engine.detectors.complexity.detect_complexity", return_value=([], 0)
+            "desloppify.engine.detectors.complexity.detect_complexity",
+            return_value=([], 0),
         ) as mock_detect:
             cmd(args)
             assert mock_detect.call_args.kwargs["threshold"] == 15

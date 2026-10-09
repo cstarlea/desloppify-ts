@@ -126,7 +126,9 @@ def validate_dimension_prompts(
                 context=f"{context}.{dim_name}.skip",
             ),
         }
-        meta = validate_prompt_meta(entry.get("meta"), context=f"{context}.{dim_name}.meta")
+        meta = validate_prompt_meta(
+            entry.get("meta"), context=f"{context}.{dim_name}.meta"
+        )
         if meta:
             parsed_entry["meta"] = meta
         out[dim_name] = parsed_entry

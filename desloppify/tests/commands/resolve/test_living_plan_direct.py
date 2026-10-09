@@ -127,7 +127,9 @@ def test_update_living_plan_after_resolve_marks_all_completed_clusters_done(
     monkeypatch.setattr(
         living_plan_mod,
         "append_log_entry",
-        lambda _plan, event, **kwargs: calls.append((event, kwargs.get("cluster_name"))),
+        lambda _plan, event, **kwargs: calls.append(
+            (event, kwargs.get("cluster_name"))
+        ),
     )
     monkeypatch.setattr(
         living_plan_mod, "add_uncommitted_issues", lambda *_a, **_k: None
@@ -192,14 +194,14 @@ def test_update_living_plan_after_resolve_reconciles_when_queue_drains(
     monkeypatch.setattr(
         living_plan_mod,
         "reconcile_plan",
-        lambda _plan, _state, *, target_strict: seen.append(
-            ("reconcile", target_strict, _state)
-        )
-        or type(
-            "Result",
-            (),
-            {"lifecycle_phase_changed": False, "lifecycle_phase": "execute"},
-        )(),
+        lambda _plan, _state, *, target_strict: (
+            seen.append(("reconcile", target_strict, _state))
+            or type(
+                "Result",
+                (),
+                {"lifecycle_phase_changed": False, "lifecycle_phase": "execute"},
+            )()
+        ),
     )
 
     living_plan_mod.update_living_plan_after_resolve(
@@ -288,14 +290,14 @@ def test_update_living_plan_after_resolve_reconciles_once_when_invalidated_and_d
     monkeypatch.setattr(
         living_plan_mod,
         "reconcile_plan",
-        lambda _plan, _state, *, target_strict: seen.append(
-            ("reconcile", target_strict)
-        )
-        or type(
-            "Result",
-            (),
-            {"lifecycle_phase_changed": False, "lifecycle_phase": "execute"},
-        )(),
+        lambda _plan, _state, *, target_strict: (
+            seen.append(("reconcile", target_strict))
+            or type(
+                "Result",
+                (),
+                {"lifecycle_phase_changed": False, "lifecycle_phase": "execute"},
+            )()
+        ),
     )
 
     living_plan_mod.update_living_plan_after_resolve(

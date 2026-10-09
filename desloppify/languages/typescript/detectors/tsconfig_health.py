@@ -63,19 +63,34 @@ _KNOWN_BASES: tuple[tuple[str, dict[str, Any]], ...] = (
     ("@tsconfig/", {"strict": True}),
     (
         "@total-typescript/tsconfig",
-        {"strict": True, "noUncheckedIndexedAccess": True, "noImplicitOverride": True, "verbatimModuleSyntax": True},
+        {
+            "strict": True,
+            "noUncheckedIndexedAccess": True,
+            "noImplicitOverride": True,
+            "verbatimModuleSyntax": True,
+        },
     ),
     (
         "@sindresorhus/tsconfig",
-        {name: value for name, value in _STRICTEST.items() if name != "exactOptionalPropertyTypes"},
+        {
+            name: value
+            for name, value in _STRICTEST.items()
+            if name != "exactOptionalPropertyTypes"
+        },
     ),
     ("@vue/tsconfig", {"strict": True, "verbatimModuleSyntax": True}),
 )
 
 # The options checked one by one when strict is on: (tier, what goes unchecked without it).
 _EXTRAS: dict[str, tuple[int, str]] = {
-    "noUncheckedIndexedAccess": (3, "`arr[i]` and `record[key]` are typed as never undefined"),
-    "noImplicitOverride": (2, "a method that overrides a base class method needs no `override`"),
+    "noUncheckedIndexedAccess": (
+        3,
+        "`arr[i]` and `record[key]` are typed as never undefined",
+    ),
+    "noImplicitOverride": (
+        2,
+        "a method that overrides a base class method needs no `override`",
+    ),
     "verbatimModuleSyntax": (2, "type-only imports can be emitted as runtime imports"),
 }
 # Options compared between packages.
@@ -106,7 +121,9 @@ class _Project:
     config: Path
     files: list[str] = field(default_factory=list)
     ts_major: int | None = None
-    package: bool = False  # a published package (named, not private): compared for drift
+    package: bool = (
+        False  # a published package (named, not private): compared for drift
+    )
     values: dict[str, tuple[Any, bool]] = field(default_factory=dict)
     reported: set[str] = field(default_factory=set)
     not_applicable: set[str] = field(default_factory=set)
@@ -132,7 +149,10 @@ class _Project:
             return value is True
         if self.ts_major is not None and self.ts_major >= 6:
             return True
-        return all(self.option(flag) == (True, True) for flag in ("noImplicitAny", "strictNullChecks"))
+        return all(
+            self.option(flag) == (True, True)
+            for flag in ("noImplicitAny", "strictNullChecks")
+        )
 
 
 def detect_tsconfig_health(
@@ -179,12 +199,16 @@ def detect_tsconfig_health(
                 ),
             )
     entries = list(found.values())
-    packages = [project for project in projects if project.package and project.strict_on()]
+    packages = [
+        project for project in projects if project.package and project.strict_on()
+    ]
     if len(packages) > 1:
         for project in packages:
             checked.add((project.config, "drift"))
             entries.extend(_drift_entries(project, packages))
-    return DetectorResult(entries=entries, population_kind="checks", population_size=len(checked))
+    return DetectorResult(
+        entries=entries, population_kind="checks", population_size=len(checked)
+    )
 
 
 def _projects(path: Path, zone_map: FileZoneMap | None, root: Path) -> list[_Project]:
@@ -198,7 +222,9 @@ def _projects(path: Path, zone_map: FileZoneMap | None, root: Path) -> list[_Pro
         directory = Path(resolve_path(filepath)).parent
         if directory not in by_dir:
             config = find_nearest_tsconfig(directory)
-            by_dir[directory] = config if config is not None and config.is_relative_to(root) else None
+            by_dir[directory] = (
+                config if config is not None and config.is_relative_to(root) else None
+            )
         config = by_dir[directory]
         if config is None:
             continue
@@ -277,7 +303,11 @@ def _nearest_manifest(directory: Path, root: Path) -> dict[str, Any] | None:
 
 def _published_package(directory: Path, root: Path) -> bool:
     manifest = _nearest_manifest(directory, root)
-    return manifest is not None and isinstance(manifest.get("name"), str) and manifest.get("private") is not True
+    return (
+        manifest is not None
+        and isinstance(manifest.get("name"), str)
+        and manifest.get("private") is not True
+    )
 
 
 def _package_type(directory: Path) -> str | None:
@@ -301,7 +331,9 @@ def _typescript_major(directory: Path, root: Path) -> int | None:
             spec = deps.get("typescript") if isinstance(deps, dict) else None
             if isinstance(spec, str):
                 if spec.startswith("catalog:"):
-                    spec = _pnpm_catalog_spec(current, root, spec[len("catalog:") :] or "default")
+                    spec = _pnpm_catalog_spec(
+                        current, root, spec[len("catalog:") :] or "default"
+                    )
                 return _major(spec)
         if current == root:
             break
@@ -318,7 +350,11 @@ def _pnpm_catalog_spec(directory: Path, root: Path, catalog: str) -> str | None:
     for current in (directory, *directory.parents):
         workspace = current / "pnpm-workspace.yaml"
         if workspace.is_file():
-            return _catalog_entry((read_file_text(str(workspace)) or "").splitlines(), catalog, "typescript")
+            return _catalog_entry(
+                (read_file_text(str(workspace)) or "").splitlines(),
+                catalog,
+                "typescript",
+            )
         if current == root:
             break
     return None
@@ -326,7 +362,11 @@ def _pnpm_catalog_spec(directory: Path, root: Path, catalog: str) -> str | None:
 
 def _catalog_entry(lines: list[str], catalog: str, package: str) -> str | None:
     """``package`` in the ``catalog:`` map (``default``) or in ``catalogs.<catalog>``."""
-    paths = (["catalog"], ["catalogs", "default"]) if catalog == "default" else (["catalogs", catalog],)
+    paths = (
+        (["catalog"], ["catalogs", "default"])
+        if catalog == "default"
+        else (["catalogs", catalog],)
+    )
     stack: list[tuple[int, str]] = []
     for line in lines:
         text = line.split("#", 1)[0].rstrip()
@@ -375,9 +415,15 @@ def _strict_entry(project: _Project, owner: Path) -> dict[str, Any]:
 def _drift_entries(project: _Project, packages: list[_Project]) -> list[dict[str, Any]]:
     weaker = []
     for name in _DRIFT_OPTIONS:
-        if name in project.reported or name in project.not_applicable or project.on(name) is not False:
+        if (
+            name in project.reported
+            or name in project.not_applicable
+            or project.on(name) is not False
+        ):
             continue
-        states = [other.on(name) for other in packages if name not in other.not_applicable]
+        states = [
+            other.on(name) for other in packages if name not in other.not_applicable
+        ]
         known = [state for state in states if state is not None]
         on = sum(1 for state in known if state)
         if on >= 2 and on * 2 > len(known):

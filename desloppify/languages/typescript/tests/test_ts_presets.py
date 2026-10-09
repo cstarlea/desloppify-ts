@@ -45,17 +45,37 @@ def _coupling_issues(root: Path, config: dict | None = None) -> list[dict]:
 
 def _layered_app(root: Path) -> None:
     _write(root, "package.json", json.dumps({"name": "app"}))
-    _write(root, "src/app/main.ts", "import { add } from '../features/cart/add';\nexport { add };\n")
-    _write(root, "src/features/cart/add.ts", "import { s } from '../auth/session';\nexport const add = s;\n")
+    _write(
+        root,
+        "src/app/main.ts",
+        "import { add } from '../features/cart/add';\nexport { add };\n",
+    )
+    _write(
+        root,
+        "src/features/cart/add.ts",
+        "import { s } from '../auth/session';\nexport const add = s;\n",
+    )
     _write(root, "src/features/auth/session.ts", "export const s = 1;\n")
-    _write(root, "src/lib/format.ts", "import { add } from '../features/cart/add';\nexport const f = add;\n")
+    _write(
+        root,
+        "src/lib/format.ts",
+        "import { add } from '../features/cart/add';\nexport const f = add;\n",
+    )
 
 
 def test_no_layout_is_assumed(tmp_path):
     """The author's old src/shared + src/tools rule no longer applies by itself."""
     _write(tmp_path, "package.json", json.dumps({"name": "app"}))
-    _write(tmp_path, "src/shared/a.ts", "import { t } from '../tools/editor/t';\nexport const a = t;\n")
-    _write(tmp_path, "src/tools/editor/t.ts", "import { b } from '../viewer/b';\nexport const t = b;\n")
+    _write(
+        tmp_path,
+        "src/shared/a.ts",
+        "import { t } from '../tools/editor/t';\nexport const a = t;\n",
+    )
+    _write(
+        tmp_path,
+        "src/tools/editor/t.ts",
+        "import { b } from '../viewer/b';\nexport const t = b;\n",
+    )
     _write(tmp_path, "src/tools/viewer/b.ts", "export const b = 1;\n")
     assert _coupling_issues(tmp_path) == []
 
@@ -87,7 +107,9 @@ def test_configured_layers_replace_presets(tmp_path):
 
 
 def test_marker_dependency_turns_preset_on(tmp_path):
-    _write(tmp_path, "package.json", json.dumps({"devDependencies": {"steiger": "^0.5.0"}}))
+    _write(
+        tmp_path, "package.json", json.dumps({"devDependencies": {"steiger": "^0.5.0"}})
+    )
     names = [p.name for p in presets_mod.active_presets(tmp_path, _lang())]
     assert names == ["feature-sliced"]
     layers = presets_mod.resolve_layers(tmp_path, _lang())
@@ -111,7 +133,11 @@ def test_config_set_validates_preset_names():
 
 def test_shadcn_ui_dir_from_components_json(tmp_path):
     assert presets_mod.shadcn_ui_dirs(tmp_path) == ()
-    _write(tmp_path, "components.json", json.dumps({"aliases": {"components": "@/components"}}))
+    _write(
+        tmp_path,
+        "components.json",
+        json.dumps({"aliases": {"components": "@/components"}}),
+    )
     (tmp_path / "src/components/ui").mkdir(parents=True)
     assert presets_mod.shadcn_ui_dirs(tmp_path) == ("src/components/ui",)
     _write(tmp_path, "components.json", json.dumps({"aliases": {"ui": "~/ui"}}))

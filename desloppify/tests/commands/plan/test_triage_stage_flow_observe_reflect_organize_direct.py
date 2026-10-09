@@ -26,29 +26,41 @@ def _services(
     saved: list[dict] = []
     logs: list[tuple[str, dict]] = []
     state_obj = state or {}
-    return SimpleNamespace(
-        command_runtime=lambda _args: SimpleNamespace(state=state_obj),
-        load_plan=lambda: plan,
-        save_plan=lambda current: saved.append(current.copy()),
-        collect_triage_input=lambda _plan, _state: SimpleNamespace(
-            open_issues=open_issues or {},
-            resolved_issues=resolved_issues or {},
+    return (
+        SimpleNamespace(
+            command_runtime=lambda _args: SimpleNamespace(state=state_obj),
+            load_plan=lambda: plan,
+            save_plan=lambda current: saved.append(current.copy()),
+            collect_triage_input=lambda _plan, _state: SimpleNamespace(
+                open_issues=open_issues or {},
+                resolved_issues=resolved_issues or {},
+            ),
+            extract_issue_citations=lambda _report, _valid_ids: set(),
+            append_log_entry=lambda _plan, action, **kwargs: logs.append(
+                (action, kwargs)
+            ),
+            detect_recurring_patterns=lambda _open, _resolved: {},
         ),
-        extract_issue_citations=lambda _report, _valid_ids: set(),
-        append_log_entry=lambda _plan, action, **kwargs: logs.append((action, kwargs)),
-        detect_recurring_patterns=lambda _open, _resolved: {},
-    ), saved, logs
+        saved,
+        logs,
+    )
 
 
 def test_observe_autostarts_planning_and_requires_report(monkeypatch) -> None:
     plan = {"epic_triage_meta": {}}
     services, saved, _logs = _services(plan)
     called: list[str] = []
-    monkeypatch.setattr(observe_mod, "_print_observe_report_requirement", lambda: called.append("required"))
+    monkeypatch.setattr(
+        observe_mod,
+        "_print_observe_report_requirement",
+        lambda: called.append("required"),
+    )
 
     def _inject_started_plan(current_plan: dict) -> None:
         current_plan.setdefault("queue_order", []).append("workflow::observe")
-        current_plan.setdefault("epic_triage_meta", {}).setdefault("triage_stages", {})["strategize"] = {
+        current_plan.setdefault("epic_triage_meta", {}).setdefault("triage_stages", {})[
+            "strategize"
+        ] = {
             "stage": "strategize",
             "report": "{}",
             "confirmed_at": "t",
@@ -81,7 +93,11 @@ def test_observe_zero_issue_path_records_stage_and_saves(monkeypatch) -> None:
         }
     }
     services, saved, _logs = _services(plan)
-    monkeypatch.setattr(observe_mod, "record_observe_stage", lambda stages, **_k: stages.setdefault("observe", {}) or [])
+    monkeypatch.setattr(
+        observe_mod,
+        "record_observe_stage",
+        lambda stages, **_k: stages.setdefault("observe", {}) or [],
+    )
 
     observe_mod._cmd_stage_observe(
         _args(report="short but valid"),
@@ -108,7 +124,9 @@ def test_organize_exits_when_reflect_requirement_not_met(monkeypatch) -> None:
     plan = {"epic_triage_meta": {"triage_stages": {}}, "clusters": {}}
     services, _saved, _logs = _services(plan, state={"issues": {}})
     monkeypatch.setattr(organize_mod, "has_triage_in_queue", lambda _plan: True)
-    monkeypatch.setattr(organize_mod, "_require_reflect_stage_for_organize", lambda _stages: False)
+    monkeypatch.setattr(
+        organize_mod, "_require_reflect_stage_for_organize", lambda _stages: False
+    )
 
     organize_mod._cmd_stage_organize(_args(report="organized"), services=services)
 
@@ -128,8 +146,12 @@ def test_organize_records_zero_issue_noop_batch(monkeypatch) -> None:
     }
     services, saved, logs = _services(plan, state={"issues": {}})
     monkeypatch.setattr(organize_mod, "has_triage_in_queue", lambda _plan: True)
-    monkeypatch.setattr(organize_mod, "_require_reflect_stage_for_organize", lambda _stages: True)
-    monkeypatch.setattr(organize_mod, "auto_confirm_reflect_for_organize", lambda **_kwargs: True)
+    monkeypatch.setattr(
+        organize_mod, "_require_reflect_stage_for_organize", lambda _stages: True
+    )
+    monkeypatch.setattr(
+        organize_mod, "auto_confirm_reflect_for_organize", lambda **_kwargs: True
+    )
 
     organize_mod._cmd_stage_organize(
         _args(
@@ -149,9 +171,21 @@ def test_organize_records_zero_issue_noop_batch(monkeypatch) -> None:
 def test_public_stage_entrypoints_remain_callable(monkeypatch) -> None:
     called: list[str] = []
     services, _saved, _logs = _services({"epic_triage_meta": {"triage_stages": {}}})
-    monkeypatch.setattr(reflect_mod, "_cmd_stage_reflect", lambda *args, **kwargs: called.append("reflect"))
-    monkeypatch.setattr(organize_mod, "_cmd_stage_organize", lambda *args, **kwargs: called.append("organize"))
-    monkeypatch.setattr(observe_mod, "ensure_triage_started", lambda *args, **kwargs: SimpleNamespace(status="blocked"))
+    monkeypatch.setattr(
+        reflect_mod,
+        "_cmd_stage_reflect",
+        lambda *args, **kwargs: called.append("reflect"),
+    )
+    monkeypatch.setattr(
+        organize_mod,
+        "_cmd_stage_organize",
+        lambda *args, **kwargs: called.append("organize"),
+    )
+    monkeypatch.setattr(
+        observe_mod,
+        "ensure_triage_started",
+        lambda *args, **kwargs: SimpleNamespace(status="blocked"),
+    )
 
     args = _args()
     observe_mod.cmd_stage_observe(args, services=services)
@@ -222,9 +256,15 @@ def test_reflect_preserves_observe_auto_disposition_during_fresh_persist(
     }
     services, saved, _logs = _services(plan, open_issues=open_issues)
     monkeypatch.setattr(reflect_mod, "has_triage_in_queue", lambda _plan: True)
-    monkeypatch.setattr(reflect_mod, "auto_confirm_observe_if_attested", lambda **_kwargs: True)
-    monkeypatch.setattr(reflect_mod, "validate_stage_report_length", lambda **_kwargs: True)
-    monkeypatch.setattr(reflect_mod, "_validate_recurring_dimension_mentions", lambda **_kwargs: True)
+    monkeypatch.setattr(
+        reflect_mod, "auto_confirm_observe_if_attested", lambda **_kwargs: True
+    )
+    monkeypatch.setattr(
+        reflect_mod, "validate_stage_report_length", lambda **_kwargs: True
+    )
+    monkeypatch.setattr(
+        reflect_mod, "_validate_recurring_dimension_mentions", lambda **_kwargs: True
+    )
 
     reflect_mod._cmd_stage_reflect(
         _args(

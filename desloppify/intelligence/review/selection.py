@@ -148,7 +148,7 @@ def _compute_review_priority(filepath: str, lang, state: dict) -> int:
             score += ic * 10
 
     # Already has programmatic issues (compound value — review will be richer)
-    issues = (state.get("work_items") or state.get("issues", {}))
+    issues = state.get("work_items") or state.get("issues", {})
     n_issues = sum(
         1 for f in issues.values() if f.get("file") == rpath and f["status"] == "open"
     )
@@ -190,9 +190,7 @@ def low_value_pattern(lang_or_name: Any = None) -> re.Pattern[str]:
 
     if isinstance(lang_or_name, str):
         try:
-            pattern = getattr(
-                get_lang(lang_or_name), "review_low_value_pattern", None
-            )
+            pattern = getattr(get_lang(lang_or_name), "review_low_value_pattern", None)
             if isinstance(pattern, re.Pattern):
                 return pattern
         except (ImportError, ValueError, TypeError, AttributeError) as exc:

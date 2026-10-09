@@ -41,7 +41,9 @@ def compute_score_impact(
     failing = det_data.get("failing")
     if not isinstance(failing, (int, float)) or failing <= 0:
         failing = det_data.get("count")
-    avg_weight = old_weighted / max(1, int(failing) if isinstance(failing, (int, float)) else 1)
+    avg_weight = old_weighted / max(
+        1, int(failing) if isinstance(failing, (int, float)) else 1
+    )
     new_weighted = max(0.0, old_weighted - issues_to_fix * avg_weight)
 
     total_potential = 0
@@ -81,4 +83,3 @@ def get_dimension_for_detector(detector: str) -> Dimension | None:
 
 
 __all__ = ["compute_score_impact", "get_dimension_for_detector"]
-

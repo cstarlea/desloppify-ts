@@ -170,7 +170,9 @@ class TestCodeText:
         assert result.count("\n") == 2
 
     def test_template_substitutions_stay_code(self):
-        result = _code_text("const s = `id: ${await f('x')} and ${`${await g()}`}`;\nawait h();")
+        result = _code_text(
+            "const s = `id: ${await f('x')} and ${`${await g()}`}`;\nawait h();"
+        )
         assert result.count("await") == 3
         assert "id:" not in result
         assert "'x'" not in result
@@ -189,7 +191,9 @@ class TestCodeText:
         text = "a('x\\'y'); /* c\n d */ `t${b}`; // e\n/re/.test(s)"
         result = _code_text(text)
         assert len(result) == len(text)
-        assert [i for i, c in enumerate(result) if c == "\n"] == [i for i, c in enumerate(text) if c == "\n"]
+        assert [i for i, c in enumerate(result) if c == "\n"] == [
+            i for i, c in enumerate(text) if c == "\n"
+        ]
 
 
 # ── _track_brace_body ────────────────────────────────────────
@@ -372,7 +376,9 @@ class TestDetectAsyncNoAwait:
 
     def test_await_in_comment_still_flagged(self):
         """'await' inside a comment should not count — function is still flagged."""
-        content = "async function fetchData() {\n  // await fetch('/');\n  return 1;\n}\n"
+        content = (
+            "async function fetchData() {\n  // await fetch('/');\n  return 1;\n}\n"
+        )
         counts = _make_counts()
         _detect_async_no_await(_ctx(content), counts)
         assert len(counts["async_no_await"]) == 1
@@ -572,14 +578,21 @@ class TestDetectDeadUseeffects:
         assert len(counts["dead_useeffect"]) == 0
 
 
-
 _DEAD_EFFECT_CASES = [
     pytest.param("useEffect(function () {\n}, []);\n", [1], id="function-form"),
     pytest.param("useEffect(() => {\n  return;\n}, [a]);\n", [1], id="bare-return"),
-    pytest.param("React.useEffect(function () { return; });\n", [1], id="react-function-return"),
-    pytest.param("useEffect(() => {\n  return () => off();\n}, []);\n", [], id="returns-cleanup"),
-    pytest.param("useEffect(function () { load(); }, []);\n", [], id="function-with-body"),
-    pytest.param("const s = `\nuseEffect(() => {\n}, []);\n`;\n", [], id="template-string"),
+    pytest.param(
+        "React.useEffect(function () { return; });\n", [1], id="react-function-return"
+    ),
+    pytest.param(
+        "useEffect(() => {\n  return () => off();\n}, []);\n", [], id="returns-cleanup"
+    ),
+    pytest.param(
+        "useEffect(function () { load(); }, []);\n", [], id="function-with-body"
+    ),
+    pytest.param(
+        "const s = `\nuseEffect(() => {\n}, []);\n`;\n", [], id="template-string"
+    ),
 ]
 
 
@@ -596,7 +609,8 @@ def test_dead_useeffect_forms(content, lines, path, monkeypatch, tmp_path):
 
 
 @pytest.mark.skipif(
-    importlib.util.find_spec("tree_sitter_language_pack") is None, reason="needs tree-sitter"
+    importlib.util.find_spec("tree_sitter_language_pack") is None,
+    reason="needs tree-sitter",
 )
 def test_dead_useeffect_tree_sees_calls_mid_line(tmp_path):
     content = "const a = 1; useEffect(() => {}, []);\nfoo(); React.useEffect(function () {});\n"
@@ -606,7 +620,8 @@ def test_dead_useeffect_tree_sees_calls_mid_line(tmp_path):
 
 
 @pytest.mark.skipif(
-    importlib.util.find_spec("tree_sitter_language_pack") is None, reason="needs tree-sitter"
+    importlib.util.find_spec("tree_sitter_language_pack") is None,
+    reason="needs tree-sitter",
 )
 def test_dead_useeffect_tree_line_matches_the_fixer_after_a_line_separator(tmp_path):
     content = "const s = 'a b';\nuseEffect(() => {}, []);\n"
@@ -899,7 +914,9 @@ class TestFunctionShapeOnSyntaxTree:
     def test_concise_arrow_complexity_is_measured(self):
         cond = " ||\n  ".join(f"x === {i}" for i in range(20))
         content = f"const pick = (x: number) =>\n  {cond};\n"
-        found = _messages(_detect_high_cyclomatic_complexity, content, "high_cyclomatic_complexity")
+        found = _messages(
+            _detect_high_cyclomatic_complexity, content, "high_cyclomatic_complexity"
+        )
         assert found == [(1, "pick() — cyclomatic complexity 20")]
 
     def test_nested_closures_are_counted_in_methods(self):

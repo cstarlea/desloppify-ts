@@ -50,8 +50,14 @@ def run_claude_orchestrator(
 
     print(colorize("\n  Claude triage orchestrator mode.", "bold"))
     print(colorize("  " + "─" * 60, "dim"))
-    print(colorize("  You are the orchestrator. For each stage, launch a subagent.\n", "cyan"))
-    print("  For each stage (strategize → observe → reflect → organize → enrich → sense-check):\n")
+    print(
+        colorize(
+            "  You are the orchestrator. For each stage, launch a subagent.\n", "cyan"
+        )
+    )
+    print(
+        "  For each stage (strategize → observe → reflect → organize → enrich → sense-check):\n"
+    )
     print("    1. Get the prompt:")
     print("       desloppify plan triage --stage-prompt <stage>\n")
     print("    2. Launch a subagent (Agent tool) with that prompt.\n")
@@ -61,7 +67,9 @@ def run_claude_orchestrator(
     print('       desloppify plan triage --confirm <stage> --attestation "..."\n')
     print("    5. Proceed to the next stage.\n")
     print("  After all 6 stages:")
-    print('    desloppify plan triage --complete --strategy "..." --attestation "..."\n')
+    print(
+        '    desloppify plan triage --complete --strategy "..." --attestation "..."\n'
+    )
     print(colorize("  Key rules:", "yellow"))
     print("    - ONE subagent per stage. Don't combine stages.")
     print("    - Check the dashboard between stages.")

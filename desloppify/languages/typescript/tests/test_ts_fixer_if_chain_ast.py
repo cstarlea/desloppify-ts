@@ -22,7 +22,9 @@ needs_treesitter = pytest.mark.skipif(
 
 def _fix(source: str, *lines: int, path: str = "a.ts"):
     parsed = parse_text(source, path)
-    out, fixed, skipped = remove_empty_if_chains(parsed, [{"line": line} for line in lines])
+    out, fixed, skipped = remove_empty_if_chains(
+        parsed, [{"line": line} for line in lines]
+    )
     text = out.decode("utf-8")
     assert count_syntax_errors(text, path) == 0, text
     return text, [entry["line"] for entry in fixed], skipped
@@ -39,7 +41,9 @@ def _fix(source: str, *lines: int, path: str = "a.ts"):
             id="multiline-chain",
         ),
         pytest.param("if (x) {} else {}\nfoo();\n", 1, "foo();\n", id="one-line-chain"),
-        pytest.param("if (a) ; else {}\nfoo();\n", 1, "foo();\n", id="empty-statement-branch"),
+        pytest.param(
+            "if (a) ; else {}\nfoo();\n", 1, "foo();\n", id="empty-statement-branch"
+        ),
         pytest.param(
             "function f() {\n  if (!ready || n > 2) {\n  }\n  return 1;\n}\n",
             2,
@@ -62,15 +66,28 @@ def test_remove_empty_if_chains(source, line, expected):
         pytest.param(
             "if (a) {\n} else {\n  doThing();\n}\n", 1, "not_empty", id="non-empty-else"
         ),
-        pytest.param("if (a) {} else if (b) { x(); }\n", 1, "not_empty", id="non-empty-else-if"),
-        pytest.param("if (a) {\n  // todo\n}\n", 1, "not_empty", id="comment-only-block"),
-        pytest.param("if (save()) {}\n", 1, "side_effects", id="call-in-condition"),
-        pytest.param("if (x = y) {}\n", 1, "side_effects", id="assignment-in-condition"),
         pytest.param(
-            "if (a) {} else if (next()) {}\n", 1, "side_effects", id="call-in-later-condition"
+            "if (a) {} else if (b) { x(); }\n", 1, "not_empty", id="non-empty-else-if"
         ),
-        pytest.param("for (;;) if (a) {}\n", 1, "not_standalone", id="unbraced-loop-body"),
-        pytest.param("let a = 1\nif (a) {}\n(foo)()\n", 2, "asi_hazard", id="no-semicolons"),
+        pytest.param(
+            "if (a) {\n  // todo\n}\n", 1, "not_empty", id="comment-only-block"
+        ),
+        pytest.param("if (save()) {}\n", 1, "side_effects", id="call-in-condition"),
+        pytest.param(
+            "if (x = y) {}\n", 1, "side_effects", id="assignment-in-condition"
+        ),
+        pytest.param(
+            "if (a) {} else if (next()) {}\n",
+            1,
+            "side_effects",
+            id="call-in-later-condition",
+        ),
+        pytest.param(
+            "for (;;) if (a) {}\n", 1, "not_standalone", id="unbraced-loop-body"
+        ),
+        pytest.param(
+            "let a = 1\nif (a) {}\n(foo)()\n", 2, "asi_hazard", id="no-semicolons"
+        ),
         pytest.param("foo();\n", 1, "not_found", id="stale"),
     ],
 )
@@ -88,8 +105,18 @@ def test_fix_empty_if_chain_writes_and_reports(tmp_path):
 
     result = fix_empty_if_chain(
         [
-            {"file": str(ts_file), "line": 1, "smell_id": "empty_if_chain", "issue_id": "s::a"},
-            {"file": str(ts_file), "line": 2, "smell_id": "empty_if_chain", "issue_id": "s::a"},
+            {
+                "file": str(ts_file),
+                "line": 1,
+                "smell_id": "empty_if_chain",
+                "issue_id": "s::a",
+            },
+            {
+                "file": str(ts_file),
+                "line": 2,
+                "smell_id": "empty_if_chain",
+                "issue_id": "s::a",
+            },
         ]
     )
 

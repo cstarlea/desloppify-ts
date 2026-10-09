@@ -82,7 +82,9 @@ def normalize_smell_matches(
     return normalized
 
 
-def normalize_smell_entries(raw_entries: Iterable[Mapping[str, Any]]) -> list[SmellEntry]:
+def normalize_smell_entries(
+    raw_entries: Iterable[Mapping[str, Any]],
+) -> list[SmellEntry]:
     """Normalize smell detector entries and validate required contract keys."""
     normalized: list[SmellEntry] = []
     for raw in raw_entries:

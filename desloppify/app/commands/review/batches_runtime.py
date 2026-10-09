@@ -90,7 +90,9 @@ class BatchProgressTracker:
             colorize_fn=self.colorize_fn,
         )
 
-    def report(self, batch_index: int, event: str, code: int | None = None, **details) -> None:
+    def report(
+        self, batch_index: int, event: str, code: int | None = None, **details
+    ) -> None:
         self._progress_reporter(
             BatchProgressEvent(
                 batch_index=batch_index,
@@ -128,7 +130,9 @@ class BatchProgressTracker:
                 {"position": self.batch_positions.get(idx, 0), "status": "pending"},
             )
             if idx not in failure_set:
-                state["status"] = "recovered" if idx in execution_failure_set else "succeeded"
+                state["status"] = (
+                    "recovered" if idx in execution_failure_set else "succeeded"
+                )
                 continue
             if idx in execution_failure_set:
                 state["status"] = "failed"
@@ -138,6 +142,7 @@ class BatchProgressTracker:
                 continue
             state["status"] = "parse_failed"
 
+
 def resolve_run_log_path(
     raw_run_log_file: object,
     *,
@@ -146,7 +151,9 @@ def resolve_run_log_path(
 ) -> Path:
     if isinstance(raw_run_log_file, str) and raw_run_log_file.strip():
         candidate = Path(raw_run_log_file.strip()).expanduser()
-        run_log_path = candidate if candidate.is_absolute() else project_root / candidate
+        run_log_path = (
+            candidate if candidate.is_absolute() else project_root / candidate
+        )
     else:
         run_log_path = run_dir / "run.log"
     run_log_path.parent.mkdir(parents=True, exist_ok=True)
@@ -208,7 +215,9 @@ def write_run_summary(
             summary_config.heartbeat_seconds if summary_config.run_parallel else None
         ),
         "batch_stall_warning_seconds": (
-            summary_config.stall_warning_seconds if summary_config.run_parallel else None
+            summary_config.stall_warning_seconds
+            if summary_config.run_parallel
+            else None
         ),
         "batch_stall_kill_seconds": summary_config.stall_kill_seconds,
         "immutable_packet": str(summary_config.immutable_packet_path),

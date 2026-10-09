@@ -69,13 +69,16 @@ def test_ci_workflow_jobs_are_bound_to_make_targets() -> None:
         assert install in runs and runs.index(install) < next(
             i for i, run in enumerate(runs) if expected_cmd in run
         ), f"{job_name} must run `{install}` before its gate."
-        assert any(step.get("uses") == "actions/setup-python@v5" for step in job["steps"]), (
-            f"{job_name} should use actions/setup-python@v5."
-        )
+        assert any(
+            step.get("uses") == "actions/setup-python@v5" for step in job["steps"]
+        ), f"{job_name} should use actions/setup-python@v5."
 
 
 def _matrix_versions(job: dict) -> list[str]:
-    return [str(v) for v in job.get("strategy", {}).get("matrix", {}).get("python-version", [])]
+    return [
+        str(v)
+        for v in job.get("strategy", {}).get("matrix", {}).get("python-version", [])
+    ]
 
 
 def _check_names(job_name: str, job: dict) -> list[str]:
@@ -104,11 +107,14 @@ def test_ci_tests_cover_supported_python_versions() -> None:
     )
     for job_name in ("tests-core", "tests-full"):
         setup = next(
-            step for step in jobs[job_name]["steps"]
+            step
+            for step in jobs[job_name]["steps"]
             if step.get("uses") == "actions/setup-python@v5"
         )
         assert setup["with"]["python-version"] == "${{ matrix.python-version }}"
-        assert jobs[job_name]["name"] == f"{job_name} (${{{{ matrix.python-version }}}})"
+        assert (
+            jobs[job_name]["name"] == f"{job_name} (${{{{ matrix.python-version }}}})"
+        )
 
 
 def test_ci_has_a_windows_core_job() -> None:
@@ -185,7 +191,7 @@ def test_makefile_contains_ci_gate_targets() -> None:
 def test_ci_contracts_target_includes_phase_order_invariant() -> None:
     text = MAKEFILE.read_text()
     assert (
-        '$(PYTEST) -q desloppify/tests/commands/test_lifecycle_transitions.py '
+        "$(PYTEST) -q desloppify/tests/commands/test_lifecycle_transitions.py "
         '-k "assessment_then_score_when_no_review_followup"'
     ) in text
 
@@ -237,7 +243,9 @@ def test_ci_plan_required_checks_match_ci_workflow() -> None:
     ]
 
     doc = CI_PLAN.read_text()
-    section = doc.split("Required status checks:", 1)[1].split("Pull request policy:", 1)[0]
+    section = doc.split("Required status checks:", 1)[1].split(
+        "Pull request policy:", 1
+    )[0]
     documented = re.findall(r"- `([^`]+)`", section)
 
     assert documented == expected_contexts
@@ -260,7 +268,9 @@ GATE_TARGETS = (
 
 def _make_rule(text: str, target: str) -> tuple[str, str]:
     """A target's prerequisites and recipe."""
-    match = re.search(rf"^{re.escape(target)}:(.*)\n((?:\t.*\n?)*)", text, flags=re.MULTILINE)
+    match = re.search(
+        rf"^{re.escape(target)}:(.*)\n((?:\t.*\n?)*)", text, flags=re.MULTILINE
+    )
     assert match, f"Makefile has no `{target}` target."
     return match.group(1).strip(), match.group(2)
 
@@ -269,8 +279,12 @@ def test_make_gates_do_not_install_anything() -> None:
     text = MAKEFILE.read_text()
     for target in GATE_TARGETS:
         prerequisites, recipe = _make_rule(text, target)
-        assert "install" not in prerequisites, f"`{target}` must not depend on an install target."
-        assert "$(PIP)" not in recipe, f"`{target}` must not pip install; use make install-dev."
+        assert "install" not in prerequisites, (
+            f"`{target}` must not depend on an install target."
+        )
+        assert "$(PIP)" not in recipe, (
+            f"`{target}` must not pip install; use make install-dev."
+        )
     for target, extras in (("install-dev", ".[dev]"), ("install-full", ".[full,dev]")):
         _prerequisites, recipe = _make_rule(text, target)
         assert f'install -e "{extras}"' in recipe
@@ -279,6 +293,13 @@ def test_make_gates_do_not_install_anything() -> None:
 def test_dev_extra_pins_the_gate_tools() -> None:
     dev = _optional_dependencies()["dev"]
     names = {re.split(r"[=<>!~ ]", dep, maxsplit=1)[0].lower() for dep in dev}
-    assert {"pytest", "pytest-xdist", "pytest-timeout", "ruff", "mypy", "import-linter"} <= names
+    assert {
+        "pytest",
+        "pytest-xdist",
+        "pytest-timeout",
+        "ruff",
+        "mypy",
+        "import-linter",
+    } <= names
     unpinned = [dep for dep in dev if "==" not in dep]
     assert not unpinned, f"dev tools must be pinned: {unpinned}"

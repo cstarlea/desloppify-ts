@@ -25,7 +25,9 @@ def test_build_run_batches_next_command_preserves_state_scope(tmp_path: Path) ->
     assert "--no-retrospective" in command
 
 
-def test_build_external_submit_next_command_preserves_state_scope(tmp_path: Path) -> None:
+def test_build_external_submit_next_command_preserves_state_scope(
+    tmp_path: Path,
+) -> None:
     context = packet_build_mod.ReviewPacketContext(
         path=tmp_path,
         state_path=tmp_path / "alt-state.json",
@@ -69,7 +71,9 @@ def test_build_review_packet_payload_attaches_prepared_packet_contract(
         retrospective_max_issues=30,
         retrospective_max_batch_items=20,
     )
-    monkeypatch.setattr(packet_build_mod.narrative_mod, "compute_narrative", lambda *_a, **_k: {})
+    monkeypatch.setattr(
+        packet_build_mod.narrative_mod, "compute_narrative", lambda *_a, **_k: {}
+    )
 
     payload = packet_build_mod.build_review_packet_payload(
         state=SimpleNamespace(),
@@ -84,7 +88,9 @@ def test_build_review_packet_payload_attaches_prepared_packet_contract(
         },
     )
 
-    assert payload["prepared_packet_contract"] == packet_build_mod.prepared_packet_contract(
+    assert payload[
+        "prepared_packet_contract"
+    ] == packet_build_mod.prepared_packet_contract(
         context,
         config={},
     )
@@ -112,7 +118,9 @@ def test_attach_plan_deferral_context_uses_plan_for_selected_state(
             }
         }
 
-    monkeypatch.setattr(packet_build_mod, "plan_path_for_state", fake_plan_path_for_state)
+    monkeypatch.setattr(
+        packet_build_mod, "plan_path_for_state", fake_plan_path_for_state
+    )
     monkeypatch.setattr("desloppify.engine.plan_state.load_plan", fake_load_plan)
 
     packet = {

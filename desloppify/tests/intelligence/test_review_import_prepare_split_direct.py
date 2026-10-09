@@ -50,7 +50,11 @@ def test_contract_validation_accepts_valid_payload_and_dismissed_entries() -> No
 
 
 def test_holistic_cache_update_and_resolution_helpers(monkeypatch) -> None:
-    monkeypatch.setattr(holistic_cache_mod, "load_dimensions_for_lang", lambda _name: ([], {"naming_quality": {}}, "sys"))
+    monkeypatch.setattr(
+        holistic_cache_mod,
+        "load_dimensions_for_lang",
+        lambda _name: ([], {"naming_quality": {}}, "sys"),
+    )
 
     state: dict = {
         "issues": {
@@ -78,10 +82,19 @@ def test_holistic_cache_update_and_resolution_helpers(monkeypatch) -> None:
     holistic_cache_mod.update_holistic_review_cache(
         state,
         issues_data=[
-            {"dimension": "naming_quality", "identifier": "id1", "summary": "x", "confidence": "high"}
+            {
+                "dimension": "naming_quality",
+                "identifier": "id1",
+                "summary": "x",
+                "confidence": "high",
+            }
         ],
         lang_name="python",
-        review_scope={"total_files": 10, "reviewed_files_count": 2, "full_sweep_included": True},
+        review_scope={
+            "total_files": 10,
+            "reviewed_files_count": 2,
+            "full_sweep_included": True,
+        },
         utc_now_fn=lambda: "2026-03-09T00:00:00+00:00",
     )
     assert state["review_cache"]["holistic"]["issue_count"] == 1
@@ -96,7 +109,9 @@ def test_holistic_cache_update_and_resolution_helpers(monkeypatch) -> None:
     )
     # naming_quality is assessed, so its issue should be resolved
     assert diff["auto_resolved"] == 1
-    assert state["work_items"]["subjective_review::.::naming_quality"]["status"] == "fixed"
+    assert (
+        state["work_items"]["subjective_review::.::naming_quality"]["status"] == "fixed"
+    )
 
     # resolve_reviewed_file_coverage_issues is now a no-op
     diff = {"auto_resolved": 0}
@@ -110,7 +125,11 @@ def test_holistic_cache_update_and_resolution_helpers(monkeypatch) -> None:
 
 
 def test_issue_flow_build_collect_and_auto_resolve_paths(monkeypatch) -> None:
-    monkeypatch.setattr(issue_flow_mod, "validate_review_issue_payload", contracts_validation_mod.validate_review_issue_payload)
+    monkeypatch.setattr(
+        issue_flow_mod,
+        "validate_review_issue_payload",
+        contracts_validation_mod.validate_review_issue_payload,
+    )
     monkeypatch.setattr(issue_flow_mod, "normalize_review_confidence", lambda c: str(c))
     monkeypatch.setattr(issue_flow_mod, "review_tier", lambda _c, holistic=True: 2)
 
@@ -196,21 +215,41 @@ def test_resolution_and_state_helper_utilities() -> None:
     assert potentials == {}
 
 
-def test_collectors_scope_payload_parts_and_orchestration_helpers(monkeypatch, tmp_path) -> None:
+def test_collectors_scope_payload_parts_and_orchestration_helpers(
+    monkeypatch, tmp_path
+) -> None:
     ctx = SimpleNamespace(
         architecture={"god_modules": [{"file": "src/a.py"}]},
         coupling={"module_level_io": [{"file": "src/b.py"}], "boundary_violations": []},
         dependencies={"deferred_import_density": [], "cycle_summaries": []},
-        conventions={"sibling_behavior": {}, "duplicate_clusters": [], "naming_drift": []},
+        conventions={
+            "sibling_behavior": {},
+            "duplicate_clusters": [],
+            "naming_drift": [],
+        },
         errors={"strategy_by_directory": {}, "exception_hotspots": []},
         abstractions={"util_files": [], "pass_through_wrappers": []},
         testing={"critical_untested": [{"file": "src/t.py"}]},
         api_surface={"sync_async_mix": ["src/api.py"]},
-        authorization={"route_auth_coverage": {}, "service_role_usage": [], "rls_coverage": {}},
+        authorization={
+            "route_auth_coverage": {},
+            "service_role_usage": [],
+            "rls_coverage": {},
+        },
         ai_debt_signals={"file_signals": {"src/debt.py": {}}},
         migration_signals={"deprecated_markers": {"files": []}, "migration_todos": []},
-        structure={"flat_dir_issues": [], "root_files": [], "directory_profiles": {}, "coupling_matrix": {}},
-        scan_evidence={"mutable_globals": [], "complexity_hotspots": [], "error_hotspots": [], "signal_density": []},
+        structure={
+            "flat_dir_issues": [],
+            "root_files": [],
+            "directory_profiles": {},
+            "coupling_matrix": {},
+        },
+        scan_evidence={
+            "mutable_globals": [],
+            "complexity_hotspots": [],
+            "error_hotspots": [],
+            "signal_density": [],
+        },
         index=SimpleNamespace(files={}),
     )
 
@@ -218,7 +257,11 @@ def test_collectors_scope_payload_parts_and_orchestration_helpers(monkeypatch, t
     assert collectors_quality_mod._testing_api_files(ctx)
     assert collectors_structure_mod._ai_debt_files(ctx)
 
-    allowed = scope_mod.collect_allowed_review_files(["src/a.py", "tests/a_test.py"], SimpleNamespace(zone_map=None), base_path=tmp_path)
+    allowed = scope_mod.collect_allowed_review_files(
+        ["src/a.py", "tests/a_test.py"],
+        SimpleNamespace(zone_map=None),
+        base_path=tmp_path,
+    )
     assert "src/a.py" in allowed
     assert scope_mod.file_in_allowed_scope("src/a.py", allowed) is True
 
@@ -226,10 +269,14 @@ def test_collectors_scope_payload_parts_and_orchestration_helpers(monkeypatch, t
         {
             "dimensions": ["naming_quality"],
             "concern_signals": [{"file": "src/a.py"}, {"file": "tests/a_test.py"}],
-            "historical_issue_focus": {"issues": [{"related_files": ["src/a.py", "tests/a_test.py"]}]},
+            "historical_issue_focus": {
+                "issues": [{"related_files": ["src/a.py", "tests/a_test.py"]}]
+            },
         }
     ]
-    scoped_batches = scope_mod.filter_batches_to_file_scope(batches, allowed_files={"src/a.py"})
+    scoped_batches = scope_mod.filter_batches_to_file_scope(
+        batches, allowed_files={"src/a.py"}
+    )
     assert scoped_batches[0]["concern_signals"] == [{"file": "src/a.py"}]
 
     selected = payload_parts_mod._build_selected_prompts(
@@ -239,15 +286,27 @@ def test_collectors_scope_payload_parts_and_orchestration_helpers(monkeypatch, t
     )
     assert "naming_quality" in selected
 
-    monkeypatch.setattr(payload_parts_mod, "build_issue_history_context", lambda _state, options: {"issues": [{"id": "i1"}]})
-    monkeypatch.setattr(payload_parts_mod, "build_batch_issue_focus", lambda _history, **_kw: {"issues": [{"related_files": ["src/a.py"]}]})
+    monkeypatch.setattr(
+        payload_parts_mod,
+        "build_issue_history_context",
+        lambda _state, options: {"issues": [{"id": "i1"}]},
+    )
+    monkeypatch.setattr(
+        payload_parts_mod,
+        "build_batch_issue_focus",
+        lambda _history, **_kw: {"issues": [{"related_files": ["src/a.py"]}]},
+    )
 
     payload: dict = {}
     history_batches = payload_parts_mod._attach_issue_history_context(
         payload,
         [{"dimensions": ["naming_quality"], "files_to_read": ["src/a.py"]}],
         state={},
-        options=SimpleNamespace(include_issue_history=True, issue_history_max_issues=10, issue_history_max_batch_items=5),
+        options=SimpleNamespace(
+            include_issue_history=True,
+            issue_history_max_issues=10,
+            issue_history_max_batch_items=5,
+        ),
         allowed_review_files={"src/a.py"},
     )
     assert payload["historical_review_issues"]["issues"][0]["id"] == "i1"
@@ -264,8 +323,14 @@ def test_collectors_scope_payload_parts_and_orchestration_helpers(monkeypatch, t
     dim_ctx = orchestration_mod._resolve_dimension_context(
         "python",
         SimpleNamespace(dimensions=["naming_quality"]),
-        load_dimensions_for_lang_fn=lambda _name: (["naming_quality"], {"naming_quality": {"prompt": "x"}}, "sys"),
-        resolve_dimensions_fn=lambda cli_dimensions, default_dimensions: cli_dimensions or default_dimensions,
+        load_dimensions_for_lang_fn=lambda _name: (
+            ["naming_quality"],
+            {"naming_quality": {"prompt": "x"}},
+            "sys",
+        ),
+        resolve_dimensions_fn=lambda cli_dimensions, default_dimensions: (
+            cli_dimensions or default_dimensions
+        ),
         get_lang_guidance_fn=lambda _name: "guide",
     )
     assert dim_ctx.dims == ["naming_quality"]
@@ -301,14 +366,18 @@ def test_prepare_holistic_payload_compacts_batch_dimension_contexts() -> None:
         is_file_cache_enabled_fn=lambda: False,
         enable_file_cache_fn=lambda: None,
         disable_file_cache_fn=lambda: None,
-        build_holistic_context_fn=lambda *_args, **_kwargs: {"codebase_stats": {"total_files": 1}},
+        build_holistic_context_fn=lambda *_args, **_kwargs: {
+            "codebase_stats": {"total_files": 1}
+        },
         build_review_context_fn=lambda *_args, **_kwargs: SimpleNamespace(),
         load_dimensions_for_lang_fn=lambda _name: (
             ["naming_quality"],
             {"naming_quality": {"prompt": "Assess naming"}},
             "sys",
         ),
-        resolve_dimensions_fn=lambda cli_dimensions, default_dimensions: cli_dimensions or default_dimensions,
+        resolve_dimensions_fn=lambda cli_dimensions, default_dimensions: (
+            cli_dimensions or default_dimensions
+        ),
         get_lang_guidance_fn=lambda _name: "guide",
         assemble_holistic_batches_fn=lambda *_args, **_kwargs: [
             {
@@ -330,7 +399,9 @@ def test_prepare_holistic_payload_compacts_batch_dimension_contexts() -> None:
     )
     payload = orchestration_mod.prepare_holistic_review_payload(
         Path("."),
-        SimpleNamespace(name="python", file_finder=lambda _path: ["src/a.py"], zone_map=None),
+        SimpleNamespace(
+            name="python", file_finder=lambda _path: ["src/a.py"], zone_map=None
+        ),
         state={
             "dimension_contexts": {
                 "naming_quality": {
@@ -358,7 +429,9 @@ def test_prepare_holistic_payload_compacts_batch_dimension_contexts() -> None:
     )
 
     assert payload["dimension_contexts"]["naming_quality"]["insights"][0]["description"]
-    batch_ctx = payload["investigation_batches"][0]["dimension_contexts"]["naming_quality"]
+    batch_ctx = payload["investigation_batches"][0]["dimension_contexts"][
+        "naming_quality"
+    ]
     assert batch_ctx["insights"] == [
         {
             "header": "Names map to command intent",
@@ -415,8 +488,16 @@ def test_authorization_collector_uses_module_fallback_for_with_auth_siblings() -
     ctx = SimpleNamespace(
         authorization={
             "route_auth_coverage": {
-                "routes/admin/audit.py": {"handlers": 2, "with_auth": 0, "without_auth": 2},
-                "routes/internal/guarded.py": {"handlers": 2, "with_auth": 2, "without_auth": 0},
+                "routes/admin/audit.py": {
+                    "handlers": 2,
+                    "with_auth": 0,
+                    "without_auth": 2,
+                },
+                "routes/internal/guarded.py": {
+                    "handlers": 2,
+                    "with_auth": 2,
+                    "without_auth": 0,
+                },
                 "ui/home.py": {"handlers": 1, "with_auth": 1, "without_auth": 0},
             },
             "service_role_usage": [],
@@ -440,7 +521,11 @@ def test_authorization_collector_excludes_guidance_like_runtime_paths() -> None:
                     "with_auth": 0,
                     "without_auth": 1,
                 },
-                "src/routes/admin.py": {"handlers": 1, "with_auth": 0, "without_auth": 1},
+                "src/routes/admin.py": {
+                    "handlers": 1,
+                    "with_auth": 0,
+                    "without_auth": 1,
+                },
             },
             "service_role_usage": ["prompts/security_prompt.ts", "src/lib/supabase.ts"],
             "rls_coverage": {

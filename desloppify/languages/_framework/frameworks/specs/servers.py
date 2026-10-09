@@ -17,7 +17,12 @@ from desloppify.languages._framework.node.frameworks.servers import (
 from ..types import DetectionConfig, EntryConventions, FrameworkSpec, ScannerRule
 
 _SOURCE_EXTENSIONS = frozenset({".ts", ".tsx", ".js", ".jsx", ".mts", ".mjs"})
-_VITE_CONFIGS = ("vite.config.ts", "vite.config.js", "vite.config.mts", "vite.config.mjs")
+_VITE_CONFIGS = (
+    "vite.config.ts",
+    "vite.config.js",
+    "vite.config.mts",
+    "vite.config.mjs",
+)
 
 
 def _line_issue(detector: str, rule: str, tier: int, confidence: str, summary: str):
@@ -112,7 +117,9 @@ HONO_SPEC = FrameworkSpec(
                 ),
                 detail={"line": entry["line"], "helper": entry["helper"]},
             ),
-            log_message=lambda count: f"       hono: {count} handlers drop the response they build",
+            log_message=lambda count: (
+                f"       hono: {count} handlers drop the response they build"
+            ),
         ),
         ScannerRule(
             id="unawaited_next",
@@ -125,7 +132,9 @@ HONO_SPEC = FrameworkSpec(
                 "Middleware calls next() without await or return, so its code after "
                 "next() runs before the handlers downstream finish.",
             ),
-            log_message=lambda count: f"       hono: {count} middleware calls of next() not awaited",
+            log_message=lambda count: (
+                f"       hono: {count} middleware calls of next() not awaited"
+            ),
         ),
     ),
     entry_conventions=(HONOX_ENTRY_CONVENTIONS, WRANGLER_ENTRY_CONVENTIONS),
@@ -160,7 +169,9 @@ FASTIFY_SPEC = FrameworkSpec(
                 "Async plugin or hook also takes a done callback; Fastify rejects the "
                 "mix — an async function signals completion by resolving.",
             ),
-            log_message=lambda count: f"       fastify: {count} async plugins/hooks also take done",
+            log_message=lambda count: (
+                f"       fastify: {count} async plugins/hooks also take done"
+            ),
         ),
     ),
     entry_conventions=FASTIFY_ENTRY_CONVENTIONS,

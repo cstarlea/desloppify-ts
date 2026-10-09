@@ -40,7 +40,11 @@ def ensure_stage_is_confirmable(stages: dict, *, stage: str) -> bool:
     """Validate stage presence/confirmation status before confirm flow runs."""
     if stage not in stages:
         print(colorize(f"  Cannot confirm: {stage} stage not recorded.", "red"))
-        print(colorize(f'  Run: desloppify plan triage --stage {stage} --report "..."', "dim"))
+        print(
+            colorize(
+                f'  Run: desloppify plan triage --stage {stage} --report "..."', "dim"
+            )
+        )
         return False
     if stages[stage].get("confirmed_at"):
         label = _STAGE_LABELS.get(stage, stage.title())

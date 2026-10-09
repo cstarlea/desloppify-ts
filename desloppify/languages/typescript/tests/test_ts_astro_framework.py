@@ -41,15 +41,25 @@ def test_astro_glob(tmp_path: Path):
         "---\nconst posts = await Astro.glob('../posts/*.md');\nconst more = await Astro.glob('../more/*.md');\n---\n"
         "<p>Astro.glob() is gone</p>\n",
     )
-    _write(tmp_path, "src/pages/index.astro", "---\nconst posts = import.meta.glob('../posts/*.md');\n---\n")
+    _write(
+        tmp_path,
+        "src/pages/index.astro",
+        "---\nconst posts = import.meta.glob('../posts/*.md');\n---\n",
+    )
     entries, scanned = scan_astro_glob(tmp_path)
     assert scanned == 2
-    assert [(Path(e["file"]).name, e["line"], e["count"]) for e in entries] == [("blog.astro", 2, 2)]
+    assert [(Path(e["file"]).name, e["line"], e["count"]) for e in entries] == [
+        ("blog.astro", 2, 2)
+    ]
 
 
 def test_astro_glob_fine_before_astro_5(tmp_path: Path):
     _package(tmp_path, "^4.16.0")
-    _write(tmp_path, "src/pages/blog.astro", "---\nconst posts = await Astro.glob('../posts/*.md');\n---\n")
+    _write(
+        tmp_path,
+        "src/pages/blog.astro",
+        "---\nconst posts = await Astro.glob('../posts/*.md');\n---\n",
+    )
     assert scan_astro_glob(tmp_path) == ([], 0)
 
 
@@ -66,7 +76,7 @@ def test_client_directive_on_astro_component(tmp_path: Path):
         "import Counter from '../components/Counter.tsx';\n"
         "import Card, { type Props } from '../components/Card.astro';\n"
         "---\n"
-        "<Header\n  title=\"x\"\n  client:load\n/>\n"
+        '<Header\n  title="x"\n  client:load\n/>\n'
         "<Counter client:visible />\n"
         "<!-- <Card client:idle /> -->\n"
         "<Card title={`a > b`} client:idle>text</Card>\n"
@@ -100,13 +110,24 @@ def test_server_env_in_client_script(tmp_path: Path):
     )
     entries, scanned = scan_server_env_in_client_scripts(tmp_path)
     assert scanned == 1
-    assert sorted((e["line"], e["name"]) for e in entries) == [(6, "astro:env/server"), (8, "ANALYTICS_TOKEN")]
+    assert sorted((e["line"], e["name"]) for e in entries) == [
+        (6, "astro:env/server"),
+        (8, "ANALYTICS_TOKEN"),
+    ]
 
 
 def test_custom_env_prefix_skips_env_check(tmp_path: Path):
     _package(tmp_path)
-    _write(tmp_path, "astro.config.mjs", "export default { vite: { envPrefix: ['PUBLIC_', 'APP_'] } };\n")
-    _write(tmp_path, "src/components/A.astro", "<script>\n  const id = import.meta.env.APP_ID;\n</script>\n")
+    _write(
+        tmp_path,
+        "astro.config.mjs",
+        "export default { vite: { envPrefix: ['PUBLIC_', 'APP_'] } };\n",
+    )
+    _write(
+        tmp_path,
+        "src/components/A.astro",
+        "<script>\n  const id = import.meta.env.APP_ID;\n</script>\n",
+    )
     assert scan_server_env_in_client_scripts(tmp_path) == ([], 0)
 
 
@@ -117,7 +138,11 @@ def test_spec_wires_scanners(tmp_path: Path):
         "deprecated_astro_glob",
     ]
     _package(tmp_path)
-    _write(tmp_path, "src/pages/a.astro", "---\nimport B from './B.astro';\n---\n<B client:only=\"react\" />\n")
+    _write(
+        tmp_path,
+        "src/pages/a.astro",
+        "---\nimport B from './B.astro';\n---\n<B client:only=\"react\" />\n",
+    )
     rule = ASTRO_SPEC.scanners[1]
     entries, _ = rule.scan(tmp_path, None)
     issue = rule.issue_factory(entries[0])

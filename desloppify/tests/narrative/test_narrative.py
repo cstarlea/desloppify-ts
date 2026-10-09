@@ -156,8 +156,12 @@ class TestCountOpenByDetector:
     def test_suppressed_review_uninvestigated_excluded(self):
         issues = {
             "a": {"status": "open", "detector": "review", "detail": {}},
-            "b": {"status": "open", "detector": "review", "detail": {},
-                   "suppressed": True},
+            "b": {
+                "status": "open",
+                "detector": "review",
+                "detail": {},
+                "suppressed": True,
+            },
         }
         result = _count_open_by_detector(issues)
         assert result["review"] == 1
@@ -740,8 +744,14 @@ class TestComputeReminders:
             "ignore_integrity": {"ignored": 12, "suppressed_pct": 42.0},
         }
         reminders, _ = compute_reminders(
-            state, "typescript", "middle_grind", {},
-            [], {}, {}, "scan",
+            state,
+            "typescript",
+            "middle_grind",
+            {},
+            [],
+            {},
+            {},
+            "scan",
         )
         reminder_types = [r["type"] for r in reminders]
         assert "ignore_suppression_high" in reminder_types
@@ -752,8 +762,14 @@ class TestComputeReminders:
             "ignore_integrity": {"ignored": 2, "suppressed_pct": 12.0},
         }
         reminders, _ = compute_reminders(
-            state, "typescript", "middle_grind", {},
-            [], {}, {}, "scan",
+            state,
+            "typescript",
+            "middle_grind",
+            {},
+            [],
+            {},
+            {},
+            "scan",
         )
         reminder_types = [r["type"] for r in reminders]
         assert "ignore_suppression_high" not in reminder_types
@@ -911,15 +927,29 @@ class TestComputeReminders:
 
     def test_reminders_include_metadata_and_rank_high_priority_first(self):
         state = {"strict_score": 50.0}
-        actions = [{"type": "auto_fix", "count": 3, "command": "desloppify autofix unused-imports --dry-run"}]
+        actions = [
+            {
+                "type": "auto_fix",
+                "count": 3,
+                "command": "desloppify autofix unused-imports --dry-run",
+            }
+        ]
         reminders, _ = compute_reminders(
-            state, "typescript", "middle_grind", {"trend": "growing"},
-            actions, {}, {}, "autofix",
+            state,
+            "typescript",
+            "middle_grind",
+            {"trend": "growing"},
+            actions,
+            {},
+            {},
+            "autofix",
         )
         reminder_types = [r["type"] for r in reminders]
         assert "rescan_needed" in reminder_types
         assert "wontfix_growing" in reminder_types
-        assert reminder_types.index("rescan_needed") < reminder_types.index("wontfix_growing")
+        assert reminder_types.index("rescan_needed") < reminder_types.index(
+            "wontfix_growing"
+        )
         assert all("priority" in r for r in reminders)
         assert all("severity" in r for r in reminders)
 

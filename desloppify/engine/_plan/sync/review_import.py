@@ -49,7 +49,11 @@ def _review_issue_ids_for_import_sync(
     """
     if _has_triage_baseline(plan):
         return compute_new_issue_ids(plan, state)
-    return set(open_review_ids) if open_review_ids is not None else compute_open_issue_ids(state)
+    return (
+        set(open_review_ids)
+        if open_review_ids is not None
+        else compute_open_issue_ids(state)
+    )
 
 
 def _is_review_queue_id(issue_id: str, state: StateModel) -> bool:
@@ -77,7 +81,8 @@ def _prune_stale_triage_meta(
     active_ids = meta.get("active_triage_issue_ids")
     if isinstance(active_ids, list):
         filtered_active = [
-            issue_id for issue_id in active_ids
+            issue_id
+            for issue_id in active_ids
             if isinstance(issue_id, str) and issue_id not in stale_ids
         ]
         if filtered_active:
@@ -88,7 +93,8 @@ def _prune_stale_triage_meta(
     undispositioned_ids = meta.get("undispositioned_issue_ids")
     if isinstance(undispositioned_ids, list):
         filtered_undispositioned = [
-            issue_id for issue_id in undispositioned_ids
+            issue_id
+            for issue_id in undispositioned_ids
             if isinstance(issue_id, str) and issue_id not in stale_ids
         ]
         if filtered_undispositioned:
@@ -116,7 +122,8 @@ def _prune_stale_review_ids_from_plan(
         {
             issue_id
             for issue_id in order
-            if _is_review_queue_id(issue_id, state) and issue_id not in live_open_review_ids
+            if _is_review_queue_id(issue_id, state)
+            and issue_id not in live_open_review_ids
         }
     )
     if not stale_ids:
@@ -129,7 +136,9 @@ def _prune_stale_review_ids_from_plan(
 
     deferred = plan.get("deferred")
     if isinstance(deferred, list):
-        plan["deferred"] = [issue_id for issue_id in deferred if issue_id not in stale_set]
+        plan["deferred"] = [
+            issue_id for issue_id in deferred if issue_id not in stale_set
+        ]
 
     skipped = plan.get("skipped")
     if isinstance(skipped, dict):
@@ -192,7 +201,9 @@ def sync_plan_after_review_import(
         triage_result = sync_triage_needed(plan, state, policy=policy)
         triage_injected_ids = list(getattr(triage_result, "injected", []) or [])
         triage_injected = bool(triage_injected_ids)
-        triage_deferred = bool(triage_result and getattr(triage_result, "deferred", False))
+        triage_deferred = bool(
+            triage_result and getattr(triage_result, "deferred", False)
+        )
 
     return ReviewImportSyncResult(
         new_ids=new_ids,

@@ -129,7 +129,9 @@ def collect_batch_results(
             try:
                 safe_write_text(raw_path, json.dumps(payload, indent=2) + "\n")
             except OSError as exc:
-                logger.warning("Failed writing normalized batch payload %s: %s", raw_path, exc)
+                logger.warning(
+                    "Failed writing normalized batch payload %s: %s", raw_path, exc
+                )
         try:
             (
                 assessments,
@@ -140,7 +142,9 @@ def collect_batch_results(
                 context_updates,
             ) = normalize_result_fn(payload, allowed_dims)
         except ValueError as exc:
-            logger.debug("Invalid batch payload at index %s (%s): %s", idx, raw_path, exc)
+            logger.debug(
+                "Invalid batch payload at index %s (%s): %s", idx, raw_path, exc
+            )
             failure_set.add(idx)
             continue
         if had_execution_failure:

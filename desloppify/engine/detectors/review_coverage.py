@@ -52,6 +52,7 @@ def _is_low_value_file(
         return bool(pattern.search(filepath))
     return bool(_LOW_VALUE_NAMES.search(filepath))
 
+
 def _check_file_review_status(
     abs_path: str,
     cached: dict | None,
@@ -188,7 +189,12 @@ def detect_review_coverage(
     for abs_path, rpath, loc in candidates:
         cached = review_cache.get(rpath)
         entry = _check_file_review_status(
-            abs_path, cached, loc, now, max_age_days, holistic_fresh,
+            abs_path,
+            cached,
+            loc,
+            now,
+            max_age_days,
+            holistic_fresh,
         )
         if entry is not None:
             entries.append(entry)

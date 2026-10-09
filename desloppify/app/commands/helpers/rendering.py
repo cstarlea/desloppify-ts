@@ -103,7 +103,12 @@ def print_ranked_actions(
         count = int(action.get("count", 0))
         cluster_count = action.get("cluster_count")
         if cluster_count:
-            print(colorize(f"    - {detector}: {count} open in {cluster_count} cluster(s) — `desloppify next`", "dim"))
+            print(
+                colorize(
+                    f"    - {detector}: {count} open in {cluster_count} cluster(s) — `desloppify next`",
+                    "dim",
+                )
+            )
         else:
             command = action.get("command", "desloppify next")
             print(colorize(f"    - {detector}: {count} open — `{command}`", "dim"))

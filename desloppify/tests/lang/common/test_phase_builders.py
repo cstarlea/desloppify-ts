@@ -110,5 +110,5 @@ def test_shared_tail_slow_flags():
     """Last two phases (boilerplate duplication + duplicates) are slow."""
     phases = shared_subjective_duplicates_tail()
     assert phases[0].slow is False  # subjective review
-    assert phases[1].slow is True   # boilerplate duplication
-    assert phases[2].slow is True   # duplicates
+    assert phases[1].slow is True  # boilerplate duplication
+    assert phases[2].slow is True  # duplicates

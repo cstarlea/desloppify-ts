@@ -77,7 +77,9 @@ def _nextjs_info(scan_root: Path, lang: LangRuntimeContract) -> NextjsFrameworkI
 def _wrap_scan(
     scan_fn: Callable[[Path, NextjsFrameworkInfo], tuple[list[dict[str, Any]], int]],
 ) -> Callable[[Path, LangRuntimeContract], tuple[list[dict[str, Any]], int]]:
-    def scan(scan_root: Path, lang: LangRuntimeContract) -> tuple[list[dict[str, Any]], int]:
+    def scan(
+        scan_root: Path, lang: LangRuntimeContract
+    ) -> tuple[list[dict[str, Any]], int]:
         info = _nextjs_info(scan_root, lang)
         return scan_fn(scan_root, info)
 
@@ -87,7 +89,9 @@ def _wrap_scan(
 def _wrap_info_scan(
     scan_fn: Callable[[NextjsFrameworkInfo], list[dict[str, Any]]],
 ) -> Callable[[Path, LangRuntimeContract], tuple[list[dict[str, Any]], int]]:
-    def scan(scan_root: Path, lang: LangRuntimeContract) -> tuple[list[dict[str, Any]], int]:
+    def scan(
+        scan_root: Path, lang: LangRuntimeContract
+    ) -> tuple[list[dict[str, Any]], int]:
         info = _nextjs_info(scan_root, lang)
         return list(scan_fn(info)), 0
 
@@ -135,14 +139,15 @@ NEXTJS_SCANNERS: tuple[ScannerRule, ...] = (
         issue_factory=lambda entry: make_issue(
             "nextjs",
             entry["file"],
-            f"error_file_missing_use_client::{entry.get('name','error')}",
+            f"error_file_missing_use_client::{entry.get('name', 'error')}",
             tier=2,
             confidence="high",
             summary="App Router error boundary module is missing 'use client' (required for error.js/error.tsx).",
             detail={"line": entry["line"], "name": entry.get("name")},
         ),
         log_message=lambda count: (
-            "       nextjs: " f"{count} App Router error boundary files missing 'use client'"
+            "       nextjs: "
+            f"{count} App Router error boundary files missing 'use client'"
         ),
     ),
     ScannerRule(
@@ -151,7 +156,7 @@ NEXTJS_SCANNERS: tuple[ScannerRule, ...] = (
         issue_factory=lambda entry: make_issue(
             "nextjs",
             entry["file"],
-            f"pages_router_artifact_in_app_router::{entry.get('name','artifact')}",
+            f"pages_router_artifact_in_app_router::{entry.get('name', 'artifact')}",
             tier=3,
             confidence="high",
             summary=(
@@ -161,7 +166,7 @@ NEXTJS_SCANNERS: tuple[ScannerRule, ...] = (
             detail={"line": entry["line"], "name": entry.get("name")},
         ),
         log_message=lambda count: (
-            "       nextjs: " f"{count} Pages Router artifact files found under app/"
+            f"       nextjs: {count} Pages Router artifact files found under app/"
         ),
     ),
     ScannerRule(
@@ -177,7 +182,7 @@ NEXTJS_SCANNERS: tuple[ScannerRule, ...] = (
             detail={"line": entry["line"], "hook": entry["hook"]},
         ),
         log_message=lambda count: (
-            "       nextjs: " f"{count} App Router files missing 'use client'"
+            f"       nextjs: {count} App Router files missing 'use client'"
         ),
     ),
     ScannerRule(
@@ -222,7 +227,7 @@ NEXTJS_SCANNERS: tuple[ScannerRule, ...] = (
             },
         ),
         log_message=lambda count: (
-            "       nextjs: " f"{count} client components import server-only modules"
+            f"       nextjs: {count} client components import server-only modules"
         ),
     ),
     ScannerRule(
@@ -231,7 +236,7 @@ NEXTJS_SCANNERS: tuple[ScannerRule, ...] = (
         issue_factory=lambda entry: make_issue(
             "nextjs",
             entry["file"],
-            f"server_export_in_client::{entry.get('export','export')}",
+            f"server_export_in_client::{entry.get('export', 'export')}",
             tier=3,
             confidence="high",
             summary=(
@@ -241,7 +246,8 @@ NEXTJS_SCANNERS: tuple[ScannerRule, ...] = (
             detail={"line": entry["line"], "export": entry.get("export")},
         ),
         log_message=lambda count: (
-            "       nextjs: " f"{count} client components export server-only Next.js exports"
+            "       nextjs: "
+            f"{count} client components export server-only Next.js exports"
         ),
     ),
     ScannerRule(
@@ -250,7 +256,7 @@ NEXTJS_SCANNERS: tuple[ScannerRule, ...] = (
         issue_factory=lambda entry: make_issue(
             "nextjs",
             entry["file"],
-            f"pages_router_api_in_app_router::{entry.get('api','api')}",
+            f"pages_router_api_in_app_router::{entry.get('api', 'api')}",
             tier=3,
             confidence="high",
             summary=(
@@ -260,7 +266,7 @@ NEXTJS_SCANNERS: tuple[ScannerRule, ...] = (
             detail={"line": entry["line"], "api": entry.get("api")},
         ),
         log_message=lambda count: (
-            "       nextjs: " f"{count} App Router files use Pages Router APIs"
+            f"       nextjs: {count} App Router files use Pages Router APIs"
         ),
     ),
     ScannerRule(
@@ -274,7 +280,7 @@ NEXTJS_SCANNERS: tuple[ScannerRule, ...] = (
             summary="App Router module imports next/head (unsupported in App Router).",
         ),
         log_message=lambda count: (
-            "       nextjs: " f"{count} App Router files import next/head"
+            f"       nextjs: {count} App Router files import next/head"
         ),
     ),
     ScannerRule(
@@ -288,7 +294,7 @@ NEXTJS_SCANNERS: tuple[ScannerRule, ...] = (
             summary="next/document import outside valid Pages Router _document.* file.",
         ),
         log_message=lambda count: (
-            "       nextjs: " f"{count} files import next/document outside _document.*"
+            f"       nextjs: {count} files import next/document outside _document.*"
         ),
     ),
     ScannerRule(
@@ -297,7 +303,7 @@ NEXTJS_SCANNERS: tuple[ScannerRule, ...] = (
         issue_factory=lambda entry: make_issue(
             "nextjs",
             entry["file"],
-            f"browser_global_missing_use_client::{entry.get('global','global')}",
+            f"browser_global_missing_use_client::{entry.get('global', 'global')}",
             tier=2,
             confidence="medium",
             summary=(
@@ -307,7 +313,8 @@ NEXTJS_SCANNERS: tuple[ScannerRule, ...] = (
             detail={"line": entry["line"], "global": entry.get("global")},
         ),
         log_message=lambda count: (
-            "       nextjs: " f"{count} App Router files access browser globals without 'use client'"
+            "       nextjs: "
+            f"{count} App Router files access browser globals without 'use client'"
         ),
     ),
     ScannerRule(
@@ -320,9 +327,7 @@ NEXTJS_SCANNERS: tuple[ScannerRule, ...] = (
             confidence="low",
             summary="Client layout detected (layout.* marked 'use client') — consider isolating interactivity to leaf components.",
         ),
-        log_message=lambda count: (
-            "       nextjs: " f"{count} client layouts detected"
-        ),
+        log_message=lambda count: f"       nextjs: {count} client layouts detected",
     ),
     ScannerRule(
         id="async_client_component",
@@ -335,7 +340,7 @@ NEXTJS_SCANNERS: tuple[ScannerRule, ...] = (
             summary="Client component is async (invalid in Next.js).",
         ),
         log_message=lambda count: (
-            "       nextjs: " f"{count} async client components detected"
+            f"       nextjs: {count} async client components detected"
         ),
     ),
     ScannerRule(
@@ -344,7 +349,7 @@ NEXTJS_SCANNERS: tuple[ScannerRule, ...] = (
         issue_factory=lambda entry: make_issue(
             "nextjs",
             entry["file"],
-            f"env_leak_in_client::{entry.get('var','env')}",
+            f"env_leak_in_client::{entry.get('var', 'env')}",
             tier=2,
             confidence="high",
             summary=(
@@ -354,7 +359,7 @@ NEXTJS_SCANNERS: tuple[ScannerRule, ...] = (
             detail={"line": entry["line"], "var": entry.get("var")},
         ),
         log_message=lambda count: (
-            "       nextjs: " f"{count} non-public env vars read in client modules"
+            f"       nextjs: {count} non-public env vars read in client modules"
         ),
     ),
     ScannerRule(
@@ -373,7 +378,7 @@ NEXTJS_SCANNERS: tuple[ScannerRule, ...] = (
             detail={"line": entry["line"], "exports": entry.get("exports", [])},
         ),
         log_message=lambda count: (
-            "       nextjs: " f"{count} Pages Router API routes export App Router handlers"
+            f"       nextjs: {count} Pages Router API routes export App Router handlers"
         ),
     ),
     ScannerRule(
@@ -382,7 +387,7 @@ NEXTJS_SCANNERS: tuple[ScannerRule, ...] = (
         issue_factory=lambda entry: make_issue(
             "nextjs",
             entry["file"],
-            f"middleware_misuse::{entry.get('kind','route')}",
+            f"middleware_misuse::{entry.get('kind', 'route')}",
             tier=3,
             confidence="medium",
             summary=(
@@ -397,7 +402,7 @@ NEXTJS_SCANNERS: tuple[ScannerRule, ...] = (
             },
         ),
         log_message=lambda count: (
-            "       nextjs: " f"{count} route handler/middleware context misuse findings"
+            f"       nextjs: {count} route handler/middleware context misuse findings"
         ),
     ),
     ScannerRule(
@@ -406,7 +411,7 @@ NEXTJS_SCANNERS: tuple[ScannerRule, ...] = (
         issue_factory=lambda entry: make_issue(
             "nextjs",
             entry["file"],
-            f"server_api_in_client::{entry.get('api','api')}",
+            f"server_api_in_client::{entry.get('api', 'api')}",
             tier=2,
             confidence="high",
             summary=(
@@ -416,7 +421,8 @@ NEXTJS_SCANNERS: tuple[ScannerRule, ...] = (
             detail={"line": entry["line"], "api": entry.get("api")},
         ),
         log_message=lambda count: (
-            "       nextjs: " f"{count} client modules call server-only next/navigation APIs"
+            "       nextjs: "
+            f"{count} client modules call server-only next/navigation APIs"
         ),
     ),
     ScannerRule(
@@ -430,7 +436,8 @@ NEXTJS_SCANNERS: tuple[ScannerRule, ...] = (
             summary="'use server' directive in a client module (invalid in Next.js).",
         ),
         log_message=lambda count: (
-            "       nextjs: " f"{count} client modules contain a module-level 'use server' directive"
+            "       nextjs: "
+            f"{count} client modules contain a module-level 'use server' directive"
         ),
     ),
     ScannerRule(
@@ -444,7 +451,8 @@ NEXTJS_SCANNERS: tuple[ScannerRule, ...] = (
             summary="'use server' directive is present but not the first meaningful line (invalid in Next.js).",
         ),
         log_message=lambda count: (
-            "       nextjs: " f"{count} modules contain a non-top-level 'use server' directive"
+            "       nextjs: "
+            f"{count} modules contain a non-top-level 'use server' directive"
         ),
     ),
     ScannerRule(
@@ -453,7 +461,7 @@ NEXTJS_SCANNERS: tuple[ScannerRule, ...] = (
         issue_factory=lambda entry: make_issue(
             "nextjs",
             entry["file"],
-            f"app_router_exports_in_pages_router::{entry.get('export','export')}",
+            f"app_router_exports_in_pages_router::{entry.get('export', 'export')}",
             tier=3,
             confidence="high",
             summary=(
@@ -463,7 +471,8 @@ NEXTJS_SCANNERS: tuple[ScannerRule, ...] = (
             detail={"line": entry["line"], "export": entry.get("export")},
         ),
         log_message=lambda count: (
-            "       nextjs: " f"{count} Pages Router files export App Router-only module exports"
+            "       nextjs: "
+            f"{count} Pages Router files export App Router-only module exports"
         ),
     ),
     ScannerRule(
@@ -491,7 +500,8 @@ NEXTJS_SCANNERS: tuple[ScannerRule, ...] = (
             },
         ),
         log_message=lambda count: (
-            "       nextjs: " f"{count} Pages Router files import App Router server-only modules"
+            "       nextjs: "
+            f"{count} Pages Router files import App Router server-only modules"
         ),
     ),
     ScannerRule(

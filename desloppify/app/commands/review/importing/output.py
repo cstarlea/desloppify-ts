@@ -32,12 +32,12 @@ def _print_import_error_hints(
     import_cmd = (
         "desloppify review --import "
         f"{quoted_import} --attested-external --attest "
-        f"\"{ATTESTED_EXTERNAL_ATTEST_EXAMPLE}\""
+        f'"{ATTESTED_EXTERNAL_ATTEST_EXAMPLE}"'
     )
     validate_cmd = (
         "desloppify review --validate-import "
         f"{quoted_import} --attested-external --attest "
-        f"\"{ATTESTED_EXTERNAL_ATTEST_EXAMPLE}\""
+        f'"{ATTESTED_EXTERNAL_ATTEST_EXAMPLE}"'
     )
     issues_only_cmd = f"desloppify review --import {quoted_import}"
 
@@ -111,7 +111,9 @@ def print_assessment_mode_banner(
     if not assessments_present and mode == "none":
         return
     style = "yellow" if mode in {"manual_override", "issues_only"} else "dim"
-    print(colorize_fn(f"  Assessment import mode: {assessment_mode_label(policy)}", style))
+    print(
+        colorize_fn(f"  Assessment import mode: {assessment_mode_label(policy)}", style)
+    )
 
 
 def print_assessment_policy_notice(
@@ -126,7 +128,9 @@ def print_assessment_policy_notice(
         return
     mode = policy_model.mode.strip().lower()
     handlers = {
-        "trusted": lambda: _print_trusted_policy_notice(policy_model, colorize_fn=colorize_fn),
+        "trusted": lambda: _print_trusted_policy_notice(
+            policy_model, colorize_fn=colorize_fn
+        ),
         "trusted_internal": lambda: _print_trusted_internal_policy_notice(
             policy_model,
             colorize_fn=colorize_fn,
@@ -155,7 +159,9 @@ def _print_reason_line(reason: str, *, colorize_fn) -> None:
         print(colorize_fn(f"  Reason: {reason}", "dim"))
 
 
-def _print_trusted_policy_notice(policy_model: AssessmentImportPolicyModel, *, colorize_fn) -> None:
+def _print_trusted_policy_notice(
+    policy_model: AssessmentImportPolicyModel, *, colorize_fn
+) -> None:
     packet_path = policy_model.provenance.packet_path.strip() or None
     detail = f" · blind packet {packet_path}" if packet_path else ""
     print(
@@ -243,7 +249,7 @@ def _print_issues_only_policy_notice(
     print(
         colorize_fn(
             "  If you intentionally want manual assessment import, rerun with "
-            f"`desloppify review --import {import_file} --manual-override --attest \"<why this is justified>\"`.",
+            f'`desloppify review --import {import_file} --manual-override --attest "<why this is justified>"`.',
             "dim",
         )
     )
@@ -251,7 +257,7 @@ def _print_issues_only_policy_notice(
         colorize_fn(
             "  Claude cloud path for durable scores: "
             f"`desloppify review --import {import_file} --attested-external "
-            f"--attest \"{ATTESTED_EXTERNAL_ATTEST_EXAMPLE}\"`",
+            f'--attest "{ATTESTED_EXTERNAL_ATTEST_EXAMPLE}"`',
             "dim",
         )
     )
@@ -312,7 +318,11 @@ def print_open_review_summary(state: StateModel, *, colorize_fn) -> str:
             "bold",
         )
     )
-    print(colorize_fn("  Run `desloppify show review --status open` to see the work queue", "dim"))
+    print(
+        colorize_fn(
+            "  Run `desloppify show review --status open` to see the work queue", "dim"
+        )
+    )
     return "desloppify show review --status open"
 
 

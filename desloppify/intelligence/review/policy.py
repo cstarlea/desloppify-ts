@@ -46,11 +46,15 @@ def build_dimension_policy(
 
     known = frozenset(normalize_dimension_name(name) for name in DIMENSION_PROMPTS)
 
-    configured_custom = _normalized_custom_allowlist(cfg.get("review_custom_dimensions"))
+    configured_custom = _normalized_custom_allowlist(
+        cfg.get("review_custom_dimensions")
+    )
     discovered_custom = _normalized_custom_allowlist(st.get("custom_review_dimensions"))
     allowed_custom = frozenset(configured_custom | discovered_custom)
 
-    allow_custom = bool(allow_custom_dimensions) or bool(cfg.get("review_allow_custom_dimensions", False))
+    allow_custom = bool(allow_custom_dimensions) or bool(
+        cfg.get("review_allow_custom_dimensions", False)
+    )
 
     return DimensionPolicy(
         allow_custom=allow_custom,
@@ -131,7 +135,9 @@ def normalize_assessment_inputs(
     return accepted, sorted(set(skipped)), discovered_custom
 
 
-def append_custom_dimensions(state: dict, custom_dimensions: set[str] | list[str]) -> None:
+def append_custom_dimensions(
+    state: dict, custom_dimensions: set[str] | list[str]
+) -> None:
     """Persist newly discovered custom dimensions to state (deduplicated)."""
     if not custom_dimensions:
         return
@@ -156,5 +162,7 @@ def filter_assessments_for_scoring(
     policy: DimensionPolicy,
 ) -> dict | None:
     """Filter/normalize assessments to scoring-eligible dimensions."""
-    accepted, _skipped, _new_custom = normalize_assessment_inputs(raw_assessments, policy=policy)
+    accepted, _skipped, _new_custom = normalize_assessment_inputs(
+        raw_assessments, policy=policy
+    )
     return accepted or None

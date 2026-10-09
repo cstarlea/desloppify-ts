@@ -49,10 +49,16 @@ def show_tier_progress_table(by_tier: dict, debt_by_tier: dict | None = None) ->
             else ts.get("wontfix", 0)
         )
         t_total = sum(ts.values())
-        strict_pct = round((t_fixed + ts.get("false_positive", 0)) / t_total * 100) if t_total else 100
+        strict_pct = (
+            round((t_fixed + ts.get("false_positive", 0)) / t_total * 100)
+            if t_total
+            else 100
+        )
         bar_len = 20
         filled = round(strict_pct / 100 * bar_len)
-        bar = colorize("█" * filled, "green") + colorize("░" * (bar_len - filled), "dim")
+        bar = colorize("█" * filled, "green") + colorize(
+            "░" * (bar_len - filled), "dim"
+        )
         rows.append(
             [
                 f"Tier {tier_num}",
@@ -109,7 +115,7 @@ def write_status_query(request: StatusQueryRequest) -> None:
     verified_strict_score = request.verified_strict_score
     plan = request.plan
 
-    issues = (state.get("work_items") or state.get("issues", {}))
+    issues = state.get("work_items") or state.get("issues", {})
     open_scope = (
         open_scope_breakdown(issues, state.get("scan_path"))
         if isinstance(issues, dict)
@@ -136,7 +142,9 @@ def write_status_query(request: StatusQueryRequest) -> None:
             "potentials": state.get("potentials"),
             "codebase_metrics": state.get("codebase_metrics"),
             "open_scope": open_scope,
-            "score_breakdown": compute_health_breakdown(dim_scores) if dim_scores else None,
+            "score_breakdown": compute_health_breakdown(dim_scores)
+            if dim_scores
+            else None,
             "next_command": status_next_command(narrative),
             "narrative": narrative,
             **_status_plan_payload(plan),
@@ -193,9 +201,13 @@ def show_disabled_summary(state: dict, entries: list[str]) -> None:
         1
         for issue in (state.get("work_items") or {}).values()
         if isinstance(issue, dict)
-        and str(issue.get("suppression_pattern") or "").startswith(DISABLED_PATTERN_PREFIX)
+        and str(issue.get("suppression_pattern") or "").startswith(
+            DISABLED_PATTERN_PREFIX
+        )
     )
-    print(colorize(f"\n  Disabled in config, out of scoring: {', '.join(entries)}", "dim"))
+    print(
+        colorize(f"\n  Disabled in config, out of scoring: {', '.join(entries)}", "dim")
+    )
     print(
         colorize(
             f"    {hidden} issue(s) hidden. "

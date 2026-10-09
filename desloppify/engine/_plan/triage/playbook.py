@@ -17,27 +17,27 @@ TRIAGE_STAGE_LABELS: tuple[tuple[str, str], ...] = (
 TRIAGE_RUNNERS: tuple[str, ...] = ("codex", "claude", "rovodev")
 
 TRIAGE_CMD_STRATEGIZE = (
-    'desloppify plan triage --stage strategize --report '
+    "desloppify plan triage --stage strategize --report "
     '\'"{"score_trend":"stable","debt_trend":"stable"}"\''
 )
 TRIAGE_CMD_OBSERVE = (
-    'desloppify plan triage --stage observe --report '
+    "desloppify plan triage --stage observe --report "
     '"analysis of themes and root causes..."'
 )
 TRIAGE_CMD_REFLECT = (
-    'desloppify plan triage --stage reflect --report '
+    "desloppify plan triage --stage reflect --report "
     '"comparison against completed work..."'
 )
 TRIAGE_CMD_ORGANIZE = (
-    'desloppify plan triage --stage organize --report '
+    "desloppify plan triage --stage organize --report "
     '"summary of organization and priorities..."'
 )
 TRIAGE_CMD_ENRICH = (
-    'desloppify plan triage --stage enrich --report '
+    "desloppify plan triage --stage enrich --report "
     '"summary of enrichment work done..."'
 )
 TRIAGE_CMD_SENSE_CHECK = (
-    'desloppify plan triage --stage sense-check --report '
+    "desloppify plan triage --stage sense-check --report "
     '"summary of sense-check findings..."'
 )
 TRIAGE_CMD_COMPLETE = 'desloppify plan triage --complete --strategy "execution plan..."'
@@ -55,8 +55,7 @@ TRIAGE_CMD_CLUSTER_ENRICH = (
     '"step 1" "step 2"'
 )
 TRIAGE_CMD_CLUSTER_ENRICH_COMPACT = (
-    'desloppify plan cluster update <name> --description "..." --steps '
-    '"step1" "step2"'
+    'desloppify plan cluster update <name> --description "..." --steps "step1" "step2"'
 )
 TRIAGE_CMD_CLUSTER_STEPS = (
     'desloppify plan cluster update <name> --steps "step 1" "step 2"'
@@ -121,12 +120,8 @@ TRIAGE_STAGE_PREREQUISITES: dict[str, tuple[StagePrerequisite, ...]] = {
         StagePrerequisite("reflect"),
         StagePrerequisite("organize", require_confirmation=True),
     ),
-    "sense-check": (
-        StagePrerequisite("enrich", require_confirmation=True),
-    ),
-    "commit": (
-        StagePrerequisite("sense-check"),
-    ),
+    "sense-check": (StagePrerequisite("enrich", require_confirmation=True),),
+    "commit": (StagePrerequisite("sense-check"),),
 }
 
 TRIAGE_STAGE_DEPENDENCIES: dict[str, set[str]] = {
@@ -149,7 +144,9 @@ def _first_unmet_prerequisite(
     for prerequisite in TRIAGE_STAGE_PREREQUISITES[stage_name]:
         if not recorded.get(prerequisite.stage_name, False):
             return prerequisite
-        if prerequisite.require_confirmation and not confirmed.get(prerequisite.stage_name, False):
+        if prerequisite.require_confirmation and not confirmed.get(
+            prerequisite.stage_name, False
+        ):
             return prerequisite
     return None
 
@@ -158,7 +155,15 @@ def compute_triage_progress(stages_data: dict) -> TriageProgress:
     """Return canonical triage-stage progression for display and validation."""
     stage_map = stages_data if isinstance(stages_data, dict) else {}
     if "strategize" not in stage_map and any(
-        name in stage_map for name in ("observe", "reflect", "organize", "enrich", "sense-check", "commit")
+        name in stage_map
+        for name in (
+            "observe",
+            "reflect",
+            "organize",
+            "enrich",
+            "sense-check",
+            "commit",
+        )
     ):
         stage_map = {
             **stage_map,
@@ -175,7 +180,9 @@ def compute_triage_progress(stages_data: dict) -> TriageProgress:
     for stage_name, _label in TRIAGE_STAGE_LABELS:
         payload = stage_map.get(stage_name, {})
         is_recorded = isinstance(payload, dict) and stage_name in stage_map
-        is_confirmed = bool(payload.get("confirmed_at")) if isinstance(payload, dict) else False
+        is_confirmed = (
+            bool(payload.get("confirmed_at")) if isinstance(payload, dict) else False
+        )
         readiness.append(
             StageReadiness(
                 name=stage_name,
@@ -198,12 +205,18 @@ def compute_triage_progress(stages_data: dict) -> TriageProgress:
             current_stage = stage_name
             next_command = triage_manual_stage_command(stage_name)
         else:
-            prerequisite_label = _STAGE_LABEL_BY_NAME.get(missing.stage_name, missing.stage_name)
+            prerequisite_label = _STAGE_LABEL_BY_NAME.get(
+                missing.stage_name, missing.stage_name
+            )
             if missing.require_confirmation and recorded.get(missing.stage_name, False):
-                blocked_reason = f"{label} blocked until {prerequisite_label} is confirmed."
+                blocked_reason = (
+                    f"{label} blocked until {prerequisite_label} is confirmed."
+                )
                 next_command = _confirm_stage_command(missing.stage_name)
             else:
-                blocked_reason = f"{label} blocked until {prerequisite_label} is recorded."
+                blocked_reason = (
+                    f"{label} blocked until {prerequisite_label} is recorded."
+                )
                 next_command = triage_manual_stage_command(missing.stage_name)
         break
 
@@ -235,7 +248,9 @@ def triage_run_stages_command(
     if isinstance(only_stages, str):
         stages = [only_stages]
     else:
-        stages = [str(stage).strip().lower() for stage in only_stages if str(stage).strip()]
+        stages = [
+            str(stage).strip().lower() for stage in only_stages if str(stage).strip()
+        ]
 
     invalid = [stage for stage in stages if stage not in _RUNNER_STAGE_NAMES]
     if invalid:

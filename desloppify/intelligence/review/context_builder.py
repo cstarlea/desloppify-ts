@@ -20,7 +20,9 @@ class ReviewContextBuildServices:
     abs_path: Callable[[str], str]
     rel_path: Callable[[str], str]
     importer_count: Callable[[dict[str, object]], int]
-    default_review_module_patterns: Callable[[str], list[str] | tuple[str, ...] | set[str]]
+    default_review_module_patterns: Callable[
+        [str], list[str] | tuple[str, ...] | set[str]
+    ]
     gather_ai_debt_signals: Callable[..., dict[str, object]]
     gather_auth_context: Callable[..., dict[str, object]]
     classify_error_strategy: Callable[[str], str]
@@ -47,9 +49,9 @@ def build_review_context_inner(
     prefix_counter: Counter = Counter()
     total_names = 0
     for content in file_contents.values():
-        for name in services.func_name_re.findall(content) + services.class_name_re.findall(
+        for name in services.func_name_re.findall(
             content
-        ):
+        ) + services.class_name_re.findall(content):
             total_names += 1
             match = services.name_prefix_re.match(name)
             if match:
@@ -107,7 +109,7 @@ def build_review_context_inner(
         for filepath in file_contents
         if isinstance(filepath, str) and filepath
     }
-    issues = (state.get("work_items") or state.get("issues", {}))
+    issues = state.get("work_items") or state.get("issues", {})
     by_file: dict[str, list[str]] = {}
     for issue in issues.values():
         if issue.get("status") != "open":

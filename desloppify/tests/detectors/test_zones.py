@@ -201,7 +201,9 @@ class TestClassifyFile:
         from desloppify.languages.typescript._zones import TS_ZONE_RULES
 
         assert classify_file("examples/app/src/a.test.ts", TS_ZONE_RULES) == Zone.TEST
-        assert classify_file("examples/app/vite.config.ts", TS_ZONE_RULES) == Zone.CONFIG
+        assert (
+            classify_file("examples/app/vite.config.ts", TS_ZONE_RULES) == Zone.CONFIG
+        )
         assert classify_file("examples/app/src/a.ts", TS_ZONE_RULES) == Zone.SCRIPT
 
     def test_production_default(self):
@@ -453,7 +455,9 @@ class TestGeneratedHeader:
         (tmp_path / "src" / "client.ts").write_text("// @generated\nexport {};\n")
         (tmp_path / "src" / "app.ts").write_text("export {};\n")
         (tmp_path / "src" / "app.test.ts").write_text("// auto-generated\n")
-        files = [str(tmp_path / "src" / n) for n in ("client.ts", "app.ts", "app.test.ts")]
+        files = [
+            str(tmp_path / "src" / n) for n in ("client.ts", "app.ts", "app.test.ts")
+        ]
         zone_map = FileZoneMap(
             files,
             COMMON_ZONE_RULES,
@@ -671,7 +675,11 @@ class TestZonePolicies:
         """SCRIPT zone skips coupling, single_use, orphaned, facade, test_coverage."""
         policy = ZONE_POLICIES[Zone.SCRIPT]
         assert policy.skip_detectors == {
-            "coupling", "single_use", "orphaned", "facade", "test_coverage"
+            "coupling",
+            "single_use",
+            "orphaned",
+            "facade",
+            "test_coverage",
         }
 
     def test_script_zone_downgrades_structural(self):
@@ -701,7 +709,6 @@ class TestZonePolicies:
 
 
 # ── adjust_potential() ───────────────────────────────────────
-
 
 
 # ── Directory and glob overrides ─────────────────────────────
@@ -734,7 +741,10 @@ class TestPatternOverrides:
         assert is_override_pattern("app/[slug]/page.tsx") is False
         overrides = {"app/[slug]/page.tsx": "test"}
         assert matching_override("app/s/page.tsx", overrides) is None
-        assert classify_file("app/[slug]/page.tsx", COMMON_ZONE_RULES, overrides) == Zone.TEST
+        assert (
+            classify_file("app/[slug]/page.tsx", COMMON_ZONE_RULES, overrides)
+            == Zone.TEST
+        )
 
     def test_precedence(self):
         overrides = {
@@ -743,16 +753,33 @@ class TestPatternOverrides:
             "www/docs/**": "test",
             "www/docs/keep.ts": "production",
         }
-        assert classify_file("www/docs/keep.ts", COMMON_ZONE_RULES, overrides) == Zone.PRODUCTION
-        assert classify_file("www/docs/other.ts", COMMON_ZONE_RULES, overrides) == Zone.TEST
-        assert classify_file("www/blog/post.ts", COMMON_ZONE_RULES, overrides) == Zone.VENDOR
+        assert (
+            classify_file("www/docs/keep.ts", COMMON_ZONE_RULES, overrides)
+            == Zone.PRODUCTION
+        )
+        assert (
+            classify_file("www/docs/other.ts", COMMON_ZONE_RULES, overrides)
+            == Zone.TEST
+        )
+        assert (
+            classify_file("www/blog/post.ts", COMMON_ZONE_RULES, overrides)
+            == Zone.VENDOR
+        )
         assert classify_file("src/app.ts", COMMON_ZONE_RULES, overrides) == Zone.CONFIG
-        assert classify_file("src/app.js", COMMON_ZONE_RULES, overrides) == Zone.PRODUCTION
+        assert (
+            classify_file("src/app.js", COMMON_ZONE_RULES, overrides) == Zone.PRODUCTION
+        )
 
     def test_pattern_beats_builtin_rules(self):
         overrides = {"www/**": "production"}
-        assert classify_file("www/tests/a.ts", COMMON_ZONE_RULES, overrides) == Zone.PRODUCTION
-        assert classify_file("www/scripts/a.ts", COMMON_ZONE_RULES, overrides) == Zone.PRODUCTION
+        assert (
+            classify_file("www/tests/a.ts", COMMON_ZONE_RULES, overrides)
+            == Zone.PRODUCTION
+        )
+        assert (
+            classify_file("www/scripts/a.ts", COMMON_ZONE_RULES, overrides)
+            == Zone.PRODUCTION
+        )
 
     def test_pattern_override_beats_generated_header(self, tmp_path):
         target = tmp_path / "www" / "client.ts"

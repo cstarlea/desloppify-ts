@@ -86,7 +86,9 @@ def draw_right_panel(
                 draw.rectangle(
                     (grid_x1 + 1, band_top, grid_x2 - 1, band_bottom), fill=BG_ROW_ALT
                 )
-            text_y = band_top + (row_h - row_text_height) // 2 - row_text_offset + scale(1)
+            text_y = (
+                band_top + (row_h - row_text_height) // 2 - row_text_offset + scale(1)
+            )
             score = data.get("score", 100)
             strict = data.get("strict", score)
 
@@ -117,6 +119,7 @@ def draw_right_panel(
                 fill=score_color(strict, muted=True),
                 font=font_strict,
             )
+
 
 __all__ = [
     "draw_left_panel",

@@ -20,7 +20,7 @@ def _normalize_file_path(value: object) -> str | None:
     """Normalize/validate candidate file paths for batch payloads."""
     if not isinstance(value, str):
         return None
-    text = value.strip().strip(",\'\"")
+    text = value.strip().strip(",'\"")
     if not text or text in {".", ".."}:
         return None
     if text.endswith("/"):

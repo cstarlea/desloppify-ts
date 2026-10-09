@@ -25,10 +25,17 @@ def show_fix_dry_run_samples(entries: list[dict], results: list[dict]) -> None:
         else:
             _print_fix_file_sample(result, entries)
     if len(results) > _MAX_DIFF_FILES:
-        print(colorize(f"\n  ... and {len(results) - _MAX_DIFF_FILES} more files", "dim"))
+        print(
+            colorize(f"\n  ... and {len(results) - _MAX_DIFF_FILES} more files", "dim")
+        )
     removed_count = sum(len(r["removed"]) if "removed" in r else 1 for r in results)
     if len(entries) > removed_count:
-        print(colorize(f"\n  Note: {len(entries) - removed_count} of {len(entries)} entries were skipped (complex patterns, rest elements, etc.)", "dim"))
+        print(
+            colorize(
+                f"\n  Note: {len(entries) - removed_count} of {len(entries)} entries were skipped (complex patterns, rest elements, etc.)",
+                "dim",
+            )
+        )
     print()
 
 
@@ -47,7 +54,9 @@ def _print_diff(diff: str) -> None:
         else:
             print(f"    {line}")
     if len(lines) > _MAX_DIFF_LINES:
-        print(colorize(f"    ... {len(lines) - _MAX_DIFF_LINES} more diff lines", "dim"))
+        print(
+            colorize(f"    ... {len(lines) - _MAX_DIFF_LINES} more diff lines", "dim")
+        )
 
 
 def _print_fix_file_sample(result: dict, entries: list[dict]) -> None:
@@ -59,7 +68,11 @@ def _print_fix_file_sample(result: dict, entries: list[dict]) -> None:
         _logger.debug("dry-run sample skipped for %s: %s", filepath, exc)
         return
 
-    file_entries = [entry for entry in entries if entry["file"] == filepath and entry.get("name", "") in removed_set]
+    file_entries = [
+        entry
+        for entry in entries
+        if entry["file"] == filepath and entry.get("name", "") in removed_set
+    ]
     shown = 0
     for entry in file_entries[:2]:
         line_idx = entry.get("line", entry.get("detail", {}).get("line", 0)) - 1
@@ -72,5 +85,5 @@ def _print_fix_file_sample(result: dict, entries: list[dict]) -> None:
         print(colorize(f"    {name} (line {line_idx + 1}):", "dim"))
         for idx in range(ctx_s, ctx_e):
             marker = colorize("  →", "red") if idx == line_idx else "   "
-            print(f"    {marker} {idx+1:4d}  {lines[idx][:90]}")
+            print(f"    {marker} {idx + 1:4d}  {lines[idx][:90]}")
         shown += 1

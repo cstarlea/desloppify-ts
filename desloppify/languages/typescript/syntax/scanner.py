@@ -50,7 +50,11 @@ def jsx_text_spans(text: str, path: str | Path | None) -> list[tuple[int, int]]:
     Empty for ``.ts`` files (no JSX), without a path, or without tree-sitter.
     ``path`` picks the grammar; its parse is reused when it holds ``text``.
     """
-    if path is None or grammar_for(path) != "tsx" or ("</" not in text and "/>" not in text):
+    if (
+        path is None
+        or grammar_for(path) != "tsx"
+        or ("</" not in text and "/>" not in text)
+    ):
         return []
     source = text.encode("utf-8")
     parsed = parsed_file(path)
@@ -62,11 +66,17 @@ def jsx_text_spans(text: str, path: str | Path | None) -> list[tuple[int, int]]:
     query = _JSX_TEXT_QUERIES.get(id(language))
     if query is None:
         try:
-            query = _JSX_TEXT_QUERIES[id(language)] = _make_query(language, "(jsx_text) @text")
+            query = _JSX_TEXT_QUERIES[id(language)] = _make_query(
+                language, "(jsx_text) @text"
+            )
         except PARSE_INIT_ERRORS:
             return []
     nodes = sorted(
-        (node for _pattern, captures in _run_query(query, parsed.root) for node in captures["text"]),
+        (
+            node
+            for _pattern, captures in _run_query(query, parsed.root)
+            for node in captures["text"]
+        ),
         key=lambda node: node.start_byte,
     )
     if len(source) == len(text):
@@ -113,7 +123,9 @@ class SourceText:
     @cached_property
     def uncommented(self) -> str:
         """The text with only comments blanked: strings and templates kept."""
-        return blank_spans(self.text, [span for span in self.spans if span[2] == "comment"])
+        return blank_spans(
+            self.text, [span for span in self.spans if span[2] == "comment"]
+        )
 
     @cached_property
     def uncommented_lines(self) -> list[str]:
@@ -121,7 +133,10 @@ class SourceText:
 
     def _split(self, text: str) -> list[str]:
         """``text`` (the same length as the source) cut where the source's lines are."""
-        return [text[start : start + len(line)] for start, line in zip(self.line_starts, self.lines, strict=True)]
+        return [
+            text[start : start + len(line)]
+            for start, line in zip(self.line_starts, self.lines, strict=True)
+        ]
 
     def line_of(self, offset: int) -> int:
         """The 1-based line holding ``offset``."""
@@ -143,7 +158,9 @@ class SourceText:
             return self.spans[index][2]
         return None
 
-    def line_matches(self, pattern: str | re.Pattern[str], anchor: str = "code") -> Iterator[tuple[int, re.Match[str]]]:
+    def line_matches(
+        self, pattern: str | re.Pattern[str], anchor: str = "code"
+    ) -> Iterator[tuple[int, re.Match[str]]]:
         """``(line index, match)`` for the first anchored match of ``pattern`` on each line."""
         regex = re.compile(pattern) if isinstance(pattern, str) else pattern
         for index in range(len(self.lines)):
@@ -151,7 +168,9 @@ class SourceText:
             if match is not None:
                 yield index, match
 
-    def search(self, pattern: str | re.Pattern[str], index: int, anchor: str = "code") -> re.Match[str] | None:
+    def search(
+        self, pattern: str | re.Pattern[str], index: int, anchor: str = "code"
+    ) -> re.Match[str] | None:
         """The first match of ``pattern`` on line ``index`` whose first
         non-blank character is where ``anchor`` says.
 
@@ -164,11 +183,15 @@ class SourceText:
         position = 0
         while (match := regex.search(line, position)) is not None:
             text = match.group()
-            offset = self.line_starts[index] + match.start() + len(text) - len(text.lstrip())
+            offset = (
+                self.line_starts[index] + match.start() + len(text) - len(text.lstrip())
+            )
             if self._anchored(offset, anchor):
                 return match
             position = match.start() + 1
-            if position > len(line):  # search() clamps a later start, so an empty match would repeat
+            if position > len(
+                line
+            ):  # search() clamps a later start, so an empty match would repeat
                 break
         return None
 

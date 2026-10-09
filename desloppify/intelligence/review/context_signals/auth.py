@@ -108,9 +108,9 @@ _SUPABASE_CLIENT_RE = re.compile(r"\bcreateClient\b")
 def _normalize_sql_ident(raw: str) -> str:
     """Strip surrounding quotes/brackets from a SQL identifier for comparison."""
     if len(raw) >= 2:
-        if (raw[0] == '"' and raw[-1] == '"') or (raw[0] == '`' and raw[-1] == '`'):
+        if (raw[0] == '"' and raw[-1] == '"') or (raw[0] == "`" and raw[-1] == "`"):
             return raw[1:-1]
-        if raw[0] == '[' and raw[-1] == ']':
+        if raw[0] == "[" and raw[-1] == "]":
             return raw[1:-1]
     return raw
 
@@ -294,7 +294,9 @@ def _segment_has_auth_enforcement(segment: str) -> bool:
         return True
     if not _AUTH_LOOKUP_RE.search(segment):
         return False
-    return bool(_NEGATED_AUTH_BRANCH_RE.search(segment) and _AUTH_DENIAL_RE.search(segment))
+    return bool(
+        _NEGATED_AUTH_BRANCH_RE.search(segment) and _AUTH_DENIAL_RE.search(segment)
+    )
 
 
 def is_auth_runtime_path(filepath: str) -> bool:

@@ -134,7 +134,9 @@ class TestMergeScan:
         assert "smells::foo.py::debug_tag" in state["work_items"]
 
     @patch.object(merge_mod, "_recompute_stats")
-    def test_merge_keeps_disappeared_open_issue_when_file_exists(self, mock_recompute, tmp_path):
+    def test_merge_keeps_disappeared_open_issue_when_file_exists(
+        self, mock_recompute, tmp_path
+    ):
         """Open issues whose file still exists stay open even if absent from scan."""
         mock_recompute.return_value = None
         (tmp_path / "old.py").write_text("# still here")
@@ -156,13 +158,19 @@ class TestMergeScan:
         }
         state["stats"]["open"] = 1
         diff = merge_scan(
-            state, [], MergeScanOptions(lang="python", force_resolve=True, project_root=str(tmp_path))
+            state,
+            [],
+            MergeScanOptions(
+                lang="python", force_resolve=True, project_root=str(tmp_path)
+            ),
         )
         assert diff["auto_resolved"] == 0
         assert state["work_items"]["smells::old.py::leftover"]["status"] == "open"
 
     @patch.object(merge_mod, "_recompute_stats")
-    def test_merge_auto_resolves_issue_when_file_deleted(self, mock_recompute, tmp_path):
+    def test_merge_auto_resolves_issue_when_file_deleted(
+        self, mock_recompute, tmp_path
+    ):
         """Open issues for files that no longer exist on disk are auto-resolved."""
         mock_recompute.return_value = None
         # tmp_path exists but old.py does NOT — simulates a deleted file
@@ -184,7 +192,11 @@ class TestMergeScan:
         }
         state["stats"]["open"] = 1
         diff = merge_scan(
-            state, [], MergeScanOptions(lang="python", force_resolve=True, project_root=str(tmp_path))
+            state,
+            [],
+            MergeScanOptions(
+                lang="python", force_resolve=True, project_root=str(tmp_path)
+            ),
         )
         assert diff["auto_resolved"] == 1
         item = state["work_items"]["smells::old.py::leftover"]
@@ -262,9 +274,7 @@ class TestReaders:
 
     @patch("desloppify.intelligence.review.context_holistic.readers.read_file_text")
     @patch("desloppify.intelligence.review.context_holistic.readers.resolve_path")
-    def test_read_file_contents_returns_existing_files(
-        self, mock_resolve, mock_read
-    ):
+    def test_read_file_contents_returns_existing_files(self, mock_resolve, mock_read):
         mock_resolve.side_effect = lambda f: f"/abs/{f}"
         mock_read.side_effect = lambda path: f"contents of {path}"
 
@@ -278,9 +288,7 @@ class TestReaders:
     @patch("desloppify.intelligence.review.context_holistic.readers.resolve_path")
     def test_read_file_contents_skips_missing_files(self, mock_resolve, mock_read):
         mock_resolve.side_effect = lambda f: f"/abs/{f}"
-        mock_read.side_effect = lambda path: (
-            "contents" if "exists" in path else None
-        )
+        mock_read.side_effect = lambda path: "contents" if "exists" in path else None
 
         result = readers_mod._read_file_contents(["exists.py", "missing.py"])
         assert "exists.py" in result
@@ -472,7 +480,9 @@ class TestReviewParser:
         sub = parser.add_subparsers(dest="command")
         parser_admin_mod._add_review_parser(sub)
 
-        args = parser.parse_args(["review", "--import", "results.json", "--allow-partial"])
+        args = parser.parse_args(
+            ["review", "--import", "results.json", "--allow-partial"]
+        )
         assert args.allow_partial is True
 
 
@@ -548,9 +558,7 @@ class TestFixParser:
         sub = parser.add_subparsers(dest="command")
         parser_admin_mod._add_autofix_parser(sub)
 
-        args = parser.parse_args(
-            ["autofix", "unused", "--path", "src", "--dry-run"]
-        )
+        args = parser.parse_args(["autofix", "unused", "--path", "src", "--dry-run"])
         assert args.fixer == "unused"
         assert args.path == "src"
         assert args.dry_run is True
@@ -656,7 +664,9 @@ class TestRollbackMoveTarget:
         assert source.exists()
         assert source.read_text() == "moved content"
 
-    @patch("desloppify.app.commands.move.apply.shutil.move", side_effect=OSError("fail"))
+    @patch(
+        "desloppify.app.commands.move.apply.shutil.move", side_effect=OSError("fail")
+    )
     @patch("desloppify.app.commands.move.apply.warn_best_effort")
     def test_rollback_os_error_warns(self, mock_warn, mock_move, tmp_path):
         dest = tmp_path / "dest.py"
@@ -750,9 +760,7 @@ class TestApplyDirectoryMove:
         (src / "mod.py").write_text("x = 1")
 
         dest = tmp_path / "new_pkg"
-        move_apply_mod.apply_directory_move(
-            str(src), str(dest), src, {}, {}
-        )
+        move_apply_mod.apply_directory_move(str(src), str(dest), src, {}, {})
         assert not src.exists()
         assert (dest / "mod.py").exists()
         assert (dest / "mod.py").read_text() == "x = 1"
@@ -879,7 +887,9 @@ class TestLogPhaseSummary:
     @patch("desloppify.languages._framework.base.shared_phases.log")
     def test_with_results(self, mock_log):
         fake_issues = [{"id": "a"}, {"id": "b"}]
-        shared_phases_mod._log_phase_summary("test coverage", fake_issues, 50, "production files")
+        shared_phases_mod._log_phase_summary(
+            "test coverage", fake_issues, 50, "production files"
+        )
         mock_log.assert_called_once()
         msg = mock_log.call_args[0][0]
         assert "test coverage" in msg

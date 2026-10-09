@@ -220,7 +220,9 @@ def test_detect_security_issues_reads_relative_files_from_the_project_root(
     assert entries, "read the cwd's src/creds.py instead of the project's"
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="zone rule patterns are POSIX paths")
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="zone rule patterns are POSIX paths"
+)
 def test_detect_security_issues_skips_excluded_zone(tmp_path):
     """Files in excluded zones are not scanned."""
     f = tmp_path / "test_creds.py"

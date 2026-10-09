@@ -17,6 +17,7 @@ from desloppify.app.commands.status import render as status_render
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_followup(**overrides):
     payload = {
         "low_assessed": True,
@@ -43,6 +44,7 @@ def _subjective_entry(dimension_key: str, *, stale: bool = False, score: float =
 # ---------------------------------------------------------------------------
 # print_subjective_followup — suppressed vs actionable
 # ---------------------------------------------------------------------------
+
 
 class TestPrintSubjectiveFollowup:
     """Test the shared subjective followup renderer."""
@@ -85,6 +87,7 @@ class TestPrintSubjectiveFollowup:
 # ---------------------------------------------------------------------------
 # _render_dimension_legend — stale commands gated
 # ---------------------------------------------------------------------------
+
 
 class TestRenderDimensionLegend:
     """Test the stale-dimension legend in the status dimension table."""

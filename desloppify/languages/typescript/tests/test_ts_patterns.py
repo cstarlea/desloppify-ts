@@ -220,7 +220,9 @@ class TestDetectPatternAnomalies:
 class TestPatternFamilies:
     def test_nothing_is_built_in(self, tmp_path):
         """Without configured families nothing is matched or reported."""
-        _write(tmp_path, "editor/sub/main.ts", "const s = useAutoSaveSettings<Config>();\n")
+        _write(
+            tmp_path, "editor/sub/main.ts", "const s = useAutoSaveSettings<Config>();\n"
+        )
         result = detect_pattern_anomalies(tmp_path, {})
         assert result.entries == [] and result.population_size == 0
         assert configured_pattern_families(None) == {}
@@ -244,6 +246,10 @@ class TestPatternFamilies:
     def test_reads_lang_setting(self):
         class _Lang:
             def runtime_setting(self, key):
-                return {"f": {"patterns": {"x": "x"}}} if key == "pattern_families" else None
+                return (
+                    {"f": {"patterns": {"x": "x"}}}
+                    if key == "pattern_families"
+                    else None
+                )
 
         assert set(configured_pattern_families(_Lang())) == {"f"}

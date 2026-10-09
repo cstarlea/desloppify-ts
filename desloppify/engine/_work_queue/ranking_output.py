@@ -62,10 +62,14 @@ def item_explain(item: WorkQueueItem) -> dict[str, Any]:
             "initial_review": initial,
             "policy": (
                 "Initial review items sort first (onboarding priority)."
-                if initial else
-                "Sorted by dimension impact (score headroom × weight), then subjective score."
+                if initial
+                else "Sorted by dimension impact (score headroom × weight), then subjective score."
             ),
-            "ranking_factors": ["estimated_impact desc", "subjective_score asc", "id asc"],
+            "ranking_factors": [
+                "estimated_impact desc",
+                "subjective_score asc",
+                "id asc",
+            ],
         }
 
     detail = detail_dict(item)
@@ -84,7 +88,12 @@ def item_explain(item: WorkQueueItem) -> dict[str, Any]:
             "id asc",
         ]
     else:
-        ranking_factors = ["estimated_impact desc", "confidence asc", "count desc", "id asc"]
+        ranking_factors = [
+            "estimated_impact desc",
+            "confidence asc",
+            "count desc",
+            "id asc",
+        ]
     explain = {
         "kind": "issue",
         "estimated_impact": item.get("estimated_impact", 0.0),
@@ -116,7 +125,11 @@ def group_queue_items(
             key = item.get("detector", "")
         elif group == "cluster":
             plan_cluster = item.get("plan_cluster")
-            key = plan_cluster["name"] if isinstance(plan_cluster, dict) else "(unclustered)"
+            key = (
+                plan_cluster["name"]
+                if isinstance(plan_cluster, dict)
+                else "(unclustered)"
+            )
         else:
             key = "items"
         grouped.setdefault(key, []).append(item)

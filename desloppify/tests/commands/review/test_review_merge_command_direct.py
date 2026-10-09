@@ -60,9 +60,17 @@ def test_do_merge_dry_run_reports_groups_without_persisting(
 
     monkeypatch.setattr(merge_mod, "command_runtime", lambda _args: runtime)
     monkeypatch.setattr(merge_mod, "compute_narrative", lambda *_a, **_k: {})
-    monkeypatch.setattr(merge_mod, "show_score_with_plan_context", lambda *_a, **_k: None)
+    monkeypatch.setattr(
+        merge_mod, "show_score_with_plan_context", lambda *_a, **_k: None
+    )
     monkeypatch.setattr(merge_mod, "write_query", lambda *_a, **_k: None)
-    monkeypatch.setattr(merge_mod, "save_state", lambda *_a, **_k: (_ for _ in ()).throw(AssertionError("dry-run must not save state")))
+    monkeypatch.setattr(
+        merge_mod,
+        "save_state",
+        lambda *_a, **_k: (_ for _ in ()).throw(
+            AssertionError("dry-run must not save state")
+        ),
+    )
 
     args = argparse.Namespace(similarity=0.3, dry_run=True)
     merge_mod.do_merge(args)
@@ -72,7 +80,9 @@ def test_do_merge_dry_run_reports_groups_without_persisting(
     assert "Dry run only" in capsys.readouterr().out
 
 
-def test_do_merge_marks_duplicates_and_persists_state(monkeypatch, tmp_path: Path) -> None:
+def test_do_merge_marks_duplicates_and_persists_state(
+    monkeypatch, tmp_path: Path
+) -> None:
     first = _holistic_review_issue(
         name="issue-a",
         summary="Resolve command helper error contract drift",
@@ -90,14 +100,20 @@ def test_do_merge_marks_duplicates_and_persists_state(monkeypatch, tmp_path: Pat
     query_payloads: list[dict] = []
 
     monkeypatch.setattr(merge_mod, "command_runtime", lambda _args: runtime)
-    monkeypatch.setattr(merge_mod, "compute_narrative", lambda *_a, **_k: {"summary": "narrative"})
-    monkeypatch.setattr(merge_mod, "show_score_with_plan_context", lambda *_a, **_k: None)
+    monkeypatch.setattr(
+        merge_mod, "compute_narrative", lambda *_a, **_k: {"summary": "narrative"}
+    )
+    monkeypatch.setattr(
+        merge_mod, "show_score_with_plan_context", lambda *_a, **_k: None
+    )
     monkeypatch.setattr(
         merge_mod,
         "save_state",
         lambda st, path: saved.append((st, path)),
     )
-    monkeypatch.setattr(merge_mod, "write_query", lambda payload: query_payloads.append(payload))
+    monkeypatch.setattr(
+        merge_mod, "write_query", lambda payload: query_payloads.append(payload)
+    )
     monkeypatch.setattr(merge_mod, "utc_now", lambda: "2026-03-10T12:00:00+00:00")
 
     args = argparse.Namespace(similarity=0.3, dry_run=False)
@@ -106,9 +122,13 @@ def test_do_merge_marks_duplicates_and_persists_state(monkeypatch, tmp_path: Pat
     assert saved == [(state, runtime.state_path)]
     assert query_payloads and query_payloads[0]["duplicates_merged"] == 1
 
-    open_issues = [issue for issue in state["work_items"].values() if issue["status"] == "open"]
+    open_issues = [
+        issue for issue in state["work_items"].values() if issue["status"] == "open"
+    ]
     auto_resolved = [
-        issue for issue in state["work_items"].values() if issue["status"] == "auto_resolved"
+        issue
+        for issue in state["work_items"].values()
+        if issue["status"] == "auto_resolved"
     ]
     assert len(open_issues) == 1
     assert len(auto_resolved) == 1

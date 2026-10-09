@@ -130,9 +130,7 @@ def _state_review_cache(state: StateModel) -> dict[str, object]:
         return normalized
     if isinstance(review_cache, dict):
         return review_cache
-    raise ScanStateContractError(
-        "state.review_cache must be an object when present"
-    )
+    raise ScanStateContractError("state.review_cache must be an object when present")
 
 
 def _state_issues(state: StateModel) -> dict[str, dict[str, Any]]:
@@ -258,9 +256,7 @@ def _reset_subjective_assessments_for_scan_reset(
     assessments = _state_subjective_assessments(state)
 
     reset_keys = {
-        key.strip()
-        for key in assessments
-        if isinstance(key, str) and key.strip()
+        key.strip() for key in assessments if isinstance(key, str) and key.strip()
     }
     reset_keys.update(_subjective_reset_dimensions(lang_name=lang_name))
 
@@ -279,8 +275,6 @@ def _reset_subjective_assessments_for_scan_reset(
             "placeholder": True,
         }
     return len(reset_keys)
-
-
 
 
 def prepare_scan_runtime(args: argparse.Namespace) -> ScanRuntime:
@@ -310,7 +304,9 @@ def prepare_scan_runtime(args: argparse.Namespace) -> ScanRuntime:
     lang = _configure_lang_runtime(args, config, state, lang_config)
     coverage_warnings = _seed_runtime_coverage_warnings(lang)
     zone_overrides_raw = config.get("zone_overrides")
-    zone_overrides = zone_overrides_raw if isinstance(zone_overrides_raw, dict) else None
+    zone_overrides = (
+        zone_overrides_raw if isinstance(zone_overrides_raw, dict) else None
+    )
 
     return ScanRuntime(
         args=args,
@@ -342,9 +338,7 @@ def _augment_with_stale_exclusion_issues(
 
     if scanned_files is None:
         scanned_files = runtime.lang.file_finder(runtime.path)
-    stale = audit_excluded_dirs(
-        extra_exclusions, scanned_files, get_project_root()
-    )
+    stale = audit_excluded_dirs(extra_exclusions, scanned_files, get_project_root())
     if not stale:
         return issues
 
@@ -478,9 +472,7 @@ def merge_scan_results(
         ),
     )
 
-    mark_stale_holistic(
-        runtime.state, runtime.config.get("holistic_max_age_days", 30)
-    )
+    mark_stale_holistic(runtime.state, runtime.config.get("holistic_max_age_days", 30))
     save_state(
         runtime.state,
         runtime.state_path,
@@ -507,15 +499,13 @@ def resolve_noise_snapshot(
     config: dict[str, object],
 ) -> ScanNoiseSnapshot:
     """Resolve noise budget settings and hidden issue counters."""
-    noise_budget, global_noise_budget, budget_warning = (
-        resolve_issue_noise_settings(config)
+    noise_budget, global_noise_budget, budget_warning = resolve_issue_noise_settings(
+        config
     )
     issues_by_id = _state_issues(state)
     open_issues = [
         issue
-        for issue in path_scoped_issues(
-            issues_by_id, state.get("scan_path")
-        ).values()
+        for issue in path_scoped_issues(issues_by_id, state.get("scan_path")).values()
         if issue.get("status") == "open"
     ]
     _, hidden_by_detector = apply_issue_noise_budget(

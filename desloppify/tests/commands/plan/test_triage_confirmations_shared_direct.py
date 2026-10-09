@@ -7,7 +7,9 @@ from types import SimpleNamespace
 import desloppify.app.commands.plan.triage.confirmations.shared as shared_mod
 
 
-def test_ensure_stage_is_confirmable_guards_missing_and_already_confirmed(capsys) -> None:
+def test_ensure_stage_is_confirmable_guards_missing_and_already_confirmed(
+    capsys,
+) -> None:
     assert shared_mod.ensure_stage_is_confirmable({}, stage="observe") is False
     missing_out = capsys.readouterr().out
     assert "Cannot confirm: observe stage not recorded" in missing_out
@@ -53,7 +55,9 @@ def test_finalize_stage_confirmation_sets_state_and_logs(monkeypatch, capsys) ->
     logs: list[dict] = []
     saved: list[dict] = []
     purged: list[str] = []
-    monkeypatch.setattr(shared_mod, "purge_triage_stage", lambda _plan, stage: purged.append(stage))
+    monkeypatch.setattr(
+        shared_mod, "purge_triage_stage", lambda _plan, stage: purged.append(stage)
+    )
     services = SimpleNamespace(
         append_log_entry=lambda _plan, action, **kwargs: logs.append(
             {"action": action, "kwargs": kwargs}

@@ -223,7 +223,9 @@ SUBJECTIVE_CHECKS = 10
 FAILURE_STATUSES_BY_MODE: dict[ScoreMode, frozenset[str]] = {
     "lenient": frozenset({"open", "deferred", "triaged_out"}),
     "strict": frozenset({"open", "wontfix", "deferred", "triaged_out"}),
-    "verified_strict": frozenset({"open", "wontfix", "fixed", "false_positive", "deferred", "triaged_out"}),
+    "verified_strict": frozenset(
+        {"open", "wontfix", "fixed", "false_positive", "deferred", "triaged_out"}
+    ),
 }
 
 # Failure statuses that stop failing in a mode once a later scan confirms the
@@ -244,7 +246,10 @@ def issue_counts_as_failure(issue: Mapping[str, Any], mode: ScoreMode) -> bool:
         return False
     if status in SCAN_VERIFIED_PASSES_BY_MODE[mode]:
         attestation = issue.get("resolution_attestation")
-        if isinstance(attestation, Mapping) and attestation.get("scan_verified") is True:
+        if (
+            isinstance(attestation, Mapping)
+            and attestation.get("scan_verified") is True
+        ):
             return False
     return True
 

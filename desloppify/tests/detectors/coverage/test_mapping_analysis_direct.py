@@ -95,7 +95,9 @@ def test_analyze_test_quality_tolerates_placeholder_typeerror() -> None:
         {"tests/a.test.ts"},
         "typescript",
         load_lang_module=load_lang_module,
-        read_coverage_file_fn=lambda _path, context: _ReadResult(True, "test('x', () => {})"),
+        read_coverage_file_fn=lambda _path, context: _ReadResult(
+            True, "test('x', () => {})"
+        ),
         logger=logging.getLogger(__name__),
     )
 

@@ -140,7 +140,9 @@ def show_post_scan_analysis(
     has_plan = plan_data is not None or has_living_plan()
     print(colorize("  Run `desloppify next` for the highest-priority item.", "dim"))
     if has_plan:
-        print(colorize("  Run `desloppify plan` to see the updated living plan.", "dim"))
+        print(
+            colorize("  Run `desloppify plan` to see the updated living plan.", "dim")
+        )
     print(colorize("  Run `desloppify status` for the full dashboard.", "dim"))
     print()
 
@@ -154,7 +156,12 @@ def _should_show_score_integrity(
     ignore_patterns: int,
     confidence_reduced: bool,
 ) -> bool:
-    return not (wontfix <= 5 and ignored <= 0 and ignore_patterns <= 0 and not confidence_reduced)
+    return not (
+        wontfix <= 5
+        and ignored <= 0
+        and ignore_patterns <= 0
+        and not confidence_reduced
+    )
 
 
 def _print_dimension_gap_summary(state: StateModel) -> None:
@@ -326,4 +333,8 @@ def show_score_integrity(state: StateModel, diff: dict[str, Any]) -> None:
     print()
 
 
-__all__ = ["post_scan_analysis", "show_post_scan_analysis", "show_score_integrity"]  # show_score_integrity used by status
+__all__ = [
+    "post_scan_analysis",
+    "show_post_scan_analysis",
+    "show_score_integrity",
+]  # show_score_integrity used by status

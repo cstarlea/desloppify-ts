@@ -97,11 +97,15 @@ def test_print_score_section_renders_sparkline_when_three_checkpoints_exist(
             {"event_type": "plan_checkpoint", "payload": {"scores": {"strict": 75.0}}},
         ]
 
-    monkeypatch.setattr("desloppify.engine._state.progression.load_progression", fake_load_progression)
+    monkeypatch.setattr(
+        "desloppify.engine._state.progression.load_progression", fake_load_progression
+    )
 
     flow_mod.print_score_section(
         state={},
-        scores=SimpleNamespace(overall=90.0, objective=95.0, strict=85.0, verified=84.0),
+        scores=SimpleNamespace(
+            overall=90.0, objective=95.0, strict=85.0, verified=84.0
+        ),
         plan={},
         target_strict_score=95.0,
         ctx=SimpleNamespace(),
@@ -128,11 +132,15 @@ def test_print_score_section_omits_sparkline_when_checkpoint_count_is_below_thre
             {"event_type": "plan_checkpoint", "payload": {"scores": {"strict": 72.0}}},
         ]
 
-    monkeypatch.setattr("desloppify.engine._state.progression.load_progression", fake_load_progression)
+    monkeypatch.setattr(
+        "desloppify.engine._state.progression.load_progression", fake_load_progression
+    )
 
     flow_mod.print_score_section(
         state={},
-        scores=SimpleNamespace(overall=90.0, objective=95.0, strict=85.0, verified=84.0),
+        scores=SimpleNamespace(
+            overall=90.0, objective=95.0, strict=85.0, verified=84.0
+        ),
         plan={},
         target_strict_score=95.0,
         ctx=SimpleNamespace(),
@@ -142,9 +150,7 @@ def test_print_score_section_omits_sparkline_when_checkpoint_count_is_below_thre
     assert _sparkline_lines(out) == []
 
 
-def test_print_score_section_ignores_sparkline_failures(
-    capsys, monkeypatch
-) -> None:
+def test_print_score_section_ignores_sparkline_failures(capsys, monkeypatch) -> None:
     monkeypatch.setattr(flow_mod, "get_plan_start_strict", lambda _plan: None)
     monkeypatch.setattr(flow_mod, "plan_aware_queue_breakdown", lambda *_a, **_k: None)
     monkeypatch.setattr(flow_mod, "colorize", lambda text, _style=None: text)
@@ -159,7 +165,9 @@ def test_print_score_section_ignores_sparkline_failures(
 
     flow_mod.print_score_section(
         state={},
-        scores=SimpleNamespace(overall=90.0, objective=95.0, strict=85.0, verified=84.0),
+        scores=SimpleNamespace(
+            overall=90.0, objective=95.0, strict=85.0, verified=84.0
+        ),
         plan={},
         target_strict_score=95.0,
         ctx=SimpleNamespace(),

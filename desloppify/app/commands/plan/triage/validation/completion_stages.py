@@ -40,7 +40,11 @@ _COMPLETE_AUTO_CONFIRM_STAGE_CONFIG = {
 
 
 def _manual_cluster_names(plan: dict) -> list[str]:
-    return [name for name, cluster in plan.get("clusters", {}).items() if not cluster.get("auto")]
+    return [
+        name
+        for name, cluster in plan.get("clusters", {}).items()
+        if not cluster.get("auto")
+    ]
 
 
 def _first_missing_recorded_stage(stages: dict, *, through_stage: str) -> str | None:
@@ -100,15 +104,33 @@ def _require_enrich_stage_for_complete(
         underspec = _underspecified_steps(plan)
     if underspec:
         print(colorize("  Cannot complete: enrich stage not done.", "red"))
-        print(colorize(f"  {len(underspec)} cluster(s) have underspecified steps (missing detail or issue_refs):", "yellow"))
+        print(
+            colorize(
+                f"  {len(underspec)} cluster(s) have underspecified steps (missing detail or issue_refs):",
+                "yellow",
+            )
+        )
         for name, bare, total in underspec[:5]:
-            print(colorize(f"    {name}: {bare}/{total} steps need enrichment", "yellow"))
-        print(colorize('  Fix: desloppify plan cluster update <name> --update-step N --detail "sub-details"', "dim"))
-        print(colorize('  Then: desloppify plan triage --stage enrich --report "..."', "dim"))
+            print(
+                colorize(f"    {name}: {bare}/{total} steps need enrichment", "yellow")
+            )
+        print(
+            colorize(
+                '  Fix: desloppify plan cluster update <name> --update-step N --detail "sub-details"',
+                "dim",
+            )
+        )
+        print(
+            colorize(
+                '  Then: desloppify plan triage --stage enrich --report "..."', "dim"
+            )
+        )
     else:
         print(colorize("  Cannot complete: enrich stage not recorded.", "red"))
         print(colorize("  Steps look enriched. Record the stage:", "dim"))
-        print(colorize('    desloppify plan triage --stage enrich --report "..."', "dim"))
+        print(
+            colorize('    desloppify plan triage --stage enrich --report "..."', "dim")
+        )
     return False
 
 
@@ -127,10 +149,20 @@ def _auto_confirm_enrich_for_complete(
         underspec = _underspecified_steps(plan)
     if underspec:
         total_bare = sum(n for _, n, _ in underspec)
-        print(colorize(f"  Cannot auto-confirm enrich: {total_bare} step(s) still lack detail or issue_refs.", "red"))
+        print(
+            colorize(
+                f"  Cannot auto-confirm enrich: {total_bare} step(s) still lack detail or issue_refs.",
+                "red",
+            )
+        )
         for name, bare, total in underspec[:5]:
             print(colorize(f"    {name}: {bare}/{total} steps", "yellow"))
-        print(colorize('  Fix: desloppify plan cluster update <name> --update-step N --detail "sub-details"', "dim"))
+        print(
+            colorize(
+                '  Fix: desloppify plan cluster update <name> --update-step N --detail "sub-details"',
+                "dim",
+            )
+        )
         return False
 
     return _auto_confirm_stage_for_complete(
@@ -155,7 +187,11 @@ def _require_sense_check_stage_for_complete(
         return _require_enrich_stage_for_complete(plan=plan, meta=meta, stages=stages)
 
     print(colorize("  Cannot complete: sense-check stage not recorded.", "red"))
-    print(colorize('  Run: desloppify plan triage --stage sense-check --report "..."', "dim"))
+    print(
+        colorize(
+            '  Run: desloppify plan triage --stage sense-check --report "..."', "dim"
+        )
+    )
     return False
 
 
@@ -170,11 +206,21 @@ def _require_organize_stage_for_complete(
         return True
     if missing == "strategize":
         print(colorize("  Cannot complete: strategize stage not done yet.", "red"))
-        print(colorize('  Start with: desloppify plan triage --stage strategize --report "{...}"', "dim"))
+        print(
+            colorize(
+                '  Start with: desloppify plan triage --stage strategize --report "{...}"',
+                "dim",
+            )
+        )
         return False
     if missing == "observe":
         print(colorize("  Cannot complete: no stages done yet.", "red"))
-        print(colorize('  Start with: desloppify plan triage --stage observe --report "..."', "dim"))
+        print(
+            colorize(
+                '  Start with: desloppify plan triage --stage observe --report "..."',
+                "dim",
+            )
+        )
         return False
 
     print(colorize("  Cannot complete: organize stage not done.", "red"))
@@ -183,18 +229,36 @@ def _require_organize_stage_for_complete(
         print(colorize(f"  {len(gaps)} cluster(s) still need enrichment:", "yellow"))
         for name, missing in gaps:
             print(colorize(f"    {name}: missing {', '.join(missing)}", "yellow"))
-        print(colorize('  Fix: desloppify plan cluster update <name> --description "..." --steps "step1" "step2"', "dim"))
+        print(
+            colorize(
+                '  Fix: desloppify plan cluster update <name> --description "..." --steps "step1" "step2"',
+                "dim",
+            )
+        )
         print(colorize(f"  Then: {TRIAGE_CMD_ORGANIZE}", "dim"))
     else:
         manual = manual_clusters_with_issues(plan)
         if manual:
-            print(colorize("  Clusters are enriched. Record the organize stage first:", "dim"))
+            print(
+                colorize(
+                    "  Clusters are enriched. Record the organize stage first:", "dim"
+                )
+            )
             print(colorize(f"    {TRIAGE_CMD_ORGANIZE}", "dim"))
         else:
-            print(colorize("  Create enriched clusters first, then record organize:", "dim"))
+            print(
+                colorize(
+                    "  Create enriched clusters first, then record organize:", "dim"
+                )
+            )
             print(colorize(f"    {TRIAGE_CMD_ORGANIZE}", "dim"))
     if meta.get("strategy_summary"):
-        print(colorize('  Or fast-track: --confirm-existing --note "why plan is still valid" --strategy "..."', "dim"))
+        print(
+            colorize(
+                '  Or fast-track: --confirm-existing --note "why plan is still valid" --strategy "..."',
+                "dim",
+            )
+        )
     return False
 
 

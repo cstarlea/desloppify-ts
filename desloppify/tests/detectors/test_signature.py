@@ -99,15 +99,29 @@ def test_missing_return_annotations_do_not_trigger_return_variance():
 def test_phase_pattern_grouping_detects_variance_for_private_phase_functions():
     """_phase_* and phase_* functions are compared via the phase_* naming group."""
     functions = [
-        _fn("_phase_unused", "lang/python/phases.py", ["path", "lang"],
-            return_annotation="tuple[list[dict], dict[str, int]]"),
-        _fn("_phase_smells", "lang/typescript/phases.py", ["path", "lang"],
-            return_annotation="tuple[list[Issue], dict[str, int]]"),
-        _fn("phase_dupes", "lang/base.py", ["path", "lang"],
-            return_annotation="tuple[list[Issue], dict[str, int]]"),
+        _fn(
+            "_phase_unused",
+            "lang/python/phases.py",
+            ["path", "lang"],
+            return_annotation="tuple[list[dict], dict[str, int]]",
+        ),
+        _fn(
+            "_phase_smells",
+            "lang/typescript/phases.py",
+            ["path", "lang"],
+            return_annotation="tuple[list[Issue], dict[str, int]]",
+        ),
+        _fn(
+            "phase_dupes",
+            "lang/base.py",
+            ["path", "lang"],
+            return_annotation="tuple[list[Issue], dict[str, int]]",
+        ),
     ]
     entries, _ = detect_signature_variance(functions, min_occurrences=3)
-    phase_entries = [e for e in entries if e["name"] == "phase_*" and e["group_type"] == "pattern"]
+    phase_entries = [
+        e for e in entries if e["name"] == "phase_*" and e["group_type"] == "pattern"
+    ]
     assert len(phase_entries) == 1
     assert phase_entries[0]["has_return_variance"] is True
 
@@ -167,7 +181,9 @@ def test_test_functions_skipped():
 def test_default_exports_skipped():
     """Importers name a default export, so its local name isn't an API name."""
     functions = [
-        FunctionInfo("Page", f"app/{d}/page.tsx", 1, 5, 5, "", params=p, default_export=True)
+        FunctionInfo(
+            "Page", f"app/{d}/page.tsx", 1, 5, 5, "", params=p, default_export=True
+        )
         for d, p in (("a", []), ("b", ["params"]), ("c", ["params", "searchParams"]))
     ]
     entries, _ = detect_signature_variance(functions)
@@ -177,7 +193,9 @@ def test_default_exports_skipped():
 def test_object_members_skipped():
     """An object-literal member's parameters are set by the shape its object fills."""
     functions = [
-        FunctionInfo("onError", f"{d}/server.ts", 1, 5, 5, "", params=p, object_member=True)
+        FunctionInfo(
+            "onError", f"{d}/server.ts", 1, 5, 5, "", params=p, object_member=True
+        )
         for d, p in (("a", []), ("b", ["err"]), ("c", ["opts"]))
     ]
     entries, _ = detect_signature_variance(functions)

@@ -45,13 +45,15 @@ def test_phase_structural_uses_lang_thresholds(monkeypatch, tmp_path: Path):
         "desloppify.engine.detectors.large.detect_large_files", _fake_detect_large
     )
     monkeypatch.setattr(
-        "desloppify.engine.detectors.complexity.detect_complexity", _fake_detect_complexity
+        "desloppify.engine.detectors.complexity.detect_complexity",
+        _fake_detect_complexity,
     )
     monkeypatch.setattr(
         "desloppify.engine.detectors.gods.detect_gods", lambda *a, **k: ([], 0)
     )
     monkeypatch.setattr(
-        "desloppify.engine.detectors.flat_dirs.detect_flat_dirs", lambda *a, **k: ([], 0)
+        "desloppify.engine.detectors.flat_dirs.detect_flat_dirs",
+        lambda *a, **k: ([], 0),
     )
     monkeypatch.setattr(
         "desloppify.languages.typescript.extractors_components.extract_ts_components",
@@ -147,7 +149,15 @@ def test_phase_coupling_passes_orphaned_options(monkeypatch, tmp_path: Path):
 
     # Potentials dict should contain all expected coupling dimension keys
     assert isinstance(potentials, dict)
-    expected_keys = {"single_use", "coupling", "cycles", "orphaned", "patterns", "naming", "facade"}
+    expected_keys = {
+        "single_use",
+        "coupling",
+        "cycles",
+        "orphaned",
+        "patterns",
+        "naming",
+        "facade",
+    }
     assert set(potentials.keys()) == expected_keys
     assert "orphaned" in potentials
     # All potential values should be non-negative integers

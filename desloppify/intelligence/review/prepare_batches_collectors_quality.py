@@ -126,7 +126,7 @@ def _abstractions_files(
     for summary in ctx.dependencies.get("cycle_summaries", []):
         for token in summary.split():
             if "/" in token and "." in token:
-                cycle_files.append({"file": token.strip(",\'\"")})
+                cycle_files.append({"file": token.strip(",'\"")})
 
     return _collect_unique_files(
         [
@@ -151,7 +151,9 @@ def _testing_api_files(
 ) -> list[str]:
     """Files relevant to testing/API dimensions."""
     critical = ctx.testing.get("critical_untested", [])
-    sync_async = [{"file": filepath} for filepath in ctx.api_surface.get("sync_async_mix", [])]
+    sync_async = [
+        {"file": filepath} for filepath in ctx.api_surface.get("sync_async_mix", [])
+    ]
     return _collect_unique_files([critical, sync_async], max_files=max_files)
 
 
@@ -183,7 +185,9 @@ def _workflow_seam_files(
         for group in ("declared_in", "implemented_in"):
             for filepath in item.get(group, []):
                 interface_files.append({"file": filepath})
-    sync_async = [{"file": filepath} for filepath in ctx.api_surface.get("sync_async_mix", [])]
+    sync_async = [
+        {"file": filepath} for filepath in ctx.api_surface.get("sync_async_mix", [])
+    ]
     return _collect_unique_files(
         [boundary_files, handoff_files, wrapper_files, interface_files, sync_async],
         max_files=max_files,

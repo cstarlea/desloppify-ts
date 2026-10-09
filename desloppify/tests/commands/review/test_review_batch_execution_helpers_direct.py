@@ -93,10 +93,18 @@ def test_progress_reporter_tracks_lifecycle_and_stalls(tmp_path: Path) -> None:
         BatchProgressEvent(
             batch_index=0,
             event="heartbeat",
-            details={"active_batches": [0], "queued_batches": [1], "elapsed_seconds": {0: 7}},
+            details={
+                "active_batches": [0],
+                "queued_batches": [1],
+                "elapsed_seconds": {0: 7},
+            },
         )
     )
-    reporter(BatchProgressEvent(batch_index=0, event="done", code=0, details={"elapsed_seconds": 9}))
+    reporter(
+        BatchProgressEvent(
+            batch_index=0, event="done", code=0, details={"elapsed_seconds": 9}
+        )
+    )
     assert batch_status["1"]["status"] == "succeeded"
     assert batch_status["1"]["elapsed_seconds"] == 9
     assert 0 not in stall_warned
@@ -145,17 +153,19 @@ def test_collect_and_reconcile_results_marks_failure_modes(tmp_path: Path) -> No
     out0.write_text("{}")
     output_files = {0: out0, 1: tmp_path / "out1.json", 2: tmp_path / "out2.json"}
     batch_status: dict[str, dict[str, object]] = {}
-    batch_results, successful, failures, failure_set = results_mod.collect_and_reconcile_results(
-        collect_batch_results_fn=lambda _request: ([{"ok": True}], [1, 2]),
-        request=orchestrator_mod.review_batches_mod.CollectBatchResultsRequest(
-            selected_indexes=[0, 1, 2],
-            failures=[1],
-            output_files=output_files,
-            allowed_dims={"design_coherence"},
-        ),
-        execution_failures=[1],
-        batch_positions={0: 1, 1: 2, 2: 3},
-        batch_status=batch_status,
+    batch_results, successful, failures, failure_set = (
+        results_mod.collect_and_reconcile_results(
+            collect_batch_results_fn=lambda _request: ([{"ok": True}], [1, 2]),
+            request=orchestrator_mod.review_batches_mod.CollectBatchResultsRequest(
+                selected_indexes=[0, 1, 2],
+                failures=[1],
+                output_files=output_files,
+                allowed_dims={"design_coherence"},
+            ),
+            execution_failures=[1],
+            batch_positions={0: 1, 1: 2, 2: 3},
+            batch_status=batch_status,
+        )
     )
     assert batch_results == [{"ok": True}]
     assert successful == [0]
@@ -172,13 +182,19 @@ def test_merge_and_finalize_helpers(tmp_path: Path, monkeypatch) -> None:
         "collect_reviewed_files_from_batches",
         lambda **_kwargs: ["a.py", "b.py"],
     )
-    monkeypatch.setattr(results_mod, "normalize_dimension_list", lambda dims: [str(d) for d in dims if d])
+    monkeypatch.setattr(
+        results_mod,
+        "normalize_dimension_list",
+        lambda dims: [str(d) for d in dims if d],
+    )
     monkeypatch.setattr(
         results_mod,
         "print_import_dimension_coverage_notice",
         lambda **_kwargs: ["missing_dim"],
     )
-    monkeypatch.setattr(results_mod, "print_review_quality", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(
+        results_mod, "print_review_quality", lambda *_args, **_kwargs: None
+    )
 
     run_dir = tmp_path / "run"
     merged_path, missing = results_mod.merge_and_write_results(
@@ -249,7 +265,9 @@ def test_import_and_finalize_raises_when_followup_scan_fails(tmp_path: Path) -> 
         )
 
 
-def test_do_import_run_reuses_merge_result_boundary(tmp_path: Path, monkeypatch) -> None:
+def test_do_import_run_reuses_merge_result_boundary(
+    tmp_path: Path, monkeypatch
+) -> None:
     run_dir = tmp_path / "run"
     results_dir = run_dir / "results"
     results_dir.mkdir(parents=True)
@@ -320,12 +338,17 @@ def test_do_import_run_reuses_merge_result_boundary(tmp_path: Path, monkeypatch)
     )
 
     assert len(merge_calls) == 1
-    assert merge_calls[0]["merge_batch_results_fn"] is orchestrator_mod._merge_batch_results
+    assert (
+        merge_calls[0]["merge_batch_results_fn"]
+        is orchestrator_mod._merge_batch_results
+    )
     assert len(coverage_calls) == 1
     assert coverage_calls[0]["allow_partial"] is True
 
 
-def test_do_import_run_recollects_batches_from_selected_indexes(tmp_path: Path, monkeypatch) -> None:
+def test_do_import_run_recollects_batches_from_selected_indexes(
+    tmp_path: Path, monkeypatch
+) -> None:
     run_dir = tmp_path / "run"
     results_dir = run_dir / "results"
     results_dir.mkdir(parents=True)
@@ -367,7 +390,7 @@ def test_do_import_run_recollects_batches_from_selected_indexes(tmp_path: Path, 
     monkeypatch.setattr(
         orchestrator_mod,
         "collect_batch_results",
-        lambda **kwargs: (collect_calls.append(kwargs) or ([{"dummy": True}], [])),
+        lambda **kwargs: collect_calls.append(kwargs) or ([{"dummy": True}], []),
     )
     monkeypatch.setattr(
         orchestrator_mod,
@@ -396,7 +419,9 @@ def test_do_import_run_recollects_batches_from_selected_indexes(tmp_path: Path, 
     assert collect_calls[0]["request"].selected_indexes == [0, 1]
 
 
-def test_try_load_prepared_packet_accepts_matching_contract(tmp_path: Path, monkeypatch) -> None:
+def test_try_load_prepared_packet_accepts_matching_contract(
+    tmp_path: Path, monkeypatch
+) -> None:
     expected_contract = {
         "path": "/repo",
         "state_path": "/repo/.desloppify/state.json",
@@ -424,7 +449,9 @@ def test_try_load_prepared_packet_accepts_matching_contract(tmp_path: Path, monk
     assert mismatch is None
 
 
-def test_try_load_prepared_packet_rejects_contract_mismatch(tmp_path: Path, monkeypatch) -> None:
+def test_try_load_prepared_packet_rejects_contract_mismatch(
+    tmp_path: Path, monkeypatch
+) -> None:
     expected_contract = {
         "path": "/repo/new",
         "state_path": "/repo/.desloppify/state.json",

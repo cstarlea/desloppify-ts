@@ -54,12 +54,16 @@ def _should_merge_issues(
 
     existing_files = set(existing.get("related_files", []))
     incoming_files = set(incoming.get("related_files", []))
-    file_overlap_signal = bool(existing_files and incoming_files and (existing_files & incoming_files))
+    file_overlap_signal = bool(
+        existing_files and incoming_files and (existing_files & incoming_files)
+    )
 
     existing_identifier = str(existing.get("identifier", "")).strip()
     incoming_identifier = str(incoming.get("identifier", "")).strip()
     identifier_signal = bool(
-        existing_identifier and incoming_identifier and existing_identifier == incoming_identifier
+        existing_identifier
+        and incoming_identifier
+        and existing_identifier == incoming_identifier
     )
 
     corroborating_signals = (
@@ -211,7 +215,9 @@ def merge_batch_results(
         # Collect dimension_judgment — each batch covers one dimension, no conflicts
         for dim_key, judgment in result.get("dimension_judgment", {}).items():
             if isinstance(judgment, dict) and dim_key not in merged_dimension_judgment:
-                merged_dimension_judgment[dim_key] = cast(BatchDimensionJudgmentPayload, judgment)
+                merged_dimension_judgment[dim_key] = cast(
+                    BatchDimensionJudgmentPayload, judgment
+                )
         # Collect context_updates — each batch covers different dimensions, accumulate
         batch_ctx = result.get("context_updates")
         if isinstance(batch_ctx, dict):

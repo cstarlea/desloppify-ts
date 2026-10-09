@@ -33,9 +33,7 @@ def resolve_dimensions(
     5) Global defaults from ``dimensions.json``
     """
     lang_dims = (
-        _non_empty(HOLISTIC_DIMENSIONS_BY_LANG.get(lang_name))
-        if lang_name
-        else None
+        _non_empty(HOLISTIC_DIMENSIONS_BY_LANG.get(lang_name)) if lang_name else None
     )
     return list(
         _non_empty(cli_dimensions)

@@ -25,6 +25,7 @@ from desloppify.engine._plan.schema import (
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _plan_with_queue(*ids: str) -> dict:
     plan = empty_plan()
     plan["queue_order"] = list(ids)
@@ -50,6 +51,7 @@ def _state_with_issues(*ids: str, status: str = "open") -> dict:
 # skip_items
 # ---------------------------------------------------------------------------
 
+
 def test_skip_temporary():
     plan = _plan_with_queue("a", "b", "c")
     count = skip_items(plan, ["b"], kind="temporary")
@@ -61,7 +63,8 @@ def test_skip_temporary():
 def test_skip_permanent():
     plan = _plan_with_queue("a", "b")
     count = skip_items(
-        plan, ["a"],
+        plan,
+        ["a"],
         kind="permanent",
         note="acceptable risk",
         attestation="I have actually reviewed and am not gaming",
@@ -75,7 +78,8 @@ def test_skip_permanent():
 def test_skip_false_positive():
     plan = _plan_with_queue("a")
     count = skip_items(
-        plan, ["a"],
+        plan,
+        ["a"],
         kind="false_positive",
         attestation="I have actually reviewed and am not gaming",
     )
@@ -124,12 +128,15 @@ def test_skip_clears_focus_when_focused_cluster_has_no_queue_members():
 # unskip_items
 # ---------------------------------------------------------------------------
 
+
 def test_unskip_temporary():
     plan = _plan_with_queue("a", "b", "c")
     skip_items(plan, ["b"], kind="temporary")
     count, need_reopen, protected = unskip_items(plan, ["b"])
     assert count == 1
-    assert need_reopen == ["b"]  # temporary skips now set state to deferred, so need reopen
+    assert need_reopen == [
+        "b"
+    ]  # temporary skips now set state to deferred, so need reopen
     assert protected == []
     assert "b" in plan["queue_order"]
     assert "b" not in plan["skipped"]
@@ -171,7 +178,13 @@ def test_unskip_permanent_without_note_not_protected():
 
 def test_unskip_false_positive_with_note_is_protected():
     plan = _plan_with_queue("a")
-    skip_items(plan, ["a"], kind="false_positive", note="not a real issue", attestation="test attest")
+    skip_items(
+        plan,
+        ["a"],
+        kind="false_positive",
+        note="not a real issue",
+        attestation="test attest",
+    )
     count, need_reopen, protected = unskip_items(plan, ["a"])
     assert count == 0
     assert protected == ["a"]
@@ -198,6 +211,7 @@ def test_unskip_nonexistent():
 # resurface_stale_skips
 # ---------------------------------------------------------------------------
 
+
 def test_resurface_stale_skips():
     plan = _plan_with_queue()
     skip_items(plan, ["a", "b"], kind="temporary", review_after=3, scan_count=5)
@@ -221,7 +235,9 @@ def test_resurface_no_review_after_stays():
 
 def test_resurface_permanent_never_resurfaces():
     plan = _plan_with_queue()
-    skip_items(plan, ["a"], kind="permanent", note="ok", attestation="attest", scan_count=5)
+    skip_items(
+        plan, ["a"], kind="permanent", note="ok", attestation="attest", scan_count=5
+    )
     resurfaced = resurface_stale_skips(plan, 100)
     assert resurfaced == []
     assert "a" in plan["skipped"]
@@ -230,6 +246,7 @@ def test_resurface_permanent_never_resurfaces():
 # ---------------------------------------------------------------------------
 # purge_ids cleans skipped
 # ---------------------------------------------------------------------------
+
 
 def test_move_clears_skipped():
     plan = _plan_with_queue("a", "b", "c")
@@ -254,6 +271,7 @@ def test_purge_ids_cleans_skipped():
 # ---------------------------------------------------------------------------
 # Migration: deferred → skipped
 # ---------------------------------------------------------------------------
+
 
 def test_migration_deferred_to_skipped():
     plan = empty_plan()
@@ -280,6 +298,7 @@ def test_migration_deferred_does_not_overwrite_existing():
 # ---------------------------------------------------------------------------
 # Validation
 # ---------------------------------------------------------------------------
+
 
 def test_validate_no_overlap_queue_skipped():
     plan = empty_plan()
@@ -316,6 +335,7 @@ def test_validate_skip_entry_missing_kind():
 # Reconcile: superseded items in skipped
 # ---------------------------------------------------------------------------
 
+
 def test_reconcile_supersedes_skipped_items():
     plan = _plan_with_queue()
     skip_items(plan, ["gone"], kind="temporary")
@@ -344,6 +364,7 @@ def test_reconcile_resurfaced():
 # Full roundtrip
 # ---------------------------------------------------------------------------
 
+
 def test_skip_and_unskip_roundtrip():
     plan = _plan_with_queue("a", "b", "c")
 
@@ -365,7 +386,10 @@ def test_skip_and_unskip_roundtrip():
     # Unskip all — b is protected (permanent with note), c is not (fp without note)
     count, need_reopen, protected = unskip_items(plan, ["a", "b", "c"])
     assert count == 2  # a (temporary) + c (fp without note)
-    assert set(need_reopen) == {"a", "c"}  # temporary skips now need reopen too (deferred→open)
+    assert set(need_reopen) == {
+        "a",
+        "c",
+    }  # temporary skips now need reopen too (deferred→open)
     assert protected == ["b"]
     assert "a" in plan["queue_order"]
     assert "b" not in plan["queue_order"]  # protected
@@ -384,6 +408,7 @@ def test_skip_and_unskip_roundtrip():
 # ---------------------------------------------------------------------------
 # purge_ids clears override cluster ref
 # ---------------------------------------------------------------------------
+
 
 def test_purge_ids_clears_override_cluster_ref():
     """purge_ids should clear the cluster field from overrides."""
@@ -418,6 +443,7 @@ def test_purge_ids_clears_focus_when_active_cluster_becomes_empty():
 # ---------------------------------------------------------------------------
 # append_log_entry
 # ---------------------------------------------------------------------------
+
 
 def test_append_log_entry_basic():
     plan = empty_plan()

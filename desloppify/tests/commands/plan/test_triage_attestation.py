@@ -17,6 +17,7 @@ from desloppify.engine._plan.schema import empty_plan
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _state_with_issues(*ids: str, dimension: str = "naming") -> dict:
     """Build minimal state with open review issues in a given dimension."""
     issues = {}
@@ -51,7 +52,9 @@ def _plan_with_stages(*stage_names: str, confirmed: bool = False) -> dict:
             stages[name]["dimension_counts"] = {"naming": 5}
         if confirmed:
             stages[name]["confirmed_at"] = "2025-06-01T00:01:00Z"
-            stages[name]["confirmed_text"] = "I have thoroughly reviewed all the issues in this stage"
+            stages[name]["confirmed_text"] = (
+                "I have thoroughly reviewed all the issues in this stage"
+            )
     return plan
 
 
@@ -85,13 +88,17 @@ def _fake_services(plan, state, save_plan_fn=None):
         command_runtime=lambda args: _fake_runtime(state),
         load_plan=lambda *a, **kw: plan,
         save_plan=save_plan_fn or (lambda p, *a, **kw: None),
-        collect_triage_input=lambda p, s: type("TI", (), {
-            "open_issues": s.get("issues", {}),
-            "resolved_issues": {},
-            "new_since_last": [],
-            "resolved_since_last": [],
-            "existing_clusters": {},
-        })(),
+        collect_triage_input=lambda p, s: type(
+            "TI",
+            (),
+            {
+                "open_issues": s.get("issues", {}),
+                "resolved_issues": {},
+                "new_since_last": [],
+                "resolved_since_last": [],
+                "existing_clusters": {},
+            },
+        )(),
         detect_recurring_patterns=lambda _a, _b: {},
         append_log_entry=lambda *a, **kw: None,
         extract_issue_citations=lambda text, ids: set(),
@@ -102,7 +109,8 @@ def _fake_services(plan, state, save_plan_fn=None):
 def _patch_triage(monkeypatch, plan, state, save_plan_fn=None):
     """Apply standard triage monkeypatches."""
     monkeypatch.setattr(
-        triage_mod, "default_triage_services",
+        triage_mod,
+        "default_triage_services",
         lambda: _fake_services(plan, state, save_plan_fn),
     )
     monkeypatch.setattr(triage_mod, "require_issue_inventory", lambda s: True)
@@ -191,7 +199,9 @@ class TestValidateAttestation:
         )
         assert err is None
 
-    def test_validate_organize_accepts_substantive_work_product_without_cluster_name(self):
+    def test_validate_organize_accepts_substantive_work_product_without_cluster_name(
+        self,
+    ):
         """Organize can pass without an exact cluster name when the attestation describes the organized work."""
         err = validate_attestation(
             "I organized all review issues into clusters with clear priority ordering, action steps, and dependency decisions grounded in the code.",
@@ -200,7 +210,9 @@ class TestValidateAttestation:
         )
         assert err is None
 
-    def test_validate_enrich_accepts_substantive_work_product_without_cluster_name(self):
+    def test_validate_enrich_accepts_substantive_work_product_without_cluster_name(
+        self,
+    ):
         """Enrich can pass without an exact cluster name when executor-ready details are described."""
         err = validate_attestation(
             "The planned steps are executor-ready with concrete file paths, issue refs, detailed instructions, and effort tags verified against the codebase.",
@@ -209,7 +221,9 @@ class TestValidateAttestation:
         )
         assert err is None
 
-    def test_validate_sense_check_accepts_substantive_work_product_without_cluster_name(self):
+    def test_validate_sense_check_accepts_substantive_work_product_without_cluster_name(
+        self,
+    ):
         """Sense-check can pass without an exact cluster name when the verification work is explicit."""
         err = validate_attestation(
             "I verified content and structure, checked cross-cluster dependencies, and confirmed value decisions are safe and accurately recorded.",
@@ -287,7 +301,12 @@ class TestConfirmObserveValidation:
         state = _state_with_issues("r1", "r2", "r3", dimension="naming")
         saved = []
 
-        _patch_triage(monkeypatch, plan, state, save_plan_fn=lambda p, *a, **kw: saved.append(True))
+        _patch_triage(
+            monkeypatch,
+            plan,
+            state,
+            save_plan_fn=lambda p, *a, **kw: saved.append(True),
+        )
 
         attestation = "I reviewed the naming dimension issues and identified 3 root causes across the codebase test modules thoroughly"
         assert len(attestation) >= 80

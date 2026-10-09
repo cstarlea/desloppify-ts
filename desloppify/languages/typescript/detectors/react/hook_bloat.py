@@ -24,11 +24,17 @@ def detect_hook_return_bloat(path: Path) -> tuple[list[dict], int]:
 
     for filepath in find_tsx_and_jsx_files(path):
         try:
-            p = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
+            p = (
+                Path(filepath)
+                if Path(filepath).is_absolute()
+                else get_project_root() / filepath
+            )
             content = p.read_text(encoding="utf-8")
             lines = split_lines(content)
         except (OSError, UnicodeDecodeError) as exc:
-            logger.debug("Skipping unreadable TSX file %s in hook-bloat pass: %s", filepath, exc)
+            logger.debug(
+                "Skipping unreadable TSX file %s in hook-bloat pass: %s", filepath, exc
+            )
             continue
 
         for match in hook_re.finditer(file_code_text(content, p)):
@@ -47,7 +53,9 @@ def detect_hook_return_bloat(path: Path) -> tuple[list[dict], int]:
             depth = 0
             found_open = False
             func_end = None
-            for line_idx in range(brace_line, min(brace_line + MAX_FUNC_SCAN, len(lines))):
+            for line_idx in range(
+                brace_line, min(brace_line + MAX_FUNC_SCAN, len(lines))
+            ):
                 for _, ch, in_s in scan_code(lines[line_idx]):
                     if in_s:
                         continue
@@ -155,7 +163,11 @@ def detect_boolean_state_explosion(path: Path) -> tuple[list[dict], int]:
 
     for filepath in find_tsx_and_jsx_files(path):
         try:
-            p = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
+            p = (
+                Path(filepath)
+                if Path(filepath).is_absolute()
+                else get_project_root() / filepath
+            )
             content = p.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError) as exc:
             logger.debug(
@@ -171,8 +183,7 @@ def detect_boolean_state_explosion(path: Path) -> tuple[list[dict], int]:
 
         total_components += 1
         states = [
-            (m.group(1), m.group(2), line_number(content, m.start()))
-            for m in matches
+            (m.group(1), m.group(2), line_number(content, m.start())) for m in matches
         ]
 
         prefixes: dict[str, list[tuple]] = {}

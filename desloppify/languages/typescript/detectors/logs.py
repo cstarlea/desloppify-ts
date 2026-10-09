@@ -35,7 +35,9 @@ logger = logging.getLogger(__name__)
 
 TAG_EXTRACT_RE = re.compile(r"\[([^\]]+)\]")
 
-_LOG_CALLEES = frozenset(f"console.{method}" for method in ("log", "warn", "info", "debug"))
+_LOG_CALLEES = frozenset(
+    f"console.{method}" for method in ("log", "warn", "info", "debug")
+)
 _TAGGED_FIRST_ARG_RE = re.compile(
     r"""^['"`].{0,4}\[|^`\$\{\w*(?:TAG|DEBUG|LOG)\w*\}""", re.IGNORECASE
 )
@@ -44,7 +46,9 @@ _TAGGED_FIRST_ARG_RE = re.compile(
 # Pattern 1: Direct and emoji-prefixed tags
 _PAT1 = re.compile(r"console\.(log|warn|info|debug)\s*\(\s*['\"`].{0,4}\[")
 # Pattern 2: Template-literal tag via variable containing TAG/DEBUG/LOG
-_PAT2 = re.compile(r"console\.(log|warn|info|debug)\s*\(\s*`\$\{\w*(TAG|DEBUG|LOG)\w*\}", re.IGNORECASE)
+_PAT2 = re.compile(
+    r"console\.(log|warn|info|debug)\s*\(\s*`\$\{\w*(TAG|DEBUG|LOG)\w*\}", re.IGNORECASE
+)
 
 
 def tagged_console_calls(parsed: ParsedSource) -> list:
@@ -69,7 +73,9 @@ def detect_logs(path: Path) -> DetectorResult[dict]:
         content = read_file_text(filepath)
         if content is not None:
             entries.extend(_regex_logs(filepath, code_text(content, filepath)))
-    return DetectorResult(entries=entries, population_kind="files", population_size=len(ts_files))
+    return DetectorResult(
+        entries=entries, population_kind="files", population_size=len(ts_files)
+    )
 
 
 def _tree_logs(filepath: str, parsed: ParsedSource) -> list[dict]:
@@ -99,7 +105,12 @@ def _regex_logs(filepath: str, content: str) -> list[dict]:
             continue
         tag = TAG_EXTRACT_RE.search(line, match.start())
         entries.append(
-            {"file": filepath, "line": index + 1, "tag": tag.group(1) if tag else "unknown", "content": line.strip()}
+            {
+                "file": filepath,
+                "line": index + 1,
+                "tag": tag.group(1) if tag else "unknown",
+                "content": line.strip(),
+            }
         )
     return entries
 

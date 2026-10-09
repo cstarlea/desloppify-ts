@@ -133,15 +133,11 @@ def _append_footer(
     lines.append("## Status: Needs Investigation\n")
     lines.append("Investigate the files above, then resolve with a note:\n")
     lines.append("```bash")
-    lines.append(
-        f'desloppify plan resolve "{issue_id}" --note "description of fix"'
-    )
+    lines.append(f'desloppify plan resolve "{issue_id}" --note "description of fix"')
     lines.append("```\n")
     lines.append("Or save detailed analysis first:\n")
     lines.append("```bash")
-    lines.append(
-        f'desloppify show "{issue_id}" --notes analysis.md'
-    )
+    lines.append(f'desloppify show "{issue_id}" --notes analysis.md')
     lines.append("```\n")
 
 
@@ -179,7 +175,9 @@ def render_issue_detail(
     if not is_review:
         meta = DETECTORS.get(detector)
         detector_display = meta.display if meta else detector
-        lines.append(f"**Detector**: {detector_display} | **Confidence**: {confidence}  ")
+        lines.append(
+            f"**Detector**: {detector_display} | **Confidence**: {confidence}  "
+        )
     else:
         lines.append(f"**Dimension**: {dimension} | **Confidence**: {confidence}  ")
     lines.append(f"**Score impact**: {label} (~{impact_pts:.1f} pts)\n")

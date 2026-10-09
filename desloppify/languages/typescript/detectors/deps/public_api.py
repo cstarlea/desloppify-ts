@@ -35,7 +35,9 @@ _STAR = "*star*"  # every name but ``default`` (``export * from``)
 Resolve = Callable[[str, str], "str | None"]
 
 
-def published_entry_files(packages: Iterable[Package], candidates: list[str]) -> set[str]:
+def published_entry_files(
+    packages: Iterable[Package], candidates: list[str]
+) -> set[str]:
     """Absolute public entry files of the packages that aren't private."""
     files: set[str] = set()
     for package in packages:
@@ -45,7 +47,9 @@ def published_entry_files(packages: Iterable[Package], candidates: list[str]) ->
     return files
 
 
-def public_exports(entry_files: Iterable[str], resolve: Resolve) -> set[tuple[str, str]]:
+def public_exports(
+    entry_files: Iterable[str], resolve: Resolve
+) -> set[tuple[str, str]]:
     """Every (absolute file, exported name) the entry files expose."""
     found: set[tuple[str, str]] = set()
     seen: set[tuple[str, str]] = set()
@@ -69,7 +73,11 @@ def public_exports(entry_files: Iterable[str], resolve: Resolve) -> set[tuple[st
                     stack.append((target, _STAR))
         else:
             names = {wanted}
-            if wanted not in summary.local and wanted not in summary.forwarded and wanted != "default":
+            if (
+                wanted not in summary.local
+                and wanted not in summary.forwarded
+                and wanted != "default"
+            ):
                 for spec in summary.stars:
                     target = resolve(spec, path)
                     if target is not None:
@@ -87,7 +95,9 @@ def public_exports(entry_files: Iterable[str], resolve: Resolve) -> set[tuple[st
     return found
 
 
-def public_export_names(candidates: list[str], project_root: Path) -> set[tuple[str, str]]:
+def public_export_names(
+    candidates: list[str], project_root: Path
+) -> set[tuple[str, str]]:
     """(project-relative file, name) pairs the project's published packages expose."""
     resolver = project_resolver(project_root)
 

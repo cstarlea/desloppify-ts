@@ -11,4 +11,5 @@ def cmd_backlog(args: argparse.Namespace) -> None:
 
     _cmd_backlog(args)
 
+
 __all__ = ["cmd_backlog"]

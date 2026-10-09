@@ -160,7 +160,9 @@ def test_signal_compute_exceptions_are_best_effort(tmp_path):
     ]
     finder = _file_finder_for(fp)
 
-    entries, total = detect_complexity(tmp_path, signals, finder, threshold=1, min_loc=10)
+    entries, total = detect_complexity(
+        tmp_path, signals, finder, threshold=1, min_loc=10
+    )
     assert total == 1
     assert len(entries) == 1
     assert entries[0]["file"] == fp
@@ -174,7 +176,9 @@ def test_unexpected_signal_exceptions_propagate(tmp_path):
     def broken_signal(content, lines):
         raise RuntimeError("unexpected runtime error")
 
-    signals = [ComplexitySignal(name="broken", compute=broken_signal, weight=1, threshold=0)]
+    signals = [
+        ComplexitySignal(name="broken", compute=broken_signal, weight=1, threshold=0)
+    ]
     finder = _file_finder_for(fp)
 
     with pytest.raises(RuntimeError, match="unexpected runtime error"):
@@ -251,7 +255,9 @@ def test_relative_paths_resolve_against_scan_root(tmp_path):
     signals = [ComplexitySignal(name="ifs", pattern=r"^if\b", weight=1, threshold=0)]
     finder = _file_finder_for("src/local.py")
 
-    entries, total = detect_complexity(scan_root, signals, finder, threshold=1, min_loc=10)
+    entries, total = detect_complexity(
+        scan_root, signals, finder, threshold=1, min_loc=10
+    )
     assert total == 1
     assert len(entries) == 1
     assert entries[0]["file"] == "src/local.py"

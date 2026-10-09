@@ -37,7 +37,9 @@ def _state(**statuses: str) -> dict:
     return state
 
 
-@pytest.mark.parametrize("status", ["fixed", "false_positive", "wontfix", "auto_resolved"])
+@pytest.mark.parametrize(
+    "status", ["fixed", "false_positive", "wontfix", "auto_resolved"]
+)
 def test_resolve_completes_cluster_when_other_members_already_resolved(status) -> None:
     plan = _plan_with_cluster()
     state = _state(p=status, q="fixed")
@@ -52,7 +54,10 @@ def test_resolve_keeps_cluster_open_while_a_member_is_unresolved(status) -> None
     plan = _plan_with_cluster()
     state = _state(p=status, q="fixed")
     assert living_plan_mod._completed_cluster_names(plan, [_Q], state) == []
-    assert living_plan_mod.capture_cluster_context(plan, [_Q], state).cluster_remaining == 1
+    assert (
+        living_plan_mod.capture_cluster_context(plan, [_Q], state).cluster_remaining
+        == 1
+    )
 
 
 def test_resolving_cluster_members_one_at_a_time_closes_it(tmp_path) -> None:
@@ -61,7 +66,10 @@ def test_resolving_cluster_members_one_at_a_time_closes_it(tmp_path) -> None:
     save_plan(_plan_with_cluster(), plan_file)
     args = argparse.Namespace(status="fixed", note="done")
 
-    for issue_id, statuses in ((_P, {"p": "fixed", "q": "open"}), (_Q, {"p": "fixed", "q": "fixed"})):
+    for issue_id, statuses in (
+        (_P, {"p": "fixed", "q": "open"}),
+        (_Q, {"p": "fixed", "q": "fixed"}),
+    ):
         _plan, ctx = living_plan_mod.update_living_plan_after_resolve(
             args=args,
             all_resolved=[issue_id],
@@ -74,10 +82,14 @@ def test_resolving_cluster_members_one_at_a_time_closes_it(tmp_path) -> None:
     assert load_plan(plan_file)["clusters"]["anys"]["execution_status"] == "done"
 
 
-@pytest.mark.parametrize("status", ["fixed", "false_positive", "wontfix", "auto_resolved"])
+@pytest.mark.parametrize(
+    "status", ["fixed", "false_positive", "wontfix", "auto_resolved"]
+)
 def test_scan_reconcile_closes_cluster_of_resolved_members(status) -> None:
     plan = _plan_with_cluster()
     result = ReconcileResult()
-    _reconcile_active_clusters_by_item_status(plan, _state(p=status, q="fixed"), result=result)
+    _reconcile_active_clusters_by_item_status(
+        plan, _state(p=status, q="fixed"), result=result
+    )
     assert result.clusters_completed == ["anys"]
     assert plan["clusters"]["anys"]["execution_status"] == "done"

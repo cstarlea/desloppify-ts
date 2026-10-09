@@ -243,9 +243,7 @@ def test_load_dimensions_for_lang_falls_back_to_shared(tmp_path, monkeypatch):
     assert "shared_dim" in prompts
 
 
-def test_load_dimensions_for_lang_applies_override_patch(
-    tmp_path, monkeypatch
-):
+def test_load_dimensions_for_lang_applies_override_patch(tmp_path, monkeypatch):
     shared_dir = tmp_path / "review_data"
     lang_dir = tmp_path / "lang_data"
     shared_dir.mkdir(parents=True)
@@ -274,16 +272,16 @@ def test_load_dimensions_for_lang_applies_override_patch(
         "system_prompt_append": "lang-tail",
     }
     (shared_dir / "dimensions.json").write_text(json.dumps(shared_payload))
-    (
-        lang_dir / "python" / "review_data" / "dimensions.override.json"
-    ).write_text(json.dumps(override_payload))
+    (lang_dir / "python" / "review_data" / "dimensions.override.json").write_text(
+        json.dumps(override_payload)
+    )
 
     monkeypatch.setattr(dimensions_data_mod, "_DATA_DIR", shared_dir)
     monkeypatch.setattr(dimensions_data_mod, "_LANG_DIR", lang_dir)
     dimensions_data_mod.load_dimensions_for_lang.cache_clear()
     try:
-        dims, prompts, system_prompt = (
-            dimensions_data_mod.load_dimensions_for_lang("python")
+        dims, prompts, system_prompt = dimensions_data_mod.load_dimensions_for_lang(
+            "python"
         )
     finally:
         dimensions_data_mod.load_dimensions_for_lang.cache_clear()
@@ -294,9 +292,7 @@ def test_load_dimensions_for_lang_applies_override_patch(
     assert "lang-tail" in system_prompt
 
 
-def test_load_dimensions_for_lang_override_remove_and_append(
-    tmp_path, monkeypatch
-):
+def test_load_dimensions_for_lang_override_remove_and_append(tmp_path, monkeypatch):
     shared_dir = tmp_path / "review_data"
     lang_dir = tmp_path / "lang_data"
     shared_dir.mkdir(parents=True)
@@ -318,9 +314,9 @@ def test_load_dimensions_for_lang_override_remove_and_append(
         },
     }
     (shared_dir / "dimensions.json").write_text(json.dumps(shared_payload))
-    (
-        lang_dir / "python" / "review_data" / "dimensions.override.json"
-    ).write_text(json.dumps(override_payload))
+    (lang_dir / "python" / "review_data" / "dimensions.override.json").write_text(
+        json.dumps(override_payload)
+    )
 
     monkeypatch.setattr(dimensions_data_mod, "_DATA_DIR", shared_dir)
     monkeypatch.setattr(dimensions_data_mod, "_LANG_DIR", lang_dir)
@@ -365,7 +361,7 @@ def test_parse_dimensions_payload_supports_meta_enabled_defaults():
 
 def test_is_numeric_rejects_non_finite_floats():
     assert is_numeric(1) is True
-    assert is_numeric(10 ** 500) is True
+    assert is_numeric(10**500) is True
     assert is_numeric(1.5) is True
     assert is_numeric(math.inf) is False
     assert is_numeric(-math.inf) is False
@@ -420,9 +416,9 @@ def test_load_dimensions_for_lang_meta_enabled_dimension_requires_no_append(
         }
     }
     (shared_dir / "dimensions.json").write_text(json.dumps(shared_payload))
-    (
-        lang_dir / "python" / "review_data" / "dimensions.override.json"
-    ).write_text(json.dumps(override_payload))
+    (lang_dir / "python" / "review_data" / "dimensions.override.json").write_text(
+        json.dumps(override_payload)
+    )
 
     monkeypatch.setattr(dimensions_data_mod, "_DATA_DIR", shared_dir)
     monkeypatch.setattr(dimensions_data_mod, "_LANG_DIR", lang_dir)

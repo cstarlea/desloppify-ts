@@ -87,9 +87,9 @@ def test_rel_path_outside_project_root(tmp_path, monkeypatch):
     result = rel(outside)
     # Path outside PROJECT_ROOT should be normalized to a relative path
     try:
-        expected = os.path.relpath(outside, str(paths_api_mod.get_project_root())).replace(
-            "\\", "/"
-        )
+        expected = os.path.relpath(
+            outside, str(paths_api_mod.get_project_root())
+        ).replace("\\", "/")
     except ValueError:
         # Windows cross-drive fallback: rel() should return absolute normalized path.
         expected = str(Path(outside).resolve()).replace("\\", "/")
@@ -238,7 +238,9 @@ def test_find_source_files_with_explicit_exclusion(tmp_path, patch_project_root)
     assert not any("generated" in f for f in files)
 
 
-def test_find_source_files_excludes_prefixed_virtualenv_dirs(tmp_path, patch_project_root):
+def test_find_source_files_excludes_prefixed_virtualenv_dirs(
+    tmp_path, patch_project_root
+):
     """Prefixed virtualenv directories (.venv-*, venv-*) are pruned."""
     patch_project_root(tmp_path)
 

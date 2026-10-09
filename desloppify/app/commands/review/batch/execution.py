@@ -68,6 +68,7 @@ class BatchRunDeps:
     safe_write_text_fn: Callable[[Path, str], None]
     colorize_fn: Callable[[str, str | None], str]
 
+
 __all__ = [
     "BatchRunDeps",
     "CollectBatchResultsRequest",

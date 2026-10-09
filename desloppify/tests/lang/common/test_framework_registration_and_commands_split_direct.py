@@ -56,9 +56,14 @@ def test_make_cmd_deps_json_and_text_paths(monkeypatch, tmp_path) -> None:
     )
 
     printed: list[str] = []
-    monkeypatch.setattr("builtins.print", lambda *args, **kwargs: printed.append(" ".join(str(a) for a in args)))
+    monkeypatch.setattr(
+        "builtins.print",
+        lambda *args, **kwargs: printed.append(" ".join(str(a) for a in args)),
+    )
     monkeypatch.setattr(registry_cmd_mod, "colorize", lambda text, _style: text)
-    monkeypatch.setattr(registry_cmd_mod, "print_table", lambda *args, **kwargs: printed.append("TABLE"))
+    monkeypatch.setattr(
+        registry_cmd_mod, "print_table", lambda *args, **kwargs: printed.append("TABLE")
+    )
 
     cmd(SimpleNamespace(path=str(tmp_path), json=True, top=5))
     payload = json.loads(printed[-1])
@@ -85,18 +90,37 @@ def test_make_cmd_cycles_orphaned_and_dupes(monkeypatch, tmp_path) -> None:
     file_a = str((tmp_path / "a.py").resolve())
     file_b = str((tmp_path / "b.py").resolve())
     graph = {
-        file_a: {"imports": {file_b}, "importers": set(), "import_count": 1, "importer_count": 0},
-        file_b: {"imports": set(), "importers": {file_a}, "import_count": 0, "importer_count": 1},
+        file_a: {
+            "imports": {file_b},
+            "importers": set(),
+            "import_count": 1,
+            "importer_count": 0,
+        },
+        file_b: {
+            "imports": set(),
+            "importers": {file_a},
+            "import_count": 0,
+            "importer_count": 1,
+        },
     }
 
     printed: list[str] = []
-    monkeypatch.setattr("builtins.print", lambda *args, **kwargs: printed.append(" ".join(str(a) for a in args)))
+    monkeypatch.setattr(
+        "builtins.print",
+        lambda *args, **kwargs: printed.append(" ".join(str(a) for a in args)),
+    )
     monkeypatch.setattr(registry_cmd_mod, "colorize", lambda text, _style: text)
-    monkeypatch.setattr(registry_cmd_mod, "print_table", lambda *args, **kwargs: printed.append("TABLE"))
+    monkeypatch.setattr(
+        registry_cmd_mod, "print_table", lambda *args, **kwargs: printed.append("TABLE")
+    )
 
     cycle_entries = [{"length": 2, "files": [file_a, file_b]}]
-    monkeypatch.setattr(registry_cmd_mod, "detect_cycles", lambda _graph: (cycle_entries, 2))
-    cmd_cycles = registry_cmd_mod.make_cmd_cycles(build_dep_graph_fn=lambda _path: graph)
+    monkeypatch.setattr(
+        registry_cmd_mod, "detect_cycles", lambda _graph: (cycle_entries, 2)
+    )
+    cmd_cycles = registry_cmd_mod.make_cmd_cycles(
+        build_dep_graph_fn=lambda _path: graph
+    )
 
     cmd_cycles(SimpleNamespace(path=str(tmp_path), json=True, top=5))
     payload = json.loads(printed[-1])
@@ -108,7 +132,11 @@ def test_make_cmd_cycles_orphaned_and_dupes(monkeypatch, tmp_path) -> None:
     assert any("No dependency cycles" in line for line in printed)
 
     orphan_entries = [{"file": file_a, "loc": 12}]
-    monkeypatch.setattr(registry_cmd_mod, "detect_orphaned_files", lambda *_args, **_kwargs: (orphan_entries, 1))
+    monkeypatch.setattr(
+        registry_cmd_mod,
+        "detect_orphaned_files",
+        lambda *_args, **_kwargs: (orphan_entries, 1),
+    )
     cmd_orphaned = registry_cmd_mod.make_cmd_orphaned(
         build_dep_graph_fn=lambda _path: graph,
         extensions=[".py"],
@@ -122,16 +150,26 @@ def test_make_cmd_cycles_orphaned_and_dupes(monkeypatch, tmp_path) -> None:
     assert payload["count"] == 1
     assert payload["entries"][0]["loc"] == 12
 
-    monkeypatch.setattr(registry_cmd_mod, "detect_duplicates", lambda *_args, **_kwargs: ([
-        {
-            "fn_a": {"name": "a", "file": file_a, "line": 1},
-            "fn_b": {"name": "b", "file": file_b, "line": 2},
-            "similarity": 0.91,
-            "kind": "exact",
-        }
-    ], 1))
+    monkeypatch.setattr(
+        registry_cmd_mod,
+        "detect_duplicates",
+        lambda *_args, **_kwargs: (
+            [
+                {
+                    "fn_a": {"name": "a", "file": file_a, "line": 1},
+                    "fn_b": {"name": "b", "file": file_b, "line": 2},
+                    "similarity": 0.91,
+                    "kind": "exact",
+                }
+            ],
+            1,
+        ),
+    )
     cmd_dupes = registry_cmd_mod.make_cmd_dupes(
-        extract_functions_fn=lambda _path: [SimpleNamespace(name="a"), SimpleNamespace(name="b")]
+        extract_functions_fn=lambda _path: [
+            SimpleNamespace(name="a"),
+            SimpleNamespace(name="b"),
+        ]
     )
 
     printed.clear()

@@ -32,7 +32,12 @@ def test_cmd_backlog_uses_backlog_queue(monkeypatch) -> None:
         "command_runtime",
         lambda _args: CommandRuntime(
             config={},
-            state={"issues": {}, "dimension_scores": {}, "scan_path": ".", "last_scan": "2026-01-01"},
+            state={
+                "issues": {},
+                "dimension_scores": {},
+                "scan_path": ".",
+                "last_scan": "2026-01-01",
+            },
             state_path="/tmp/fake-state.json",
         ),
     )

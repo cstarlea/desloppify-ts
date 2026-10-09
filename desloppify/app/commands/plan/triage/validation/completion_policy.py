@@ -54,7 +54,11 @@ def _resolve_strategy_input(
     existing = meta.get("strategy_summary", "")
     if existing:
         print(colorize(f"  Current strategy: {existing}", "dim"))
-        print(colorize('  Use --strategy "same" to keep it, or provide a new summary.', "dim"))
+        print(
+            colorize(
+                '  Use --strategy "same" to keep it, or provide a new summary.', "dim"
+            )
+        )
     else:
         print(
             colorize(
@@ -74,7 +78,11 @@ def _strategy_valid_or_error(
         return True
     if len(strategy.strip()) >= 200:
         return True
-    print(colorize(f"  Strategy too short: {len(strategy.strip())} chars (minimum 200).", "red"))
+    print(
+        colorize(
+            f"  Strategy too short: {len(strategy.strip())} chars (minimum 200).", "red"
+        )
+    )
     if include_guidance:
         print(colorize("  The strategy should describe:", "dim"))
         print(colorize("    - Execution order and priorities", "dim"))
@@ -93,7 +101,14 @@ def _completion_clusters_valid(plan: dict, state: dict | None = None) -> bool:
 
 def _required_completion_stages_valid(stages: dict) -> tuple[bool, str]:
     """Validate that the triage completion stages are present and confirmed."""
-    for required in ("strategize", "observe", "reflect", "organize", "enrich", "sense-check"):
+    for required in (
+        "strategize",
+        "observe",
+        "reflect",
+        "organize",
+        "enrich",
+        "sense-check",
+    ):
         if required not in stages:
             return False, f"Stage {required} not recorded."
         if not stages[required].get("confirmed_at"):
@@ -118,8 +133,7 @@ def _find_all_trivial_clusters(clusters: dict) -> list[str]:
             continue
         steps = cluster.get("action_steps") or []
         if steps and all(
-            isinstance(step, dict) and step.get("effort") == "trivial"
-            for step in steps
+            isinstance(step, dict) and step.get("effort") == "trivial" for step in steps
         ):
             trivial_clusters.append(name)
     return trivial_clusters
@@ -141,7 +155,9 @@ def evaluate_completion_readiness(
 
     triage_scope = active_triage_issue_scope(plan, state)
     in_scope_open_ids = (
-        open_review_ids_from_state(state) if state is not None and triage_scope is None else (triage_scope or set())
+        open_review_ids_from_state(state)
+        if state is not None and triage_scope is None
+        else (triage_scope or set())
     )
     if state is not None and not in_scope_open_ids:
         return CompletionReadiness(ok=True)
@@ -149,26 +165,56 @@ def evaluate_completion_readiness(
     manual_clusters = scoped_manual_clusters_with_issues(plan, state)
     if not manual_clusters:
         any_clusters = [
-            name for name, cluster in plan.get("clusters", {}).items()
+            name
+            for name, cluster in plan.get("clusters", {}).items()
             if cluster_issue_ids(cluster)
         ]
         if not any_clusters:
             print(colorize("  Cannot complete: no clusters with issues exist.", "red"))
-            print(colorize('  Create clusters: desloppify plan cluster create <name> --description "..."', "dim"))
-            return CompletionReadiness(ok=False, message="No clusters with issues exist.")
+            print(
+                colorize(
+                    '  Create clusters: desloppify plan cluster create <name> --description "..."',
+                    "dim",
+                )
+            )
+            return CompletionReadiness(
+                ok=False, message="No clusters with issues exist."
+            )
 
     gaps = unenriched_clusters(plan, state)
     if gaps:
-        print(colorize(f"  Cannot complete: {len(gaps)} cluster(s) still need enrichment.", "red"))
+        print(
+            colorize(
+                f"  Cannot complete: {len(gaps)} cluster(s) still need enrichment.",
+                "red",
+            )
+        )
         for name, missing in gaps:
             print(colorize(f"    {name}: missing {', '.join(missing)}", "yellow"))
-        print(colorize("  Small clusters (<5 issues) need at least 1 action step per issue.", "dim"))
-        print(colorize('  Fix: desloppify plan cluster update <name> --description "..." --steps "step1" "step2"', "dim"))
-        return CompletionReadiness(ok=False, message=f"{len(gaps)} cluster(s) still need enrichment.")
+        print(
+            colorize(
+                "  Small clusters (<5 issues) need at least 1 action step per issue.",
+                "dim",
+            )
+        )
+        print(
+            colorize(
+                '  Fix: desloppify plan cluster update <name> --description "..." --steps "step1" "step2"',
+                "dim",
+            )
+        )
+        return CompletionReadiness(
+            ok=False, message=f"{len(gaps)} cluster(s) still need enrichment."
+        )
 
     unclustered = unclustered_review_issues(plan, state)
     if unclustered:
-        print(colorize(f"  Cannot complete: {len(unclustered)} review issue(s) have no action plan.", "red"))
+        print(
+            colorize(
+                f"  Cannot complete: {len(unclustered)} review issue(s) have no action plan.",
+                "red",
+            )
+        )
         for fid in unclustered[:5]:
             short = fid.rsplit("::", 2)[-2] if "::" in fid else fid
             print(colorize(f"    {short}", "yellow"))
@@ -218,32 +264,58 @@ def _completion_strategy_valid(strategy: str) -> bool:
 def _require_prior_strategy_for_confirm(meta: dict) -> bool:
     if meta.get("strategy_summary", ""):
         return True
-    print(colorize("  Cannot confirm existing: no prior triage has been completed.", "red"))
-    print(colorize("  The full OBSERVE → REFLECT → ORGANIZE → COMMIT flow is required the first time.", "dim"))
+    print(
+        colorize(
+            "  Cannot confirm existing: no prior triage has been completed.", "red"
+        )
+    )
+    print(
+        colorize(
+            "  The full OBSERVE → REFLECT → ORGANIZE → COMMIT flow is required the first time.",
+            "dim",
+        )
+    )
     print(colorize(f"  Create and enrich clusters, then: {TRIAGE_CMD_ORGANIZE}", "dim"))
     return False
 
 
-def _confirm_existing_stages_valid(*, stages: dict, has_only_additions: bool, si) -> bool:
+def _confirm_existing_stages_valid(
+    *, stages: dict, has_only_additions: bool, si
+) -> bool:
     if has_only_additions:
         from ..stages.rendering import _print_new_issues_since_last  # noqa: PLC0415
 
         _print_new_issues_since_last(si)
         return True
     if "strategize" not in stages:
-        print(colorize("  Cannot confirm existing: strategize stage not complete.", "red"))
+        print(
+            colorize("  Cannot confirm existing: strategize stage not complete.", "red")
+        )
         print(colorize("  You must review cross-cycle history first.", "dim"))
-        print(colorize('  Run: desloppify plan triage --stage strategize --report "{...}"', "dim"))
+        print(
+            colorize(
+                '  Run: desloppify plan triage --stage strategize --report "{...}"',
+                "dim",
+            )
+        )
         return False
     if "observe" not in stages:
         print(colorize("  Cannot confirm existing: observe stage not complete.", "red"))
         print(colorize("  You must read issues first.", "dim"))
-        print(colorize('  Run: desloppify plan triage --stage observe --report "..."', "dim"))
+        print(
+            colorize(
+                '  Run: desloppify plan triage --stage observe --report "..."', "dim"
+            )
+        )
         return False
     if "reflect" not in stages:
         print(colorize("  Cannot confirm existing: reflect stage not complete.", "red"))
         print(colorize("  You must compare against completed work first.", "dim"))
-        print(colorize('  Run: desloppify plan triage --stage reflect --report "..."', "dim"))
+        print(
+            colorize(
+                '  Run: desloppify plan triage --stage reflect --report "..."', "dim"
+            )
+        )
         return False
     return True
 
@@ -251,7 +323,11 @@ def _confirm_existing_stages_valid(*, stages: dict, has_only_additions: bool, si
 def _confirm_note_valid(note: str | None) -> bool:
     if not note:
         print(colorize("  --note is required for confirm-existing.", "red"))
-        print(colorize('  Explain why the existing plan is still valid (min 100 chars).', "dim"))
+        print(
+            colorize(
+                "  Explain why the existing plan is still valid (min 100 chars).", "dim"
+            )
+        )
         return False
     if len(note) < 100:
         print(colorize(f"  Note too short: {len(note)} chars (minimum 100).", "red"))
@@ -276,7 +352,9 @@ def _confirm_strategy_valid(strategy: str) -> bool:
     return _strategy_valid_or_error(strategy, include_guidance=False)
 
 
-def _confirmed_text_or_error(*, plan: dict, state: dict, confirmed: str | None) -> str | None:
+def _confirmed_text_or_error(
+    *, plan: dict, state: dict, confirmed: str | None
+) -> str | None:
     from ..confirmations.basic import MIN_ATTESTATION_LEN  # noqa: PLC0415
 
     if confirmed and len(confirmed.strip()) >= MIN_ATTESTATION_LEN:
@@ -284,7 +362,12 @@ def _confirmed_text_or_error(*, plan: dict, state: dict, confirmed: str | None) 
     print(colorize("  Current plan:", "bold"))
     show_plan_summary(plan, state)
     if confirmed:
-        print(colorize(f"\n  --confirmed text too short ({len(confirmed.strip())} chars, min {MIN_ATTESTATION_LEN}).", "red"))
+        print(
+            colorize(
+                f"\n  --confirmed text too short ({len(confirmed.strip())} chars, min {MIN_ATTESTATION_LEN}).",
+                "red",
+            )
+        )
     print(colorize('\n  Add --confirmed "I validate this plan..." to proceed.', "dim"))
     return None
 

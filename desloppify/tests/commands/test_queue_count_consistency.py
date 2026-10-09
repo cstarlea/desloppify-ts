@@ -20,6 +20,7 @@ from desloppify.engine.policy.zones import FileZoneMap, Zone, ZoneRule
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _issue(
     fid: str,
     detector: str = "unused",
@@ -51,16 +52,21 @@ def _state_with_issues(*issues: dict) -> dict:
 # Fix 1: verify_disappeared preserves manual authority
 # ---------------------------------------------------------------------------
 
+
 class TestAutoResolveOutOfScope:
     def test_out_of_scope_open_issues_remain_open(self):
         """Open issues outside scan_path remain open instead of auto-closing."""
         existing = {
             "f1": {
-                "id": "f1", "status": "open", "file": "supabase/fn.ts",
+                "id": "f1",
+                "status": "open",
+                "file": "supabase/fn.ts",
                 "detector": "unused",
             },
             "f2": {
-                "id": "f2", "status": "open", "file": "src/app.ts",
+                "id": "f2",
+                "status": "open",
+                "file": "src/app.ts",
                 "detector": "unused",
             },
         }
@@ -81,8 +87,11 @@ class TestAutoResolveOutOfScope:
         """A resolved issue outside scan_path is not confirmed absent (2.39)."""
         existing = {
             "f1": {
-                "id": "f1", "status": "fixed", "file": "supabase/fn.ts",
-                "detector": "smells", "note": "done",
+                "id": "f1",
+                "status": "fixed",
+                "file": "supabase/fn.ts",
+                "detector": "smells",
+                "note": "done",
                 "resolution_attestation": {
                     "kind": "manual",
                     "text": "done",
@@ -91,7 +100,9 @@ class TestAutoResolveOutOfScope:
                 },
             },
             "f2": {
-                "id": "f2", "status": "false_positive", "file": "supabase/other.ts",
+                "id": "f2",
+                "status": "false_positive",
+                "file": "supabase/other.ts",
                 "detector": "smells",
                 "resolution_attestation": {"kind": "manual", "scan_verified": True},
             },
@@ -116,7 +127,9 @@ class TestAutoResolveOutOfScope:
         """When scan_path is None, open disappeared items still stay open."""
         existing = {
             "f1": {
-                "id": "f1", "status": "open", "file": "anywhere/file.ts",
+                "id": "f1",
+                "status": "open",
+                "file": "anywhere/file.ts",
                 "detector": "unused",
             },
         }
@@ -135,7 +148,9 @@ class TestAutoResolveOutOfScope:
         """scan_path='.' still leaves open disappeared items unchanged."""
         existing = {
             "f1": {
-                "id": "f1", "status": "open", "file": "anywhere/file.ts",
+                "id": "f1",
+                "status": "open",
+                "file": "anywhere/file.ts",
                 "detector": "unused",
             },
         }
@@ -152,10 +167,14 @@ class TestAutoResolveOutOfScope:
 
     def test_resolved_issues_verified_only_on_confirmed_absence(self):
         """fixed/false_positive need the detector to have run, like open issues (2.39)."""
+
         def _issue(status: str, detector: str) -> dict:
             return {
-                "id": f"{detector}-{status}", "status": status,
-                "file": "src/file.ts", "detector": detector, "note": "mine",
+                "id": f"{detector}-{status}",
+                "status": status,
+                "file": "src/file.ts",
+                "detector": detector,
+                "note": "mine",
                 "resolution_attestation": {"kind": "manual", "scan_verified": False},
             }
 
@@ -238,6 +257,7 @@ class TestAutoResolveOutOfScope:
 # Fix 2: queue counting functions pass scan_path
 # ---------------------------------------------------------------------------
 
+
 class TestQueueCountingScanPath:
     def test_queue_count_respects_scan_path_from_state(self):
         """build_work_queue auto-reads scan_path from state and filters issues."""
@@ -249,14 +269,24 @@ class TestQueueCountingScanPath:
         state: dict = {
             "issues": {
                 "f1": {
-                    "id": "f1", "detector": "unused", "status": "open",
-                    "file": "src/a.ts", "tier": 1, "confidence": "high",
-                    "summary": "in scope", "detail": {},
+                    "id": "f1",
+                    "detector": "unused",
+                    "status": "open",
+                    "file": "src/a.ts",
+                    "tier": 1,
+                    "confidence": "high",
+                    "summary": "in scope",
+                    "detail": {},
                 },
                 "f2": {
-                    "id": "f2", "detector": "unused", "status": "open",
-                    "file": "other/b.ts", "tier": 1, "confidence": "high",
-                    "summary": "out of scope", "detail": {},
+                    "id": "f2",
+                    "detector": "unused",
+                    "status": "open",
+                    "file": "other/b.ts",
+                    "tier": 1,
+                    "confidence": "high",
+                    "summary": "out of scope",
+                    "detail": {},
                 },
             },
             "scan_path": "src",
@@ -282,14 +312,24 @@ class TestQueueCountingScanPath:
         state: dict = {
             "issues": {
                 "f1": {
-                    "id": "f1", "detector": "unused", "status": "open",
-                    "file": "src/a.ts", "tier": 1, "confidence": "high",
-                    "summary": "a", "detail": {},
+                    "id": "f1",
+                    "detector": "unused",
+                    "status": "open",
+                    "file": "src/a.ts",
+                    "tier": 1,
+                    "confidence": "high",
+                    "summary": "a",
+                    "detail": {},
                 },
                 "f2": {
-                    "id": "f2", "detector": "unused", "status": "open",
-                    "file": "other/b.ts", "tier": 1, "confidence": "high",
-                    "summary": "b", "detail": {},
+                    "id": "f2",
+                    "detector": "unused",
+                    "status": "open",
+                    "file": "other/b.ts",
+                    "tier": 1,
+                    "confidence": "high",
+                    "summary": "b",
+                    "detail": {},
                 },
             },
             "scan_count": 5,
@@ -378,14 +418,24 @@ class TestQueueCountingScanPath:
         state: dict = {
             "issues": {
                 "f1": {
-                    "id": "f1", "detector": "unused", "status": "open",
-                    "file": "src/a.ts", "tier": 1, "confidence": "high",
-                    "summary": "a", "detail": {},
+                    "id": "f1",
+                    "detector": "unused",
+                    "status": "open",
+                    "file": "src/a.ts",
+                    "tier": 1,
+                    "confidence": "high",
+                    "summary": "a",
+                    "detail": {},
                 },
                 "f2": {
-                    "id": "f2", "detector": "unused", "status": "open",
-                    "file": "other/b.ts", "tier": 1, "confidence": "high",
-                    "summary": "b", "detail": {},
+                    "id": "f2",
+                    "detector": "unused",
+                    "status": "open",
+                    "file": "other/b.ts",
+                    "tier": 1,
+                    "confidence": "high",
+                    "summary": "b",
+                    "detail": {},
                 },
             },
             "scan_path": "src",  # state says "src"
@@ -402,6 +452,7 @@ class TestQueueCountingScanPath:
 # ---------------------------------------------------------------------------
 # Fix 3: compute_subjective_visibility respects scan_path + plan
 # ---------------------------------------------------------------------------
+
 
 class TestSubjectivePolicyScanPathAndPlan:
     def test_scan_path_excludes_out_of_scope_issues(self):
@@ -445,9 +496,9 @@ class TestSubjectivePolicyScanPathAndPlan:
     def test_scan_path_and_plan_combined(self):
         """Both filters applied together: scope + skipped."""
         state = _state_with_issues(
-            _issue("f1", "unused", file="src/a.ts"),     # in scope, not skipped → counts
-            _issue("f2", "unused", file="src/b.ts"),     # in scope, skipped → excluded
-            _issue("f3", "unused", file="other/c.ts"),   # out of scope → excluded
+            _issue("f1", "unused", file="src/a.ts"),  # in scope, not skipped → counts
+            _issue("f2", "unused", file="src/b.ts"),  # in scope, skipped → excluded
+            _issue("f3", "unused", file="other/c.ts"),  # out of scope → excluded
         )
         plan = {"skipped": {"f2": {"kind": "temporary"}}}
         policy = compute_subjective_visibility(state, scan_path="src", plan=plan)
@@ -466,6 +517,7 @@ class TestSubjectivePolicyScanPathAndPlan:
 # ---------------------------------------------------------------------------
 # Fix 4a: workflow::run-scan synthetic item
 # ---------------------------------------------------------------------------
+
 
 class TestWorkflowRunScanItem:
     def test_run_scan_item_injected_when_queue_empty_and_plan_active(self):
@@ -505,9 +557,14 @@ class TestWorkflowRunScanItem:
         state: dict = {
             "issues": {
                 "f1": {
-                    "id": "f1", "detector": "unused", "status": "open",
-                    "file": "src/a.ts", "tier": 1, "confidence": "high",
-                    "summary": "test", "detail": {},
+                    "id": "f1",
+                    "detector": "unused",
+                    "status": "open",
+                    "file": "src/a.ts",
+                    "tier": 1,
+                    "confidence": "high",
+                    "summary": "test",
+                    "detail": {},
                 },
             },
             "scan_count": 5,
@@ -525,7 +582,9 @@ class TestWorkflowRunScanItem:
                 plan=plan,
             ),
         )
-        run_scan_items = [i for i in result["items"] if i.get("id") == "workflow::run-scan"]
+        run_scan_items = [
+            i for i in result["items"] if i.get("id") == "workflow::run-scan"
+        ]
         assert len(run_scan_items) == 0
 
     def test_deferred_disposition_blocks_run_scan_when_temporary_skips_exist(self):
@@ -538,9 +597,14 @@ class TestWorkflowRunScanItem:
         state: dict = {
             "issues": {
                 "f1": {
-                    "id": "f1", "detector": "unused", "status": "open",
-                    "file": "src/a.ts", "tier": 1, "confidence": "high",
-                    "summary": "test", "detail": {},
+                    "id": "f1",
+                    "detector": "unused",
+                    "status": "open",
+                    "file": "src/a.ts",
+                    "tier": 1,
+                    "confidence": "high",
+                    "summary": "test",
+                    "detail": {},
                 },
             },
             "scan_count": 5,
@@ -702,6 +766,7 @@ class TestWorkflowRunScanItem:
 # Cluster focus must not trigger false-empty queue (workflow::run-scan bug)
 # ---------------------------------------------------------------------------
 
+
 class TestClusterFocusDoesNotTriggerRunScan:
     """Regression tests: active_cluster must not affect lifecycle decisions.
 
@@ -715,14 +780,24 @@ class TestClusterFocusDoesNotTriggerRunScan:
         """Two open issues, one in cluster 'auth', one outside."""
         work_items = {
             "f1": {
-                "id": "f1", "detector": "unused", "status": "open",
-                "file": "src/auth.ts", "tier": 1, "confidence": "high",
-                "summary": "in cluster", "detail": {},
+                "id": "f1",
+                "detector": "unused",
+                "status": "open",
+                "file": "src/auth.ts",
+                "tier": 1,
+                "confidence": "high",
+                "summary": "in cluster",
+                "detail": {},
             },
             "f2": {
-                "id": "f2", "detector": "unused", "status": "open",
-                "file": "src/utils.ts", "tier": 1, "confidence": "high",
-                "summary": "outside cluster", "detail": {},
+                "id": "f2",
+                "detector": "unused",
+                "status": "open",
+                "file": "src/utils.ts",
+                "tier": 1,
+                "confidence": "high",
+                "summary": "outside cluster",
+                "detail": {},
             },
         }
         state: dict = {
@@ -819,6 +894,7 @@ class TestClusterFocusDoesNotTriggerRunScan:
 # Stale tracked IDs must not broaden execution to backlog
 # ---------------------------------------------------------------------------
 
+
 class TestStaleTrackedPlanDoesNotBroadenExecution:
     def test_stale_plan_shows_run_scan_instead_of_backlog_items(self):
         """A stale queue_order should drain into postflight, not generic backlog."""
@@ -866,11 +942,13 @@ class TestStaleTrackedPlanDoesNotBroadenExecution:
 # Fix 4a: render_queue_header for workflow-only items
 # ---------------------------------------------------------------------------
 
+
 class TestRenderQueueHeaderWorkflow:
     def test_header_shows_queue_count_for_run_scan(self, capsys):
         from desloppify.app.commands.next.render_support import (
             render_queue_header,
         )
+
         queue = {
             "total": 1,
             "items": [{"id": "workflow::run-scan", "kind": "workflow_action"}],
@@ -884,6 +962,7 @@ class TestRenderQueueHeaderWorkflow:
         from desloppify.app.commands.next.render_support import (
             render_queue_header,
         )
+
         queue = {
             "total": 5,
             "items": [{"id": "f1", "kind": "issue"}],
@@ -897,6 +976,7 @@ class TestRenderQueueHeaderWorkflow:
 # ---------------------------------------------------------------------------
 # Fix 6: queue_guard passes scan_path
 # ---------------------------------------------------------------------------
+
 
 class TestQueueGuardScanPath:
     def test_queue_guard_respects_scan_path_from_state(self):
@@ -933,7 +1013,9 @@ class TestQueueGuardScanPath:
             ) as mock_build,
         ):
             # Should not raise — f1 is at front of queue
-            result = _check_queue_order_guard(state, ["f1"], "fixed", plan_access=plan_access)
+            result = _check_queue_order_guard(
+                state, ["f1"], "fixed", plan_access=plan_access
+            )
             assert result is False
             # Verify build_work_queue was called (scan_path resolved internally)
             mock_build.assert_called_once()

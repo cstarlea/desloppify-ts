@@ -19,6 +19,7 @@ def open_review_ids(state: StateModel) -> set[str]:
     ``is_triage_stale``.
     """
     from desloppify.engine._state.issue_semantics import is_review_work_item
+
     return {
         fid
         for fid, f in (state.get("work_items") or state.get("issues", {})).items()
@@ -29,6 +30,7 @@ def open_review_ids(state: StateModel) -> set[str]:
 def open_mechanical_count(state: StateModel) -> int:
     """Return the count of open mechanical defects from state."""
     from desloppify.engine._state.issue_semantics import is_objective_finding
+
     return sum(
         1
         for f in (state.get("work_items") or state.get("issues", {})).values()
@@ -62,7 +64,9 @@ def _collect_subjective_entry_ids(
         dim_key = entry.get("dimension_key", "")
         if not dim_key or not predicate(entry):
             continue
-        collected.add(_subjective_entry_id(dim_key, subjective_prefix=subjective_prefix))
+        collected.add(
+            _subjective_entry_id(dim_key, subjective_prefix=subjective_prefix)
+        )
     return collected
 
 
@@ -86,7 +90,11 @@ def _unscored_ids_from_assessments(
 ) -> set[str]:
     unscored: set[str] = set()
     for dim_key, payload in assessments.items():
-        if not isinstance(payload, dict) or not payload.get("placeholder") or not dim_key:
+        if (
+            not isinstance(payload, dict)
+            or not payload.get("placeholder")
+            or not dim_key
+        ):
             continue
         unscored.add(_subjective_entry_id(dim_key, subjective_prefix=subjective_prefix))
     return unscored
@@ -144,7 +152,8 @@ def current_under_target_ids(
             predicate=lambda entry: (
                 not entry.get("placeholder")
                 and not entry.get("stale")
-                and float(entry.get("strict", entry.get("score", 100.0))) < target_strict
+                and float(entry.get("strict", entry.get("score", 100.0)))
+                < target_strict
             ),
         )
         if item_id not in stale_ids and item_id not in unscored_ids

@@ -129,7 +129,10 @@ def test_quarantine_persists_and_does_not_warn_again(tmp_path, capsys):
 
     on_disk = _on_disk(path)
     assert sorted(on_disk["work_items"]) == ["a"]
-    assert sorted(e["id"] for e in on_disk["quarantined_work_items"]) == ["bad", "worse"]
+    assert sorted(e["id"] for e in on_disk["quarantined_work_items"]) == [
+        "bad",
+        "worse",
+    ]
 
     reloaded = load_state(path)
     assert len(reloaded["quarantined_work_items"]) == 2

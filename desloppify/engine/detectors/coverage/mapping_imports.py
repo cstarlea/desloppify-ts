@@ -26,7 +26,6 @@ def _infer_lang_name(test_files: set[str], production_files: set[str]) -> str | 
     return None
 
 
-
 def _discover_additional_test_mapping_files(
     test_files: set[str],
     production_files: set[str],
@@ -52,7 +51,6 @@ def _discover_additional_test_mapping_files(
     return result
 
 
-
 def _resolve_import(
     spec: str,
     test_path: str,
@@ -64,7 +62,6 @@ def _resolve_import(
     if callable(resolver):
         return resolver(spec, test_path, production_files)
     return None
-
 
 
 def _resolve_barrel_reexports(
@@ -80,7 +77,6 @@ def _resolve_barrel_reexports(
     if callable(resolver):
         return resolver(filepath, production_files)
     return set()
-
 
 
 def _parse_test_imports(

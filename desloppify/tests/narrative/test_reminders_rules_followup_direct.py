@@ -54,7 +54,9 @@ def test_stale_assessment_reminder_requires_no_open_issues() -> None:
     assert "naming,error_handling" in reminders[0]["command"]
 
 
-def test_review_staleness_reminder_handles_old_and_invalid_timestamps(monkeypatch) -> None:
+def test_review_staleness_reminder_handles_old_and_invalid_timestamps(
+    monkeypatch,
+) -> None:
     old = (_dt.now(UTC) - timedelta(days=45)).isoformat()
     state = {
         "review_cache": {
@@ -64,7 +66,9 @@ def test_review_staleness_reminder_handles_old_and_invalid_timestamps(monkeypatc
         }
     }
 
-    reminders = followup_mod._review_staleness_reminder(state, {"review_max_age_days": 30})
+    reminders = followup_mod._review_staleness_reminder(
+        state, {"review_max_age_days": 30}
+    )
     assert reminders and reminders[0]["type"] == "review_stale"
 
     called = {"count": 0}
@@ -80,12 +84,17 @@ def test_review_staleness_reminder_handles_old_and_invalid_timestamps(monkeypatc
             }
         }
     }
-    assert followup_mod._review_staleness_reminder(bad_state, {"review_max_age_days": 1}) == []
+    assert (
+        followup_mod._review_staleness_reminder(bad_state, {"review_max_age_days": 1})
+        == []
+    )
     assert called["count"] == 1
 
 
 def test_feedback_reminder_branches(monkeypatch) -> None:
-    monkeypatch.setattr(followup_mod, "_feedback_base_url", lambda: "https://example.invalid")
+    monkeypatch.setattr(
+        followup_mod, "_feedback_base_url", lambda: "https://example.invalid"
+    )
 
     assert followup_mod._feedback_reminder({}, "normal", "scan", {}) == []
 

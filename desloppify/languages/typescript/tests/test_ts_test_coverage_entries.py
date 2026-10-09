@@ -14,7 +14,11 @@ from desloppify.engine.scoring import is_loc_weighted_dimension
 from desloppify.languages.typescript.detectors.deps.resolver import clear_resolver_cache
 from desloppify.languages.typescript.test_coverage import public_entry_files
 
-_LOGIC = "export function run(n: number): number {\n" + "  n += 1;\n" * 10 + "  return n;\n}\n"
+_LOGIC = (
+    "export function run(n: number): number {\n"
+    + "  n += 1;\n" * 10
+    + "  return n;\n}\n"
+)
 
 
 @pytest.fixture(autouse=True)
@@ -36,13 +40,30 @@ def _project(root: Path, manifest: str) -> tuple[dict, dict, FileZoneMap]:
     """api.test imports index (entry) -> core -> helper; util.test imports util -> internal."""
     _touch(root, "package.json", manifest)
     files = {
-        "index": _touch(root, "src/index.ts", "import { run as c } from './core';\n" + _LOGIC.replace("n += 1", "n += c(n)")),
-        "core": _touch(root, "src/core.ts", "import { run as h } from './helper';\n" + _LOGIC),
+        "index": _touch(
+            root,
+            "src/index.ts",
+            "import { run as c } from './core';\n"
+            + _LOGIC.replace("n += 1", "n += c(n)"),
+        ),
+        "core": _touch(
+            root, "src/core.ts", "import { run as h } from './helper';\n" + _LOGIC
+        ),
         "helper": _touch(root, "src/helper.ts", _LOGIC),
-        "util": _touch(root, "src/util.ts", "import { run as i } from './internal';\n" + _LOGIC),
+        "util": _touch(
+            root, "src/util.ts", "import { run as i } from './internal';\n" + _LOGIC
+        ),
         "internal": _touch(root, "src/internal.ts", _LOGIC),
-        "api_test": _touch(root, "test/api.test.ts", "import { run } from '../src';\nit('runs', () => { expect(run(1)).toBe(12); });\n"),
-        "util_test": _touch(root, "test/util.test.ts", "import { run } from '../src/util';\nit('runs', () => { expect(run(1)).toBe(12); });\n"),
+        "api_test": _touch(
+            root,
+            "test/api.test.ts",
+            "import { run } from '../src';\nit('runs', () => { expect(run(1)).toBe(12); });\n",
+        ),
+        "util_test": _touch(
+            root,
+            "test/util.test.ts",
+            "import { run } from '../src/util';\nit('runs', () => { expect(run(1)).toBe(12); });\n",
+        ),
     }
     graph = {
         files["index"]: {"imports": {files["core"]}, "importer_count": 1},
@@ -62,7 +83,9 @@ def _kinds(result) -> dict[str, str]:
 
 
 def test_modules_behind_a_tested_public_entry_count_as_covered(tmp_path):
-    files, graph, zone_map = _project(tmp_path, '{"name": "pkg", "main": "src/index.ts"}')
+    files, graph, zone_map = _project(
+        tmp_path, '{"name": "pkg", "main": "src/index.ts"}'
+    )
     assert public_entry_files(set(files.values())) == {files["index"]}
 
     result = run_test_coverage(graph, zone_map, "typescript")

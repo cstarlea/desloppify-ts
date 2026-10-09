@@ -146,9 +146,7 @@ class TestHolisticDimensionsByLang:
     def test_curated_dims_are_subset_of_superset(self):
         for lang_name, dims in HOLISTIC_DIMENSIONS_BY_LANG.items():
             for dim in dims:
-                assert dim in DIMENSIONS, (
-                    f"{lang_name} dim {dim!r} not in DIMENSIONS"
-                )
+                assert dim in DIMENSIONS, f"{lang_name} dim {dim!r} not in DIMENSIONS"
 
     def test_all_curated_dims_have_prompts(self):
         for lang_name, dims in HOLISTIC_DIMENSIONS_BY_LANG.items():
@@ -380,7 +378,10 @@ class TestPrepareHolisticReview:
                 question="Is this file doing too many things?",
                 evidence=("Flagged by: structural",),
                 fingerprint="abc123def456",
-                source_issues=("structural::big.ts::large_file", "structural::big.ts::high_complexity"),
+                source_issues=(
+                    "structural::big.ts::large_file",
+                    "structural::big.ts::high_complexity",
+                ),
             ),
             SimpleNamespace(
                 type="systemic_smell",
@@ -673,7 +674,9 @@ class TestImportHolisticIssues:
                 "summary": "Three error strategies across modules",
                 "confidence": "medium",
                 "related_files": ["handler.py", "service.py"],
-                "evidence": ["Handlers mix exceptions, sentinel values, and Result types."],
+                "evidence": [
+                    "Handlers mix exceptions, sentinel values, and Result types."
+                ],
                 "suggestion": "Consolidate to Result type",
             },
         ]
@@ -717,9 +720,12 @@ class TestImportHolisticIssues:
         }
 
         from desloppify.base.runtime_state import RuntimeContext, runtime_scope
+
         ctx = RuntimeContext(project_root=tmp_path)
         with runtime_scope(ctx):
-            _ = _call_import_holistic_issues(issues_data, state, "python", project_root=tmp_path)
+            _ = _call_import_holistic_issues(
+                issues_data, state, "python", project_root=tmp_path
+            )
 
         files_cache = state.get("review_cache", {}).get("files", {})
         assert "pkg/module.py" in files_cache
@@ -764,7 +770,9 @@ class TestImportHolisticIssues:
 
         ctx = RuntimeContext(project_root=tmp_path)
         with runtime_scope(ctx):
-            diff = _call_import_holistic_issues(payload, state, "python", project_root=tmp_path)
+            diff = _call_import_holistic_issues(
+                payload, state, "python", project_root=tmp_path
+            )
 
         assert diff["auto_resolved"] >= 1
         assert state["work_items"][coverage_id]["status"] == "fixed"
@@ -1028,9 +1036,7 @@ class TestHolisticStaleness:
         assert len(entries) == 0
 
     def test_stale_cache_returns_stale(self):
-        old = (datetime.now(UTC) - timedelta(days=45)).isoformat(
-            timespec="seconds"
-        )
+        old = (datetime.now(UTC) - timedelta(days=45)).isoformat(timespec="seconds")
         cache = {
             "holistic": {
                 "reviewed_at": old,
@@ -1374,7 +1380,9 @@ class TestBuildInvestigationBatches:
         assert "convention_outlier" in names
 
         # Batches no longer carry files_to_read — verify structure only
-        arch_batch = next(b for b in batches if b["name"] == "cross_module_architecture")
+        arch_batch = next(
+            b for b in batches if b["name"] == "cross_module_architecture"
+        )
         assert arch_batch["dimensions"] == ["cross_module_architecture"]
         assert "why" in arch_batch
 
@@ -1471,7 +1479,9 @@ class TestBuildInvestigationBatches:
 
         batches = _build_investigation_batches(ctx, lang)
 
-        arch_batch = next(b for b in batches if b["name"] == "cross_module_architecture")
+        arch_batch = next(
+            b for b in batches if b["name"] == "cross_module_architecture"
+        )
         assert "files_to_read" not in arch_batch
         assert arch_batch["dimensions"] == ["cross_module_architecture"]
 
@@ -1666,4 +1676,3 @@ class TestFilterBatchesToDimensions:
         assert filtered[0]["name"] == "low_level_elegance"
         assert filtered[0]["dimensions"] == ["low_level_elegance"]
         assert "files_to_read" not in filtered[0]
-

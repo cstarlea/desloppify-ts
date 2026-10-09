@@ -57,9 +57,7 @@ class Tier(enum.IntEnum):
     MAJOR_REFACTOR = 4
 
 
-def canonical_issue_status(
-    value: object, *, default: Status = Status.OPEN
-) -> Status:
+def canonical_issue_status(value: object, *, default: Status = Status.OPEN) -> Status:
     """Normalize legacy/unknown issue status values to a canonical enum."""
     token = str(value).strip().lower()
     token = _LEGACY_STATUS_ALIASES.get(token, token)

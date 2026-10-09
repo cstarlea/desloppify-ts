@@ -133,7 +133,8 @@ def _validate_organize_submission(
     if not _unclustered_review_issues_or_error(plan, state):
         return None
     if not _validate_organize_against_ledger_or_error(
-        plan=plan, stages=stages,
+        plan=plan,
+        stages=stages,
     ):
         return None
 
@@ -161,7 +162,9 @@ def _validate_organize_submission(
         validate_report_references_clusters,
     )
 
-    cluster_ref_failures = validate_report_references_clusters(normalized_report, manual_clusters)
+    cluster_ref_failures = validate_report_references_clusters(
+        normalized_report, manual_clusters
+    )
     if cluster_ref_failures:
         print(
             colorize(
@@ -216,7 +219,11 @@ def _cmd_stage_organize(
     plan = resolved_services.load_plan()
 
     if not has_triage_in_queue(plan):
-        print(colorize("  No planning stages in the queue — nothing to organize.", "yellow"))
+        print(
+            colorize(
+                "  No planning stages in the queue — nothing to organize.", "yellow"
+            )
+        )
         return
 
     meta = plan.get("epic_triage_meta", {})

@@ -9,16 +9,18 @@ from dataclasses import dataclass, field
 # Shared constants
 # ---------------------------------------------------------------------------
 
-VERDICT_KEYWORDS = frozenset({
-    "genuine",
-    "false positive",
-    "false-positive",
-    "exaggerated",
-    "over-engineering",
-    "over engineering",
-    "not-worth-it",
-    "not worth it",
-})
+VERDICT_KEYWORDS = frozenset(
+    {
+        "genuine",
+        "false positive",
+        "false-positive",
+        "exaggerated",
+        "over-engineering",
+        "over engineering",
+        "not-worth-it",
+        "not worth it",
+    }
+)
 
 # Permissive path regex — detects whether *any* file path was mentioned.
 # NOT used to validate existence (that's enrich-only in validation.enrich_checks).
@@ -27,6 +29,7 @@ _EVIDENCE_PATH_RE = re.compile(r"[\w.@-]+/[\w./@-]+\.\w+")
 # ---------------------------------------------------------------------------
 # Data classes
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class EvidenceFailure:
@@ -80,6 +83,7 @@ class DecisionLedger:
 # OBSERVE evidence parsing — structured template format
 # ---------------------------------------------------------------------------
 
+
 def _normalise_verdict(raw: str) -> str | None:
     """Return a normalised verdict keyword, or None if not recognised."""
     lower = raw.lower().strip()
@@ -101,7 +105,9 @@ def _build_short_map(valid_ids: set[str]) -> dict[str, str]:
     return short_map
 
 
-def _is_valid_hash(raw_hash: str, short_map: dict[str, str], valid_ids: set[str]) -> bool:
+def _is_valid_hash(
+    raw_hash: str, short_map: dict[str, str], valid_ids: set[str]
+) -> bool:
     """Check if a hash is known in either the short map or valid IDs."""
     return raw_hash in short_map or raw_hash in valid_ids
 
@@ -118,6 +124,7 @@ _YAML_REASONING_RE = re.compile(r"^\s*verdict_reasoning\s*:\s*(.+)", re.IGNORECA
 _YAML_FILES_RE = re.compile(r"^\s*files_read\s*:\s*(.+)", re.IGNORECASE)
 # Matches lines like:  recommendation: do something
 _YAML_RECOMMENDATION_RE = re.compile(r"^\s*recommendation\s*:\s*(.+)", re.IGNORECASE)
+
 
 def _parse_yaml_files_field(raw: str) -> list[str]:
     """Parse the files_read field — supports [a, b] list or single path."""
@@ -256,21 +263,23 @@ def validate_observe_evidence(
     failures: list[EvidenceFailure] = []
 
     if not evidence.entries:
-        failures.append(EvidenceFailure(
-            code="no_verdicts",
-            message=(
-                "No per-issue assessment entries found in report.\n"
-                "\n"
-                f"{_OBSERVE_TEMPLATE_HINT}\n"
-                "\n"
-                "  Example:\n"
-                "    - hash: 34580232\n"
-                "      verdict: false-positive\n"
-                "      verdict_reasoning: Uses branded string union KnownTaskType\n"
-                "      files_read: [src/types/database.ts]\n"
-                "      recommendation: No action needed"
-            ),
-        ))
+        failures.append(
+            EvidenceFailure(
+                code="no_verdicts",
+                message=(
+                    "No per-issue assessment entries found in report.\n"
+                    "\n"
+                    f"{_OBSERVE_TEMPLATE_HINT}\n"
+                    "\n"
+                    "  Example:\n"
+                    "    - hash: 34580232\n"
+                    "      verdict: false-positive\n"
+                    "      verdict_reasoning: Uses branded string union KnownTaskType\n"
+                    "      files_read: [src/types/database.ts]\n"
+                    "      recommendation: No action needed"
+                ),
+            )
+        )
         return failures
 
     # Check field presence — no quality thresholds
@@ -290,49 +299,55 @@ def validate_observe_evidence(
         examples = "\n".join(
             f"    [{e.issue_hash}] {e.verdict}" for e in missing_reasoning[:5]
         )
-        failures.append(EvidenceFailure(
-            code="missing_verdict_reasoning",
-            message=(
-                f"{len(missing_reasoning)} of {len(evidence.entries)} assessment(s) "
-                f"have no verdict_reasoning.\n"
-                "\n"
-                f"{_OBSERVE_TEMPLATE_HINT}\n"
-                "\n"
-                f"  Entries missing reasoning:\n{examples}"
-            ),
-        ))
+        failures.append(
+            EvidenceFailure(
+                code="missing_verdict_reasoning",
+                message=(
+                    f"{len(missing_reasoning)} of {len(evidence.entries)} assessment(s) "
+                    f"have no verdict_reasoning.\n"
+                    "\n"
+                    f"{_OBSERVE_TEMPLATE_HINT}\n"
+                    "\n"
+                    f"  Entries missing reasoning:\n{examples}"
+                ),
+            )
+        )
 
     if missing_files:
         examples = "\n".join(
             f"    [{e.issue_hash}] {e.verdict}" for e in missing_files[:5]
         )
-        failures.append(EvidenceFailure(
-            code="missing_files_read",
-            message=(
-                f"{len(missing_files)} of {len(evidence.entries)} assessment(s) "
-                f"have no files_read.\n"
-                "\n"
-                f"{_OBSERVE_TEMPLATE_HINT}\n"
-                "\n"
-                f"  Entries missing files_read:\n{examples}"
-            ),
-        ))
+        failures.append(
+            EvidenceFailure(
+                code="missing_files_read",
+                message=(
+                    f"{len(missing_files)} of {len(evidence.entries)} assessment(s) "
+                    f"have no files_read.\n"
+                    "\n"
+                    f"{_OBSERVE_TEMPLATE_HINT}\n"
+                    "\n"
+                    f"  Entries missing files_read:\n{examples}"
+                ),
+            )
+        )
 
     if missing_recommendation:
         examples = "\n".join(
             f"    [{e.issue_hash}] {e.verdict}" for e in missing_recommendation[:5]
         )
-        failures.append(EvidenceFailure(
-            code="missing_recommendation",
-            message=(
-                f"{len(missing_recommendation)} of {len(evidence.entries)} assessment(s) "
-                f"have no recommendation.\n"
-                "\n"
-                f"{_OBSERVE_TEMPLATE_HINT}\n"
-                "\n"
-                f"  Entries missing recommendation:\n{examples}"
-            ),
-        ))
+        failures.append(
+            EvidenceFailure(
+                code="missing_recommendation",
+                message=(
+                    f"{len(missing_recommendation)} of {len(evidence.entries)} assessment(s) "
+                    f"have no recommendation.\n"
+                    "\n"
+                    f"{_OBSERVE_TEMPLATE_HINT}\n"
+                    "\n"
+                    f"  Entries missing recommendation:\n{examples}"
+                ),
+            )
+        )
 
     return failures
 
@@ -364,20 +379,20 @@ def validate_reflect_skip_evidence(report: str) -> list[EvidenceFailure]:
             bad_skips.append((issue_hash, reason))
 
     if bad_skips:
-        failing_examples = "\n".join(
-            f'    [{h}] "{r}"' for h, r in bad_skips[:5]
+        failing_examples = "\n".join(f'    [{h}] "{r}"' for h, r in bad_skips[:5])
+        failures.append(
+            EvidenceFailure(
+                code="vague_skip_reason",
+                message=(
+                    f"{len(bad_skips)} skip reason(s) are empty.\n"
+                    "\n"
+                    "  Required format:\n"
+                    "    Skip: [<hash>] (<reason for skipping>)\n"
+                    "\n"
+                    f"  Failing skips:\n{failing_examples}"
+                ),
+            )
         )
-        failures.append(EvidenceFailure(
-            code="vague_skip_reason",
-            message=(
-                f"{len(bad_skips)} skip reason(s) are empty.\n"
-                "\n"
-                "  Required format:\n"
-                "    Skip: [<hash>] (<reason for skipping>)\n"
-                "\n"
-                f"  Failing skips:\n{failing_examples}"
-            ),
-        ))
 
     return failures
 
@@ -385,6 +400,7 @@ def validate_reflect_skip_evidence(report: str) -> list[EvidenceFailure]:
 # ---------------------------------------------------------------------------
 # Cluster-name mention check (organize + sense-check)
 # ---------------------------------------------------------------------------
+
 
 def validate_report_references_clusters(
     report: str,
@@ -403,17 +419,19 @@ def validate_report_references_clusters(
     names_str = ", ".join(cluster_names[:5])
     if len(cluster_names) > 5:
         names_str += f" ... ({len(cluster_names)} total)"
-    failures.append(EvidenceFailure(
-        code="no_cluster_mention",
-        message=(
-            f"Report references none of the {len(cluster_names)} cluster name(s).\n"
-            "\n"
-            "  The report must mention at least one cluster by name to prove\n"
-            "  awareness of the plan structure.\n"
-            "\n"
-            f"  Cluster names: {names_str}"
-        ),
-    ))
+    failures.append(
+        EvidenceFailure(
+            code="no_cluster_mention",
+            message=(
+                f"Report references none of the {len(cluster_names)} cluster name(s).\n"
+                "\n"
+                "  The report must mention at least one cluster by name to prove\n"
+                "  awareness of the plan structure.\n"
+                "\n"
+                f"  Cluster names: {names_str}"
+            ),
+        )
+    )
     return failures
 
 
@@ -421,33 +439,42 @@ def validate_report_references_clusters(
 # File path mention check (sense-check)
 # ---------------------------------------------------------------------------
 
+
 def validate_report_has_file_paths(report: str) -> list[EvidenceFailure]:
     """Check that at least one file path appears in the report."""
     if _EVIDENCE_PATH_RE.search(report):
         return []
-    return [EvidenceFailure(
-        code="no_file_paths_in_report",
-        message=(
-            "Report references no file paths (need at least 1).\n"
-            "\n"
-            "  The sense-check report must prove code was read. Include specific\n"
-            "  file paths and line numbers for verified steps.\n"
-            "\n"
-            "  Example:\n"
-            "    Verified src/services/funds.ts lines 45-67: function signature\n"
-            "    matches step description. Effort tag 'small' is accurate."
-        ),
-    )]
+    return [
+        EvidenceFailure(
+            code="no_file_paths_in_report",
+            message=(
+                "Report references no file paths (need at least 1).\n"
+                "\n"
+                "  The sense-check report must prove code was read. Include specific\n"
+                "  file paths and line numbers for verified steps.\n"
+                "\n"
+                "  Example:\n"
+                "    Verified src/services/funds.ts lines 45-67: function signature\n"
+                "    matches step description. Effort tag 'small' is accurate."
+            ),
+        )
+    ]
 
 
 # ---------------------------------------------------------------------------
 # Cluster-level verdict parsing (observe stage)
 # ---------------------------------------------------------------------------
 
-_CLUSTER_VERDICT_KEYWORDS = frozenset({
-    "actionable", "mostly-false-positives", "mostly false positives",
-    "mixed", "low-value", "low value",
-})
+_CLUSTER_VERDICT_KEYWORDS = frozenset(
+    {
+        "actionable",
+        "mostly-false-positives",
+        "mostly false positives",
+        "mixed",
+        "low-value",
+        "low value",
+    }
+)
 
 # Matches:  - cluster: auto/security-B602
 _YAML_CLUSTER_RE = re.compile(r"^\s*-?\s*cluster\s*:\s*(\S+)", re.IGNORECASE)
@@ -556,6 +583,7 @@ def parse_value_check_decision_ledger(report: str) -> DecisionLedger:
 # ---------------------------------------------------------------------------
 # Shared output helpers
 # ---------------------------------------------------------------------------
+
 
 def format_evidence_failures(
     failures: list[EvidenceFailure],

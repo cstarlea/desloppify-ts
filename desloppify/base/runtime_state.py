@@ -38,7 +38,9 @@ class FileTextCache:
         self._values.clear()
         self._last_result = None
 
-    def read_result(self, filepath: str, *, root: Path | None = None) -> FileTextReadResult:
+    def read_result(
+        self, filepath: str, *, root: Path | None = None
+    ) -> FileTextReadResult:
         """Read *filepath*; a relative path is taken relative to *root*, not the cwd."""
         if self._enabled and filepath in self._values:
             result = self._values[filepath]

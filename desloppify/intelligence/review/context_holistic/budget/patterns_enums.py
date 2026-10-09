@@ -23,7 +23,9 @@ _FUNCTION_TYPES = frozenset(
         "method_definition",
     }
 )
-_SCHEMA_INFER_NAMES = frozenset({"infer", "input", "output", "TypeOf", "InferInput", "InferOutput"})
+_SCHEMA_INFER_NAMES = frozenset(
+    {"infer", "input", "output", "TypeOf", "InferInput", "InferOutput"}
+)
 
 
 def _collect_enum_defs(
@@ -50,7 +52,11 @@ def _collect_enum_defs(
                 if key is not None and value is not None:
                     members[parsed.text(key)] = value
             if members:
-                result[(rpath, parsed.text(name))] = {"file": rpath, "kind": "enum", "members": members}
+                result[(rpath, parsed.text(name))] = {
+                    "file": rpath,
+                    "kind": "enum",
+                    "members": members,
+                }
         for decl in type_declarations(parsed):
             if decl.kind != "alias":
                 continue
@@ -81,7 +87,9 @@ def _find_enum_bypass(
             if value == "" or (isinstance(value, int) and value in _GENERIC_INT_VALUES):
                 continue
             label = member if info["kind"] == "enum" else None
-            value_to_types.setdefault(value, []).append((file, info["kind"], type_name, label))
+            value_to_types.setdefault(value, []).append(
+                (file, info["kind"], type_name, label)
+            )
     if not value_to_types:
         return []
 
@@ -89,7 +97,11 @@ def _find_enum_bypass(
     for rpath, parsed in parsed_files.items():
         for literal, subject in _literal_comparisons(parsed):
             value = _literal_value(parsed, literal)
-            if value is None or value not in value_to_types or subject.type == "unary_expression":
+            if (
+                value is None
+                or value not in value_to_types
+                or subject.type == "unary_expression"
+            ):
                 continue
             string_typed: bool | None = None
             for file, kind, type_name, member in value_to_types[value]:
@@ -123,7 +135,10 @@ def _literal_comparisons(parsed: ParsedSource):
             operator = node.child_by_field_name("operator")
             if operator is None or operator.type not in _EQUALITY_OPS:
                 continue
-            left, right = node.child_by_field_name("left"), node.child_by_field_name("right")
+            left, right = (
+                node.child_by_field_name("left"),
+                node.child_by_field_name("right"),
+            )
             if left is None or right is None:
                 continue
             if _is_literal(right) and not _is_literal(left):
@@ -138,7 +153,11 @@ def _literal_comparisons(parsed: ParsedSource):
         while subject.type == "parenthesized_expression" and subject.named_children:
             subject = subject.named_children[0]
         for case in body.named_children:
-            value = case.child_by_field_name("value") if case.type == "switch_case" else None
+            value = (
+                case.child_by_field_name("value")
+                if case.type == "switch_case"
+                else None
+            )
             if value is not None and _is_literal(value):
                 yield value, subject
 
@@ -172,7 +191,11 @@ def _string_union(parsed: ParsedSource, node) -> list[str] | None:
         return None
     literals = []
     for member in _union_members(node):
-        inner = member.named_children[0] if member.type == "literal_type" and member.named_children else None
+        inner = (
+            member.named_children[0]
+            if member.type == "literal_type" and member.named_children
+            else None
+        )
         if inner is None or inner.type != "string":
             return None
         literals.append(string_value(parsed, inner))
@@ -191,9 +214,14 @@ def _is_string_type(node) -> bool:
     for member in _union_members(node):
         if member.type == "predefined_type" and member.text == b"string":
             kinds.append("string")
-        elif member.type == "literal_type" and member.named_children and member.named_children[0].type in (
-            "undefined",
-            "null",
+        elif (
+            member.type == "literal_type"
+            and member.named_children
+            and member.named_children[0].type
+            in (
+                "undefined",
+                "null",
+            )
         ):
             kinds.append("nullish")
         else:
@@ -212,11 +240,19 @@ def _declared_string(parsed: ParsedSource, subject) -> bool:
             params = scope.child_by_field_name("parameters")
             for param in params.named_children if params is not None else ():
                 pattern = param.child_by_field_name("pattern")
-                if pattern is not None and pattern.type == "identifier" and pattern.text == name:
+                if (
+                    pattern is not None
+                    and pattern.type == "identifier"
+                    and pattern.text == name
+                ):
                     return _is_string_type(param.child_by_field_name("type"))
         if scope.type in _FUNCTION_TYPES or scope.parent is None:
-            body = scope.child_by_field_name("body") if scope.parent is not None else scope
-            for declarator in descendants(body, ("variable_declarator",)) if body is not None else ():
+            body = (
+                scope.child_by_field_name("body") if scope.parent is not None else scope
+            )
+            for declarator in (
+                descendants(body, ("variable_declarator",)) if body is not None else ()
+            ):
                 key = declarator.child_by_field_name("name")
                 if key is not None and key.type == "identifier" and key.text == name:
                     return _is_string_type(declarator.child_by_field_name("type"))
@@ -250,20 +286,33 @@ def _census_type_strategies(
                 strategies["string_union"].append(entry)
         for info in classes(parsed):
             if info.name and (
-                any(m.kind == "field" and not m.is_static for m in info.members) or _has_parameter_properties(info)
+                any(m.kind == "field" and not m.is_static for m in info.members)
+                or _has_parameter_properties(info)
             ):
-                strategies["class"].append({"name": info.name, "file": rpath, "line": info.line})
+                strategies["class"].append(
+                    {"name": info.name, "file": rpath, "line": info.line}
+                )
         for node in descendants(parsed.root, ("enum_declaration",)):
             name = node.child_by_field_name("name")
             if name is not None:
-                strategies["enum"].append({"name": parsed.text(name), "file": rpath, "line": parsed.line(node)})
+                strategies["enum"].append(
+                    {
+                        "name": parsed.text(name),
+                        "file": rpath,
+                        "line": parsed.line(node),
+                    }
+                )
     return {name: items for name, items in strategies.items() if items}
 
 
 def _has_parameter_properties(info) -> bool:
     """``constructor(private db: Db)``: parameters that declare fields."""
     constructor = next((m for m in info.members if m.kind == "constructor"), None)
-    params = constructor.node.child_by_field_name("parameters") if constructor is not None else None
+    params = (
+        constructor.node.child_by_field_name("parameters")
+        if constructor is not None
+        else None
+    )
     return params is not None and any(
         child.type in ("accessibility_modifier", "readonly")
         for param in params.named_children

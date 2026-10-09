@@ -43,7 +43,6 @@ class TestFacadeTierConfidence:
         assert conf == "medium"
 
 
-
 # ── detect_reexport_facades_common ───────────────────────
 
 
@@ -111,17 +110,13 @@ class TestDetectReexportFacadesCommon:
                 return {"loc": 10, "imports_from": ["pkg.a"]}
             return None
 
-        entries, total = detect_reexport_facades_common(
-            graph, is_facade_fn=selective
-        )
+        entries, total = detect_reexport_facades_common(graph, is_facade_fn=selective)
         assert total == 2
         assert len(entries) == 1
         assert entries[0]["file"] == "a.py"
 
     def test_empty_graph(self):
-        entries, total = detect_reexport_facades_common(
-            {}, is_facade_fn=lambda p: None
-        )
+        entries, total = detect_reexport_facades_common({}, is_facade_fn=lambda p: None)
         assert total == 0
         assert entries == []
 
@@ -131,9 +126,7 @@ class TestDetectReexportFacadesCommon:
         def facade(path: str) -> dict | None:
             return {"loc": 15, "imports_from": ["a", "b"]}
 
-        entries, _ = detect_reexport_facades_common(
-            graph, is_facade_fn=facade
-        )
+        entries, _ = detect_reexport_facades_common(graph, is_facade_fn=facade)
         e = entries[0]
         assert e["file"] == "mod.py"
         assert e["loc"] == 15

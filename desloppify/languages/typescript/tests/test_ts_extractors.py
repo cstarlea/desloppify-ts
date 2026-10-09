@@ -357,7 +357,9 @@ def test_extract_falls_back_to_regex_without_tree_sitter(tmp_path, monkeypatch):
 
     monkeypatch.setattr(functions_mod, "parsed_file", lambda _path: None)
     ts_file = tmp_path / "plain.ts"
-    ts_file.write_text("export function first(x: string) {\n  const a = x;\n  return a;\n}\n")
+    ts_file.write_text(
+        "export function first(x: string) {\n  const a = x;\n  return a;\n}\n"
+    )
     funcs = extract_ts_functions(str(ts_file))
     assert [(f.name, f.params) for f in funcs] == [("first", ["x"])]
 

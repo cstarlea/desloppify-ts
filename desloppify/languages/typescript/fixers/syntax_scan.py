@@ -12,9 +12,7 @@ _CHAR_DEPTH_DELTA: dict[str, tuple[str, int]] = {
 }
 
 
-def _iter_code_chars(
-    text: str, start: int = 0
-) -> list[tuple[int, str, bool]]:
+def _iter_code_chars(text: str, start: int = 0) -> list[tuple[int, str, bool]]:
     """Yield source characters while skipping comments outside strings."""
     result: list[tuple[int, str, bool]] = []
     in_string: str | None = None

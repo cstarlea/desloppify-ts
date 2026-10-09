@@ -31,7 +31,7 @@ def _import_yaml_module() -> Any | None:
         print(
             colorize(
                 "  YAML import/export requires PyYAML. "
-                "Install with: pip install \"desloppify-ts[plan-yaml]\"",
+                'Install with: pip install "desloppify-ts[plan-yaml]"',
                 "red",
             )
         )
@@ -104,7 +104,9 @@ def _print_cluster_import_preview(entries: list[dict], clusters: dict) -> None:
     print(colorize("  (dry run — no changes saved)", "dim"))
 
 
-def _import_cluster_entry(plan: dict, clusters: dict, entry: dict) -> tuple[bool, dict] | None:
+def _import_cluster_entry(
+    plan: dict, clusters: dict, entry: dict
+) -> tuple[bool, dict] | None:
     if not isinstance(entry, dict) or "name" not in entry:
         print(colorize(f"  Skipping entry without 'name': {entry!r}", "yellow"))
         return None
@@ -172,7 +174,12 @@ def _cmd_cluster_delete(args: argparse.Namespace) -> None:
         actor="user",
     )
     save_plan(plan)
-    print(colorize(f"  Deleted cluster {cluster_name} ({len(orphaned)} items orphaned).", "green"))
+    print(
+        colorize(
+            f"  Deleted cluster {cluster_name} ({len(orphaned)} items orphaned).",
+            "green",
+        )
+    )
 
 
 def _cmd_cluster_export(args: argparse.Namespace) -> None:
@@ -203,7 +210,11 @@ def _cmd_cluster_export(args: argparse.Namespace) -> None:
         }
         if "priority" in cluster:
             payload["priority"] = cluster["priority"]
-        print(yaml.dump({"clusters": [payload]}, default_flow_style=False, sort_keys=False))
+        print(
+            yaml.dump(
+                {"clusters": [payload]}, default_flow_style=False, sort_keys=False
+            )
+        )
     else:
         print(format_steps(steps))
 
@@ -241,7 +252,9 @@ def _cmd_cluster_import(args: argparse.Namespace) -> None:
             updated += 1
 
     save_plan(plan)
-    print(colorize(f"  Import complete: {created} created, {updated} updated.", "green"))
+    print(
+        colorize(f"  Import complete: {created} created, {updated} updated.", "green")
+    )
 
 
 def _cmd_cluster_merge(args: argparse.Namespace) -> None:

@@ -35,7 +35,11 @@ def workspace(tmp_path, monkeypatch):
     lint run as ``(config dir, targets)``.
     """
     _write(tmp_path, "eslint.config.js")
-    _write(tmp_path, "package.json", '{"workspaces": ["packages/*"], "devDependencies": {"eslint": "9"}}\n')
+    _write(
+        tmp_path,
+        "package.json",
+        '{"workspaces": ["packages/*"], "devDependencies": {"eslint": "9"}}\n',
+    )
     _write(tmp_path, "node_modules/.bin/eslint", "#!/bin/sh\n")
     type_aware: set[Path] = set()
     runs: list[tuple[str, list[str]]] = []
@@ -44,10 +48,14 @@ def workspace(tmp_path, monkeypatch):
         directory = config.directory
         if any(arg.startswith("--print-config") for arg in cmd):
             return SimpleNamespace(
-                stdout=json.dumps(_TYPE_AWARE if directory in type_aware else {}), stderr="", returncode=0
+                stdout=json.dumps(_TYPE_AWARE if directory in type_aware else {}),
+                stderr="",
+                returncode=0,
             )
         ignores = [cmd[i + 1] for i, arg in enumerate(cmd) if arg == "--ignore-pattern"]
-        targets = [arg for arg in cmd[4:] if arg not in ignores and arg != "--ignore-pattern"]
+        targets = [
+            arg for arg in cmd[4:] if arg not in ignores and arg != "--ignore-pattern"
+        ]
         runs.append((directory.relative_to(tmp_path).as_posix() or ".", targets))
         results = []
         for target in targets:
@@ -55,11 +63,21 @@ def workspace(tmp_path, monkeypatch):
                 for name in files:
                     file = Path(dirpath) / name
                     relative = os.path.relpath(file, directory).replace(os.sep, "/")
-                    if file.suffix != ".ts" or any(fnmatch.fnmatch(relative, p) for p in ignores):
+                    if file.suffix != ".ts" or any(
+                        fnmatch.fnmatch(relative, p) for p in ignores
+                    ):
                         continue
-                    message = {"ruleId": "eqeqeq", "line": 1, "column": 1, "severity": 2, "message": "m"}
+                    message = {
+                        "ruleId": "eqeqeq",
+                        "line": 1,
+                        "column": 1,
+                        "severity": 2,
+                        "message": "m",
+                    }
                     results.append({"filePath": str(file), "messages": [message]})
-        return SimpleNamespace(stdout=json.dumps({"results": results}), stderr="", returncode=1)
+        return SimpleNamespace(
+            stdout=json.dumps({"results": results}), stderr="", returncode=1
+        )
 
     for module in (runner_mod, eslint_mod):
         monkeypatch.setattr(module, "run_process", run)
@@ -68,7 +86,9 @@ def workspace(tmp_path, monkeypatch):
 
 
 def _files(result, root: Path) -> list[str]:
-    return sorted(Path(f).relative_to(root).as_posix() for f in result.checked_files or [])
+    return sorted(
+        Path(f).relative_to(root).as_posix() for f in result.checked_files or []
+    )
 
 
 def test_nested_config_is_linted_from_its_own_directory(workspace):
@@ -87,10 +107,14 @@ def test_nested_config_is_linted_from_its_own_directory(workspace):
     assert _files(result, root) == ["packages/p/src/x.ts", "src/a.ts"]
     assert runs == [(".", ["."]), ("packages/p", ["."])]
     assert result.coverage is None
-    assert [(p.directory.relative_to(root).as_posix(), p.skipped) for p in result.packages] == [
-        ("packages/p", None)
-    ]
-    assert len({(e["file"], e["rule"], e["line"]) for e in result.entries}) == len(result.entries) == 2
+    assert [
+        (p.directory.relative_to(root).as_posix(), p.skipped) for p in result.packages
+    ] == [("packages/p", None)]
+    assert (
+        len({(e["file"], e["rule"], e["line"]) for e in result.entries})
+        == len(result.entries)
+        == 2
+    )
 
 
 def test_type_aware_root_config_runs_once_per_package_under_the_limit(workspace):
@@ -106,16 +130,29 @@ def test_type_aware_root_config_runs_once_per_package_under_the_limit(workspace)
     runs.clear()
     result = detect_lint_result(root, type_aware_max_files=2, monorepo=Budget(60, 1024))
 
-    assert default.checked_files is None and default.coverage.reason == "type_aware_too_large"
+    assert (
+        default.checked_files is None
+        and default.coverage.reason == "type_aware_too_large"
+    )
     assert runs == [(".", ["packages/a"]), (".", ["."])]
-    assert _files(result, root) == ["packages/a/src/f0.ts", "packages/a/src/f1.ts", "scripts/build.ts"]
-    assert [(p.directory.relative_to(root).as_posix() or ".", p.skipped) for p in result.packages] == [
+    assert _files(result, root) == [
+        "packages/a/src/f0.ts",
+        "packages/a/src/f1.ts",
+        "scripts/build.ts",
+    ]
+    assert [
+        (p.directory.relative_to(root).as_posix() or ".", p.skipped)
+        for p in result.packages
+    ] == [
         ("packages/a", None),
         ("packages/b", "type_aware_too_large"),
         (".", None),
     ]
     summary = result.coverage.summary
-    assert "1 of 3 packages were not linted (3 files; type-aware and over the file limit: packages/b)" in summary
+    assert (
+        "1 of 3 packages were not linted (3 files; type-aware and over the file limit: packages/b)"
+        in summary
+    )
     assert "uses type information and the scan has 6 files" not in summary
 
 
@@ -127,8 +164,13 @@ def test_spent_budget_skips_the_remaining_packages(workspace):
         _write(root, f"packages/{name}/x.ts")
 
     ticks = iter([0.0, 15.0])  # the first package run takes 15 of the 10 seconds
-    result = detect_lint_result(root, monorepo=Budget(10, 1024, clock=lambda: next(ticks)))
+    result = detect_lint_result(
+        root, monorepo=Budget(10, 1024, clock=lambda: next(ticks))
+    )
 
-    assert [(p.directory.name, p.skipped) for p in result.packages] == [("p", None), ("q", "time_budget")]
+    assert [(p.directory.name, p.skipped) for p in result.packages] == [
+        ("p", None),
+        ("q", "time_budget"),
+    ]
     assert "time budget spent: packages/q" in result.coverage.summary
     assert ("packages/q", ["."]) not in runs

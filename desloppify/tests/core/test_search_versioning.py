@@ -81,10 +81,12 @@ def test_grep_files_empty_file_list(fake_read):
 
 def test_grep_files_containing_finds_names_in_files(fake_read):
     """Each name maps to the set of files that contain it."""
-    fake_read({
-        "/a.py": "import foo\nuse bar",
-        "/b.py": "only foo here",
-    })
+    fake_read(
+        {
+            "/a.py": "import foo\nuse bar",
+            "/b.py": "only foo here",
+        }
+    )
     result = grep_files_containing({"foo", "bar"}, ["/a.py", "/b.py"])
     assert result["foo"] == {"/a.py", "/b.py"}
     assert result["bar"] == {"/a.py"}

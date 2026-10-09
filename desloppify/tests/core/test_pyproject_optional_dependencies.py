@@ -46,7 +46,9 @@ def test_full_extra_matches_union_of_other_extras() -> None:
 def test_treesitter_extra_declares_runtime_and_language_pack() -> None:
     optional = _optional_dependencies()
     treesitter_specs = optional.get("treesitter")
-    assert isinstance(treesitter_specs, list), "optional extra 'treesitter' must be a list"
+    assert isinstance(treesitter_specs, list), (
+        "optional extra 'treesitter' must be a list"
+    )
     package_names = _package_names(treesitter_specs)
     assert "tree-sitter" in package_names
     assert "tree-sitter-language-pack" in package_names
@@ -55,7 +57,9 @@ def test_treesitter_extra_declares_runtime_and_language_pack() -> None:
 def test_treesitter_language_pack_is_capped_below_incompatible_release() -> None:
     optional = _optional_dependencies()
     treesitter_specs = optional.get("treesitter")
-    assert isinstance(treesitter_specs, list), "optional extra 'treesitter' must be a list"
+    assert isinstance(treesitter_specs, list), (
+        "optional extra 'treesitter' must be a list"
+    )
 
     language_pack_specs = [
         str(spec)
@@ -71,5 +75,7 @@ def test_tree_sitter_floor_supports_query_cursor() -> None:
     """``QueryCursor`` (used by the extractors) only exists in tree-sitter>=0.25."""
     optional = _optional_dependencies()
     for extra in ("treesitter", "full"):
-        specs = [str(s) for s in optional[extra] if re.match(r"tree-sitter[<>=!~]", str(s))]
+        specs = [
+            str(s) for s in optional[extra] if re.match(r"tree-sitter[<>=!~]", str(s))
+        ]
         assert specs == ["tree-sitter>=0.25"], extra

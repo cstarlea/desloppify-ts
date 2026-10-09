@@ -154,4 +154,6 @@ def select_files_for_review(lang, path, state, **kwargs):
 
 
 def prepare_review(path, lang, state, **kwargs):
-    return _prepare_review_impl(path, lang, state, options=ReviewPrepareOptions(**kwargs))
+    return _prepare_review_impl(
+        path, lang, state, options=ReviewPrepareOptions(**kwargs)
+    )

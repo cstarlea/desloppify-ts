@@ -73,7 +73,9 @@ def _accumulate_batch_scores(
             score_buckets=score_buckets,
         )
         note = result_notes.get(key)
-        _merge_strongest_dimension_note(key, note, merged_dimension_notes=merged_dimension_notes)
+        _merge_strongest_dimension_note(
+            key, note, merged_dimension_notes=merged_dimension_notes
+        )
         _record_abstraction_axis_scores(
             key,
             note,

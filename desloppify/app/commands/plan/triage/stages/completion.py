@@ -46,7 +46,11 @@ def _print_completion_coverage_warning(*, organized: int, total: int) -> None:
     if total <= 0:
         return
     if organized == 0:
-        print(colorize("  Cannot complete: no issues have been organized into clusters.", "red"))
+        print(
+            colorize(
+                "  Cannot complete: no issues have been organized into clusters.", "red"
+            )
+        )
         print(colorize(f"  {total} issues are waiting.", "dim"))
         return
     if organized < total:
@@ -68,7 +72,9 @@ def _print_completion_jump_back_guidance() -> None:
             "dim",
         )
     )
-    print(colorize("  Pass --report to update, or omit to keep existing analysis.", "dim"))
+    print(
+        colorize("  Pass --report to update, or omit to keep existing analysis.", "dim")
+    )
 
 
 def _record_incomplete_recovery(
@@ -163,7 +169,11 @@ def _cmd_triage_complete(
     plan = resolved_services.load_plan()
 
     if not has_triage_in_queue(plan):
-        print(colorize("  No planning stages in the queue — nothing to complete.", "yellow"))
+        print(
+            colorize(
+                "  No planning stages in the queue — nothing to complete.", "yellow"
+            )
+        )
         return
 
     meta = plan.get("epic_triage_meta", {})
@@ -171,26 +181,37 @@ def _cmd_triage_complete(
 
     state = resolved_services.command_runtime(args).state
     triage_scope = active_triage_issue_scope(plan, state)
-    review_ids = open_review_ids_from_state(state) if triage_scope is None else triage_scope
+    review_ids = (
+        open_review_ids_from_state(state) if triage_scope is None else triage_scope
+    )
 
     # Organize gate
     if not _require_organize_stage_for_complete(plan=plan, meta=meta, stages=stages):
         return
     if not _auto_confirm_stage_for_complete(
-        plan=plan, stages=stages, stage="organize",
-        attestation=attestation, save_plan_fn=resolved_services.save_plan,
+        plan=plan,
+        stages=stages,
+        stage="organize",
+        attestation=attestation,
+        save_plan_fn=resolved_services.save_plan,
     ):
         return
 
     # Enrich gate — compute underspecified steps once, share across require + confirm
     underspec = _underspecified_steps(triage_scoped_plan(plan, state))
     if not _require_enrich_stage_for_complete(
-        plan=plan, meta=meta, stages=stages, underspec=underspec,
+        plan=plan,
+        meta=meta,
+        stages=stages,
+        underspec=underspec,
     ):
         return
     if not _auto_confirm_enrich_for_complete(
-        plan=plan, stages=stages, attestation=attestation,
-        save_plan_fn=resolved_services.save_plan, underspec=underspec,
+        plan=plan,
+        stages=stages,
+        attestation=attestation,
+        save_plan_fn=resolved_services.save_plan,
+        underspec=underspec,
     ):
         return
 
@@ -198,8 +219,11 @@ def _cmd_triage_complete(
     if not _require_sense_check_stage_for_complete(plan=plan, meta=meta, stages=stages):
         return
     if not _auto_confirm_stage_for_complete(
-        plan=plan, stages=stages, stage="sense-check",
-        attestation=attestation, save_plan_fn=resolved_services.save_plan,
+        plan=plan,
+        stages=stages,
+        stage="sense-check",
+        attestation=attestation,
+        save_plan_fn=resolved_services.save_plan,
     ):
         return
 
@@ -269,7 +293,11 @@ def _cmd_confirm_existing(
     plan = resolved_services.load_plan()
 
     if not has_triage_in_queue(plan):
-        print(colorize("  No planning stages in the queue — nothing to confirm.", "yellow"))
+        print(
+            colorize(
+                "  No planning stages in the queue — nothing to confirm.", "yellow"
+            )
+        )
         return
 
     meta = plan.get("epic_triage_meta", {})
@@ -292,7 +320,9 @@ def _cmd_confirm_existing(
 
     clusters_with_issues = manual_clusters_with_issues(plan)
     if not clusters_with_issues:
-        print(colorize("  Cannot confirm existing: no clusters with issues exist.", "red"))
+        print(
+            colorize("  Cannot confirm existing: no clusters with issues exist.", "red")
+        )
         print(colorize("  Use the full organize flow instead.", "dim"))
         return
 

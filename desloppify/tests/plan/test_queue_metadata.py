@@ -56,10 +56,22 @@ def test_auto_queue_flows_through_execution_policy() -> None:
     from desloppify.engine._plan.cluster_semantics import infer_cluster_execution_policy
 
     auto_cluster = {"auto": True, "action": ""}
-    assert infer_cluster_execution_policy(auto_cluster, detector="unused") == EXECUTION_POLICY_EPHEMERAL_AUTOPROMOTE
-    assert infer_cluster_execution_policy(auto_cluster, detector="logs") == EXECUTION_POLICY_EPHEMERAL_AUTOPROMOTE
-    assert infer_cluster_execution_policy(auto_cluster, detector="smells") == EXECUTION_POLICY_PLANNED_ONLY
-    assert infer_cluster_execution_policy(auto_cluster, detector="rust_import_hygiene") == EXECUTION_POLICY_PLANNED_ONLY
+    assert (
+        infer_cluster_execution_policy(auto_cluster, detector="unused")
+        == EXECUTION_POLICY_EPHEMERAL_AUTOPROMOTE
+    )
+    assert (
+        infer_cluster_execution_policy(auto_cluster, detector="logs")
+        == EXECUTION_POLICY_EPHEMERAL_AUTOPROMOTE
+    )
+    assert (
+        infer_cluster_execution_policy(auto_cluster, detector="smells")
+        == EXECUTION_POLICY_PLANNED_ONLY
+    )
+    assert (
+        infer_cluster_execution_policy(auto_cluster, detector="rust_import_hygiene")
+        == EXECUTION_POLICY_PLANNED_ONLY
+    )
 
 
 # ── Cluster execution policy with auto_queue ───────────────────────
@@ -380,9 +392,18 @@ def test_markdown_output_includes_explanation() -> None:
     """--format md should include the queue_explanation when present."""
     from desloppify.app.commands.next.output import render_markdown_for_command
 
-    items = [{"kind": "issue", "confidence": "high", "summary": "test", "primary_command": ""}]
+    items = [
+        {
+            "kind": "issue",
+            "confidence": "high",
+            "summary": "test",
+            "primary_command": "",
+        }
+    ]
     explanation = "  Mode: execute\n  Items in queue: 1"
-    md = render_markdown_for_command(items, command="next", queue_explanation=explanation)
+    md = render_markdown_for_command(
+        items, command="next", queue_explanation=explanation
+    )
     assert "## Queue context" in md
     assert "Mode: execute" in md
     assert "| issue |" in md

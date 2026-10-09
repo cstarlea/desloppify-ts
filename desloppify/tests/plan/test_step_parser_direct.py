@@ -24,8 +24,12 @@ def test_consume_indented_line_parses_refs_and_detail_lines() -> None:
     step = {"title": "Demo"}
     detail_lines: list[str] = []
 
-    parser_mod._consume_indented_line("   Refs: a, b , c", current=step, detail_lines=detail_lines)
-    parser_mod._consume_indented_line("   additional detail", current=step, detail_lines=detail_lines)
+    parser_mod._consume_indented_line(
+        "   Refs: a, b , c", current=step, detail_lines=detail_lines
+    )
+    parser_mod._consume_indented_line(
+        "   additional detail", current=step, detail_lines=detail_lines
+    )
 
     assert step["issue_refs"] == ["a", "b", "c"]
     assert detail_lines == ["additional detail"]

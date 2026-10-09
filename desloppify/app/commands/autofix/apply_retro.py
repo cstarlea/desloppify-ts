@@ -59,7 +59,11 @@ def _warn_uncommitted_changes() -> None:
             timeout=5,
         )  # nosec B603
         if result.stdout.strip():
-            print(colorize("\n  ⚠ You have uncommitted changes. Consider running:", "yellow"))
+            print(
+                colorize(
+                    "\n  ⚠ You have uncommitted changes. Consider running:", "yellow"
+                )
+            )
             print(
                 colorize(
                     "    git add -A && git commit -m 'pre-fix checkpoint' && git push",
@@ -111,7 +115,9 @@ def _cascade_unused_import_cleanup(
         print(colorize("  Cascade: no orphaned imports found", "dim"))
         return
 
-    removed_count = sum(len(result["removed"]) if "removed" in result else 1 for result in results)
+    removed_count = sum(
+        len(result["removed"]) if "removed" in result else 1 for result in results
+    )
     removed_lines = sum(result.get("lines_removed", 0) for result in results)
     print(
         colorize(

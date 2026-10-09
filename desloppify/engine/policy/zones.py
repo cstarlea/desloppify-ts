@@ -275,11 +275,14 @@ def matching_override(rel_path: str, overrides: dict[str, str] | None) -> str | 
     matches = [
         key
         for key in overrides
-        if is_override_pattern(key) and _compile_override_pattern(key).fullmatch(rel_path)
+        if is_override_pattern(key)
+        and _compile_override_pattern(key).fullmatch(rel_path)
     ]
     if not matches:
         return None
-    return min(matches, key=lambda key: (tuple(-n for n in override_specificity(key)), key))
+    return min(
+        matches, key=lambda key: (tuple(-n for n in override_specificity(key)), key)
+    )
 
 
 def classify_file(

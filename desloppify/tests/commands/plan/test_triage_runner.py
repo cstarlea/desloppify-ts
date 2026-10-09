@@ -71,7 +71,9 @@ def test_build_reflect_prompt_includes_prior(tmp_path: Path) -> None:
     assert "exactly once" in prompt
 
 
-def test_build_stage_prompt_places_prior_reports_before_issue_data(tmp_path: Path) -> None:
+def test_build_stage_prompt_places_prior_reports_before_issue_data(
+    tmp_path: Path,
+) -> None:
     si = _make_triage_input()
     prior = {"reflect": "Cluster blueprint goes here."}
     prompt = build_stage_prompt("organize", si, prior, repo_root=tmp_path)
@@ -79,7 +81,9 @@ def test_build_stage_prompt_places_prior_reports_before_issue_data(tmp_path: Pat
     assert "Do not go\nsearch old triage runs" in prompt
 
 
-def test_build_organize_prompt_uses_compact_issue_summary_and_relevant_prior_report(tmp_path: Path) -> None:
+def test_build_organize_prompt_uses_compact_issue_summary_and_relevant_prior_report(
+    tmp_path: Path,
+) -> None:
     si = _make_triage_input()
     prior = {
         "observe": "Long observe report",
@@ -93,7 +97,9 @@ def test_build_organize_prompt_uses_compact_issue_summary_and_relevant_prior_rep
     assert "## Issue Data" not in prompt
 
 
-def test_build_organize_prompt_carries_observe_file_evidence_forward(tmp_path: Path) -> None:
+def test_build_organize_prompt_carries_observe_file_evidence_forward(
+    tmp_path: Path,
+) -> None:
     si = _make_triage_input()
     prior = {"reflect": "Cluster blueprint goes here."}
     prompt = build_stage_prompt(
@@ -131,7 +137,10 @@ def test_build_reflect_prompt_output_only_for_codex_runner(tmp_path: Path) -> No
         mode="output_only",
     )
     assert "Do NOT run any `desloppify` commands." in prompt
-    assert "Do NOT debug, repair, reinstall, or inspect the `desloppify` CLI/environment." in prompt
+    assert (
+        "Do NOT debug, repair, reinstall, or inspect the `desloppify` CLI/environment."
+        in prompt
+    )
     assert "orchestrator records and confirms the stage" in prompt
     assert "## Coverage Ledger Template" in prompt
     assert "CLI Command Reference" not in prompt
@@ -207,7 +216,9 @@ Cluster "review-packet-lifecycle-ownership" owns packet lifecycle policy.
     assert duplicates == []
 
 
-def test_validate_reflect_issue_accounting_rejects_ambiguous_short_id_collisions() -> None:
+def test_validate_reflect_issue_accounting_rejects_ambiguous_short_id_collisions() -> (
+    None
+):
     valid_ids = {
         "review::src/a.py::cross_module_architecture::review_packet_ownership_split",
         "review::src/b.py::high_level_elegance::review_packet_ownership_split",
@@ -227,14 +238,19 @@ def test_validate_reflect_issue_accounting_rejects_ambiguous_short_id_collisions
     assert duplicates == []
 
 
-def test_build_reflect_prompt_uses_full_ids_for_colliding_short_ids(tmp_path: Path) -> None:
+def test_build_reflect_prompt_uses_full_ids_for_colliding_short_ids(
+    tmp_path: Path,
+) -> None:
     issues = {
         "review::src/a.py::cross_module_architecture::review_packet_ownership_split": {
             "status": "open",
             "detector": "review",
             "file": "src/a.py",
             "summary": "Issue A summary",
-            "detail": {"dimension": "cross_module_architecture", "suggestion": "Fix it"},
+            "detail": {
+                "dimension": "cross_module_architecture",
+                "suggestion": "Fix it",
+            },
         },
         "review::src/b.py::high_level_elegance::review_packet_ownership_split": {
             "status": "open",
@@ -313,7 +329,9 @@ def test_build_organize_prompt(tmp_path: Path) -> None:
     assert "--effort" in prompt
 
 
-def test_build_organize_prompt_uses_exact_cli_command_when_provided(tmp_path: Path) -> None:
+def test_build_organize_prompt_uses_exact_cli_command_when_provided(
+    tmp_path: Path,
+) -> None:
     si = _make_triage_input()
     prior = {"observe": "obs", "reflect": "ref"}
     prompt = build_stage_prompt(
@@ -338,7 +356,9 @@ def test_build_enrich_prompt(tmp_path: Path) -> None:
     assert "exist on disk" in prompt
 
 
-def test_build_organize_prompt_output_only_omits_mutating_cli_instructions(tmp_path: Path) -> None:
+def test_build_organize_prompt_output_only_omits_mutating_cli_instructions(
+    tmp_path: Path,
+) -> None:
     si = _make_triage_input()
     prior = {"observe": "obs", "reflect": "ref"}
     prompt = build_stage_prompt(
@@ -391,14 +411,22 @@ def test_validate_observe_short_report(tmp_path: Path) -> None:
 
 def test_validate_observe_ok(tmp_path: Path) -> None:
     # Report needs verdict entries when triage_input has hex IDs; use non-hex IDs to skip evidence parsing
-    plan = _plan_with_stages(observe={"report": "x" * 150, "cited_ids": ["a", "b", "c", "d", "e"], "issue_count": 10})
+    plan = _plan_with_stages(
+        observe={
+            "report": "x" * 150,
+            "cited_ids": ["a", "b", "c", "d", "e"],
+            "issue_count": 10,
+        }
+    )
     ok, msg = validate_stage("observe", plan, {}, tmp_path)
     assert ok, msg
 
 
 def test_validate_observe_low_citations(tmp_path: Path) -> None:
     """Observe with too few issue citations should fail."""
-    plan = _plan_with_stages(observe={"report": "x" * 150, "cited_ids": ["a"], "issue_count": 50})
+    plan = _plan_with_stages(
+        observe={"report": "x" * 150, "cited_ids": ["a"], "issue_count": 50}
+    )
     ok, msg = validate_stage("observe", plan, {}, tmp_path)
     assert not ok
     assert "cites only" in msg
@@ -434,7 +462,13 @@ def test_validate_enrich_bad_paths(tmp_path: Path) -> None:
             "issue_ids": ["review::a::b"],
             "description": "test",
             "action_steps": [
-                {"title": "fix", "detail": "Update src/nonexistent.ts and fix the imports. " + "x" * 40, "effort": "small", "issue_refs": ["review::a::b"]}
+                {
+                    "title": "fix",
+                    "detail": "Update src/nonexistent.ts and fix the imports. "
+                    + "x" * 40,
+                    "effort": "small",
+                    "issue_refs": ["review::a::b"],
+                }
             ],
         }
     }
@@ -453,7 +487,12 @@ def test_validate_enrich_missing_effort(tmp_path: Path) -> None:
             "issue_ids": ["review::a::b"],
             "description": "test",
             "action_steps": [
-                {"title": "fix", "detail": "Update src/foo.ts to remove dead code and fix the pattern. " + "x" * 30, "issue_refs": ["review::a::b"]}
+                {
+                    "title": "fix",
+                    "detail": "Update src/foo.ts to remove dead code and fix the pattern. "
+                    + "x" * 30,
+                    "issue_refs": ["review::a::b"],
+                }
             ],
         }
     }
@@ -472,7 +511,12 @@ def test_validate_enrich_missing_issue_refs(tmp_path: Path) -> None:
             "issue_ids": ["review::a::b"],
             "description": "test",
             "action_steps": [
-                {"title": "fix", "detail": "Update src/foo.ts to remove dead code and fix the pattern. " + "x" * 30, "effort": "small"}
+                {
+                    "title": "fix",
+                    "detail": "Update src/foo.ts to remove dead code and fix the pattern. "
+                    + "x" * 30,
+                    "effort": "small",
+                }
             ],
         }
     }
@@ -489,7 +533,12 @@ def test_validate_enrich_vague_detail(tmp_path: Path) -> None:
             "issue_ids": ["review::a::b"],
             "description": "test",
             "action_steps": [
-                {"title": "fix", "detail": "Fix the thing", "effort": "small", "issue_refs": ["review::a::b"]}
+                {
+                    "title": "fix",
+                    "detail": "Fix the thing",
+                    "effort": "small",
+                    "issue_refs": ["review::a::b"],
+                }
             ],
         }
     }
@@ -498,7 +547,9 @@ def test_validate_enrich_vague_detail(tmp_path: Path) -> None:
     assert "vague" in msg
 
 
-def test_validate_enrich_ignores_out_of_scope_clusters_for_frozen_triage(tmp_path: Path) -> None:
+def test_validate_enrich_ignores_out_of_scope_clusters_for_frozen_triage(
+    tmp_path: Path,
+) -> None:
     """Runner enrich validation should only inspect clusters tied to the active triage session."""
     (tmp_path / "src").mkdir()
     (tmp_path / "src" / "current.ts").write_text("export {}")
@@ -511,7 +562,8 @@ def test_validate_enrich_ignores_out_of_scope_clusters_for_frozen_triage(tmp_pat
             "action_steps": [
                 {
                     "title": "fix current",
-                    "detail": "Update src/current.ts to simplify the active path and remove duplication. " + "x" * 30,
+                    "detail": "Update src/current.ts to simplify the active path and remove duplication. "
+                    + "x" * 30,
                     "effort": "small",
                     "issue_refs": ["review::current::issue"],
                 }
@@ -539,7 +591,9 @@ def test_validate_enrich_ignores_out_of_scope_clusters_for_frozen_triage(tmp_pat
     assert ok, msg
 
 
-def test_validate_sense_check_ignores_out_of_scope_clusters_for_frozen_triage(tmp_path: Path) -> None:
+def test_validate_sense_check_ignores_out_of_scope_clusters_for_frozen_triage(
+    tmp_path: Path,
+) -> None:
     """Decision-ledger coverage should only include live targets from the active triage session."""
     (tmp_path / "src").mkdir()
     (tmp_path / "src" / "current.ts").write_text("export {}")
@@ -548,7 +602,8 @@ def test_validate_sense_check_ignores_out_of_scope_clusters_for_frozen_triage(tm
             "sense-check": {
                 "report": "\n".join(
                     [
-                        "Verified src/current.ts lines 1-10: the active cluster is concrete, safe, and removes duplication without adding indirection. " + "x" * 20,
+                        "Verified src/current.ts lines 1-10: the active cluster is concrete, safe, and removes duplication without adding indirection. "
+                        + "x" * 20,
                         "## Decision Ledger",
                         "- current -> keep",
                     ]
@@ -564,7 +619,8 @@ def test_validate_sense_check_ignores_out_of_scope_clusters_for_frozen_triage(tm
             "action_steps": [
                 {
                     "title": "fix current",
-                    "detail": "Update src/current.ts to simplify the active path and remove duplication. " + "x" * 30,
+                    "detail": "Update src/current.ts to simplify the active path and remove duplication. "
+                    + "x" * 30,
                     "effort": "small",
                     "issue_refs": ["review::current::issue"],
                 }
@@ -576,7 +632,8 @@ def test_validate_sense_check_ignores_out_of_scope_clusters_for_frozen_triage(tm
             "action_steps": [
                 {
                     "title": "old valid step",
-                    "detail": "Update src/legacy.ts to simplify the old path and remove duplication. " + "x" * 30,
+                    "detail": "Update src/legacy.ts to simplify the old path and remove duplication. "
+                    + "x" * 30,
                     "effort": "small",
                     "issue_refs": ["review::legacy::issue"],
                 }
@@ -607,7 +664,11 @@ def test_underspecified_catches_refs_but_no_detail(tmp_path: Path) -> None:
             "c1": {
                 "issue_ids": ["review::a::b"],
                 "action_steps": [
-                    {"title": "shell step", "issue_refs": ["review::a::b"], "effort": "small"}
+                    {
+                        "title": "shell step",
+                        "issue_refs": ["review::a::b"],
+                        "effort": "small",
+                    }
                 ],
             }
         }
@@ -629,7 +690,11 @@ def test_underspecified_catches_detail_but_no_refs(tmp_path: Path) -> None:
             "c1": {
                 "issue_ids": ["review::a::b"],
                 "action_steps": [
-                    {"title": "orphan step", "detail": "Update src/foo.ts lines 10-20", "effort": "small"}
+                    {
+                        "title": "orphan step",
+                        "detail": "Update src/foo.ts lines 10-20",
+                        "effort": "small",
+                    }
                 ],
             }
         }
@@ -677,7 +742,11 @@ def test_vague_detail_flags_missing_detail(tmp_path: Path) -> None:
             "c1": {
                 "issue_ids": ["review::a::b"],
                 "action_steps": [
-                    {"title": "empty step", "issue_refs": ["review::a::b"], "effort": "small"}
+                    {
+                        "title": "empty step",
+                        "issue_refs": ["review::a::b"],
+                        "effort": "small",
+                    }
                 ],
             }
         }
@@ -699,7 +768,12 @@ def test_vague_detail_flags_empty_string_detail(tmp_path: Path) -> None:
             "c1": {
                 "issue_ids": ["review::a::b"],
                 "action_steps": [
-                    {"title": "blank step", "detail": "", "issue_refs": ["review::a::b"], "effort": "small"}
+                    {
+                        "title": "blank step",
+                        "detail": "",
+                        "issue_refs": ["review::a::b"],
+                        "effort": "small",
+                    }
                 ],
             }
         }
@@ -742,7 +816,9 @@ def test_auto_attestation_organize_zero_issue_batch() -> None:
 
 
 def test_validate_completion_missing_stages(tmp_path: Path) -> None:
-    plan = _plan_with_stages(observe={"report": "x" * 150, "confirmed_at": "2024-01-01"})
+    plan = _plan_with_stages(
+        observe={"report": "x" * 150, "confirmed_at": "2024-01-01"}
+    )
     ok, msg = validate_completion(plan, {}, tmp_path)
     assert not ok
     assert "reflect" in msg
@@ -761,16 +837,24 @@ def test_validate_completion_self_dependency(tmp_path: Path) -> None:
         "self-dep": {
             "issue_ids": ["review::a::b"],
             "description": "test",
-            "action_steps": [{"title": "fix", "detail": "d", "issue_refs": ["review::a::b"]}],
+            "action_steps": [
+                {"title": "fix", "detail": "d", "issue_refs": ["review::a::b"]}
+            ],
             "depends_on_clusters": ["self-dep"],
         }
     }
-    ok, msg = validate_completion(plan, {"issues": {"review::a::b": {"status": "open", "detector": "review"}}}, tmp_path)
+    ok, msg = validate_completion(
+        plan,
+        {"issues": {"review::a::b": {"status": "open", "detector": "review"}}},
+        tmp_path,
+    )
     assert not ok
     assert "depends on itself" in msg
 
 
-def test_validate_completion_surfaces_all_trivial_cluster_advisory(tmp_path: Path) -> None:
+def test_validate_completion_surfaces_all_trivial_cluster_advisory(
+    tmp_path: Path,
+) -> None:
     plan = _plan_with_stages(
         observe={"report": "x" * 150, "confirmed_at": "t"},
         reflect={"report": "x" * 150, "confirmed_at": "t"},
@@ -817,7 +901,9 @@ def test_validate_completion_allows_zero_issue_noop(tmp_path: Path) -> None:
     assert msg == ""
 
 
-def test_validate_completion_ignores_out_of_scope_clusters_for_frozen_triage(tmp_path: Path) -> None:
+def test_validate_completion_ignores_out_of_scope_clusters_for_frozen_triage(
+    tmp_path: Path,
+) -> None:
     """Completion should only validate clusters tied to the frozen triage issue set."""
     plan = _plan_with_stages(
         observe={"report": "x" * 150, "confirmed_at": "t"},
@@ -835,7 +921,8 @@ def test_validate_completion_ignores_out_of_scope_clusters_for_frozen_triage(tmp
             "action_steps": [
                 {
                     "title": "fix current",
-                    "detail": "Update src/current.ts to simplify the active path and remove duplication. " + "x" * 30,
+                    "detail": "Update src/current.ts to simplify the active path and remove duplication. "
+                    + "x" * 30,
                     "effort": "small",
                     "issue_refs": ["review::current::issue"],
                 }
@@ -866,14 +953,22 @@ def test_validate_completion_ignores_out_of_scope_clusters_for_frozen_triage(tmp
 
 def test_validate_stage_organize_allows_zero_issue_noop(tmp_path: Path) -> None:
     plan = _plan_with_stages(organize={"report": "x" * 150})
-    ok, msg = validate_stage("organize", plan, {"issues": {}}, tmp_path, triage_input=_make_triage_input(0))
+    ok, msg = validate_stage(
+        "organize", plan, {"issues": {}}, tmp_path, triage_input=_make_triage_input(0)
+    )
     assert ok
     assert msg == ""
 
 
 def test_validate_stage_sense_check_allows_zero_issue_noop(tmp_path: Path) -> None:
     plan = _plan_with_stages(**{"sense-check": {"report": "x" * 150}})
-    ok, msg = validate_stage("sense-check", plan, {"issues": {}}, tmp_path, triage_input=_make_triage_input(0))
+    ok, msg = validate_stage(
+        "sense-check",
+        plan,
+        {"issues": {}},
+        tmp_path,
+        triage_input=_make_triage_input(0),
+    )
     assert ok
     assert msg == ""
 
@@ -904,7 +999,9 @@ def test_sense_check_prompt_includes_cluster_data(tmp_path: Path) -> None:
         }
     }
     prompt = build_sense_check_content_prompt(
-        cluster_name="fix-hooks", plan=plan, repo_root=tmp_path,
+        cluster_name="fix-hooks",
+        plan=plan,
+        repo_root=tmp_path,
     )
     assert "fix-hooks" in prompt
     assert "1 steps" in prompt
@@ -961,7 +1058,8 @@ def test_sense_check_validation_reruns_enrich_checks(tmp_path: Path) -> None:
             "action_steps": [
                 {
                     "title": "fix",
-                    "detail": "Update src/nonexistent.ts and fix the imports. " + "x" * 40,
+                    "detail": "Update src/nonexistent.ts and fix the imports. "
+                    + "x" * 40,
                     "effort": "small",
                     "issue_refs": ["review::a::b"],
                 }
@@ -996,7 +1094,8 @@ def test_sense_check_validation_ok(tmp_path: Path) -> None:
             "action_steps": [
                 {
                     "title": "fix",
-                    "detail": "Update src/foo.ts to remove dead code and fix the pattern. " + "x" * 30,
+                    "detail": "Update src/foo.ts to remove dead code and fix the pattern. "
+                    + "x" * 30,
                     "effort": "small",
                     "issue_refs": ["review::a::b"],
                 }
@@ -1020,7 +1119,8 @@ def test_sense_check_validation_uses_frozen_value_targets(tmp_path: Path) -> Non
                     "- pruned-cluster -> skip\n"
                     "- review::.::holistic::cross_module_architecture::private_framework_boundary_still_leaks -> skip\n\n"
                     "Verified kept-cluster in src/foo.ts lines 1-10 and recorded why the pruned targets were removed during the value pass. "
-                    + "x" * 80
+                    + "x"
+                    * 80
                 ),
                 "value_targets": [
                     "kept-cluster",
@@ -1037,7 +1137,8 @@ def test_sense_check_validation_uses_frozen_value_targets(tmp_path: Path) -> Non
             "action_steps": [
                 {
                     "title": "fix",
-                    "detail": "Update src/foo.ts to simplify the active path and remove duplication. " + "x" * 40,
+                    "detail": "Update src/foo.ts to simplify the active path and remove duplication. "
+                    + "x" * 40,
                     "effort": "small",
                     "issue_refs": ["review::a::b"],
                 }
@@ -1096,11 +1197,15 @@ def test_plan_lock_prevents_concurrent_writes(tmp_path: Path) -> None:
 # ---------- Triage codex runner ----------
 
 
-def test_run_triage_stage_defaults_to_text_validation(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_run_triage_stage_defaults_to_text_validation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Triage runner should validate plain text output by default (not JSON-only)."""
     captured: dict[str, object] = {}
 
-    def _fake_run_codex_batch(*, prompt, repo_root, output_file, log_file, deps, codex_batch_command_fn=None):
+    def _fake_run_codex_batch(
+        *, prompt, repo_root, output_file, log_file, deps, codex_batch_command_fn=None
+    ):
         captured["prompt"] = prompt
         captured["repo_root"] = repo_root
         captured["output_file"] = output_file
@@ -1124,11 +1229,15 @@ def test_run_triage_stage_defaults_to_text_validation(tmp_path: Path, monkeypatc
     assert captured["validator"] is codex_runner._output_file_has_text
 
 
-def test_run_triage_stage_allows_validator_override(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_run_triage_stage_allows_validator_override(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Explicit validate_output_fn should override default text validator."""
     captured: dict[str, object] = {}
 
-    def _fake_run_codex_batch(*, prompt, repo_root, output_file, log_file, deps, codex_batch_command_fn=None):
+    def _fake_run_codex_batch(
+        *, prompt, repo_root, output_file, log_file, deps, codex_batch_command_fn=None
+    ):
         captured["validator"] = deps.validate_output_fn
         return 0
 

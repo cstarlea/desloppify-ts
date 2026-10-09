@@ -39,16 +39,22 @@ from .stage_prompts_validation import _validation_requirements
 
 def _required_issue_tokens(triage_input: TriageInput) -> list[str]:
     """Return the exact ledger token required for each open review issue."""
-    review_issues = getattr(triage_input, "review_issues", getattr(triage_input, "open_issues", {}))
+    review_issues = getattr(
+        triage_input, "review_issues", getattr(triage_input, "open_issues", {})
+    )
     return required_reflect_issue_tokens(set(review_issues))
 
 
 def _compact_issue_summary(triage_input: TriageInput) -> str:
     """Return a compact issue summary for later triage stages."""
-    review_issues = getattr(triage_input, "review_issues", getattr(triage_input, "open_issues", {}))
+    review_issues = getattr(
+        triage_input, "review_issues", getattr(triage_input, "open_issues", {})
+    )
     by_dim: Counter[str] = Counter()
     for issue in review_issues.values():
-        detail = issue.get("detail", {}) if isinstance(issue.get("detail"), dict) else {}
+        detail = (
+            issue.get("detail", {}) if isinstance(issue.get("detail"), dict) else {}
+        )
         by_dim[str(detail.get("dimension", "unknown"))] += 1
     dims = ", ".join(f"{name} ({count})" for name, count in sorted(by_dim.items()))
     parts = [
@@ -60,7 +66,9 @@ def _compact_issue_summary(triage_input: TriageInput) -> str:
     if triage_input.new_since_last:
         parts.append(f"New since last triage: {len(triage_input.new_since_last)}")
     if triage_input.resolved_since_last:
-        parts.append(f"Resolved since last triage: {len(triage_input.resolved_since_last)}")
+        parts.append(
+            f"Resolved since last triage: {len(triage_input.resolved_since_last)}"
+        )
 
     # Cluster summary if clusters exist
     existing = triage_input.existing_clusters or {}
@@ -180,7 +188,9 @@ def _format_disposition_table(
     lines = ["### Issue Disposition Summary\n"]
 
     if auto_skipped:
-        lines.append(f"**Auto-skipped by observe ({len(auto_skipped)} issues)** — no action needed:\n")
+        lines.append(
+            f"**Auto-skipped by observe ({len(auto_skipped)} issues)** — no action needed:\n"
+        )
         lines.append("| Hash | Verdict | Recommendation |")
         lines.append("|------|---------|----------------|")
         for e in auto_skipped:
@@ -188,7 +198,9 @@ def _format_disposition_table(
         lines.append("")
 
     if genuine:
-        lines.append(f"**Genuine issues requiring disposition ({len(genuine)} issues):**\n")
+        lines.append(
+            f"**Genuine issues requiring disposition ({len(genuine)} issues):**\n"
+        )
         lines.append("| Hash | Verdict | Recommendation |")
         lines.append("|------|---------|----------------|")
         for e in genuine:
@@ -432,7 +444,9 @@ def build_stage_prompt(
     """Build a complete subagent prompt for a triage stage."""
     if stage == "strategize":
         if plan is None or state is None:
-            raise ValueError("build_stage_prompt(stage='strategize') requires plan and state")
+            raise ValueError(
+                "build_stage_prompt(stage='strategize') requires plan and state"
+            )
         strategist_input = collect_strategist_input(
             state,
             plan,

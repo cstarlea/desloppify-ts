@@ -55,6 +55,7 @@ def _build_work_queue_with_visibility(
     )
     return finalize_queue(items, state=state, plan=plan, opts=opts)
 
+
 __all__ = [
     "ATTEST_EXAMPLE",
     "QueueBuildOptions",

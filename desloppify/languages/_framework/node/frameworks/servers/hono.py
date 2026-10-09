@@ -15,7 +15,12 @@ _RESPONSE_HELPERS = "json|text|html|body|redirect|notFound|newResponse"
 _WRANGLER_CONFIGS = ("wrangler.toml", "wrangler.json", "wrangler.jsonc")
 _TOML_MAIN_RE = re.compile(r"""^\s*main\s*=\s*(['"])([^'"]+)\1""", re.MULTILINE)
 _JSON_MAIN_RE = re.compile(r""""main"\s*:\s*"([^"]+)\"""")
-_VITE_CONFIGS = ("vite.config.ts", "vite.config.js", "vite.config.mts", "vite.config.mjs")
+_VITE_CONFIGS = (
+    "vite.config.ts",
+    "vite.config.js",
+    "vite.config.mts",
+    "vite.config.mjs",
+)
 _HONOX_PLUGIN_RE = re.compile(r"""['"]honox/vite['"]""")
 _HONOX_ENTRY_STEMS = ("app/client", "app/server")
 _SOURCE_EXTENSIONS = (".ts", ".tsx", ".js", ".jsx", ".mts", ".mjs")
@@ -60,11 +65,17 @@ def scan_hono_unawaited_next(path: Path) -> tuple[list[dict], int]:
     for source in source_files(path, _MODULES):
         scanned += 1
         for _call_at, function in route_handlers(source):
-            if function.body is None or len(function.params) != 2 or not function.params[1]:
+            if (
+                function.body is None
+                or len(function.params) != 2
+                or not function.params[1]
+            ):
                 continue
             pattern = re.compile(rf"\b{re.escape(function.params[1])}\s*\(\s*\)")
             for match in statement_calls(source.code, function.body, pattern):
-                entries.append({"file": source.path, "line": source.line(match.start())})
+                entries.append(
+                    {"file": source.path, "line": source.line(match.start())}
+                )
                 break
     return entries, scanned
 

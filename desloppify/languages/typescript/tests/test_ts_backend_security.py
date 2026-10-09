@@ -14,7 +14,9 @@ from desloppify.languages.typescript.detectors.security.detector import (
 )
 from desloppify.languages.typescript.syntax.tree import get_parser
 
-needs_treesitter = pytest.mark.skipif(get_parser("tsx") is None, reason="needs tree-sitter with the tsx grammar")
+needs_treesitter = pytest.mark.skipif(
+    get_parser("tsx") is None, reason="needs tree-sitter with the tsx grammar"
+)
 pytestmark = needs_treesitter
 
 _BACKEND_KINDS = {
@@ -30,7 +32,9 @@ def _root(tmp_path, set_project_root):
     """Point PROJECT_ROOT at the tmp directory via RuntimeContext."""
 
 
-def _scan(tmp_path: Path, files: dict[str, str], settings: dict | None = None) -> list[dict]:
+def _scan(
+    tmp_path: Path, files: dict[str, str], settings: dict | None = None
+) -> list[dict]:
     paths = []
     for name, content in files.items():
         path = tmp_path / name
@@ -304,9 +308,15 @@ def test_apps_without_accounts_are_not_checked(tmp_path):
     assert _scan(tmp_path, files) == []
     # A configured auth function says the app has accounts, and counts as a check.
     configured = {"auth_functions": ["getShopper"]}
-    assert _names(_scan(tmp_path, files, configured)) == ["server_action_missing_auth::addItem"]
-    files["components/cart/actions.ts"] += "export async function removeItem() { await getShopper(); }\n"
-    assert _names(_scan(tmp_path, files, configured)) == ["server_action_missing_auth::addItem"]
+    assert _names(_scan(tmp_path, files, configured)) == [
+        "server_action_missing_auth::addItem"
+    ]
+    files["components/cart/actions.ts"] += (
+        "export async function removeItem() { await getShopper(); }\n"
+    )
+    assert _names(_scan(tmp_path, files, configured)) == [
+        "server_action_missing_auth::addItem"
+    ]
 
 
 def test_route_handlers_that_mutate_without_auth_are_reported(tmp_path):
@@ -347,7 +357,10 @@ def test_route_handlers_that_mutate_without_auth_are_reported(tmp_path):
         "route_handler_missing_auth::POST",
         "route_handler_missing_auth::DELETE",
     ]
-    assert [e["file"].endswith("src/app/api/posts/route.ts") for e in entries] == [True, True]
+    assert [e["file"].endswith("src/app/api/posts/route.ts") for e in entries] == [
+        True,
+        True,
+    ]
 
 
 def test_middleware_auth_lowers_confidence(tmp_path):
@@ -359,13 +372,21 @@ def test_middleware_auth_lowers_confidence(tmp_path):
             "src/app/api/posts/route.ts": "export async function POST() { await db.clear(); }\n",
         },
     )
-    assert [(e["name"], e["confidence"]) for e in entries] == [("route_handler_missing_auth::POST", "low")]
+    assert [(e["name"], e["confidence"]) for e in entries] == [
+        ("route_handler_missing_auth::POST", "low")
+    ]
 
 
 def test_ids_do_not_depend_on_line_numbers(tmp_path):
-    action = "'use server';\nexport async function drop(id: string) { await db.drop(id); }\n"
+    action = (
+        "'use server';\nexport async function drop(id: string) { await db.drop(id); }\n"
+    )
     first = _names(_scan(tmp_path, {"package.json": _AUTH_APP, "app/a.ts": action}))
-    moved = _names(_scan(tmp_path, {"package.json": _AUTH_APP, "app/a.ts": "\n\n// moved\n" + action}))
+    moved = _names(
+        _scan(
+            tmp_path, {"package.json": _AUTH_APP, "app/a.ts": "\n\n// moved\n" + action}
+        )
+    )
     assert first == moved == ["server_action_missing_auth::drop"]
 
 
@@ -373,5 +394,7 @@ def test_without_treesitter_nothing_is_reported(tmp_path, monkeypatch):
     import desloppify.languages.typescript.syntax.tree as tree_mod
 
     monkeypatch.setattr(tree_mod, "get_parser", lambda grammar: None)
-    files = {"run.ts": "import { exec } from 'child_process';\nexport function f(x) { exec(`rm ${x}`); }\n"}
+    files = {
+        "run.ts": "import { exec } from 'child_process';\nexport function f(x) { exec(`rm ${x}`); }\n"
+    }
     assert _scan(tmp_path, files) == []

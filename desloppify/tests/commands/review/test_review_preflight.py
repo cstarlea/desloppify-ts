@@ -99,7 +99,9 @@ def _mock_queue_context(
     snapshot = SimpleNamespace(
         objective_in_scope_count=objective_count,
         planned_objective_count=objective_count,
-        objective_execution_count=execution_count if execution_count is not None else objective_count,
+        objective_execution_count=execution_count
+        if execution_count is not None
+        else objective_count,
         all_postflight_review_items=(),
     )
     return SimpleNamespace(
@@ -127,7 +129,9 @@ def _mock_queue_context_with_reviews(
     snapshot = SimpleNamespace(
         objective_in_scope_count=objective_count,
         planned_objective_count=objective_count,
-        objective_execution_count=execution_count if execution_count is not None else objective_count,
+        objective_execution_count=execution_count
+        if execution_count is not None
+        else objective_count,
         all_postflight_review_items=items,
     )
     return SimpleNamespace(
@@ -324,7 +328,9 @@ def test_clears_stale_on_gate_pass():
             state, _make_args(), state_file="/tmp/state.json", save_fn=save_fn
         )
     save_fn.assert_called_once_with(state, "/tmp/state.json")
-    assert "needs_review_refresh" not in state["subjective_assessments"]["naming_quality"]
+    assert (
+        "needs_review_refresh" not in state["subjective_assessments"]["naming_quality"]
+    )
 
 
 def test_force_review_rerun_still_clears_stale():
@@ -347,7 +353,9 @@ def test_force_review_rerun_still_clears_stale():
         save_fn=save_fn,
     )
     save_fn.assert_called_once()
-    assert "needs_review_refresh" not in state["subjective_assessments"]["naming_quality"]
+    assert (
+        "needs_review_refresh" not in state["subjective_assessments"]["naming_quality"]
+    )
 
 
 def test_no_stale_markers_skips_save():
@@ -421,9 +429,13 @@ def test_run_batches_uses_prepared_query_dimensions_for_gate():
         "investigation_batches": [{"name": "dependency_health"}],
     }
     from desloppify.app.commands.helpers.query import QueryLoadResult
+
     mock_result = QueryLoadResult(ok=True, payload=prepared_query)
     with (
-        patch("desloppify.app.commands.review.preflight.load_query_result", return_value=mock_result),
+        patch(
+            "desloppify.app.commands.review.preflight.load_query_result",
+            return_value=mock_result,
+        ),
         patch(_QUEUE_CONTEXT, return_value=_mock_queue_context(objective_count=3)),
     ):
         review_rerun_preflight(state, args)
@@ -560,11 +572,13 @@ def test_scored_dimensions_legacy_numeric_zero():
 
 
 def test_scored_dimensions_multiple():
-    state = {"subjective_assessments": {
-        "nq": {"score": 82.0},
-        "lc": {"score": 90.0},
-        "dc": {"score": 0},
-    }}
+    state = {
+        "subjective_assessments": {
+            "nq": {"score": 82.0},
+            "lc": {"score": 90.0},
+            "dc": {"score": 0},
+        }
+    }
     assert _scored_dimensions(state) == ["lc", "nq"]
 
 
@@ -822,11 +836,13 @@ def test_external_submit_skips_preflight():
         patch(_LANG, return_value=MagicMock(name="python")),
         patch("desloppify.app.commands.review.cmd.do_external_submit"),
     ):
-        cmd_review(_review_args(
-            external_submit=True,
-            import_file="out.json",
-            session_id="ext_123",
-        ))
+        cmd_review(
+            _review_args(
+                external_submit=True,
+                import_file="out.json",
+                session_id="ext_123",
+            )
+        )
         mock_pf.assert_not_called()
 
 

@@ -76,8 +76,16 @@ def test_load_state_missing_and_backup_fallback(tmp_path):
 
 
 def test_issue_semantics_normalize_legacy_detector_rows():
-    review_issue = {"id": "review::src/a.py::naming", "detector": "review", "detail": {}}
-    concern_issue = {"id": "concerns::src/a.py::dup", "detector": "concerns", "detail": {}}
+    review_issue = {
+        "id": "review::src/a.py::naming",
+        "detector": "review",
+        "detail": {},
+    }
+    concern_issue = {
+        "id": "concerns::src/a.py::dup",
+        "detector": "concerns",
+        "detail": {},
+    }
     request_issue = {
         "id": "subjective_review::.::holistic_unreviewed",
         "detector": "subjective_review",
@@ -130,7 +138,9 @@ def test_validate_state_invariants_rejects_invalid_issue_semantics():
     except ValueError as exc:
         assert "work_item_kind" in str(exc)
     else:
-        raise AssertionError("validate_state_invariants should reject invalid issue_kind")
+        raise AssertionError(
+            "validate_state_invariants should reject invalid issue_kind"
+        )
 
 
 def test_state_persistence_defaults_follow_runtime_project_root(tmp_path):

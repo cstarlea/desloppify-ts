@@ -67,14 +67,14 @@ def scorecard_dimension_entries(
         strict = float(data.get("strict", score))
         issues = int(data.get("failing", 0))
         checks = int(data.get("checks", 0))
-        placeholder = bool(subjective_meta.get("placeholder")) if subjective_meta else False
-        not_scanned = bool(
-            not is_subjective and not detectors and checks == 0
+        placeholder = (
+            bool(subjective_meta.get("placeholder")) if subjective_meta else False
         )
-        carried_forward = bool(
-            not is_subjective and data.get("carried_forward")
+        not_scanned = bool(not is_subjective and not detectors and checks == 0)
+        carried_forward = bool(not is_subjective and data.get("carried_forward"))
+        dim_key = (
+            str(subjective_meta.get("dimension_key", "")) if subjective_meta else ""
         )
-        dim_key = str(subjective_meta.get("dimension_key", "")) if subjective_meta else ""
         stale = bool(subjective_meta.get("stale")) if subjective_meta else False
         cli_keys = (
             list(subjective_meta.get("cli_keys", []))
@@ -112,7 +112,10 @@ def show_scorecard_subjective_measures(state: dict) -> None:
             print(
                 "  "
                 + f"{entry['name']:<18} "
-                + colorize("─── skipped ───────────────────  (run without --skip-slow)", "yellow")
+                + colorize(
+                    "─── skipped ───────────────────  (run without --skip-slow)",
+                    "yellow",
+                )
             )
             continue
         bar = _dimension_bar(entry["score"])
@@ -150,7 +153,11 @@ def _scorecard_heading(entries: list[dict]) -> str:
 
 
 def _scorecard_heading_style(entries: list[dict]) -> str:
-    return "yellow" if any(e.get("subjective") and e.get("placeholder") for e in entries) else "dim"
+    return (
+        "yellow"
+        if any(e.get("subjective") and e.get("placeholder") for e in entries)
+        else "dim"
+    )
 
 
 def _scorecard_entry_suffix(entry: dict) -> str:

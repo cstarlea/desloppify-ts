@@ -72,7 +72,9 @@ def test_saved_plan_recovery_gives_holistic_items_actionable_context(
     assert "Re-run or re-import" in item["detail"]["suggestion"]
 
 
-def test_load_state_drops_stale_reconstructed_state_without_live_plan(tmp_path: Path) -> None:
+def test_load_state_drops_stale_reconstructed_state_without_live_plan(
+    tmp_path: Path,
+) -> None:
     """Persisted plan-derived state should clear when the live plan disappears."""
     state = empty_state()
     state["work_items"] = {
@@ -160,16 +162,22 @@ def test_cmd_plan_queue_uses_recovered_runtime_state(monkeypatch, capsys) -> Non
         lambda _args: CommandRuntime(config={}, state=recovered_state, state_path=None),
     )
     monkeypatch.setattr(queue_render_mod, "load_plan", lambda: plan)
-    monkeypatch.setattr(queue_render_mod, "print_triage_guardrail_info", lambda **_kw: None)
+    monkeypatch.setattr(
+        queue_render_mod, "print_triage_guardrail_info", lambda **_kw: None
+    )
 
     def _fake_build_execution_queue(state, *, options=None):
         del options
         captured_states.append(state)
         return {"items": [], "total": 0, "grouped": {}, "new_ids": set()}
 
-    monkeypatch.setattr(queue_render_mod, "build_execution_queue", _fake_build_execution_queue)
+    monkeypatch.setattr(
+        queue_render_mod, "build_execution_queue", _fake_build_execution_queue
+    )
 
-    args = argparse.Namespace(top=30, cluster=None, include_skipped=False, sort="priority")
+    args = argparse.Namespace(
+        top=30, cluster=None, include_skipped=False, sort="priority"
+    )
     queue_render_mod.cmd_plan_queue(args)
 
     capsys.readouterr()

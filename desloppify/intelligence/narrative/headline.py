@@ -25,7 +25,9 @@ def compute_headline(
     security_prefix = ""
     if security_count > 0:
         s = "s" if security_count != 1 else ""
-        security_prefix = f"\u26a0 {security_count} security issue{s} — review before other cleanup. "
+        security_prefix = (
+            f"\u26a0 {security_count} security issue{s} — review before other cleanup. "
+        )
 
     # Review issues callout — all phases
     review_count = (open_by_detector or {}).get("review", 0)
@@ -34,9 +36,7 @@ def compute_headline(
         s = "s" if review_count != 1 else ""
         uninvestigated = (open_by_detector or {}).get("review_uninvestigated", 0)
         if uninvestigated > 0:
-            review_suffix = (
-                f" ({review_count} review work item{s} \u2014 run `desloppify show review --status open`)"
-            )
+            review_suffix = f" ({review_count} review work item{s} \u2014 run `desloppify show review --status open`)"
         else:
             review_suffix = f" ({review_count} review work item{s} pending)"
 
@@ -58,6 +58,7 @@ def compute_headline(
     parts = security_prefix + (headline or "") + review_suffix
     return parts or None
 
+
 def _compute_headline_inner(
     phase: str,
     dimensions: dict,
@@ -73,7 +74,9 @@ def _compute_headline_inner(
 ) -> str | None:
     """Compute the base headline (without security prefix)."""
     if scan_source == "plan_reconstruction":
-        return "Scan metrics unavailable. Issue inventory reconstructed from saved plan."
+        return (
+            "Scan metrics unavailable. Issue inventory reconstructed from saved plan."
+        )
 
     # Milestone takes priority
     if milestone:

@@ -20,9 +20,15 @@ def _args(**overrides) -> argparse.Namespace:
 
 def test_cmd_policy_dispatch_routes_add_and_remove(monkeypatch) -> None:
     calls: list[str] = []
-    monkeypatch.setattr(policy_cmd_mod, "_cmd_policy_add", lambda _a: calls.append("add"))
-    monkeypatch.setattr(policy_cmd_mod, "_cmd_policy_remove", lambda _a: calls.append("remove"))
-    monkeypatch.setattr(policy_cmd_mod, "_cmd_policy_list", lambda _a: calls.append("list"))
+    monkeypatch.setattr(
+        policy_cmd_mod, "_cmd_policy_add", lambda _a: calls.append("add")
+    )
+    monkeypatch.setattr(
+        policy_cmd_mod, "_cmd_policy_remove", lambda _a: calls.append("remove")
+    )
+    monkeypatch.setattr(
+        policy_cmd_mod, "_cmd_policy_list", lambda _a: calls.append("list")
+    )
 
     policy_cmd_mod.cmd_policy_dispatch(_args(policy_action="add"))
     policy_cmd_mod.cmd_policy_dispatch(_args(policy_action="remove"))
@@ -44,8 +50,14 @@ def test_policy_add_saves_and_reports_new_rule(monkeypatch, capsys) -> None:
         "load_policy_result",
         lambda: PolicyLoadResult(ok=True, policy={"rules": []}),
     )
-    monkeypatch.setattr(policy_cmd_mod, "add_rule", lambda policy, text: policy["rules"].append({"text": text}) or 1)
-    monkeypatch.setattr(policy_cmd_mod, "save_policy", lambda policy: saved.append(policy))
+    monkeypatch.setattr(
+        policy_cmd_mod,
+        "add_rule",
+        lambda policy, text: policy["rules"].append({"text": text}) or 1,
+    )
+    monkeypatch.setattr(
+        policy_cmd_mod, "save_policy", lambda policy: saved.append(policy)
+    )
 
     policy_cmd_mod._cmd_policy_add(_args(rule_text="Prefer explicit error messages"))
     out = capsys.readouterr().out
@@ -79,14 +91,18 @@ def test_policy_list_handles_empty_and_populated_policy(monkeypatch, capsys) -> 
     assert "2 rule(s)" in populated_out
 
 
-def test_policy_remove_validates_index_and_saves_when_found(monkeypatch, capsys) -> None:
+def test_policy_remove_validates_index_and_saves_when_found(
+    monkeypatch, capsys
+) -> None:
     saved: list[dict] = []
     monkeypatch.setattr(
         policy_cmd_mod,
         "load_policy_result",
         lambda: PolicyLoadResult(ok=True, policy={"rules": [{"text": "Rule A"}]}),
     )
-    monkeypatch.setattr(policy_cmd_mod, "save_policy", lambda policy: saved.append(policy))
+    monkeypatch.setattr(
+        policy_cmd_mod, "save_policy", lambda policy: saved.append(policy)
+    )
 
     policy_cmd_mod._cmd_policy_remove(_args(rule_index=None))
     out_missing_index = capsys.readouterr().out
@@ -97,14 +113,18 @@ def test_policy_remove_validates_index_and_saves_when_found(monkeypatch, capsys)
     out_missing_rule = capsys.readouterr().out
     assert "No rule at index 9" in out_missing_rule
 
-    monkeypatch.setattr(policy_cmd_mod, "remove_rule", lambda _policy, idx: f"rule-{idx}")
+    monkeypatch.setattr(
+        policy_cmd_mod, "remove_rule", lambda _policy, idx: f"rule-{idx}"
+    )
     policy_cmd_mod._cmd_policy_remove(_args(rule_index=1))
     out_removed = capsys.readouterr().out
     assert "Removed rule #1: rule-1" in out_removed
     assert saved
 
 
-def test_policy_commands_warn_when_policy_file_is_malformed(monkeypatch, capsys) -> None:
+def test_policy_commands_warn_when_policy_file_is_malformed(
+    monkeypatch, capsys
+) -> None:
     monkeypatch.setattr(
         policy_cmd_mod,
         "load_policy_result",

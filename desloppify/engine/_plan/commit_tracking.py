@@ -125,9 +125,7 @@ def find_commit_for_issue(plan: dict[str, Any], issue_id: str) -> CommitRecord |
 def commit_tracking_summary(plan: dict[str, Any]) -> dict[str, int]:
     """Return summary counts: uncommitted, committed, total."""
     uncommitted = len(plan.get("uncommitted_issues", []))
-    committed = sum(
-        len(r.get("issue_ids", [])) for r in plan.get("commit_log", [])
-    )
+    committed = sum(len(r.get("issue_ids", [])) for r in plan.get("commit_log", []))
     return {
         "uncommitted": uncommitted,
         "committed": committed,
@@ -165,7 +163,9 @@ def _score_delta_line(plan: dict[str, Any], state: StateModel) -> str:
 
     delta = current_strict - start_strict
     sign = "+" if delta >= 0 else ""
-    return f"Score: {start_strict:.1f} → {current_strict:.1f} strict ({sign}{delta:.1f})"
+    return (
+        f"Score: {start_strict:.1f} → {current_strict:.1f} strict ({sign}{delta:.1f})"
+    )
 
 
 def generate_pr_body(plan: dict[str, Any], state: StateModel) -> str:
@@ -231,13 +231,15 @@ def suggest_commit_message(
             file_part = parts[1]
             slash_idx = file_part.rfind("/")
             if slash_idx > 0:
-                dirs.add(file_part[:slash_idx + 1])
+                dirs.add(file_part[: slash_idx + 1])
 
     summary_parts: list[str] = []
     if len(detectors) == 1:
         summary_parts.append(f"{next(iter(detectors))}")
     else:
-        summary_parts.append(f"{len(detectors)} detector{'s' if len(detectors) != 1 else ''}")
+        summary_parts.append(
+            f"{len(detectors)} detector{'s' if len(detectors) != 1 else ''}"
+        )
     if len(dirs) == 1:
         summary_parts.append(f"in {next(iter(dirs))}")
 

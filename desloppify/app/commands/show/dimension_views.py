@@ -162,8 +162,18 @@ def _render_subjective_views_guide(entity) -> None:
         "subjective_review",
     ):
         print(colorize("  Related views:", "dim"))
-        print(colorize("    `show review --status open`            Per-file design review work items", "dim"))
-        print(colorize("    `show subjective_review --status open`  Files needing re-review", "dim"))
+        print(
+            colorize(
+                "    `show review --status open`            Per-file design review work items",
+                "dim",
+            )
+        )
+        print(
+            colorize(
+                "    `show subjective_review --status open`  Files needing re-review",
+                "dim",
+            )
+        )
 
 
 __all__ = [

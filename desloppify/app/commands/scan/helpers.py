@@ -113,7 +113,9 @@ def collect_codebase_metrics(
     }
 
 
-def _resolve_scan_files(lang, path: Path, *, files: list[str] | None = None) -> list[str]:
+def _resolve_scan_files(
+    lang, path: Path, *, files: list[str] | None = None
+) -> list[str]:
     """Return discovered source files, preferring an explicit precomputed list."""
     if files is not None:
         return files

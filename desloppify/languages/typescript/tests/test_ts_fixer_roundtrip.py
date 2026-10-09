@@ -65,7 +65,9 @@ needs_treesitter = pytest.mark.skipif(
 )
 
 _BOM = "\ufeff"
-_PINNED_TSC = Path(__file__).parent / "golden" / "node" / "node_modules" / ".bin" / "tsc"
+_PINNED_TSC = (
+    Path(__file__).parent / "golden" / "node" / "node_modules" / ".bin" / "tsc"
+)
 
 
 def _find_tsc() -> str | None:
@@ -514,11 +516,12 @@ console.log('[Astro] frontmatter', title);
 _CRLF = {"src/crlf.ts", "src/crlf_bom.tsx", "src/Page.astro"}
 _WITH_BOM = {"src/bom.ts", "src/crlf_bom.tsx", "src/Page.astro"}
 # Mostly LF with one CRLF line: neither ending may be rewritten to the other.
-_MIXED = {"src/mixed.ts": "import { a, b } from './m';\r\nconst unusedMixed = 1;\nexport const m = a;\n"}
+_MIXED = {
+    "src/mixed.ts": "import { a, b } from './m';\r\nconst unusedMixed = 1;\nexport const m = a;\n"
+}
 _EXECUTABLE = {"src/asi.ts"}
 # Files where every finding can be fixed: a second detection must find nothing.
 _FULLY_FIXED = {"src/breaks.ts"}
-
 
 
 # Files that trip a fixer bug, kept out of the corpus so they don't hide other
@@ -581,7 +584,9 @@ def _literals(text: str, path: str) -> set[str]:
     return found
 
 
-def _byte_problems(name: str, before: bytes, after: bytes, *, inserts: bool) -> list[str]:
+def _byte_problems(
+    name: str, before: bytes, after: bytes, *, inserts: bool
+) -> list[str]:
     problems = []
     if inserts and not _is_subsequence(before, after):
         problems.append("the rename did more than insert text")
@@ -605,7 +610,9 @@ def _byte_problems(name: str, before: bytes, after: bytes, *, inserts: bool) -> 
 
 
 _DIAGNOSTIC_RE = re.compile(r"^(.+?)\(\d+,\d+\): error (TS\d+): (.*)$")
-_UNUSED_CODES = frozenset({"TS6133", "TS6138", "TS6192", "TS6196", "TS6198", "TS6199", "TS6205"})
+_UNUSED_CODES = frozenset(
+    {"TS6133", "TS6138", "TS6192", "TS6196", "TS6198", "TS6199", "TS6205"}
+)
 
 
 def _other_diagnostics(output: str) -> Counter:
@@ -626,7 +633,12 @@ _INSERTING_FIXERS = frozenset({"unused-params"})
 # The unused detector runs with tsc and with its fallback. The others don't
 # use tsc to detect, so they run once, with the tsc check when there is one.
 ROUND_TRIPS = [
-    pytest.param(fixer, layer, id=f"{fixer}-{layer}", marks=[_needs_tsc] if layer == "tsc" else [])
+    pytest.param(
+        fixer,
+        layer,
+        id=f"{fixer}-{layer}",
+        marks=[_needs_tsc] if layer == "tsc" else [],
+    )
     for fixer in ("unused-imports", "unused-vars", "unused-params")
     for layer in ("tsc", "fallback")
 ] + [
@@ -638,7 +650,9 @@ ROUND_TRIPS = [
 class _Tsc:
     """Points the unused detector at ``TSC`` (or hides it) and records its output."""
 
-    def __init__(self, root: Path, monkeypatch: pytest.MonkeyPatch, *, available: bool) -> None:
+    def __init__(
+        self, root: Path, monkeypatch: pytest.MonkeyPatch, *, available: bool
+    ) -> None:
         self.root = root
         self.outputs: list[str] = []
         original = tsc_mod.run_tsc_check
@@ -716,7 +730,9 @@ def _round_trip(
             problems.append(f"{name}: mode {oct(old_mode)} became {oct(new_mode)}")
         problems.extend(
             f"{name}: {problem}"
-            for problem in _byte_problems(name, old, new, inserts=fixer_name in _INSERTING_FIXERS)
+            for problem in _byte_problems(
+                name, old, new, inserts=fixer_name in _INSERTING_FIXERS
+            )
         )
         if again[name] != after[name]:
             problems.append(
@@ -725,7 +741,11 @@ def _round_trip(
             )
     if second.entries:
         problems.append(f"the second run reported fixes: {second.entries}")
-    left = [e for e in second_entries if any(str(e.get("file", "")).endswith(name) for name in _FULLY_FIXED)]
+    left = [
+        e
+        for e in second_entries
+        if any(str(e.get("file", "")).endswith(name) for name in _FULLY_FIXED)
+    ]
     if left:
         problems.append(f"findings the first run should have fixed: {left}")
     new_diagnostics = after_diagnostics - before_diagnostics
@@ -737,7 +757,9 @@ def _round_trip(
 @needs_treesitter
 @pytest.mark.parametrize(("fixer_name", "layer"), ROUND_TRIPS)
 def test_fixer_round_trip(fixer_name, layer, tmp_path, monkeypatch, capsys):
-    fixed_files, problems = _round_trip(fixer_name, layer, tmp_path, _corpus_bytes(), monkeypatch)
+    fixed_files, problems = _round_trip(
+        fixer_name, layer, tmp_path, _corpus_bytes(), monkeypatch
+    )
     capsys.readouterr()
     assert not problems, "\n".join(problems)
     # The source-based fallback reports no parameters; everything else must
@@ -748,7 +770,9 @@ def test_fixer_round_trip(fixer_name, layer, tmp_path, monkeypatch, capsys):
 
 @needs_treesitter
 @pytest.mark.parametrize(("fixer_name", "layer", "name", "source"), _KNOWN_BUGS)
-def test_known_fixer_bugs(fixer_name, layer, name, source, tmp_path, monkeypatch, capsys):
+def test_known_fixer_bugs(
+    fixer_name, layer, name, source, tmp_path, monkeypatch, capsys
+):
     fixed_files, problems = _round_trip(
         fixer_name, layer, tmp_path, {name: source.encode("utf-8")}, monkeypatch
     )

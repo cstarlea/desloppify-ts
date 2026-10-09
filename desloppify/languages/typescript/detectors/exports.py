@@ -33,7 +33,9 @@ def _count_exports(path: Path) -> int:
     total = 0
     for filepath in find_ts_and_js_files(path):
         try:
-            text = Path(resolve_path(filepath)).read_text(encoding="utf-8", errors="replace")
+            text = Path(resolve_path(filepath)).read_text(
+                encoding="utf-8", errors="replace"
+            )
         except OSError:
             continue
         total += len(_EXPORT_STATEMENT_RE.findall(text))
@@ -44,7 +46,11 @@ def _published(entry: dict, public: set[tuple[str, str]]) -> bool:
     """Whether a published package exposes the export (or the enum holding the member)."""
     if entry.get("kind") == "duplicate":
         return False
-    name = entry["name"].split(".", 1)[0] if entry.get("kind") == "enum_member" else entry["name"]
+    name = (
+        entry["name"].split(".", 1)[0]
+        if entry.get("kind") == "enum_member"
+        else entry["name"]
+    )
     return (entry["file"], name) in public
 
 
@@ -81,7 +87,8 @@ def detect_dead_exports_result(
             summary=f"Dead-export detection skipped: Knip did not run ({reason})",
             impact="Unused exports are not reported for this scan.",
             remediation=_KNIP_REMEDIATION.get(
-                reason or "", "Check that `npx knip` runs in this project and rerun scan."
+                reason or "",
+                "Check that `npx knip` runs in this project and rerun scan.",
             ),
             tool="knip",
             reason=reason or "knip_failed",
@@ -112,7 +119,11 @@ def cmd_exports(args: argparse.Namespace) -> None:
     for e in entries:
         by_file[e["file"]].append(e)
 
-    print(colorize(f"\nDead exports: {len(entries)} across {len(by_file)} files\n", "bold"))
+    print(
+        colorize(
+            f"\nDead exports: {len(entries)} across {len(by_file)} files\n", "bold"
+        )
+    )
 
     sorted_files = sorted(by_file.items(), key=lambda x: -len(x[1]))
     rows = []

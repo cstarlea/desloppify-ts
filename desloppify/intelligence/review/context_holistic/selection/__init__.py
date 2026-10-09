@@ -32,8 +32,14 @@ from .contexts import (
 )
 
 
-def select_holistic_files(path: Path, lang: object, files: list[str] | None) -> list[str]:
-    selected = files if files is not None else (lang.file_finder(path) if lang.file_finder else [])
+def select_holistic_files(
+    path: Path, lang: object, files: list[str] | None
+) -> list[str]:
+    selected = (
+        files
+        if files is not None
+        else (lang.file_finder(path) if lang.file_finder else [])
+    )
     if not selected:
         return []
 

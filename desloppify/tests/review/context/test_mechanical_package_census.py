@@ -28,7 +28,6 @@ def _issue(
 
 
 class TestBuildPackageSizeCensus:
-
     def test_single_package(self):
         by_file = {
             "pkg/a.py": [_issue(file="pkg/a.py", detail={"loc": 100})],
@@ -75,7 +74,13 @@ class TestBuildPackageSizeCensus:
 
     def test_falls_back_to_1_loc_for_non_structural(self):
         by_file = {
-            "pkg/a.py": [_issue(file="pkg/a.py", detector="smells", detail={"smell_id": "broad_except"})],
+            "pkg/a.py": [
+                _issue(
+                    file="pkg/a.py",
+                    detector="smells",
+                    detail={"smell_id": "broad_except"},
+                )
+            ],
         }
         result = _build_package_size_census(by_file)
         assert len(result) == 1

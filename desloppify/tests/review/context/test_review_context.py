@@ -23,7 +23,9 @@ def _test_rel(path: str) -> str:
 
 _gather_ai_debt_signals = functools.partial(gather_ai_debt_signals, rel_fn=_test_rel)
 _gather_auth_context = functools.partial(gather_auth_context, rel_fn=_test_rel)
-_gather_migration_signals = functools.partial(gather_migration_signals, rel_fn=_test_rel)
+_gather_migration_signals = functools.partial(
+    gather_migration_signals, rel_fn=_test_rel
+)
 _classify_error_strategy = classify_error_strategy
 
 

@@ -161,7 +161,9 @@ def _organize_stage_warnings(plan: dict) -> list[str]:
     warnings: list[str] = []
     overlaps = _cluster_file_overlaps(plan)
     if overlaps:
-        warnings.append(f"{len(overlaps)} cluster pair(s) share files without dependencies")
+        warnings.append(
+            f"{len(overlaps)} cluster pair(s) share files without dependencies"
+        )
     scattered = _clusters_with_directory_scatter(plan)
     if scattered:
         names = ", ".join(name for name, _, _ in scattered)
@@ -172,8 +174,11 @@ def _organize_stage_warnings(plan: dict) -> list[str]:
         warnings.append(f"1:1 step-to-issue ratio: {names}")
     clusters = plan.get("clusters", {})
     orphaned = [
-        name for name, cluster in clusters.items()
-        if not cluster.get("auto") and not cluster_issue_ids(cluster) and cluster.get("action_steps")
+        name
+        for name, cluster in clusters.items()
+        if not cluster.get("auto")
+        and not cluster_issue_ids(cluster)
+        and cluster.get("action_steps")
     ]
     if orphaned:
         warnings.append(f"Orphaned clusters (steps, no issues): {', '.join(orphaned)}")
@@ -185,7 +190,9 @@ def _validate_organize_stage(plan: dict, state: dict, stages: dict) -> tuple[boo
     if "organize" not in stages:
         return False, "Organize stage not recorded."
     triage_scope = active_triage_issue_scope(plan, state)
-    open_review_ids = open_review_ids_from_state(state) if triage_scope is None else triage_scope
+    open_review_ids = (
+        open_review_ids_from_state(state) if triage_scope is None else triage_scope
+    )
     manual = scoped_manual_clusters_with_issues(plan, state)
     if not open_review_ids and not manual:
         report = stages["organize"].get("report", "")
@@ -211,7 +218,12 @@ def _validate_organize_stage(plan: dict, state: dict, stages: dict) -> tuple[boo
         activity = count_log_activity_since(plan, reflect_ts)
         cluster_ops = sum(
             activity.get(key, 0)
-            for key in ("cluster_create", "cluster_add", "cluster_update", "cluster_remove")
+            for key in (
+                "cluster_create",
+                "cluster_add",
+                "cluster_update",
+                "cluster_remove",
+            )
         )
         min_ops = max(3, len(manual))
         if cluster_ops < min_ops:
@@ -262,7 +274,9 @@ def _validate_sense_check_stage(
     manual_clusters = scoped_manual_clusters_with_issues(plan, state)
     triage_issue_ids = active_triage_issue_ids(plan, state) or None
     triage_scope = active_triage_issue_scope(plan, state)
-    open_review_ids = open_review_ids_from_state(state) if triage_scope is None else triage_scope
+    open_review_ids = (
+        open_review_ids_from_state(state) if triage_scope is None else triage_scope
+    )
     if not open_review_ids and not manual_clusters:
         return True, ""
     failures = run_enrich_quality_checks(
@@ -286,24 +300,41 @@ def _validate_sense_check_stage(
     if isinstance(stages.get("sense-check"), dict):
         recorded_targets = stages["sense-check"].get("value_targets")
         if isinstance(recorded_targets, list):
-            frozen_targets = [target for target in recorded_targets if isinstance(target, str)]
+            frozen_targets = [
+                target for target in recorded_targets if isinstance(target, str)
+            ]
     if frozen_targets is None and triage_input is not None:
         triage_targets = getattr(triage_input, "value_check_targets", None)
         if isinstance(triage_targets, list):
-            frozen_targets = [target for target in triage_targets if isinstance(target, str)]
-    targets = frozen_targets if frozen_targets is not None else value_check_targets(plan, state)
+            frozen_targets = [
+                target for target in triage_targets if isinstance(target, str)
+            ]
+    targets = (
+        frozen_targets
+        if frozen_targets is not None
+        else value_check_targets(plan, state)
+    )
     if targets:
         parsed = parse_value_check_decision_ledger(report)
         if not parsed.entries:
             return False, "Sense-check report missing `## Decision Ledger` entries."
         if parsed.duplicates:
-            return False, f"Sense-check report duplicates decision targets: {', '.join(parsed.duplicates[:5])}"
+            return (
+                False,
+                f"Sense-check report duplicates decision targets: {', '.join(parsed.duplicates[:5])}",
+            )
         missing = [target for target in targets if target not in parsed.entries]
         if missing:
-            return False, f"Sense-check report missing decision(s) for: {', '.join(missing[:5])}"
+            return (
+                False,
+                f"Sense-check report missing decision(s) for: {', '.join(missing[:5])}",
+            )
         extras = [target for target in parsed.entries if target not in targets]
         if extras:
-            return False, f"Sense-check report references non-live target(s): {', '.join(extras[:5])}"
+            return (
+                False,
+                f"Sense-check report references non-live target(s): {', '.join(extras[:5])}",
+            )
     return True, ""
 
 
@@ -362,7 +393,9 @@ def build_auto_attestation(
     triage_input: TriageInput,
 ) -> str:
     """Generate valid 80+ char attestation referencing real dimensions/cluster names."""
-    review_issues = getattr(triage_input, "review_issues", getattr(triage_input, "open_issues", {}))
+    review_issues = getattr(
+        triage_input, "review_issues", getattr(triage_input, "open_issues", {})
+    )
     if stage == "observe":
         _by_dim, dim_names = observe_dimension_breakdown(triage_input)
         top_dims = dim_names[:3]

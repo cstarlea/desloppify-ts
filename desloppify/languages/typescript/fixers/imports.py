@@ -49,9 +49,13 @@ def fix_unused_imports(entries: list[dict], *, dry_run: bool = False) -> FixResu
             ),
             file=sys.stderr,
         )
-        return FixResult(entries=[], skip_reasons={"needs_treesitter": len(import_entries)})
+        return FixResult(
+            entries=[], skip_reasons={"needs_treesitter": len(import_entries)}
+        )
 
-    def transform(lines: list[str], file_entries: list[dict]) -> tuple[list[str], list[dict]]:
+    def transform(
+        lines: list[str], file_entries: list[dict]
+    ) -> tuple[list[str], list[dict]]:
         text = "".join(lines)
         path = str(file_entries[0].get("file", "")) if file_entries else ""
         parsed = parse_text(text, path)
@@ -88,7 +92,11 @@ def remove_unused_imports(
             continue
         statement_edits, statement_removed = _statement_edits(parsed, statement, wanted)
         edits.extend(statement_edits)
-        removed_at |= {(line, name) for line in range(first, last + 1) for name in statement_removed}
+        removed_at |= {
+            (line, name)
+            for line in range(first, last + 1)
+            for name in statement_removed
+        }
 
     fixed = [e for e in file_entries if (e.get("line"), e.get("name")) in removed_at]
     return apply_edits(parsed.source, edits), fixed
@@ -122,7 +130,11 @@ def _statement_edits(
 
 def _clause(statement):
     return next(
-        (c for c in statement.named_children if c.type in ("import_clause", "import_require_clause")),
+        (
+            c
+            for c in statement.named_children
+            if c.type in ("import_clause", "import_require_clause")
+        ),
         statement,
     )
 
@@ -142,7 +154,9 @@ def _bindings(parsed: ParsedSource, statement) -> tuple[list[_Binding], list[_Bi
         if child.type == "identifier":
             parts.append(_Binding(parsed.text(child), child))
         elif child.type == "namespace_import":
-            ident = next((c for c in child.named_children if c.type == "identifier"), None)
+            ident = next(
+                (c for c in child.named_children if c.type == "identifier"), None
+            )
             if ident is not None:
                 parts.append(_Binding(parsed.text(ident), child))
         elif child.type == "named_imports":
@@ -150,7 +164,9 @@ def _bindings(parsed: ParsedSource, statement) -> tuple[list[_Binding], list[_Bi
             for spec in child.named_children:
                 if spec.type != "import_specifier":
                     continue
-                local = spec.child_by_field_name("alias") or spec.child_by_field_name("name")
+                local = spec.child_by_field_name("alias") or spec.child_by_field_name(
+                    "name"
+                )
                 if local is not None:
                     specifiers.append(_Binding(parsed.text(local), spec))
     return parts, specifiers

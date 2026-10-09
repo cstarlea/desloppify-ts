@@ -36,7 +36,7 @@ def finalize_queue(
 
     total = len(items)
     if opts.count is not None and opts.count > 0:
-        items = items[:opts.count]
+        items = items[: opts.count]
     if opts.explain:
         for item in items:
             item["explain"] = item_explain(item)

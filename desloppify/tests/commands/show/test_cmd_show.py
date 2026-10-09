@@ -103,12 +103,17 @@ class TestFormatDetail:
         assert "factory" in pat_part
 
     def test_pattern_evidence_formatter(self):
-        parts = format_detail({
-            "pattern_evidence": {
-                "useAutoSaveSettings": [{"file": "src/a.ts", "line": 12}],
-                "useToolSettings": [{"file": "src/b.ts", "line": 9}, {"file": "src/c.ts", "line": 30}],
+        parts = format_detail(
+            {
+                "pattern_evidence": {
+                    "useAutoSaveSettings": [{"file": "src/a.ts", "line": 12}],
+                    "useToolSettings": [
+                        {"file": "src/b.ts", "line": 9},
+                        {"file": "src/c.ts", "line": 30},
+                    ],
+                }
             }
-        })
+        )
         ev_part = [p for p in parts if p.startswith("evidence:")][0]
         assert "useAutoSaveSettings:1 file(s)" in ev_part
         assert "useToolSettings:2 file(s)" in ev_part
@@ -157,12 +162,17 @@ class TestBuildShowPayload:
 
 
 class TestSuppressedMatchEstimate:
-    def _make_issue(self, fid, *, file="a.ts", detector="unused",
-                      tier=2, confidence="high"):
+    def _make_issue(
+        self, fid, *, file="a.ts", detector="unused", tier=2, confidence="high"
+    ):
         return {
-            "id": fid, "file": file, "detector": detector,
-            "tier": tier, "confidence": confidence,
-            "summary": f"Issue {fid}", "detail": {},
+            "id": fid,
+            "file": file,
+            "detector": detector,
+            "tier": tier,
+            "confidence": confidence,
+            "summary": f"Issue {fid}",
+            "detail": {},
         }
 
     def test_detector_name(self):
@@ -263,6 +273,7 @@ class TestShowModuleSanity:
             assert isinstance(label, str)
             assert fmt is None or callable(fmt)
 
+
 class TestShowSubjectiveFollowup:
     def test_penalty_state_prints_warning_and_next_step(self, capsys):
         state = {
@@ -293,10 +304,7 @@ class TestShowSubjectiveFollowup:
         out = capsys.readouterr().out
         assert "were reset to 0.0 this scan" in out
         assert "Anti-gaming safeguard applied" in out
-        assert (
-            "review --prepare --force-review-rerun --dimensions"
-            in out
-        )
+        assert "review --prepare --force-review-rerun --dimensions" in out
 
 
 class TestCmdShowBackendIntegration:

@@ -89,7 +89,9 @@ def print_progress(plan: dict, open_issues: dict) -> None:
     if unclustered:
         _print_unclustered_issues(unclustered, open_issues)
     elif open_issues:
-        organized, total, _ = triage_coverage(plan, open_review_ids=set(open_issues.keys()))
+        organized, total, _ = triage_coverage(
+            plan, open_review_ids=set(open_issues.keys())
+        )
         print(colorize(f"\n  All {organized}/{total} issues are in clusters.", "green"))
 
 
@@ -104,7 +106,12 @@ def print_reflect_result(
     stages: dict,
 ) -> None:
     """Print reflect stage output including briefing box and next steps."""
-    print(colorize(f"  Reflect stage recorded: {issue_count} issues, {len(recurring_dims)} recurring dimension(s).", "green"))
+    print(
+        colorize(
+            f"  Reflect stage recorded: {issue_count} issues, {len(recurring_dims)} recurring dimension(s).",
+            "green",
+        )
+    )
     if is_reuse:
         print(colorize("  Reflect data preserved (no changes).", "dim"))
         if cleared:
@@ -115,10 +122,19 @@ def print_reflect_result(
     if recurring_dims:
         for dim in recurring_dims:
             info = recurring[dim]
-            print(colorize(f"    {dim}: {len(info['resolved'])} resolved, {len(info['open'])} still open", "dim"))
+            print(
+                colorize(
+                    f"    {dim}: {len(info['resolved'])} resolved, {len(info['open'])} still open",
+                    "dim",
+                )
+            )
 
     print()
-    print(colorize("  ┌─ Strategic briefing (share with user before organizing) ─┐", "cyan"))
+    print(
+        colorize(
+            "  ┌─ Strategic briefing (share with user before organizing) ─┐", "cyan"
+        )
+    )
     for line in report.strip().splitlines():
         print(colorize(f"  │ {line}", "cyan"))
     print(colorize("  └" + "─" * 57 + "┘", "cyan"))
@@ -142,7 +158,12 @@ def print_organize_result(
     stages: dict,
 ) -> None:
     """Print organize stage output including cluster summary and next steps."""
-    print(colorize(f"  Organize stage recorded: {len(manual_clusters)} enriched cluster(s).", "green"))
+    print(
+        colorize(
+            f"  Organize stage recorded: {len(manual_clusters)} enriched cluster(s).",
+            "green",
+        )
+    )
     if is_reuse:
         print(colorize("  Organize data preserved (no changes).", "dim"))
         if cleared:
@@ -155,10 +176,19 @@ def print_organize_result(
         steps = cluster.get("action_steps", [])
         desc = cluster.get("description", "")
         desc_str = f" — {desc}" if desc else ""
-        print(colorize(f"    {name}: {len(cluster_issue_ids(cluster))} issues, {len(steps)} steps{desc_str}", "dim"))
+        print(
+            colorize(
+                f"    {name}: {len(cluster_issue_ids(cluster))} issues, {len(steps)} steps{desc_str}",
+                "dim",
+            )
+        )
 
     print()
-    print(colorize("  ┌─ Prioritized organization (share with user) ────────────┐", "cyan"))
+    print(
+        colorize(
+            "  ┌─ Prioritized organization (share with user) ────────────┐", "cyan"
+        )
+    )
     for line in report.strip().splitlines():
         print(colorize(f"  │ {line}", "cyan"))
     print(colorize("  └" + "─" * 57 + "┘", "cyan"))
@@ -219,7 +249,9 @@ def _print_resolved_issue_deltas(resolved: dict[str, dict]) -> None:
     for fid, issue in sorted(resolved.items())[:10]:
         status = issue.get("status", "")
         summary = issue.get("summary", "")
-        detail = issue.get("detail", {}) if isinstance(issue.get("detail"), dict) else {}
+        detail = (
+            issue.get("detail", {}) if isinstance(issue.get("detail"), dict) else {}
+        )
         dim = detail.get("dimension", "")
         print(f"    [{status}] [{dim}] {summary}")
         print(colorize(f"      {fid}", "dim"))
@@ -239,14 +271,27 @@ def _print_recurring_or_first_triage(
         for dim, info in sorted(recurring.items()):
             resolved_count = len(info["resolved"])
             open_count = len(info["open"])
-            label = "potential loop" if open_count >= resolved_count else "root cause unaddressed"
-            print(colorize(f"    {dim}: {resolved_count} resolved, {open_count} still open — {label}", "yellow"))
+            label = (
+                "potential loop"
+                if open_count >= resolved_count
+                else "root cause unaddressed"
+            )
+            print(
+                colorize(
+                    f"    {dim}: {resolved_count} resolved, {open_count} still open — {label}",
+                    "yellow",
+                )
+            )
         return
     if completed or resolved:
         return
     print(colorize("\n  First triage — no prior work to compare against.", "dim"))
     print(colorize("  Focus your reflect report on your strategy:", "yellow"))
-    print(colorize("  - How will you resolve contradictions you identified in observe?", "dim"))
+    print(
+        colorize(
+            "  - How will you resolve contradictions you identified in observe?", "dim"
+        )
+    )
     print(colorize("  - Which issues will you cluster together vs defer?", "dim"))
     print(colorize("  - What's the overall arc of work and why?", "dim"))
 

@@ -42,7 +42,10 @@ class TestParseObserveEvidence:
         assert len(evidence.entries) == 2
         assert evidence.entries[0].issue_hash == "abc12345"
         assert evidence.entries[0].verdict == "genuine"
-        assert evidence.entries[0].verdict_reasoning == "src/services/funds.ts line 45 has raw SQL with interpolation."
+        assert (
+            evidence.entries[0].verdict_reasoning
+            == "src/services/funds.ts line 45 has raw SQL with interpolation."
+        )
         assert evidence.entries[0].files_read == ["src/services/funds.ts"]
         assert evidence.entries[0].recommendation == "Fix the SQL injection"
         assert evidence.entries[1].verdict == "false positive"
@@ -58,7 +61,11 @@ class TestParseObserveEvidence:
         )
         evidence = parse_observe_evidence(report, self._ids("abc12345"))
         assert len(evidence.entries) == 1
-        assert evidence.entries[0].files_read == ["src/foo.ts", "src/bar.ts", "src/baz.ts"]
+        assert evidence.entries[0].files_read == [
+            "src/foo.ts",
+            "src/bar.ts",
+            "src/baz.ts",
+        ]
 
     def test_yaml_template_without_leading_dash(self):
         report = (

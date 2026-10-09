@@ -42,7 +42,13 @@ def test_validate_session_id_rejects_empty_and_path_segments() -> None:
 
 def test_build_template_payload_uses_dimension_names() -> None:
     packet = {
-        "dimensions": ["naming_quality", "abstraction_fitness", "", None, "naming_quality"],
+        "dimensions": [
+            "naming_quality",
+            "abstraction_fitness",
+            "",
+            None,
+            "naming_quality",
+        ],
     }
 
     payload = external_mod._build_template_payload(
@@ -52,7 +58,10 @@ def test_build_template_payload_uses_dimension_names() -> None:
     )
 
     assert payload["session"] == {"id": "ext_id", "token": "tok"}
-    assert set(payload["assessments"].keys()) == {"naming_quality", "abstraction_fitness"}
+    assert set(payload["assessments"].keys()) == {
+        "naming_quality",
+        "abstraction_fitness",
+    }
     assert payload["dimension_notes"] == {}
     assert payload["issues"] == []
 

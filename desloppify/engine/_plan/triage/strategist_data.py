@@ -114,7 +114,8 @@ class StrategistInput:
         return {
             "score_trajectory": asdict(self.score_trajectory),
             "dimension_trajectories": {
-                name: asdict(entry) for name, entry in self.dimension_trajectories.items()
+                name: asdict(entry)
+                for name, entry in self.dimension_trajectories.items()
             },
             "file_churn": [asdict(entry) for entry in self.file_churn],
             "rework_loops": [asdict(entry) for entry in self.rework_loops],
@@ -221,7 +222,15 @@ def score_trajectory(
         if (strict := _as_float(entry.get("strict_score"))) is not None
     ]
     if not strict_scores:
-        return ScoreTrajectory([], 0.0, "stable", 0.0, 0.0, cycle_start_score=cycle_start_score, all_time_high=all_time_high)
+        return ScoreTrajectory(
+            [],
+            0.0,
+            "stable",
+            0.0,
+            0.0,
+            cycle_start_score=cycle_start_score,
+            all_time_high=all_time_high,
+        )
     deltas = [
         round(current - previous, 2)
         for previous, current in zip(strict_scores, strict_scores[1:], strict=False)
@@ -284,7 +293,10 @@ def dimension_trajectories(
     for issue in work_items.values():
         if not isinstance(issue, dict):
             continue
-        if issue.get("resolved_at") or str(issue.get("status", "")) in _ACTIVELY_RESOLVED_STATUSES:
+        if (
+            issue.get("resolved_at")
+            or str(issue.get("status", "")) in _ACTIVELY_RESOLVED_STATUSES
+        ):
             investment_by_dim[_dimension_name_for_issue(issue)] += 1
 
     names = set(historical) | {
@@ -356,7 +368,9 @@ def file_churn_hotspots(work_items: dict[str, dict[str, Any]]) -> list[FileChurn
     return hotspots
 
 
-def rework_loop_detection(work_items: dict[str, dict[str, Any]]) -> list[ReworkLoopEntry]:
+def rework_loop_detection(
+    work_items: dict[str, dict[str, Any]],
+) -> list[ReworkLoopEntry]:
     grouped: dict[str, dict[str, Any]] = defaultdict(
         lambda: {"resolved": 0, "open": 0, "reopen": 0, "files": set()}
     )
@@ -444,7 +458,9 @@ def completed_cluster_summary_from_plan(
         summaries.append(
             CompletedClusterSummary(
                 name=str(cluster.get("name", "")).strip() or "?",
-                thesis=str(cluster.get("thesis") or cluster.get("description") or "").strip(),
+                thesis=str(
+                    cluster.get("thesis") or cluster.get("description") or ""
+                ).strip(),
                 issue_count=len(issue_ids) if isinstance(issue_ids, list) else 0,
                 completed_at=completed_at,
             )
@@ -466,28 +482,37 @@ def execution_pattern_analysis(
             continue
         relevant.append(entry)
     total_resolved = sum(
-        len(entry.get("issue_ids", [])) if isinstance(entry.get("issue_ids"), list) else 0
+        len(entry.get("issue_ids", []))
+        if isinstance(entry.get("issue_ids"), list)
+        else 0
         for entry in relevant
         if entry.get("action") == "resolve"
     )
     total_done = sum(
-        len(entry.get("issue_ids", [])) if isinstance(entry.get("issue_ids"), list) else 0
+        len(entry.get("issue_ids", []))
+        if isinstance(entry.get("issue_ids"), list)
+        else 0
         for entry in relevant
         if entry.get("action") == "done"
     )
     total_skipped = sum(
-        len(entry.get("issue_ids", [])) if isinstance(entry.get("issue_ids"), list) else 0
+        len(entry.get("issue_ids", []))
+        if isinstance(entry.get("issue_ids"), list)
+        else 0
         for entry in relevant
         if entry.get("action") == "skip"
     )
     cluster_sizes = [
         len(entry.get("issue_ids", []))
         for entry in relevant
-        if entry.get("action") == "cluster_done" and isinstance(entry.get("issue_ids"), list)
+        if entry.get("action") == "cluster_done"
+        and isinstance(entry.get("issue_ids"), list)
     ]
     denominator = total_resolved + total_done + total_skipped
     skip_rate = round(total_skipped / denominator, 3) if denominator else 0.0
-    avg_cluster_size = round(sum(cluster_sizes) / len(cluster_sizes), 2) if cluster_sizes else 0.0
+    avg_cluster_size = (
+        round(sum(cluster_sizes) / len(cluster_sizes), 2) if cluster_sizes else 0.0
+    )
     return ExecutionPatterns(
         total_resolved=total_resolved,
         total_skipped=total_skipped,
@@ -522,7 +547,9 @@ def wontfix_debt_trajectory(
         worst_dimension, worst_gap = max(gaps, key=lambda item: item[1])
 
     recent_gaps = []
-    for entry in [history for history in scan_history if isinstance(history, dict)][-5:]:
+    for entry in [history for history in scan_history if isinstance(history, dict)][
+        -5:
+    ]:
         overall = _as_float(entry.get("overall_score"))
         strict = _as_float(entry.get("strict_score"))
         if overall is None or strict is None:
@@ -615,16 +642,22 @@ def lifecycle_inventory(
             skipped_by_reason[kind] += 1
 
     clusters = plan.get("clusters", {})
-    cluster_names = [
-        name
-        for name, cluster in clusters.items()
-        if isinstance(cluster, dict) and cluster.get("issue_ids")
-    ] if isinstance(clusters, dict) else []
+    cluster_names = (
+        [
+            name
+            for name, cluster in clusters.items()
+            if isinstance(cluster, dict) and cluster.get("issue_ids")
+        ]
+        if isinstance(clusters, dict)
+        else []
+    )
 
     return {
         "backlog_by_dimension": dict(sorted(backlog_by_dimension.items())),
         "skipped_by_reason": dict(sorted(skipped_by_reason.items())),
-        "deferred_count": len(plan.get("deferred", [])) if isinstance(plan.get("deferred"), list) else 0,
+        "deferred_count": len(plan.get("deferred", []))
+        if isinstance(plan.get("deferred"), list)
+        else 0,
         "prioritized_ids": prioritized_ids,
         "cluster_names": sorted(cluster_names),
         "promoted_count": len(promoted_ids) if isinstance(promoted_ids, list) else 0,
@@ -638,8 +671,16 @@ def collect_strategist_input(
     lookback_scans: int = 5,
     progression_events: list[dict[str, Any]] | None = None,
 ) -> StrategistInput:
-    scan_history = state.get("scan_history", []) if isinstance(state.get("scan_history"), list) else []
-    meta = plan.get("epic_triage_meta", {}) if isinstance(plan.get("epic_triage_meta"), dict) else {}
+    scan_history = (
+        state.get("scan_history", [])
+        if isinstance(state.get("scan_history"), list)
+        else []
+    )
+    meta = (
+        plan.get("epic_triage_meta", {})
+        if isinstance(plan.get("epic_triage_meta"), dict)
+        else {}
+    )
     work_items = state.get("work_items") or state.get("issues", {})
     open_review, resolved_review = _open_review_and_resolved_review_issues(state)
     recurring = detect_recurring_patterns(open_review, resolved_review)
@@ -659,29 +700,45 @@ def collect_strategist_input(
     _cycle_start = max(filter(None, [_start_strict, _prev_strict]), default=None)
 
     return StrategistInput(
-        score_trajectory=score_trajectory(scan_history, window=lookback_scans, cycle_start_score=_cycle_start),
+        score_trajectory=score_trajectory(
+            scan_history, window=lookback_scans, cycle_start_score=_cycle_start
+        ),
         dimension_trajectories=dimension_trajectories(
             scan_history,
-            state.get("dimension_scores", {}) if isinstance(state.get("dimension_scores"), dict) else {},
+            state.get("dimension_scores", {})
+            if isinstance(state.get("dimension_scores"), dict)
+            else {},
             work_items if isinstance(work_items, dict) else {},
             window=lookback_scans,
         ),
-        file_churn=file_churn_hotspots(work_items if isinstance(work_items, dict) else {}),
-        rework_loops=rework_loop_detection(work_items if isinstance(work_items, dict) else {}),
+        file_churn=file_churn_hotspots(
+            work_items if isinstance(work_items, dict) else {}
+        ),
+        rework_loops=rework_loop_detection(
+            work_items if isinstance(work_items, dict) else {}
+        ),
         completed_clusters=completed_clusters,
         execution_patterns=execution_pattern_analysis(
-            plan.get("execution_log", []) if isinstance(plan.get("execution_log"), list) else []
+            plan.get("execution_log", [])
+            if isinstance(plan.get("execution_log"), list)
+            else []
         ),
         debt_trajectory=wontfix_debt_trajectory(
             scan_history,
             work_items if isinstance(work_items, dict) else {},
-            state.get("dimension_scores", {}) if isinstance(state.get("dimension_scores"), dict) else {},
+            state.get("dimension_scores", {})
+            if isinstance(state.get("dimension_scores"), dict)
+            else {},
         ),
         commit_history=commit_history_analysis(
-            plan.get("commit_log", []) if isinstance(plan.get("commit_log"), list) else []
+            plan.get("commit_log", [])
+            if isinstance(plan.get("commit_log"), list)
+            else []
         ),
         recurring_patterns=recurring,
-        current_dimension_scores=state.get("dimension_scores", {}) if isinstance(state.get("dimension_scores"), dict) else {},
+        current_dimension_scores=state.get("dimension_scores", {})
+        if isinstance(state.get("dimension_scores"), dict)
+        else {},
         open_issue_count=sum(
             1
             for issue in (work_items or {}).values()

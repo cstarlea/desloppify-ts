@@ -79,9 +79,11 @@ class TestReconcileWithEpics:
             "cluster_key": "epic::epic/done",
         }
         # r1 resolved, r2 still alive (dismissed)
-        state = {"issues": {
-            "r2": {"status": "open", "detector": "review"},
-        }}
+        state = {
+            "issues": {
+                "r2": {"status": "open", "detector": "review"},
+            }
+        }
         reconcile_plan_after_scan(plan, state)
         # r1 is gone → epic has no issue_ids → gets deleted
         assert "epic/done" not in plan["clusters"]
@@ -91,9 +93,11 @@ class TestReconcileWithEpics:
 # Operations compatibility tests
 # ---------------------------------------------------------------------------
 
+
 class TestOperationsCompat:
     def test_create_cluster_rejects_epic_prefix(self):
         from desloppify.engine._plan.operations.cluster import create_cluster
+
         plan = empty_plan()
         try:
             create_cluster(plan, "epic/test")
@@ -103,6 +107,7 @@ class TestOperationsCompat:
 
     def test_set_focus_with_epic(self):
         from desloppify.engine._plan.operations.lifecycle import set_focus
+
         plan = empty_plan()
         plan["clusters"]["epic/test"] = {
             "name": "epic/test",
@@ -122,6 +127,7 @@ class TestOperationsCompat:
 # ---------------------------------------------------------------------------
 # Idempotency test
 # ---------------------------------------------------------------------------
+
 
 class TestIdempotency:
     def test_reapply_same_triage(self):
@@ -154,6 +160,7 @@ class TestIdempotency:
 # ---------------------------------------------------------------------------
 # Migration test (v3 epics → v4 clusters)
 # ---------------------------------------------------------------------------
+
 
 class TestEpicMigration:
     def test_migrates_epics_to_clusters(self):
@@ -227,11 +234,17 @@ class TestEpicMigration:
     def test_triage_clusters_helper(self):
         plan = empty_plan()
         plan["clusters"]["epic/a"] = {
-            "name": "epic/a", "thesis": "do thing", "issue_ids": [],
-            "auto": True, "cluster_key": "epic::epic/a",
+            "name": "epic/a",
+            "thesis": "do thing",
+            "issue_ids": [],
+            "auto": True,
+            "cluster_key": "epic::epic/a",
         }
         plan["clusters"]["auto/b"] = {
-            "name": "auto/b", "issue_ids": [], "auto": True, "cluster_key": "auto::b",
+            "name": "auto/b",
+            "issue_ids": [],
+            "auto": True,
+            "cluster_key": "auto::b",
         }
         result = triage_clusters(plan)
         assert "epic/a" in result

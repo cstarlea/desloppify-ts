@@ -379,7 +379,9 @@ class TestHandleEarlyAttemptReturn:
         assert handle_early_attempt_return(result) is None
 
     def test_returns_early_return_code(self):
-        result = _ExecutionResult(code=0, stdout_text="", stderr_text="", early_return=127)
+        result = _ExecutionResult(
+            code=0, stdout_text="", stderr_text="", early_return=127
+        )
         assert handle_early_attempt_return(result) == 127
 
 
@@ -438,9 +440,7 @@ class TestHandleTimeoutOrStall:
     def test_stall_with_valid_output_recovers(self, tmp_path):
         output_file = tmp_path / "out.json"
         output_file.write_text('{"quality": {}}')
-        result = _ExecutionResult(
-            code=1, stdout_text="", stderr_text="", stalled=True
-        )
+        result = _ExecutionResult(code=1, stdout_text="", stderr_text="", stalled=True)
         deps = _make_deps()
         log_sections: list[str] = []
         ret = handle_timeout_or_stall(
@@ -455,9 +455,7 @@ class TestHandleTimeoutOrStall:
         assert ret == 0
 
     def test_stall_without_output_returns_124(self, tmp_path):
-        result = _ExecutionResult(
-            code=1, stdout_text="", stderr_text="", stalled=True
-        )
+        result = _ExecutionResult(code=1, stdout_text="", stderr_text="", stalled=True)
         deps = _make_deps()
         ret = handle_timeout_or_stall(
             header="ATTEMPT 1/1",
@@ -755,8 +753,6 @@ class TestHandleFailedAttempt:
 # ═══════════════════════════════════════════════════════════════════
 
 
-
-
 class TestExtractTextFromOpenCodeJsonStream:
     """extract_text_from_opencode_json_stream: extracts terminal assistant text."""
 
@@ -835,7 +831,7 @@ def test_runner_decodes_child_output_as_utf8_whatever_the_locale(tmp_path):
         "-c",
         (
             "import pathlib,sys;"
-            "pathlib.Path(sys.argv[1]).write_text('{\"assessments\":{},\"issues\":[]}');"
+            'pathlib.Path(sys.argv[1]).write_text(\'{"assessments":{},"issues":[]}\');'
             "sys.stdout.buffer.write('check \\u2713 '.encode() + b'bad \\xff\\n');"
             "sys.stdout.flush()"
         ),

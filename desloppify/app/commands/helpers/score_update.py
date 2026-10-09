@@ -49,11 +49,13 @@ def print_score_update(
 
     # Score-drop reassurance after structural fixes
     if new.strict is not None and prev.strict is not None and new.strict < prev.strict:
-        print(colorize(
-            "  Score dropped — this is normal after structural fixes. "
-            "New issues may surface; keep working the queue.",
-            "yellow",
-        ))
+        print(
+            colorize(
+                "  Score dropped — this is normal after structural fixes. "
+                "New issues may surface; keep working the queue.",
+                "yellow",
+            )
+        )
 
     # Always show strict target + next-command nudge
     if config is None:
@@ -64,15 +66,22 @@ def print_score_update(
 
 
 def print_strict_target_nudge(
-    strict: float, target: float, *, show_next: bool = True,
+    strict: float,
+    target: float,
+    *,
+    show_next: bool = True,
 ) -> None:
     """Print a one-liner with strict→target and optional next-command nudge."""
     gap = round(target - strict, 1)
     if gap > 0:
-        suffix = " — run `desloppify next` to find the next improvement" if show_next else ""
+        suffix = (
+            " — run `desloppify next` to find the next improvement" if show_next else ""
+        )
         print(colorize(f"  Strict {strict:.1f} (target: {target:.1f}){suffix}", "dim"))
     else:
-        print(colorize(f"  Strict {strict:.1f} — target {target:.1f} reached!", "green"))
+        print(
+            colorize(f"  Strict {strict:.1f} — target {target:.1f} reached!", "green")
+        )
 
 
 __all__ = ["print_score_update", "print_strict_target_nudge"]

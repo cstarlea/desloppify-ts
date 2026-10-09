@@ -52,9 +52,13 @@ def test_print_complete_summary_emits_stage_details(monkeypatch, capsys) -> None
     assert "Sense-check: content, structure & value verified" in out
 
 
-def test_print_new_issues_since_last_lists_ids_and_summaries(monkeypatch, capsys) -> None:
+def test_print_new_issues_since_last_lists_ids_and_summaries(
+    monkeypatch, capsys
+) -> None:
     monkeypatch.setattr(stage_rendering_mod, "colorize", lambda text, _style: text)
-    monkeypatch.setattr(stage_rendering_mod, "short_issue_id", lambda fid: fid.split("::")[-1])
+    monkeypatch.setattr(
+        stage_rendering_mod, "short_issue_id", lambda fid: fid.split("::")[-1]
+    )
 
     si = SimpleNamespace(
         new_since_last={"review::abc123"},

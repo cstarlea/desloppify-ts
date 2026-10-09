@@ -203,7 +203,9 @@ class TestVizWriteBehavior:
             lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError("disk error")),
         )
 
-        args = SimpleNamespace(path=".", depth=2, focus=None, min_loc=0, sort="loc", detail=False)
+        args = SimpleNamespace(
+            path=".", depth=2, focus=None, min_loc=0, sort="loc", detail=False
+        )
         with pytest.raises(CommandError) as exc:
             cmd_tree(args)
         assert "Tree generation failed" in exc.value.message

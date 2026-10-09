@@ -138,8 +138,12 @@ def test_execute_batch_run_partial_path_records_failures() -> None:
         execute_batches_fn=lambda **_k: [1],
         collect_batch_results_fn=lambda **_k: ({}, []),
         colorize_fn=lambda text, _tone=None: text,
-        print_failures_and_raise_fn=lambda **_k: (_ for _ in ()).throw(AssertionError("unexpected")),
-        print_failures_fn=lambda failures, **_k: printed_failures.append([idx for idx, _ in failures]),
+        print_failures_and_raise_fn=lambda **_k: (_ for _ in ()).throw(
+            AssertionError("unexpected")
+        ),
+        print_failures_fn=lambda failures, **_k: printed_failures.append(
+            [idx for idx, _ in failures]
+        ),
     )
 
     original_collect = phases_mod.collect_and_reconcile_results
@@ -249,7 +253,10 @@ def test_partial_retry_bypasses_coverage_gate() -> None:
     original_import = phases_mod.import_and_finalize
 
     # Return missing dims so the gate would normally block.
-    phases_mod.merge_and_write_results = lambda **_k: (Path("merged.json"), ["missing_dim"])
+    phases_mod.merge_and_write_results = lambda **_k: (
+        Path("merged.json"),
+        ["missing_dim"],
+    )
 
     def capture_enforce(**kwargs):
         captured_kwargs.update(kwargs)
@@ -261,7 +268,11 @@ def test_partial_retry_bypasses_coverage_gate() -> None:
         phases_mod.merge_and_import_batch_run(
             prepared=_prepared_context(
                 allow_partial=False,
-                batches=[{"dimensions": ["a"]}, {"dimensions": ["b"]}, {"dimensions": ["c"]}],
+                batches=[
+                    {"dimensions": ["a"]},
+                    {"dimensions": ["b"]},
+                    {"dimensions": ["c"]},
+                ],
                 selected_indexes=[1],
                 append_run_log=lambda *_a, **_k: None,
                 args=SimpleNamespace(),
@@ -294,7 +305,10 @@ def test_full_run_does_not_bypass_coverage_gate() -> None:
     original_enforce = phases_mod.enforce_import_coverage
     original_import = phases_mod.import_and_finalize
 
-    phases_mod.merge_and_write_results = lambda **_k: (Path("merged.json"), ["missing_dim"])
+    phases_mod.merge_and_write_results = lambda **_k: (
+        Path("merged.json"),
+        ["missing_dim"],
+    )
 
     def capture_enforce(**kwargs):
         captured_kwargs.update(kwargs)

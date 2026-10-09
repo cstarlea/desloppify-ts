@@ -37,7 +37,13 @@ def test_render_cli_reference_substitutes_cli_command() -> None:
     rendered = shared_mod.render_cli_reference(cli_command="dx")
     _assert_sections(
         rendered,
-        ("CLI Command Reference", "Stage recording", "Cluster management", "Skip/dismiss", "Effort tags"),
+        (
+            "CLI Command Reference",
+            "Stage recording",
+            "Cluster management",
+            "Skip/dismiss",
+            "Effort tags",
+        ),
     )
 
     for stage in shared_mod._STAGES:
@@ -54,9 +60,7 @@ def test_render_cli_reference_substitutes_cli_command() -> None:
         assert command_family in rendered
 
     command_lines = [
-        line.strip()
-        for line in rendered.splitlines()
-        if line.strip().startswith("dx ")
+        line.strip() for line in rendered.splitlines() if line.strip().startswith("dx ")
     ]
     assert command_lines
     assert all(line.startswith("dx ") for line in command_lines)

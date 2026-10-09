@@ -92,4 +92,5 @@ def extract_strict_trend(events: list[dict[str, Any]]) -> list[float]:
         trend.append(strict_score)
     return trend
 
+
 __all__ = ["extract_strict_trend", "render_sparkline"]
