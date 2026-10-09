@@ -273,7 +273,7 @@ def scan_nextjs_error_files_missing_use_client(
         scanned += 1
         try:
             full = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
-            content = full.read_text()
+            content = full.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError) as exc:
             logger.debug("Skipping unreadable Next.js candidate %s: %s", filepath, exc)
             continue
@@ -321,7 +321,7 @@ def scan_nextjs_use_server_not_first(
         scanned += 1
         try:
             full = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
-            content = full.read_text()
+            content = full.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError) as exc:
             logger.debug("Skipping unreadable Next.js candidate %s: %s", filepath, exc)
             continue
@@ -354,7 +354,7 @@ def scan_nextjs_next_head_in_app_router(
         scanned += 1
         try:
             full = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
-            content = full.read_text()
+            content = full.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError) as exc:
             logger.debug("Skipping unreadable Next.js candidate %s: %s", filepath, exc)
             continue
@@ -384,7 +384,7 @@ def scan_nextjs_use_client_not_first(
         scanned += 1
         try:
             full = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
-            content = full.read_text()
+            content = full.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError) as exc:
             logger.debug("Skipping unreadable Next.js candidate %s: %s", filepath, exc)
             continue
@@ -412,7 +412,7 @@ def scan_nextjs_next_document_misuse(
         scanned += 1
         try:
             full = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
-            content = full.read_text()
+            content = full.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError) as exc:
             logger.debug("Skipping unreadable Next.js candidate %s: %s", filepath, exc)
             continue
@@ -446,7 +446,7 @@ def scan_nextjs_server_navigation_apis_in_client(
         scanned += 1
         try:
             full = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
-            content = full.read_text()
+            content = full.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError) as exc:
             logger.debug("Skipping unreadable Next.js candidate %s: %s", filepath, exc)
             continue
@@ -489,7 +489,7 @@ def scan_nextjs_browser_globals_missing_use_client(
         scanned += 1
         try:
             full = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
-            content = full.read_text()
+            content = full.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError) as exc:
             logger.debug("Skipping unreadable Next.js candidate %s: %s", filepath, exc)
             continue
@@ -526,7 +526,7 @@ def scan_nextjs_client_layouts(
         scanned += 1
         try:
             full = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
-            content = full.read_text()
+            content = full.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError) as exc:
             logger.debug("Skipping unreadable Next.js candidate %s: %s", filepath, exc)
             continue
@@ -550,7 +550,7 @@ def scan_nextjs_async_client_components(
         scanned += 1
         try:
             full = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
-            content = full.read_text()
+            content = full.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError) as exc:
             logger.debug("Skipping unreadable Next.js candidate %s: %s", filepath, exc)
             continue
@@ -582,7 +582,7 @@ def scan_nextjs_use_server_in_client(
         scanned += 1
         try:
             full = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
-            content = full.read_text()
+            content = full.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError) as exc:
             logger.debug("Skipping unreadable Next.js candidate %s: %s", filepath, exc)
             continue
@@ -627,7 +627,7 @@ def scan_nextjs_server_modules_in_pages_router(
         scanned += 1
         try:
             full = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
-            content = full.read_text()
+            content = full.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError) as exc:
             logger.debug("Skipping unreadable Next.js candidate %s: %s", filepath, exc)
             continue
@@ -676,7 +676,7 @@ def scan_nextjs_pages_api_route_handlers(
         scanned += 1
         try:
             full = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
-            content = full.read_text()
+            content = full.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError) as exc:
             logger.debug("Skipping unreadable Next.js candidate %s: %s", filepath, exc)
             continue
@@ -709,7 +709,7 @@ def scan_nextjs_app_router_exports_in_pages_router(
         scanned += 1
         try:
             full = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
-            content = full.read_text()
+            content = full.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError) as exc:
             logger.debug("Skipping unreadable Next.js candidate %s: %s", filepath, exc)
             continue
@@ -753,7 +753,7 @@ def scan_rsc_missing_use_client(path: Path, info: NextjsFrameworkInfo) -> tuple[
         scanned += 1
         try:
             full = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
-            content = full.read_text()
+            content = full.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError) as exc:
             logger.debug("Skipping unreadable Next.js candidate %s: %s", filepath, exc)
             continue
@@ -799,7 +799,7 @@ def scan_nextjs_navigation_hooks_missing_use_client(
         scanned += 1
         try:
             full = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
-            content = full.read_text()
+            content = full.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError) as exc:
             logger.debug("Skipping unreadable Next.js candidate %s: %s", filepath, exc)
             continue
@@ -834,7 +834,7 @@ def scan_nextjs_server_imports_in_client(
         scanned += 1
         try:
             full = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
-            content = full.read_text()
+            content = full.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError) as exc:
             logger.debug("Skipping unreadable Next.js candidate %s: %s", filepath, exc)
             continue
@@ -880,7 +880,7 @@ def scan_next_router_imports_in_app_router(
         scanned += 1
         try:
             full = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
-            content = full.read_text()
+            content = full.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError) as exc:
             logger.debug("Skipping unreadable Next.js candidate %s: %s", filepath, exc)
             continue
@@ -909,7 +909,7 @@ def scan_nextjs_server_exports_in_client(
         scanned += 1
         try:
             full = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
-            content = full.read_text()
+            content = full.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError) as exc:
             logger.debug("Skipping unreadable Next.js candidate %s: %s", filepath, exc)
             continue
@@ -957,7 +957,7 @@ def scan_nextjs_pages_router_apis_in_app_router(
         scanned += 1
         try:
             full = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
-            content = full.read_text()
+            content = full.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError) as exc:
             logger.debug("Skipping unreadable Next.js candidate %s: %s", filepath, exc)
             continue
@@ -999,7 +999,7 @@ def scan_nextjs_env_leaks_in_client(
         scanned += 1
         try:
             full = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
-            content = full.read_text()
+            content = full.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError) as exc:
             logger.debug("Skipping unreadable Next.js candidate %s: %s", filepath, exc)
             continue
@@ -1072,7 +1072,7 @@ def scan_nextjs_route_handlers_and_middleware_misuse(
         scanned += 1
         try:
             full = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
-            content = full.read_text()
+            content = full.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError) as exc:
             logger.debug("Skipping unreadable Next.js candidate %s: %s", filepath, exc)
             continue

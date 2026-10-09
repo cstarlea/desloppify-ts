@@ -73,6 +73,29 @@ def test_sibling_behavior_context_reports_shared_pattern_outlier(tmp_path):
     assert "shared_one" in svc["outliers"][0]["missing"]
 
 
+def test_sibling_behavior_context_resolves_finder_paths_against_the_project_root(
+    tmp_path, monkeypatch
+):
+    """Finder paths are project-relative; a different cwd must not change the buckets."""
+    from desloppify.base.runtime_state import current_runtime_context
+
+    project = tmp_path / "project"
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    monkeypatch.setattr(current_runtime_context(), "project_root", project)
+    monkeypatch.chdir(elsewhere)
+    files = {
+        "src/service/alpha.py": "import shared_one\nimport shared_two\n",
+        "src/service/beta.py": "import shared_one\nimport shared_two\n",
+        "src/service/gamma.py": "import shared_two\n",
+    }
+
+    context = selection_mod._sibling_behavior_context(files, base_path=project / "src")
+
+    assert list(context) == ["service/"]
+    assert context["service/"]["outliers"][0]["file"] == "service/gamma.py"
+
+
 def test_testing_context_includes_high_importer_untested_file(tmp_path):
     target = tmp_path / "pkg" / "module.py"
     target.parent.mkdir(parents=True, exist_ok=True)

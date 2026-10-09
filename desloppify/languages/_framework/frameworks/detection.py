@@ -55,7 +55,7 @@ def _find_nearest_package_json(scan_path: Path, project_root: Path) -> Path | No
 
 def _read_package_json(package_json: Path) -> dict[str, Any]:
     try:
-        payload = json.loads(package_json.read_text())
+        payload = json.loads(package_json.read_text(encoding="utf-8"))
     except (OSError, UnicodeDecodeError, json.JSONDecodeError):
         return {}
     return payload if isinstance(payload, dict) else {}
