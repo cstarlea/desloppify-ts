@@ -24,13 +24,22 @@ HOLISTIC_REVIEW_DIMENSIONS: list[str] = [
 ]
 
 REVIEW_GUIDANCE = {
-    "patterns": [
+    "react": [
         "Check for `useEffect` with empty dependency arrays that should react to state changes",
-        "Look for `setTimeout`/`setInterval` used for synchronization instead of proper async patterns",
+        "Look for state copied from props or other state and synced in `useEffect` instead of computed during render",
         "Flag React components with >15 props — likely needs decomposition",
         "Check for `dangerouslySetInnerHTML` without sanitization",
         "Verify `useRef` isn't overused as a state escape hatch (>5 refs in a component)",
         "Look for Context providers nested >5 deep — consider composition or state management",
+        "Check that server-only modules (database clients, secrets) aren't imported into `'use client'` components",
+    ],
+    "node": [
+        "Look for floating promises: async calls neither awaited, returned nor `.catch`-ed, especially in handlers and event listeners",
+        "Look for `setTimeout`/`setInterval` used for synchronization instead of awaiting the real event",
+        "Flag synchronous `fs`, `child_process` or `crypto` calls (`readFileSync`, `execSync`) on request paths rather than at startup or in CLIs",
+        "Check that `process.env` is parsed and validated once at startup, not read ad hoc across modules",
+        "Look for errors thrown as strings or plain objects, and rethrows that drop the original error instead of passing `{ cause }`",
+        "Check for CommonJS left in an ESM package (`require`, `module.exports`, `__dirname` without `import.meta`)",
     ],
     "auth": [
         "Check `useAuth()` / `getServerSession()` / `requireAuth()` / `verifyToken()` consistency — sibling routes should use the same pattern",
