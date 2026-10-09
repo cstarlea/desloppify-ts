@@ -296,7 +296,7 @@ class ImportExtractor:
         return extract_imports_regex(text)
 
     def extract(self, filepath: str) -> list[ImportRef]:
-        if filepath.endswith(".mdx"):
+        if filepath.endswith((".mdx", ".md")):
             try:
                 return extract_mdx_imports(Path(filepath).read_text(encoding="utf-8", errors="replace"))
             except OSError:

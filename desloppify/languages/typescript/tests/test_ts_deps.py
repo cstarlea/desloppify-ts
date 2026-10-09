@@ -594,6 +594,20 @@ class TestFrameworkFiles:
         snippet_key = str((tmp_path / "www/src/components/Snippet.tsx").resolve())
         assert graph[snippet_key]["importers"] == {str((tmp_path / "www/docs/setup.mdx").resolve())}
 
+    def test_markdown_imports_only_inside_docusaurus_sites(self, tmp_path):
+        """Docusaurus compiles a site's ``.md`` as MDX; Markdown elsewhere isn't ESM."""
+
+        _write(tmp_path, "www/docusaurus.config.ts", "export default {};\n")
+        _write(tmp_path, "www/src/components/Snippet.tsx", "export const Snippet = () => null;\n")
+        _write(tmp_path, "www/docs/links.md", "import { Snippet } from '@site/src/components/Snippet';\n")
+        _write(tmp_path, "lib/util.ts", "export const u = 1;\n")
+        _write(tmp_path, "README.md", "import { u } from './lib/util';\n")
+
+        graph = deps_detector_mod.build_dep_graph(tmp_path)
+        snippet_key = str((tmp_path / "www/src/components/Snippet.tsx").resolve())
+        assert graph[snippet_key]["importers"] == {str((tmp_path / "www/docs/links.md").resolve())}
+        assert graph[str((tmp_path / "lib/util.ts").resolve())]["importers"] == set()
+
     def test_mdx_esm_forms(self):
         from desloppify.languages.typescript.detectors.deps.imports import extract_mdx_imports
 

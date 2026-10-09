@@ -9,7 +9,7 @@ from desloppify.base.discovery.paths import get_project_root
 from desloppify.engine.policy.zones import FileZoneMap, Zone
 
 from .heuristics import _has_testable_logic, _is_runtime_entrypoint
-from .metrics import _COMPLEXITY_TIER_UPGRADE, _MIN_LOC, _file_loc, _loc_weight
+from .metrics import _COMPLEXITY_TIER_UPGRADE, _MIN_LOC, _file_loc, _importer_count, _loc_weight
 
 # Max untested modules to report when there are zero tests
 _MAX_NO_TESTS_ENTRIES = 50
@@ -79,7 +79,7 @@ def _no_tests_issues(
     entries = []
     for filepath in by_loc[:_MAX_NO_TESTS_ENTRIES]:
         loc = _file_loc(filepath)
-        importer_count = graph.get(filepath, {}).get("importer_count", 0)
+        importer_count = _importer_count(graph, filepath)
         is_runtime_entry = _is_runtime_entrypoint(filepath, lang_name)
         if is_runtime_entry:
             entries.append(
