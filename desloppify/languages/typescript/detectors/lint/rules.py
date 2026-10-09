@@ -36,6 +36,20 @@ DUPLICATED_BY: dict[str, str] = {
     "no-eval": "security (eval_injection)",
     "no-new-func": "security (eval_injection)",
     "react/no-danger": "security (dangerously_set_inner_html)",
+    # Biome
+    "correctness/noUnusedVariables": "unused",
+    "correctness/noUnusedImports": "unused",
+    "correctness/noUnusedFunctionParameters": "unused",
+    "correctness/noUnusedPrivateClassMembers": "unused",
+    "suspicious/noExplicitAny": "smells (any_type)",
+    "suspicious/noTsIgnore": "smells (ts_ignore)",
+    "style/noNonNullAssertion": "smells (non_null_assert)",
+    "suspicious/noEmptyBlockStatements": "smells (empty_catch, empty_if_chain)",
+    "suspicious/useAwait": "smells (async_no_await)",
+    "complexity/noExcessiveCognitiveComplexity": "smells (high_cyclomatic_complexity)",
+    "complexity/noExcessiveLinesPerFunction": "smells (monster_function)",
+    "security/noGlobalEval": "security (eval_injection)",
+    "security/noDangerouslySetInnerHtml": "security (dangerously_set_inner_html)",
 }
 
 # Formatting plugins; ESLint's own formatting rules have ``meta.type == "layout"``.
