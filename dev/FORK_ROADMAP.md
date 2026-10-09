@@ -178,7 +178,7 @@ Every adversarial input in the original review broke one of the line-regex fixer
 | 3.9 | Class-level god rules (methods, constructor-injected deps, decorators) | M | DT-17 |
 | 3.10 | TS review overrides for type_safety, dependency_health and test_strategy; split the review guidance into React and Node sections | S | DT-16 |
 | 3.11 | **Done (#83).** Test health reads Istanbul `coverage-final.json` and `lcov.info` reports from `coverage/` in the root and in each package, plus a vitest `reportsDirectory` or jest `coverageDirectory`. Measured line coverage replaces the import-graph verdict file by file: 80% of lines passes, less is `low_coverage` weighted by the shortfall, no line run keeps `untested_*`. Files changed after the report, and files missing from it, keep the graph verdict; per-package reports merge by line. Istanbul HTML report assets are no longer scanned as source | M | DT-12 |
-| 3.12 | Detector and domain **disable** in config, which removes them from scoring instead of suppressing their issues | M | CE-15 |
+| 3.12 | **Done (#85).** `config set disabled <detector or mechanical dimension>` takes a detector or a whole dimension out of scoring: its potential and new issues are dropped, the dimension is recomputed (or disappears, not carried forward), and its existing issues are hidden with status unchanged (wontfix untouched). `config set`/`unset` rescore immediately; `config unset <key> <value>` removes one list entry. `status` lists what is disabled, `show <detector>` says so; re-enabling rechecks the hidden issues on the next scan | M | CE-15 |
 
 ### 2E. Engineering foundation
 
@@ -323,7 +323,7 @@ Status key: **done** (with PR), **partial** (what's left is in §2), **open**, *
 | CE-12 | medium | Headline score from zeroed subjective dims; ci profile; cycles under Security | done (#63, #64, #66) |
 | CE-13 | medium | Exclusions applied after language and state resolution | dropped |
 | CE-14 | medium | Auto-detect walks to an ancestor package.json | dropped |
-| CE-15 | low | No detector or domain disable | open → 3.12 |
+| CE-15 | low | No detector or domain disable | done (#85) |
 | CE-16 | medium | Codex runner Popen is locale-dependent on Windows | open → §2E |
 | CE-17 | medium | JS ESLint on Windows | dropped |
 

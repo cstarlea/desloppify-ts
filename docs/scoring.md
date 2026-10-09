@@ -70,6 +70,15 @@ If a mechanical dimension is missing from a scan, its previous score is kept and
 
 A carried score expires. `carried_forward_since_scan` records the first scan it was carried in, and after `CARRIED_FORWARD_MAX_SCANS` (3) scans without its detectors running, the dimension drops out of the score until they run again. The count is in scans, so the recomputes on saves between scans don't age it.
 
+### Disabled detectors and dimensions
+
+The `disabled` config key takes detector names (`smells`) and mechanical dimensions (`Test health`; case, `_` and `-` don't matter). Set it with `desloppify config set disabled <name>`, and remove one entry with `desloppify config unset disabled <name>`. A disabled detector is taken out of scoring altogether; this is different from `ignore`, which hides issues but leaves the detector's checks in the denominator:
+
+- Its potential is dropped and new issues from it are discarded, so its dimension is recomputed from the remaining detectors. A dimension with every detector disabled disappears and isn't carried forward.
+- Its existing issues are hidden from `status`, `show`, `next` and the score, like suppressed issues (pattern `disabled:<detector>`). Their status doesn't change, so a disabled detector isn't counted as a fix. Wontfix issues are left untouched.
+- `config set` and `config unset` rescore the saved state immediately. After re-enabling, the next scan rechecks the hidden issues: those still present are open again (not reopened), and the rest are auto-resolved.
+- `status` lists what is disabled and how many issues that hides. `show <detector>` says when the detector is disabled. `next` doesn't mention it, since nothing disabled is in the queue.
+
 ## Issue weights
 
 An issue's **tier does not affect the score**. Its confidence does:

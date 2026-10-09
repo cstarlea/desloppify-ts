@@ -470,6 +470,7 @@ def merge_scan_results(
             codebase_metrics=codebase_metrics,
             include_slow=runtime.effective_include_slow,
             ignore=runtime.config.get("ignore", []),
+            disabled=runtime.config.get("disabled", []),
             subjective_integrity_target=target_score,
             project_root=str(get_project_root()),
             zone_map=runtime.lang.zone_map if runtime.lang else None,

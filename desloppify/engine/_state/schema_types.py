@@ -65,6 +65,7 @@ class StateModel(TypedDict, total=False):
     scan_history: list[ScanHistoryEntry]
     lang_capabilities: dict[str, LangCapability]
     zone_distribution: dict[str, int]
+    disabled_detectors: list[str]
     review_cache: ReviewCacheModel
     reminder_history: dict[str, int]
     ignore_integrity: IgnoreIntegrityModel
