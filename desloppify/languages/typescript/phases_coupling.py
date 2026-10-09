@@ -6,6 +6,7 @@ from pathlib import Path
 
 from desloppify.base.discovery.file_paths import rel, resolve_path
 from desloppify.base.discovery.paths import get_project_root, get_src_path
+from desloppify.base.discovery.sfc import SFC_SUFFIXES
 from desloppify.base.output.terminal import log
 from desloppify.engine.detectors import coupling as coupling_detector_mod
 from desloppify.engine.detectors import graph as graph_detector_mod
@@ -206,7 +207,7 @@ def find_orphans(
     orphan_entries, total_graph_files = orphaned_detector_mod.detect_orphaned_files(
         path,
         graph,
-        extensions=lang.extensions,
+        extensions=[*lang.extensions, *SFC_SUFFIXES],
         options=orphaned_detector_mod.OrphanedDetectionOptions(
             extra_entry_patterns=lang.entry_patterns,
             extra_barrel_names=lang.barrel_names,

@@ -8,6 +8,7 @@ import re
 from pathlib import Path
 
 from desloppify.base.discovery.paths import get_project_root
+from desloppify.base.discovery.sfc import read_code_text
 from desloppify.engine.detectors.base import FunctionInfo
 from desloppify.languages.typescript.syntax.lines import split_lines
 from desloppify.languages.typescript.syntax.nodes import PARAMETERS, binding_names
@@ -206,7 +207,7 @@ def _param_names(parsed: ParsedSource, info: SyntaxFunctionInfo) -> list[str]:
 def _extract_ts_functions_regex(filepath: str) -> list[FunctionInfo]:
     p = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
     try:
-        content = p.read_text()
+        content = read_code_text(p)
     except (OSError, UnicodeDecodeError) as exc:
         logger.debug("Skipping unreadable TS file %s in function extraction: %s", filepath, exc)
         return []

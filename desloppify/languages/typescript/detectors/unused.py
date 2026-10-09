@@ -69,14 +69,20 @@ _detect_unused_fallback = detect_unused_fallback
 _should_use_deno_fallback = should_use_deno_fallback
 
 
-def _reduced(summary: str, *, reason: str, confidence: float) -> DetectorCoverageStatus:
+def _reduced(
+    summary: str,
+    *,
+    reason: str,
+    confidence: float,
+    remediation: str = "Install `typescript` in the project (npm i -D typescript) and rerun scan.",
+) -> DetectorCoverageStatus:
     return DetectorCoverageStatus(
         detector="unused",
         status="reduced",
         confidence=confidence,
         summary=summary,
         impact="Unused imports/declarations may be under-reported for this scan.",
-        remediation="Install `typescript` in the project (npm i -D typescript) and rerun scan.",
+        remediation=remediation,
         tool="tsc",
         reason=reason,
     )
@@ -140,6 +146,10 @@ def detect_unused_result(
             f"tsc reported config errors for {base_tsconfig.name}: {run.config_errors[0].strip()[:160]}",
             reason="tsconfig_error",
             confidence=0.7,
+        )
+    elif (components := tsc_mod.unchecked_components_note(path)) is not None:
+        coverage = _reduced(
+            components, reason="components", confidence=0.7, remediation=tsc_mod.COMPONENTS_REMEDIATION
         )
 
     entries = []

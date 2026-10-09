@@ -12,6 +12,7 @@ from typing import Any
 from desloppify.base.discovery.file_paths import rel, resolve_path
 from desloppify.base.discovery.paths import get_project_root
 from desloppify.base.discovery.source import (
+    find_component_files,
     find_source_files,
     find_ts_and_js_files,
 )
@@ -151,7 +152,9 @@ def build_dep_graph(
     resolver = ModuleResolver(path, project_root)
     extractor = ImportExtractor()
 
-    ts_files = find_ts_and_js_files(path)
+    # Components (.vue, .svelte, .astro) are modules too: their script
+    # blocks import, and other files import them.
+    ts_files = [*find_ts_and_js_files(path), *find_component_files(path)]
     # Seed every module so files with no imports of their own (constants,
     # types, leaf utilities) can still be found orphaned. Ambient
     # declaration files are never imported, so they stay out of the graph.
@@ -164,7 +167,7 @@ def build_dep_graph(
 
     runtime_edges: dict[str, set[str]] = defaultdict(set)
     pattern_refs: list[tuple[str, str, ImportRef]] = []
-    fw_files = find_source_files(path, [*_FRAMEWORK_EXTENSIONS, *_DOCUMENT_EXTENSIONS])
+    fw_files = find_source_files(path, list(_DOCUMENT_EXTENSIONS))
     fw_files += [
         f
         for f in find_source_files(path, list(_DOCUSAURUS_MARKDOWN))

@@ -4,6 +4,9 @@ from __future__ import annotations
 
 import math
 
+from desloppify.base.discovery.file_paths import resolve_path
+from desloppify.base.discovery.sfc import is_sfc, read_sfc
+
 from .io import read_coverage_file
 
 # Minimum LOC threshold — tiny files don't need dedicated tests
@@ -18,7 +21,10 @@ _LINE_COVERAGE_TARGET = 80
 
 
 def _file_loc(filepath: str) -> int:
-    """Count lines in a file, returning 0 when unreadable."""
+    """Count lines in a file (a component's script lines), returning 0 when unreadable."""
+    if is_sfc(filepath):
+        component = read_sfc(resolve_path(filepath))
+        return component.line_count if component is not None else 0
     read_result = read_coverage_file(filepath, context="loc_count")
     if not read_result.ok:
         return 0

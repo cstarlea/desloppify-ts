@@ -20,6 +20,7 @@ from functools import cached_property
 from pathlib import Path
 
 from desloppify.base.discovery.file_paths import resolve_path
+from desloppify.base.discovery.sfc import is_sfc, read_sfc
 from desloppify.languages._framework.treesitter import PARSE_INIT_ERRORS, is_available
 from desloppify.languages._framework.treesitter.cache import get_or_parse_tree
 from desloppify.languages._framework.treesitter.parsing import _get_parser
@@ -32,7 +33,14 @@ _PARSERS: dict[str, object] = {}
 
 
 def grammar_for(path: str | Path) -> str:
-    """The tree-sitter grammar for a TS/JS file: ``typescript`` or ``tsx``."""
+    """The tree-sitter grammar for a TS/JS file: ``typescript`` or ``tsx``.
+
+    A component (``.vue``/``.svelte``/``.astro``) takes its script blocks'
+    language.
+    """
+    if is_sfc(path):
+        component = read_sfc(resolve_path(str(path)))
+        return component.grammar if component is not None else "tsx"
     suffix = Path(path).suffix.lower()
     return "typescript" if suffix in _TYPESCRIPT_GRAMMAR_SUFFIXES else "tsx"
 
