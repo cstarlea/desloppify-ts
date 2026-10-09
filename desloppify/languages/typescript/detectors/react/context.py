@@ -24,7 +24,7 @@ def detect_context_nesting(path: Path) -> tuple[list[dict], int]:
         total_files += 1
         try:
             p = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
-            content = p.read_text()
+            content = p.read_text(encoding="utf-8")
             lines = SourceText(content, p).code_lines
         except (OSError, UnicodeDecodeError) as exc:
             logger.debug(

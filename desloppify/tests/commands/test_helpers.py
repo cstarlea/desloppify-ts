@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from types import SimpleNamespace
 
 from desloppify.app.commands.helpers.rendering import (
@@ -167,7 +168,7 @@ def test_state_path_from_explicit_state_arg():
     args = SimpleNamespace(state="/custom/path.json", lang=None)
     result = state_path(args)
     assert result is not None
-    assert str(result) == "/custom/path.json"
+    assert result == Path("/custom/path.json")
 
 
 # ── state.py: require_issue_inventory ─────────────────────────────────

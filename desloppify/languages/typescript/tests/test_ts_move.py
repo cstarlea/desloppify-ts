@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import sys
+
 import pytest
 
 import desloppify.languages.typescript.detectors.deps as deps_detector_mod
@@ -38,6 +40,7 @@ class TestMoveSafety:
         kept = filter_intra_package_importer_changes("/p/src/feature/x.ts", replacements, set())
         assert kept == [("'@/feature/y'", "'@/new/y'")]
 
+    @pytest.mark.skipif(sys.platform == "win32", reason="POSIX absolute paths")
     def test_self_rewrites_to_files_moving_together_are_dropped(self):
         from desloppify.languages.typescript.move import filter_directory_self_changes
 

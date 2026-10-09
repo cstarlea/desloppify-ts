@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -147,6 +148,7 @@ class TestJscpdAdapter:
         ):
             assert detect_with_jscpd(tmp_path) is None
 
+    @pytest.mark.skipif(sys.platform == "win32", reason="process groups are POSIX")
     def test_timeout_kills_jscpd_process_group(self):
         class FakeProc:
             pid = 4321
@@ -381,7 +383,7 @@ class TestCollectExcludeDirs:
             "desloppify.base.discovery.source.get_exclusions", return_value=()
         ):
             result = collect_exclude_dirs(tmp_path)
-        basenames = {p.rsplit("/", 1)[-1] for p in result}
+        basenames = {Path(p).name for p in result}
         assert "node_modules" in basenames
         assert "__pycache__" in basenames
         assert ".git" in basenames
@@ -402,7 +404,7 @@ class TestCollectExcludeDirs:
             return_value=("vendor", "third_party"),
         ):
             result = collect_exclude_dirs(tmp_path)
-        basenames = {p.rsplit("/", 1)[-1] for p in result}
+        basenames = {Path(p).name for p in result}
         assert "vendor" in basenames
         assert "third_party" in basenames
 
@@ -422,5 +424,5 @@ class TestCollectExcludeDirs:
             return_value=("node_modules",),
         ):
             result = collect_exclude_dirs(tmp_path)
-        node_entries = [p for p in result if p.endswith("/node_modules")]
+        node_entries = [p for p in result if Path(p).name == "node_modules"]
         assert len(node_entries) == 1

@@ -281,7 +281,7 @@ def _extractor() -> ImportExtractor:
 def resolve_barrel_reexports(filepath: str, production_files: set[str]) -> set[str]:
     """Resolve one-hop TypeScript barrel re-exports to concrete production files."""
     try:
-        content = Path(resolve_path(filepath)).read_text()
+        content = Path(resolve_path(filepath)).read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError) as exc:
         log_best_effort_failure(logger, f"read barrel re-export source {filepath}", exc)
         return set()

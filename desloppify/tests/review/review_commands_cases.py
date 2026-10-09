@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -61,6 +62,13 @@ runner_helpers_mod = SimpleNamespace(
     sha256_file=runner_packets_mod.sha256_file,
     write_packet_snapshot=runner_packets_mod.write_packet_snapshot,
 )
+
+
+def _codex_output_path(cmd: list[str]) -> Path:
+    """The ``-o`` path of a codex command, also when Windows wraps it in ``cmd /c``."""
+    if cmd[:2] == ["cmd", "/c"]:
+        cmd = [token.strip('"') for token in shlex.split(cmd[2], posix=False)]
+    return Path(cmd[cmd.index("-o") + 1])
 
 
 class TestBatchDimensionCoverageNotices:
@@ -956,7 +964,7 @@ class TestCmdReviewPrepare:
             **_kwargs,
         ):
             _ = timeout, cwd
-            out_path = Path(cmd[cmd.index("-o") + 1])
+            out_path = _codex_output_path(cmd)
             out_path.parent.mkdir(parents=True, exist_ok=True)
             payloads = {
                 "batch-1.raw.txt": {
@@ -1197,7 +1205,7 @@ class TestCmdReviewPrepare:
             **_kwargs,
         ):
             _ = capture_output, text, timeout, cwd
-            out_path = Path(cmd[cmd.index("-o") + 1])
+            out_path = _codex_output_path(cmd)
             out_path.parent.mkdir(parents=True, exist_ok=True)
             payload = {
                 "assessments": {"mid_level_elegance": 77},
@@ -1317,7 +1325,7 @@ class TestCmdReviewPrepare:
             **_kwargs,
         ):
             _ = capture_output, text, timeout, cwd
-            out_path = Path(cmd[cmd.index("-o") + 1])
+            out_path = _codex_output_path(cmd)
             out_path.parent.mkdir(parents=True, exist_ok=True)
             payload = {
                 "assessments": {"mid_level_elegance": 78.0},
@@ -1586,7 +1594,7 @@ class TestCmdReviewPrepare:
             **_kwargs,
         ):
             _ = capture_output, text, timeout, cwd
-            out_path = Path(cmd[cmd.index("-o") + 1])
+            out_path = _codex_output_path(cmd)
             out_path.parent.mkdir(parents=True, exist_ok=True)
             if out_path.name == "batch-1.raw.txt":
                 out_path.write_text(
@@ -1787,7 +1795,7 @@ class TestCmdReviewPrepare:
             **_kwargs,
         ):
             _ = capture_output, text, timeout, cwd
-            out_path = Path(cmd[cmd.index("-o") + 1])
+            out_path = _codex_output_path(cmd)
             out_path.parent.mkdir(parents=True, exist_ok=True)
             payload = {
                 "assessments": {"abstraction_fitness": 72},

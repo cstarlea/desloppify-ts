@@ -27,7 +27,7 @@ def _write(root: Path, files: dict[str, object]) -> None:
 
 def _found(root: Path) -> set[tuple[str, str]]:
     result = detect_tsconfig_health(root)
-    return {(str(Path(e["file"]).relative_to(root)), e["check"]) for e in result.entries}
+    return {(Path(e["file"]).relative_to(root).as_posix(), e["check"]) for e in result.entries}
 
 
 def _app(options: dict, *, typescript: str = "^5.8.0", source: str = "export const a = 1;\n") -> dict[str, object]:

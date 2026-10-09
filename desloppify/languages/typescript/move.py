@@ -58,7 +58,7 @@ def _strip_ts_ext(path: str) -> str:
 
 def _read(path: str, context: str) -> str | None:
     try:
-        return Path(path).read_text()
+        return Path(path).read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError) as exc:
         log_best_effort_failure(logger, f"{context} {path}", exc)
         return None

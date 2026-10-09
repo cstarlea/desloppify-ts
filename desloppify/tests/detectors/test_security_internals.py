@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+import sys
+
+import pytest
+
 from desloppify.engine.detectors.security.detector import detect_security_issues
 from desloppify.engine.detectors.security.filters import (
     _EXCLUDED_SECURITY_ZONES,
@@ -187,6 +191,7 @@ def test_detect_security_issues_finds_aws_key(tmp_path):
     assert "hardcoded_secret_value" in kinds or "hardcoded_secret_name" in kinds
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="zone rule patterns are POSIX paths")
 def test_detect_security_issues_skips_excluded_zone(tmp_path):
     """Files in excluded zones are not scanned."""
     f = tmp_path / "test_creds.py"

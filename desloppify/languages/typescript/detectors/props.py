@@ -275,7 +275,7 @@ def _regex_file(filepath: str, threshold: int) -> tuple[list[dict], int]:
     total = 0
     try:
         p = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
-        content = p.read_text()
+        content = p.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError) as exc:
         log_best_effort_failure(logger, f"read TypeScript interface file {filepath}", exc)
         return entries, total
