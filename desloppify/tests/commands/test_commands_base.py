@@ -29,11 +29,6 @@ def _make_args(path="/tmp/test", top=20, json_flag=False):
 
 
 class TestMakeCmdLarge:
-    def test_returns_callable(self):
-        """Factory returns a callable."""
-        cmd = make_cmd_large(file_finder=lambda p: [], default_threshold=500)
-        assert callable(cmd)
-
     @patch("desloppify.languages._framework.commands.base.display_entries")
     def test_calls_detect_large_files(self, mock_display):
         """Returned command invokes detect_large_files and display_entries."""
@@ -65,11 +60,6 @@ class TestMakeCmdLarge:
 
 
 class TestMakeCmdComplexity:
-    def test_returns_callable(self):
-        """Factory returns a callable."""
-        cmd = make_cmd_complexity(file_finder=lambda p: [], signals=[])
-        assert callable(cmd)
-
     @patch("desloppify.languages._framework.commands.base.display_entries")
     def test_calls_detect_complexity(self, mock_display):
         """Returned command invokes detect_complexity and display_entries."""
@@ -113,11 +103,6 @@ class TestMakeCmdComplexity:
 
 
 class TestMakeCmdSingleUse:
-    def test_returns_callable(self):
-        """Factory returns a callable."""
-        cmd = make_cmd_single_use(build_dep_graph=lambda p: {}, barrel_names=set())
-        assert callable(cmd)
-
     @patch("desloppify.languages._framework.commands.base.display_entries")
     def test_calls_detect_single_use(self, mock_display):
         """Returned command invokes detect_single_use_abstractions."""
@@ -138,16 +123,6 @@ class TestMakeCmdSingleUse:
 
 
 class TestMakeCmdPassthrough:
-    def test_returns_callable(self):
-        """Factory returns a callable."""
-        cmd = make_cmd_passthrough(
-            detect_fn=lambda p: [],
-            noun="component",
-            name_key="component",
-            total_key="total_props",
-        )
-        assert callable(cmd)
-
     @patch("desloppify.languages._framework.commands.base.display_entries")
     def test_calls_detect_fn(self, mock_display):
         """Returned command invokes the provided detect function."""
@@ -167,11 +142,6 @@ class TestMakeCmdPassthrough:
 
 
 class TestMakeCmdNaming:
-    def test_returns_callable(self):
-        """Factory returns a callable."""
-        cmd = make_cmd_naming(file_finder=lambda p: [], skip_names=set())
-        assert callable(cmd)
-
     @patch("desloppify.languages._framework.commands.base.display_entries")
     def test_calls_detect_naming(self, mock_display):
         """Returned command invokes detect_naming_inconsistencies."""
@@ -209,14 +179,6 @@ class TestMakeCmdNaming:
 
 
 class TestMakeCmdFacade:
-    def test_returns_callable(self):
-        """Factory returns a callable."""
-        cmd = make_cmd_facade(
-            build_dep_graph_fn=lambda p: {},
-            detect_facades_fn=lambda graph: ([], 0),
-        )
-        assert callable(cmd)
-
     def test_json_output(self, capsys):
         """With json=True, outputs JSON."""
         mock_graph = MagicMock(return_value={})
@@ -251,11 +213,6 @@ class TestMakeCmdFacade:
 
 
 class TestMakeCmdSmells:
-    def test_returns_callable(self):
-        """Factory returns a callable."""
-        cmd = make_cmd_smells(detect_smells_fn=lambda p: ([], 0))
-        assert callable(cmd)
-
     def test_json_output(self, capsys):
         """With json=True, outputs JSON."""
         cmd = make_cmd_smells(detect_smells_fn=lambda p: ([], 0))

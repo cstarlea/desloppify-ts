@@ -263,10 +263,6 @@ class TestShowModuleSanity:
             assert isinstance(label, str)
             assert fmt is None or callable(fmt)
 
-    def test_cmd_show_exists(self):
-        assert callable(cmd_show)
-
-
 class TestShowSubjectiveFollowup:
     def test_penalty_state_prints_warning_and_next_step(self, capsys):
         state = {

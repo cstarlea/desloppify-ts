@@ -76,15 +76,3 @@ def test_config_large_threshold():
     """TypeScriptConfig.large_threshold is 500."""
     cfg = TypeScriptConfig()
     assert cfg.large_threshold == 500
-
-
-def test_config_extract_functions_callable():
-    """TypeScriptConfig.extract_functions is a callable."""
-    cfg = TypeScriptConfig()
-    assert callable(cfg.extract_functions)
-
-
-def test_config_build_dep_graph_callable():
-    """TypeScriptConfig.build_dep_graph is a callable."""
-    cfg = TypeScriptConfig()
-    assert callable(cfg.build_dep_graph)

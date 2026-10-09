@@ -2,43 +2,10 @@
 
 from __future__ import annotations
 
-import desloppify.engine.planning.scorecard_dimensions as scorecard_dimensions
 import desloppify.app.output.scorecard_parts.theme as scorecard_theme
 import desloppify.engine._scoring.detection as scoring_detection
 import desloppify.engine._scoring.policy.core as scoring_policy
-import desloppify.engine._scoring.results.core as scoring_results
-import desloppify.engine._scoring.subjective.core as scoring_subjective
-import desloppify.engine._state.merge_history as merge_history
-import desloppify.engine._state.merge_issues as merge_issues
 import desloppify.engine._work_queue.ranking as work_queue_ranking
-import desloppify.engine._work_queue.synthetic as work_queue_synthetic
-import desloppify.intelligence.review.prepare_batches_builders as review_prepare_batches
-
-
-def test_split_module_direct_coverage_smoke_signals():
-    assert callable(scorecard_dimensions.prepare_scorecard_dimensions)
-    assert callable(scorecard_dimensions.prepare_scorecard_dimensions)
-    assert callable(scorecard_theme.score_color)
-    assert isinstance(scorecard_theme.BG, tuple)
-
-    assert callable(review_prepare_batches.build_investigation_batches)
-
-    assert callable(scoring_detection.detector_pass_rate)
-    assert callable(scoring_detection.merge_potentials)
-    assert isinstance(scoring_policy.DIMENSIONS, list)
-    assert isinstance(scoring_policy.FILE_BASED_DETECTORS, set)
-    assert callable(scoring_results.compute_score_bundle)
-    assert callable(scoring_subjective.append_subjective_dimensions)
-
-    assert callable(merge_issues.upsert_issues)
-    assert callable(merge_issues.verify_disappeared)
-    assert callable(merge_history._append_scan_history)
-    assert callable(merge_history._build_merge_diff)
-
-    assert callable(work_queue_synthetic.build_subjective_items)
-    assert callable(work_queue_synthetic._subjective_dimension_aliases)
-    assert callable(work_queue_ranking.item_sort_key)
-    assert callable(work_queue_ranking.group_queue_items)
 
 
 # ---------------------------------------------------------------------------

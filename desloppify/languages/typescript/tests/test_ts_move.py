@@ -13,11 +13,6 @@ import desloppify.languages.typescript.move as ts_move
 from desloppify.languages.typescript.detectors.deps.resolver import clear_resolver_cache
 
 
-def test_move_ts_module_imports():
-    assert callable(ts_move.find_replacements)
-    assert callable(ts_move.find_self_replacements)
-
-
 class TestMoveTsHelpers:
     def test_strip_ts_ext(self):
         assert ts_move._strip_ts_ext("foo.ts") == "foo"

@@ -34,13 +34,6 @@ def _write(tmp_path: Path, name: str, content: str) -> Path:
 # ── Module import smoke test ─────────────────────────────────
 
 
-def test_module_imports():
-    """Module can be imported without errors."""
-    assert callable(detect_unused)
-    assert callable(_categorize_unused)
-    assert callable(tsc_mod.run_tsc_check)
-
-
 # ── TS error regex patterns ──────────────────────────────────
 
 

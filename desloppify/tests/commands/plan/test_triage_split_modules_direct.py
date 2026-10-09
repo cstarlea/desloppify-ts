@@ -1306,10 +1306,6 @@ def test_orchestrator_pipeline_summary_writer_includes_finalization_fields(tmp_p
     assert '"finalization_reason": "partial_stage_run"' in text
 
 
-def test_orchestrator_pipeline_entrypoint_is_exposed() -> None:
-    assert callable(orchestrator_pipeline_mod.run_codex_pipeline)
-
-
 def test_orchestrator_pipeline_writes_exact_cli_helper(tmp_path: Path) -> None:
     helper = orchestrator_pipeline_mod._write_desloppify_cli_helper(tmp_path)
     text = helper.read_text(encoding="utf-8")

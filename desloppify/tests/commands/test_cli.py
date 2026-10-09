@@ -42,13 +42,6 @@ def _lang_with_specs() -> TypeScriptConfig:
     return lang
 
 
-class TestModuleImport:
-    def test_module_importable(self):
-        """Verify the cli module can be imported without side effects."""
-        assert hasattr(cli_mod, "main")
-        assert hasattr(cli_mod, "create_parser")
-
-
 class TestInstalledPackageCheckoutWarning:
     @pytest.mark.parametrize("dist_name", ["desloppify", "desloppify-ts"])
     def test_detects_installed_package_running_from_checkout(

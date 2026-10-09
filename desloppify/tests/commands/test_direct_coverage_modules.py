@@ -4,147 +4,15 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-import desloppify.app.cli_support.parser as cli_parser
-import desloppify.app.cli_support.parser_groups as cli_parser_groups
-import desloppify.app.commands.config as config_cmd
-import desloppify.app.commands.move.cmd as move_cmd_mod
-import desloppify.app.commands.move.directory as move_directory
-import desloppify.app.commands.move.reporting as move_reporting
 import desloppify.app.commands.next.output as next_output
-import desloppify.app.commands.next.render_support as next_render_support
-import desloppify.app.commands.plan.cmd as plan_cmd_mod
 import desloppify.app.commands.registry as cmd_registry
-from desloppify.app.commands.review.batch import merge as review_batch_merge
-import desloppify.app.commands.review.batch.execution as review_batches
-import desloppify.app.commands.review.importing.cmd as review_import
-import desloppify.app.commands.review.importing.helpers as review_import_helpers
-import desloppify.app.commands.review.prepare as review_prepare
-import desloppify.app.commands.runner.codex_batch as review_runner_helpers
-import desloppify.app.commands.review.runtime.setup as review_runtime_setup
-import desloppify.app.commands.scan.artifacts as scan_artifacts
-import desloppify.app.commands.scan.cmd as scan_cmd_mod
-import desloppify.app.commands.scan.reporting.presentation as scan_reporting_presentation
-import desloppify.app.commands.scan.reporting.subjective as scan_reporting_subjective
-import desloppify.app.commands.scan.workflow as scan_workflow
-import desloppify.app.commands.status.cmd as status_cmd_mod
-import desloppify.app.commands.status.render as status_render
-import desloppify.app.commands.status.summary as status_summary
-import desloppify.app.output._viz_cmd_context as viz_cmd_context
-import desloppify.app.output.scorecard_parts.draw as scorecard_draw
-import desloppify.app.output.scorecard_parts.left_panel as scorecard_left_panel
-import desloppify.app.output.scorecard_parts.ornaments as scorecard_ornaments
-import desloppify.app.output.tree_text as tree_text_mod
-import desloppify.base.runtime_state as runtime_state
 import desloppify.engine._state.noise as noise
-import desloppify.engine._state.persistence as persistence
-import desloppify.engine._state.resolution as state_resolution
 import desloppify.engine._work_queue.finalize as work_queue_finalize_mod
 import desloppify.engine._work_queue.inputs as work_queue_inputs_mod
 import desloppify.engine._work_queue.selection as work_queue_selection_mod
-import desloppify.engine.planning.helpers as plan_common
-import desloppify.engine.planning.scan as plan_scan
-import desloppify.engine.planning.select as plan_select
-import desloppify.intelligence.integrity as subjective_review_integrity
-import desloppify.intelligence.review._context.structure as review_context_structure
-import desloppify.intelligence.review.dimensions.holistic as review_dimensions_holistic
-import desloppify.intelligence.review.dimensions.validation as review_dimensions_validation
-import desloppify.languages.framework as lang_framework
-import desloppify.languages.typescript.detectors.smells.detector_safety as ts_smell_detectors_safety
 import desloppify.languages.typescript.detectors.smells.helpers as ts_smell_helpers_mod
 from desloppify.languages.typescript.syntax.scanner import SourceText
-import desloppify.languages.typescript.detectors.deps.runtime as ts_deps_runtime
-import desloppify.languages.typescript.extractors_components as ts_extractors_components
 from desloppify.engine._work_queue.models import QueueBuildOptions, QueueVisibility
-from desloppify.intelligence.review import prepare_batches_builders as review_prepare_batches
-from desloppify.languages.typescript import review as ts_review
-
-
-def _assert_all_callables(*targets) -> None:
-    for target in targets:
-        assert callable(target)
-
-
-def test_smoke_parser():
-    """Parser and CLI support modules."""
-    _assert_all_callables(
-        cli_parser.create_parser,
-        cli_parser_groups._add_scan_parser,
-    )
-
-
-def test_smoke_planning():
-    """Planning modules: common, scan, select."""
-    _assert_all_callables(
-        plan_common.is_subjective_phase,
-        plan_scan.generate_issues,
-        plan_select.get_next_items,
-        plan_select.get_next_item,
-    )
-
-
-def test_smoke_commands():
-    """App command modules: config, plan, move, scan, next, review, status."""
-    _assert_all_callables(
-        config_cmd.cmd_config,
-        plan_cmd_mod.cmd_plan_output,
-        move_directory.run_directory_move,
-        move_reporting.print_file_move_plan,
-        move_reporting.print_directory_move_plan,
-        move_cmd_mod.cmd_move,
-        scan_cmd_mod.cmd_scan,
-        scan_artifacts.build_scan_query_payload,
-        scan_artifacts.emit_scorecard_badge,
-        scan_workflow.prepare_scan_runtime,
-        scan_workflow.run_scan_generation,
-        scan_workflow.merge_scan_results,
-        next_output.serialize_item,
-        next_output.build_query_payload,
-        next_render_support.render_queue_header,
-        review_batch_merge.merge_batch_results,
-        review_batches.BatchRunDeps,
-        review_import.do_import,
-        review_import_helpers.load_import_issues_data,
-        review_prepare.do_prepare,
-        review_runner_helpers.run_codex_batch,
-        review_runtime_setup.setup_lang,
-        status_cmd_mod.cmd_status,
-        status_render.show_tier_progress_table,
-        status_summary.score_summary_lines,
-        scan_reporting_presentation.show_score_model_breakdown,
-        scan_reporting_presentation.show_detector_progress,
-        scan_reporting_subjective.subjective_rerun_command,
-        scan_reporting_subjective.subjective_integrity_followup,
-        scan_reporting_subjective.build_subjective_followup,
-    )
-    assert isinstance(cmd_registry.get_command_handlers(), dict)
-    assert "scan" in cmd_registry.get_command_handlers()
-    runtime = runtime_state.current_runtime_context()
-    assert isinstance(runtime.exclusions, tuple)
-    assert isinstance(runtime.source_file_cache.max_entries, int)
-    runtime.cache_enabled = True
-    assert runtime.cache_enabled
-    runtime.cache_enabled = False
-
-
-def test_smoke_engine():
-    """Engine modules: state internals, TypeScript detectors."""
-    # state internals
-    _assert_all_callables(
-        persistence.load_state,
-        persistence.save_state,
-        state_resolution.match_issues,
-        state_resolution.resolve_issues,
-        noise.resolve_issue_noise_budget,
-        noise.resolve_issue_noise_global_budget,
-        noise.resolve_issue_noise_settings,
-    )
-
-    # TypeScript detector modules
-    _assert_all_callables(
-        ts_smell_detectors_safety._detect_swallowed_errors,
-        ts_deps_runtime.build_dynamic_import_targets,
-        ts_extractors_components.extract_ts_components,
-    )
 
 
 def test_work_queue_split_modules_have_direct_behavior(monkeypatch):
@@ -227,19 +95,6 @@ def test_work_queue_split_modules_have_direct_behavior(monkeypatch):
     assert selected == [{"id": "backlog::1", "kind": "issue"}]
 
 
-def test_smoke_lang_plugins():
-    """Language framework facade and the TypeScript plugin."""
-    _assert_all_callables(
-        lang_framework.default_lang,
-        lang_framework.get_lang,
-        lang_framework.get_lang_hook,
-    )
-
-    # typescript
-    assert isinstance(ts_review.module_patterns("export default function A() {}"), list)
-    assert ts_review.api_surface({"a.ts": "export function f() {}"}) == {}
-
-
 def test_typescript_split_smell_helpers_have_direct_coverage():
     lines = [
         "function demo() {",
@@ -271,25 +126,6 @@ def test_typescript_split_smell_helpers_have_direct_coverage():
     assert source.kind_at(source.line_starts[2]) == "comment"
     assert source.kind_at(source.line_starts[5]) == "template"
     assert source.kind_at(source.line_starts[0]) is None
-
-
-def test_smoke_intelligence():
-    """Intelligence modules: review dimensions, context, prepare, integrity."""
-    assert isinstance(review_dimensions_holistic.DIMENSIONS, list)
-    assert "cross_module_architecture" in review_dimensions_holistic.DIMENSIONS
-    _assert_all_callables(
-        review_prepare_batches.build_investigation_batches,
-        review_context_structure.compute_structure_context,
-        review_dimensions_validation.parse_dimensions_payload,
-        subjective_review_integrity.subjective_review_open_breakdown,
-        scorecard_draw.draw_left_panel,
-        scorecard_draw.draw_right_panel,
-        scorecard_draw.draw_ornament,
-        scorecard_left_panel.draw_left_panel,
-        scorecard_ornaments.draw_ornament,
-        viz_cmd_context.load_cmd_context,
-        tree_text_mod._aggregate,
-    )
 
 
 # ---------------------------------------------------------------------------
