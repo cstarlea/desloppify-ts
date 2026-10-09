@@ -104,13 +104,13 @@ def sibling_behavior_context(
     *,
     base_path: Path | str | None = None,
 ) -> dict[str, Any]:
-    root = Path(base_path).resolve() if base_path is not None else None
+    root = Path(resolve_path(str(base_path))) if base_path is not None else None
     boilerplate_names = frozenset({"__init__.py", "conftest.py", "setup.py", "__main__.py"})
 
     def _bucket_for(filepath: str) -> str | None:
         if Path(filepath).name in boilerplate_names:
             return None
-        target = Path(filepath).resolve()
+        target = Path(resolve_path(filepath))
         if root is not None:
             try:
                 parts = target.relative_to(root).parts
@@ -129,7 +129,7 @@ def sibling_behavior_context(
         return f"{parts[-2]}/"
 
     def _display_path(filepath: str) -> str:
-        target = Path(filepath).resolve()
+        target = Path(resolve_path(filepath))
         if root is not None:
             try:
                 return target.relative_to(root).as_posix()

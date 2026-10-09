@@ -54,7 +54,7 @@ def _print_fix_file_sample(result: dict, entries: list[dict]) -> None:
     filepath, removed_set = result["file"], set(result.get("removed", []))
     try:
         path = Path(filepath) if Path(filepath).is_absolute() else Path(".") / filepath
-        lines = path.read_text().splitlines()
+        lines = path.read_text(encoding="utf-8").splitlines()
     except (OSError, UnicodeDecodeError) as exc:
         _logger.debug("dry-run sample skipped for %s: %s", filepath, exc)
         return
