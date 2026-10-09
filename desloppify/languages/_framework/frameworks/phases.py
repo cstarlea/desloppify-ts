@@ -5,12 +5,13 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from desloppify.base.discovery.paths import get_project_root
 from desloppify.base.output.terminal import log as _log
 from desloppify.languages._framework.base.types import DetectorPhase, LangRuntimeContract
 from desloppify.languages._framework.tools.phase import make_tool_phase
 from desloppify.state_io import Issue
 
-from .detection import detect_ecosystem_frameworks
+from .detection import detect_ecosystem_frameworks, workspace_framework_detections
 from .registry import ensure_builtin_specs_loaded, list_framework_specs
 from .types import FrameworkSpec, ScannerRule, ToolIntegration
 
@@ -111,21 +112,48 @@ def _run_scanner_rules(
     return issues, potential
 
 
+def _framework_roots(path: Path, lang: LangRuntimeContract, spec: FrameworkSpec) -> list[Path]:
+    """Package roots to run a framework's scanners on: the scan's own package,
+    then each workspace package inside the scan path that uses the framework."""
+    roots: list[Path] = []
+    detection = detect_ecosystem_frameworks(path, lang, spec.ecosystem)
+    if spec.id in detection.present:
+        roots.append(detection.package_root)
+    for package in workspace_framework_detections(path, lang, spec.ecosystem):
+        if spec.id in package.present:
+            roots.append(package.package_root)
+    return roots
+
+
+def _display_root(root: Path) -> str:
+    try:
+        return root.relative_to(get_project_root().resolve()).as_posix() or "."
+    except ValueError:
+        return root.as_posix()
+
+
 def _framework_smells_phase(spec: FrameworkSpec) -> DetectorPhase:
     label = f"{spec.label} framework smells"
 
     def run(path: Path, lang: LangRuntimeContract) -> tuple[list[Issue], dict[str, int]]:
-        detection = detect_ecosystem_frameworks(path, lang, spec.ecosystem)
-        if spec.id not in detection.present:
-            return [], {}
-
-        scan_root = detection.package_root
-        issues, potential = _run_scanner_rules(
-            scan_root,
-            lang,
-            detector=spec.id,
-            rules=spec.scanners,
-        )
+        roots = _framework_roots(path, lang, spec)
+        issues: list[Issue] = []
+        seen: set[str] = set()
+        potential = 0
+        for root in roots:
+            found, scanned = _run_scanner_rules(root, lang, detector=spec.id, rules=spec.scanners)
+            # A package nested in another root was already walked by that root's scanners.
+            if not any(other in root.parents for other in roots):
+                potential += scanned
+            for issue in found:
+                if issue["id"] not in seen:
+                    seen.add(issue["id"])
+                    issues.append(issue)
+        own_root = detect_ecosystem_frameworks(path, lang, spec.ecosystem).package_root
+        if any(root != own_root for root in roots):
+            shown = ", ".join(_display_root(root) for root in roots[:5])
+            more = f" and {len(roots) - 5} more" if len(roots) > 5 else ""
+            _log(f"         {spec.label} packages: {shown}{more}")
         return issues, ({spec.id: potential} if potential > 0 else {})
 
     return DetectorPhase(label, run)
