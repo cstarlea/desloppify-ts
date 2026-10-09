@@ -184,7 +184,9 @@ Every adversarial input in the original review broke one of the line-regex fixer
 ### 2E. Engineering foundation
 
 - **CI, done.** `tests-core` runs on Python 3.11–3.14, every version pyproject declares (3.14 classifier added); `tests-full` runs on 3.11 and 3.14 (E7). A `tests-windows` job runs the core suite on `windows-latest` (CE-16). It found real bugs, now fixed: subprocess output and source files were decoded with the locale encoding (cp1252), which broke the Codex runner's readers and shifted lines and columns in non-ASCII files; coverage discovery left backslash-separated graph keys; tsc/lint coverage notes used native separators. Every pytest run has a per-test `--timeout` (pytest-timeout, `PYTEST_TIMEOUT`, default 120s) (E12).
-- **Lint and types:** enforce the configured ruff `E,F,I,B,UP` and `ruff format --check` (deferred: the whole-codebase fix and format sweep would conflict with every open PR, so it waits for a quiet moment). CI checks only `E9,F63,F7,F82` today, and some F401/F841 debt remains. Extend mypy past its 16 files into `languages/typescript` and `_framework`, ratcheting with per-module ignores. Add import-linter contracts that already hold: `languages` ↛ `app`, `engine` ↛ `app` (E6).
+- **Lint and types:**
+  - done (#117, #118, #119): ruff is enforced. #117 cleared every configured `E,F,I,B,UP` finding, including the F401s in `languages/typescript/__init__.py`. Bugbear findings were reviewed by hand. One was a real bug: `next`'s "Your step(s)" view dropped each step's number, although the same screen says to run `--done-step N`. `Zone(str, Enum)` keeps a justified `noqa: UP042`, because switching to `StrEnum` would change what `str()` and `format()` return. #118 ran `ruff format` across the codebase; that commit is listed in `.git-blame-ignore-revs`. #119 makes `make lint` (the CI `lint` job) run the full `ruff check .` and `ruff format --check .`. The pre-commit hook runs both on staged Python files. Scan output on ky and commerce was byte-identical after each step (E6);
+  - open: extend mypy past its 16 files into `languages/typescript` and `_framework`, ratcheting with per-module ignores.
 - **Dev tooling, done.** A `dev` extra pins pytest, pytest-xdist, pytest-timeout, ruff, mypy, import-linter, PyYAML, build and twine. `make install-dev` and `make install-full` install once. The gate targets (`lint`, `typecheck`, `arch`, `ci-contracts`, `tests*`, `package-smoke`) no longer `pip install`; CI and the publish job run the install target as a separate step. `tests-full` stops early without the `[full]` extra, and `install-hooks` works in a worktree. The release checklist's local-validation step now says to install first, and its description of the publish workflow includes the install step (E11).
 - **Tests:**
   - done (#82): an autouse isolation fixture plus a guard that fails if the repo's `.desloppify/` is touched (E5);
@@ -335,7 +337,7 @@ Status key: **done** (with PR), **partial** (what's left is in §2), **open**, *
 | E3 | high | CI red on main; PyPI publish ungated | done (#1, #4); name → §2F |
 | E4 | medium | Glob-order test fails on tmpfs | done (#1, upstream #617) |
 | E5 | medium | Tests write into the repo's `.desloppify` | done (#82) |
-| E6 | low | Lint 4 codes, mypy 16 files, 1 import contract | partial (§2E: 4 import contracts); ruff and mypy → §2E |
+| E6 | low | Lint 4 codes, mypy 16 files, 1 import contract | partial (§2E: 4 import contracts; full ruff check and format enforced, #117–#119); mypy → §2E |
 | E7 | low | CI only on py3.11 | done (§2E: core on 3.11–3.14, full on 3.11 and 3.14) |
 | E8 | medium | Ruby and R tests never collected | dropped |
 | E9 | medium | getsource and callable tripwire tests | done (§2E) |

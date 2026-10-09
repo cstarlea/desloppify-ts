@@ -188,6 +188,20 @@ def test_makefile_contains_ci_gate_targets() -> None:
     assert expected.issubset(targets)
 
 
+def test_lint_target_enforces_full_ruff_check_and_format() -> None:
+    _prerequisites, recipe = _make_rule(MAKEFILE.read_text(), "lint")
+    commands = [line.strip() for line in recipe.splitlines() if line.strip()]
+    assert commands == ["ruff check .", "ruff format --check ."], (
+        "`make lint` must run the full configured ruff rule set and the format check."
+    )
+
+
+def test_pre_commit_hook_runs_ruff_on_staged_python() -> None:
+    hook = (REPO_ROOT / ".githooks" / "pre-commit").read_text()
+    assert '"$ruff" check' in hook
+    assert '"$ruff" format --check' in hook
+
+
 def test_ci_contracts_target_includes_phase_order_invariant() -> None:
     text = MAKEFILE.read_text()
     assert (

@@ -18,7 +18,7 @@ Triggers:
 
 Required jobs:
 - `lint`:
-  - `make lint`
+  - `make lint` (the full configured `ruff check` plus `ruff format --check`)
 - `typecheck`:
   - `make typecheck`
 - `arch-contracts`:

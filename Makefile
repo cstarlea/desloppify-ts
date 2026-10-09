@@ -44,7 +44,8 @@ install-full: install-hooks
 	$(PIP) install -e ".[full,dev]"
 
 lint:
-	ruff check . --select E9,F63,F7,F82
+	ruff check .
+	ruff format --check .
 
 typecheck:
 	python -m mypy
