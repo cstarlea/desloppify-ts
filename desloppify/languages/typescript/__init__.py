@@ -152,7 +152,7 @@ class TypeScriptConfig(LangConfig):
                 "lint_type_aware_max_files": LangValueSpec(
                     int,
                     DEFAULT_TYPE_AWARE_MAX_FILES,
-                    "Most files to lint when the project's ESLint config uses type"
+                    "Most files to lint when the project's ESLint or XO config uses type"
                     " information (0 = no limit)",
                 ),
             },

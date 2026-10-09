@@ -486,7 +486,7 @@ DETECTORS: dict[str, DetectorMeta] = {
         "lint",
         "Lint",
         "manual_fix",
-        "fix what the project's own linter reports (`detail.fixable` ones with `eslint --fix`)",
+        "fix what the project's own linter reports (`detail.fixable` ones with its `--fix`)",
         tier=2,
         marks_dims_stale=True,
         subjective_dimensions=("convention_outlier",),

@@ -20,13 +20,16 @@ from pathlib import Path
 from desloppify.base.discovery.paths import get_project_root
 from desloppify.base.discovery.source import collect_exclude_dirs, find_ts_and_js_files
 from desloppify.languages._framework.base.types import DetectorCoverageStatus
+from desloppify.languages.typescript.detectors.lint import biome as biome_mod
 from desloppify.languages.typescript.detectors.lint import eslint as eslint_mod
+from desloppify.languages.typescript.detectors.lint import oxlint as oxlint_mod
 from desloppify.languages.typescript.detectors.lint.configs import (
     LinterConfig,
     find_lint_configs,
+    find_local_bin,
     nested_config_dirs,
 )
-from desloppify.languages.typescript.detectors.lint.eslint import LinterRun, LintMessage
+from desloppify.languages.typescript.detectors.lint.runner import LinterRun, LintMessage
 from desloppify.languages.typescript.detectors.lint.rules import classify
 
 DEFAULT_TYPE_AWARE_MAX_FILES = 400
@@ -86,7 +89,7 @@ def _skip_reason(
 ) -> tuple[Path | None, str, str, str]:
     """``(binary, reason, summary, remediation)``; ``reason`` is empty when the linter can run."""
     label, name = config.label, _display(config.path)
-    binary = eslint_mod.eslint_binary(config)
+    binary = find_local_bin(config.linter, config.directory)
     if binary is None:
         if _dependencies_missing(config.directory):
             return None, "deps_not_installed", (
@@ -95,11 +98,13 @@ def _skip_reason(
         return None, "linter_missing", (
             f"{label} is configured ({name}) but not installed in node_modules; lint not run"
         ), f"Install {label} in the project and rerun scan."
+    if config.linter not in ("eslint", "xo"):
+        return binary, "", "", ""
     sample = next((f for f in files if f.suffix in _TS_SUFFIXES), files[0])
     type_aware, failure, error = eslint_mod.uses_type_information(binary, config, sample)
     if failure is not None:
         return binary, failure, f"{label} could not load {name} ({error}); lint not run", (
-            f"Fix the {label} config or its plugins (`{label.lower()} --print-config <file>`) and rerun scan."
+            f"Fix the {label} config or its plugins (`{config.linter} --print-config <file>`) and rerun scan."
         )
     if type_aware and 0 < type_aware_max_files < len(files):
         return binary, "type_aware_too_large", (
@@ -119,6 +124,18 @@ def _ignore_patterns(config_dir: Path, scan_root: Path, nested: list[Path]) -> l
         relative = os.path.relpath(directory, config_dir).replace(os.sep, "/")
         patterns.append(f"{relative}/**")
     return patterns
+
+
+def _run(
+    config: LinterConfig, binary: Path, scan_root: Path, nested: list[Path], files: set[Path]
+) -> LinterRun:
+    targets = [os.path.relpath(scan_root, config.directory).replace(os.sep, "/")]
+    ignores = _ignore_patterns(config.directory, scan_root, nested)
+    if config.linter == "biome":
+        return biome_mod.run_biome(binary, config, targets, files)
+    if config.linter == "oxlint":
+        return oxlint_mod.run_oxlint(binary, config, targets, ignores, files)
+    return eslint_mod.run_eslint(binary, config, targets, ignores)
 
 
 def _group(messages: list[LintMessage]) -> list[dict]:
@@ -186,15 +203,12 @@ def detect_lint_result(
         if reason or binary is None:
             notes.append((reason, summary, remediation))
             continue
-        relative_root = os.path.relpath(scan_root, config_dir).replace(os.sep, "/")
-        run = eslint_mod.run_eslint(
-            binary, config, [relative_root], _ignore_patterns(config_dir, scan_root, nested)
-        )
+        run = _run(config, binary, scan_root, nested, scoped)
         if run.failure is not None:
             notes.append((
                 run.failure,
                 f"{config.label} did not run correctly ({run.error}); lint not run",
-                f"Run `{config.label.lower()}` in {_display(config_dir)} to see the error, fix it and rerun scan.",
+                f"Run `{config.linter}` in {_display(config_dir)} to see the error, fix it and rerun scan.",
             ))
             continue
         runs.append(run)
