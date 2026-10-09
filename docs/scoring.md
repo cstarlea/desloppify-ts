@@ -96,6 +96,18 @@ For smells, security, test_coverage, type_error, nextjs and next_lint (plus some
 
 `test_coverage` works differently. Each scorable file contributes `min(sqrt(LOC), 50)` to the potential, and its issues fail by at most that same weight. That makes a large untested file cost more than a small one. Files shorter than 10 lines aren't scored at all, so a fix that shrinks every remaining file below that leaves Test health with nothing to check, and the dimension drops out of the score.
 
+Without a coverage report, a file's verdict comes from the import graph. A file a test imports is directly tested, and only the quality of those tests can fail it (`shallow_tests`, `snapshot_heavy` and so on). A file reached only through tested modules is `transitive_only`, unless a tested public entry (package.json `exports`, `main` and so on) reaches it. Any other file is `untested_module`, or `untested_critical` with 10 or more importers or high complexity.
+
+When the project has a coverage report, measured line coverage takes over from the graph, file by file. The scan reads `coverage/coverage-final.json` (Istanbul) or `coverage/lcov.info` in the project root and in each package directory, plus a `reportsDirectory` (vitest) or `coverageDirectory` (jest) that a config file names. Run the tests with coverage before scanning; the scan doesn't run them.
+
+- A file at or above 80% of lines covered passes, whatever the graph said.
+- A file below 80% gets `low_coverage` (ID `test_coverage::<file>::low_coverage`). It fails by its √LOC weight times the share of the target it misses, `1 − pct/80`, so 40% costs half the weight and 79% almost nothing. Branch coverage is shown but not scored.
+- A file whose lines all show zero hits never ran under the tests. It gets `untested_module` or `untested_critical`, the same IDs the graph gives.
+- Quality checks on a file's direct tests still apply.
+- A file that changed after the report was written (a newer modification time), or whose report lines run past the end of the file, isn't measured: it keeps the graph's verdict, and the scan log counts it.
+- A file missing from every report also keeps the graph's verdict. Coverage tools leave out both files that never loaded and files excluded on purpose, and the report can't tell the two apart.
+- Several reports are merged by covered line, so per-package reports in a monorepo and a root report from another run add up.
+
 ### Type checks
 
 `type_error` reports what tsc reports, read from the same tsc run as `unused` (`detectors/tsc.py` runs tsc once per scan with `--noUnusedLocals --noUnusedParameters --listFiles`; those flags only add the unused diagnostics, which `type_error` leaves out). Its potential is the number of files tsc checked in the scan path, from `--listFiles`. One issue covers one error code on one line, with ID `type_error::<file>::TS<code>::<line>`.

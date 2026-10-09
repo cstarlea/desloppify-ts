@@ -177,7 +177,7 @@ Every adversarial input in the original review broke one of the line-regex fixer
 | 3.8 | Backend security: unauthenticated server actions and route handlers, raw-SQL APIs with interpolation, `child_process` with template literals | M | DT-15 |
 | 3.9 | Class-level god rules (methods, constructor-injected deps, decorators) | M | DT-17 |
 | 3.10 | TS review overrides for type_safety, dependency_health and test_strategy; split the review guidance into React and Node sections | S | DT-16 |
-| 3.11 | Ingest real coverage (`coverage-final.json`, `lcov.info`) when present | M | DT-12 |
+| 3.11 | **Done (#83).** Test health reads Istanbul `coverage-final.json` and `lcov.info` reports from `coverage/` in the root and in each package, plus a vitest `reportsDirectory` or jest `coverageDirectory`. Measured line coverage replaces the import-graph verdict file by file: 80% of lines passes, less is `low_coverage` weighted by the shortfall, no line run keeps `untested_*`. Files changed after the report, and files missing from it, keep the graph verdict; per-package reports merge by line. Istanbul HTML report assets are no longer scanned as source | M | DT-12 |
 | 3.12 | Detector and domain **disable** in config, which removes them from scoring instead of suppressing their issues | M | CE-15 |
 
 ### 2E. Engineering foundation
@@ -298,7 +298,7 @@ Status key: **done** (with PR), **partial** (what's left is in §2), **open**, *
 | DT-9 | medium | Non-null, block `@ts-ignore`, double-cast gaps | done (#54) |
 | DT-10 | medium | Author-specific heuristics | open → 3.5 |
 | DT-11 | medium | test-d, bench, e2e, config, generated not zoned | done (#1, 2.12) |
-| DT-12 | high | Jest-only assertions; inverted test-health; cross-package basename mapping | partial (#1, #8, #45, #48, #51, #56) → 3.11 |
+| DT-12 | high | Jest-only assertions; inverted test-health; cross-package basename mapping | done (#1, #8, #45, #48, #51, #56, #83) |
 | DT-13 | medium | tsconfig strictness never read | fixed (3.3, `tsconfig_health`) |
 | DT-14 | high | No framework support beyond Next.js (React Router entries only); SFCs unanalysed | open → 3.6, 3.7 |
 | DT-15 | medium | No server-action auth, raw-SQL or child_process checks | open → 3.8 |

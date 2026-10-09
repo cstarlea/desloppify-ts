@@ -24,7 +24,7 @@ from .heuristics import _has_inline_tests, _public_entry_files
 from .issues import (
     _generate_issues,
 )
-
+from .reports import MeasuredCoverage, load_measured_coverage
 
 
 @dataclass
@@ -34,6 +34,7 @@ class CoverageResult:
     entries: list[dict] = field(default_factory=list)
     potential: int = 0
     scored_files: int = 0
+    measured: MeasuredCoverage = field(default_factory=MeasuredCoverage)
 
 
 def detect_test_coverage(
@@ -55,6 +56,7 @@ def run_test_coverage(
     lang_name: str,
     extra_test_files: set[str] | None = None,
     complexity_map: dict[str, float] | None = None,
+    measured: MeasuredCoverage | None = None,
 ) -> CoverageResult:
     graph = _normalize_graph_paths(graph)
 
@@ -66,6 +68,8 @@ def run_test_coverage(
     )
     if not scorable:
         return CoverageResult()
+    if measured is None:
+        measured = load_measured_coverage(scorable)
 
     inline_tested = {
         filepath
@@ -73,9 +77,9 @@ def run_test_coverage(
         if filepath in production_files and _has_inline_tests(filepath, lang_name)
     }
 
-    if not test_files and not inline_tested:
+    if not test_files and not inline_tested and not measured.files:
         entries = _no_tests_issues(scorable, graph, lang_name, complexity_map)
-        return CoverageResult(entries, potential, len(scorable))
+        return CoverageResult(entries, potential, len(scorable), measured)
 
     mapping_test_files = set(test_files)
     if test_files:
@@ -105,12 +109,13 @@ def run_test_coverage(
     test_quality = analyze_test_quality(test_files, lang_name)
 
     entries = _generate_issues(
-        scorable - covered_via_entry,
+        scorable - (covered_via_entry - set(measured.files)),
         directly_tested,
         transitively_tested,
         test_quality,
         graph,
         lang_name,
         complexity_map=complexity_map,
+        measured=measured.files,
     )
-    return CoverageResult(entries, potential, len(scorable))
+    return CoverageResult(entries, potential, len(scorable), measured)

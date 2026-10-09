@@ -602,6 +602,15 @@ def phase_test_coverage(
     _log_phase_summary(
         "test coverage", results, coverage.scored_files, f"production files, √LOC weight {potential}"
     )
+    measured = coverage.measured
+    if measured.reports or measured.stale:
+        reports = ", ".join(measured.reports) or "none usable"
+        stale = (
+            f"; {len(measured.stale)} changed since the report ran (import graph used)"
+            if measured.stale
+            else ""
+        )
+        log(f"         coverage report ({reports}): {len(measured.files)} files measured{stale}")
 
     return results, {"test_coverage": potential}
 
