@@ -393,10 +393,11 @@ def test_entries_from_exports_bin_and_scripts(tmp_path):
             "seed": "node --import tsx ./src/seed.ts --force",
             "lint": "eslint --cache src",
             "test": "vitest run test/",
+            "migrate": "typeorm --dataSource=src/data-source.ts --env-file=.env migration:run",
         },
     )
     _write(tmp_path, "tsconfig.json", '{ "compilerOptions": { "rootDir": "src", "outDir": "dist" } }')
-    for name in ("index", "cli", "server", "seed"):
+    for name in ("index", "cli", "server", "seed", "data-source"):
         _write(tmp_path, f"src/{name}.ts")
     _write(tmp_path, "test/index.ts")
     entries = package_entries(_only_package(tmp_path), [])
@@ -405,6 +406,7 @@ def test_entries_from_exports_bin_and_scripts(tmp_path):
         _key(tmp_path, "src/cli.ts"),
         _key(tmp_path, "src/server.ts"),
         _key(tmp_path, "src/seed.ts"),
+        _key(tmp_path, "src/data-source.ts"),
     }
 
 

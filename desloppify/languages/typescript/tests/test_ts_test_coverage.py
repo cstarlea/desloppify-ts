@@ -197,6 +197,35 @@ def test_runtime_statements_are_testable_logic(content):
     assert has_testable_logic("src/mod.ts", content) is True
 
 
+@needs_treesitter
+@pytest.mark.parametrize(
+    "content",
+    [
+        "@Module({ imports: [A], providers: [B] })\nexport class AppModule {}\n",
+        "export class CreateUserDto {\n  @IsString()\n  name: string;\n  @Type(() => Number)\n  age?: number;\n  role = 'user';\n}\n",
+        "@Entity()\nexport class User extends Base {\n  @Column() email!: string;\n  @Type(() => [Role]) roles: Role[];\n}\n",
+        "export class Session {\n  id: string;\n  user: User;\n}\n",
+    ],
+)
+def test_shape_only_classes_have_no_testable_logic(content):
+    assert has_testable_logic("src/shape.ts", content) is False
+
+
+@needs_treesitter
+@pytest.mark.parametrize(
+    "content",
+    [
+        "export class S {\n  get(): number { return 1; }\n}\n",
+        "export class S {\n  constructor(private readonly a: A) {}\n}\n",
+        "export class S {\n  cache = new Map();\n}\n",
+        "export class D {\n  @Transform(({ value }) => value.trim())\n  name: string;\n}\n",
+        "@Module({ providers: [{ provide: X, useFactory: () => new X() }] })\nexport class M {}\n",
+    ],
+)
+def test_classes_with_logic_are_testable(content):
+    assert has_testable_logic("src/logic.ts", content) is True
+
+
 def test_line_heuristic_without_treesitter(monkeypatch):
     monkeypatch.setattr(ts_coverage_mod, "parse_text", lambda *_args: None)
     assert has_testable_logic("src/a.ts", "export type A = { a: 1 };\n") is False

@@ -214,4 +214,13 @@ def detect_ecosystem_frameworks(
     return result
 
 
-__all__ = ["detect_ecosystem_frameworks"]
+def injected_class_decorators(scan_path: Path, lang: LangRuntimeContract | None) -> frozenset[str]:
+    """DI class decorators of the Node frameworks present for *scan_path*."""
+    detection = detect_ecosystem_frameworks(scan_path, lang, "node")
+    specs = list_framework_specs(ecosystem="node")
+    return frozenset().union(
+        *(specs[framework_id].injected_class_decorators for framework_id in detection.present)
+    )
+
+
+__all__ = ["detect_ecosystem_frameworks", "injected_class_decorators"]

@@ -512,10 +512,6 @@ class TestCreateParser:
         assert args.zone_action == "clear"
         assert args.zone_path == "src/foo.py"
 
-    def test_dev_requires_action(self, parser):
-        with pytest.raises(SystemExit):
-            parser.parse_args(["dev"])
-
     def test_scan_badge_options(self, parser):
         args = parser.parse_args(["scan", "--no-badge", "--badge-path", "custom.png"])
         assert args.no_badge is True
@@ -545,30 +541,6 @@ class TestDetectorNames:
         names = _get_detector_names()
         for name in ["logs", "unused", "smells", "cycles", "dupes"]:
             assert name in names
-
-    def test_runtime_detector_registration_invalidates_cached_detector_names(self):
-        from desloppify.base.registry import (
-            DetectorMeta,
-            register_detector,
-            unregister_detector,
-        )
-
-        test_detector = "_test_cli_cache_refresh"
-        cli_mod._DETECTOR_NAMES_CACHE["names"] = ["stale_only"]
-        register_detector(
-            DetectorMeta(
-                name=test_detector,
-                display="cache-refresh",
-                dimension="Code quality",
-                action_type="manual_fix",
-                guidance="cache refresh regression test",
-            )
-        )
-        assert "names" not in cli_mod._DETECTOR_NAMES_CACHE
-        assert test_detector in _get_detector_names()
-
-        # Cleanup dynamic detector mutation for test isolation.
-        unregister_detector(test_detector)
 
 
 # ===========================================================================

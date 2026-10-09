@@ -136,8 +136,48 @@ def has_testable_logic(filepath: str, content: str) -> bool:
     return _has_testable_logic_lines(content)
 
 
+_CLASS_DECLARATIONS = frozenset({"class_declaration", "abstract_class_declaration"})
+_LITERALS = frozenset(
+    {"string", "number", "true", "false", "null", "undefined", "regex", "template_string"}
+)
+
+
+_FUNCTIONS = frozenset({"arrow_function", "function_expression", "function", "generator_function"})
+# ``@Type(() => Number)``: a thunk naming a type, not logic.
+_THUNK_BODIES = frozenset({"identifier", "member_expression", "nested_identifier", "array"})
+
+
+def _is_shape_class(statement, node) -> bool:
+    """A class that only declares fields: a DTO, an entity, an empty decorated module.
+
+    Its decorators register metadata and its fields hold no logic, so there
+    is nothing in it to test. A function in a decorator (a transform, a
+    factory) is logic.
+    """
+    if node.type not in _CLASS_DECLARATIONS:
+        return False
+    body = node.child_by_field_name("body")
+    if body is None:
+        return False
+    for member in body.named_children:
+        if member.type in ("comment", "decorator", "index_signature"):
+            continue
+        if member.type != "public_field_definition":
+            return False
+        value = member.child_by_field_name("value")
+        if value is not None and value.type not in _LITERALS:
+            return False
+    for function in descendants(statement, _FUNCTIONS):
+        thunk = function.child_by_field_name("body")
+        if function.type != "arrow_function" or thunk is None or thunk.type not in _THUNK_BODIES:
+            return False
+    return True
+
+
 def _is_runtime_statement(parsed: ParsedSource, node) -> bool:
     if node.type in _TYPE_ONLY_STATEMENTS or directive(parsed, node) is not None:
+        return False
+    if _is_shape_class(node, node):
         return False
     if node.type != "export_statement":
         return True
@@ -145,7 +185,7 @@ def _is_runtime_statement(parsed: ParsedSource, node) -> bool:
         return False  # re-export
     declaration = node.child_by_field_name("declaration")
     if declaration is not None:
-        return declaration.type not in _TYPE_ONLY_STATEMENTS
+        return declaration.type not in _TYPE_ONLY_STATEMENTS and not _is_shape_class(node, declaration)
     # ``export { a }`` forwards a binding; ``export default <expr>`` / ``export =`` run code.
     return node.child_by_field_name("value") is not None or not any(
         child.type == "export_clause" for child in node.named_children

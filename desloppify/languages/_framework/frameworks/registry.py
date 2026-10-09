@@ -37,13 +37,29 @@ def _register_builtin_specs() -> None:
     """Register built-in framework specs shipped with the repo."""
     if FRAMEWORK_SPECS:
         return
+    from .specs.angular import ANGULAR_SPEC
     from .specs.astro import ASTRO_SPEC
+    from .specs.nestjs import NESTJS_SPEC
     from .specs.nextjs import NEXTJS_SPEC
     from .specs.nuxt import NUXT_SPEC
+    from .specs.react_router import REACT_ROUTER_SPEC
+    from .specs.servers import EXPRESS_SPEC, FASTIFY_SPEC, HONO_SPEC
     from .specs.sveltekit import SVELTEKIT_SPEC
     from .specs.vue import VUE_SPEC
 
-    for spec in (NEXTJS_SPEC, NUXT_SPEC, VUE_SPEC, SVELTEKIT_SPEC, ASTRO_SPEC):
+    for spec in (
+        NEXTJS_SPEC,
+        NUXT_SPEC,
+        VUE_SPEC,
+        SVELTEKIT_SPEC,
+        ASTRO_SPEC,
+        REACT_ROUTER_SPEC,
+        NESTJS_SPEC,
+        EXPRESS_SPEC,
+        HONO_SPEC,
+        FASTIFY_SPEC,
+        ANGULAR_SPEC,
+    ):
         register_framework_spec(spec)
 
 

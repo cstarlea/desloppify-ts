@@ -16,7 +16,9 @@ from desloppify.engine.detectors import single_use as single_use_detector_mod
 from desloppify.engine._state.filtering import make_issue
 from desloppify.engine.policy.zones import adjust_potential, filter_entries
 from desloppify.languages._framework.base.types import LangRuntimeContract
+from desloppify.languages._framework.frameworks.detection import injected_class_decorators
 from desloppify.languages._framework.frameworks.registry import framework_entry_conventions
+from desloppify.languages._framework.node.js_classes import iter_classes
 from desloppify.languages._framework.issue_factories import (
     make_cycle_issues,
     make_facade_issues,
@@ -42,10 +44,24 @@ def detect_single_use(
         path, graph, barrel_names=lang.barrel_names
     )
     single_entries = filter_entries(lang.zone_map, single_entries, "single_use")
+    decorators = injected_class_decorators(path, lang)
+    if decorators:
+        single_entries = [
+            e for e in single_entries if not _declares_injected_class(e["file"], decorators)
+        ]
     issues = make_single_use_issues(
         single_entries, lang.get_area, skip_dir_names={"commands"}, stderr_fn=log
     )
     return issues, single_entries, single_candidates
+
+
+def _declares_injected_class(filepath: str, decorators: frozenset[str]) -> bool:
+    """Whether the file declares a class the framework's DI container wires."""
+    try:
+        text = Path(resolve_path(filepath)).read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return False
+    return any(cls.has_decorator(decorators) for cls in iter_classes(text))
 
 
 def detect_coupling_violations(
