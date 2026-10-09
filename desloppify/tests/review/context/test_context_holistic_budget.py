@@ -353,72 +353,6 @@ def test_facade_module_not_flagged_with_few_names():
     assert result is None
 
 
-# ── TypedDict violations ──────────────────────────────────
-
-
-def test_typed_dict_get_violation_detected():
-    """TypedDict with Required fields accessed via .get() is flagged with line and field."""
-    decl_content = (
-        "from typing import TypedDict\n"
-        "\n"
-        "class Config(TypedDict):\n"
-        "    name: str\n"
-        "    value: int\n"
-    )
-    usage_content = (
-        "from .types import Config\n"
-        "\n"
-        "def process(cfg: Config) -> str:\n"
-        "    return cfg.get('name', '')\n"
-    )
-    defs: dict = {}
-    budget_mod._collect_typed_dict_defs(_parse(decl_content), defs)
-    assert "Config" in defs
-    parsed_trees = {
-        "/fake/types.py": _parse(decl_content),
-        "/fake/usage.py": _parse(usage_content),
-    }
-    violations = budget_mod._find_typed_dict_usage_violations(parsed_trees, defs)
-    assert len(violations) == 1
-    v = violations[0]
-    assert v["typed_dict_name"] == "Config"
-    assert v["violation_type"] == "get"
-    assert v["count"] == 1
-    assert v["line"] == 4
-    assert v["field"] == "name"
-
-
-def test_typed_dict_no_violation_without_annotation():
-    """Variables not annotated as TypedDict don't trigger violations."""
-    decl_content = (
-        "from typing import TypedDict\n"
-        "\n"
-        "class Config(TypedDict):\n"
-        "    name: str\n"
-    )
-    usage_content = (
-        "def process(cfg) -> str:\n"  # no annotation
-        "    return cfg.get('name', '')\n"
-    )
-    defs: dict = {}
-    budget_mod._collect_typed_dict_defs(_parse(decl_content), defs)
-    parsed_trees = {
-        "/fake/types.py": _parse(decl_content),
-        "/fake/usage.py": _parse(usage_content),
-    }
-    violations = budget_mod._find_typed_dict_usage_violations(parsed_trees, defs)
-    assert len(violations) == 0
-
-
-def test_typed_dict_no_violations_returns_empty():
-    """No TypedDict classes means no violations."""
-    parsed_trees = {
-        "/fake/mod.py": _parse("def foo():\n    return {}.get('x')\n"),
-    }
-    violations = budget_mod._find_typed_dict_usage_violations(parsed_trees, {})
-    assert violations == []
-
-
 # ── Economy sub-axes in _abstractions_context ─────────────
 
 
@@ -440,7 +374,7 @@ def test_abstractions_context_economy_summary_keys():
     summary = context["summary"]
     assert summary["delegation_heavy_class_count"] == 0
     assert summary["facade_module_count"] == 0
-    assert summary["typed_dict_violation_count"] == 0
+    assert "typed_dict_violation_count" not in summary
 
 
 def test_delegation_density_decreases_with_violations(tmp_path):

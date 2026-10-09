@@ -14,8 +14,6 @@ def _compute_sub_axes(
     one_impl_interfaces: list,
     delegation_classes: list,
     facade_modules: list,
-    typed_dict_violation_files: set,
-    total_typed_dict_violations: int,
     dict_any_count: int = 0,
     enum_bypass_count: int = 0,
 ) -> dict[str, float]:
@@ -49,8 +47,6 @@ def _compute_sub_axes(
     )
     type_discipline = _score_clamped(
         100
-        - (len(typed_dict_violation_files) * 6)
-        - (total_typed_dict_violations * 1.5)
         - (dict_any_count * 1.0)
         - (enum_bypass_count * 2.0)
     )
@@ -119,14 +115,11 @@ def _build_definition_directness_context(
 
 def _build_type_discipline_context(
     *,
-    typed_dict_violations: list[dict],
     dict_any_annotations: list[dict] | None = None,
     enum_bypass_patterns: list[dict] | None = None,
     type_strategy_census: dict[str, list[dict]] | None = None,
 ) -> dict[str, object]:
     context: dict[str, object] = {}
-    if typed_dict_violations:
-        context["typed_dict_violations"] = typed_dict_violations
     if dict_any_annotations:
         context["dict_any_annotations"] = dict_any_annotations
     if enum_bypass_patterns:
@@ -151,8 +144,6 @@ def _assemble_context(
     wide_param_bags: list,
     delegation_classes: list,
     facade_modules: list,
-    typed_dict_violations: list,
-    total_typed_dict_violations: int,
     sub_axes: dict[str, float],
     dict_any_annotations: list | None = None,
     enum_bypass_patterns: list | None = None,
@@ -171,7 +162,6 @@ def _assemble_context(
             "wide_param_bag_count": len(wide_param_bags),
             "delegation_heavy_class_count": len(delegation_classes),
             "facade_module_count": len(facade_modules),
-            "typed_dict_violation_count": total_typed_dict_violations,
             "dict_any_annotation_count": len(dict_any_annotations or []),
             "enum_bypass_count": len(enum_bypass_patterns or []),
         },
@@ -201,7 +191,6 @@ def _assemble_context(
     )
     context.update(
         _build_type_discipline_context(
-            typed_dict_violations=typed_dict_violations,
             dict_any_annotations=dict_any_annotations,
             enum_bypass_patterns=enum_bypass_patterns,
             type_strategy_census=type_strategy_census,

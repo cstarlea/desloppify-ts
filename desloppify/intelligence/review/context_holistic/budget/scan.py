@@ -17,11 +17,7 @@ from .patterns_enums import (
     _collect_enum_defs,
     _find_enum_bypass,
 )
-from .patterns_types import (
-    _collect_typed_dict_defs,
-    _find_dict_any_annotations,
-    _find_typed_dict_usage_violations,
-)
+from .patterns_types import _find_dict_any_annotations
 from .patterns_wrappers import (
     _find_delegation_heavy_classes,
     _find_facade_modules,
@@ -80,7 +76,6 @@ class _AbstractionsCollector:
     wide_param_bags: list[dict[str, object]] = dataclasses.field(default_factory=list)
     delegation_classes: list[dict] = dataclasses.field(default_factory=list)
     facade_modules: list[dict] = dataclasses.field(default_factory=list)
-    typed_dict_defs: dict[str, set[str]] = dataclasses.field(default_factory=dict)
     parsed_trees: dict[str, ast.Module] = dataclasses.field(default_factory=dict)
     total_function_signatures: int = 0
     total_wrappers: int = 0
@@ -159,7 +154,6 @@ def _scan_file(
         facade_result = _find_facade_modules(tree, loc=loc)
         if facade_result is not None:
             col.facade_modules.append({"file": rpath, **facade_result})
-        _collect_typed_dict_defs(tree, col.typed_dict_defs)
     else:
         py_wrappers = []
 
@@ -190,15 +184,7 @@ def _derive_post_scan_results(col: _AbstractionsCollector) -> dict:
             }
         )
 
-    typed_dict_violations = _find_typed_dict_usage_violations(
-        col.parsed_trees,
-        col.typed_dict_defs,
-    )[:20]
-    total_typed_dict_violations = sum(v.get("count", 1) for v in typed_dict_violations)
-    typed_dict_violation_files = {v["file"] for v in typed_dict_violations}
-
-    all_td_names = set(col.typed_dict_defs.keys())
-    dict_any_annotations = _find_dict_any_annotations(col.parsed_trees, all_td_names)[:30]
+    dict_any_annotations = _find_dict_any_annotations(col.parsed_trees)[:30]
 
     enum_defs = _collect_enum_defs(col.parsed_trees)
     enum_bypass_patterns = _find_enum_bypass(col.parsed_trees, enum_defs)[:30]
@@ -207,9 +193,6 @@ def _derive_post_scan_results(col: _AbstractionsCollector) -> dict:
 
     return {
         "one_impl_interfaces": one_impl_interfaces,
-        "typed_dict_violations": typed_dict_violations,
-        "total_typed_dict_violations": total_typed_dict_violations,
-        "typed_dict_violation_files": typed_dict_violation_files,
         "dict_any_annotations": dict_any_annotations,
         "enum_bypass_patterns": enum_bypass_patterns,
         "type_strategy_census": type_strategy_census,
@@ -254,8 +237,6 @@ def _abstractions_context(file_contents: dict[str, str]) -> dict:
         one_impl_interfaces=derived["one_impl_interfaces"],
         delegation_classes=col.delegation_classes,
         facade_modules=col.facade_modules,
-        typed_dict_violation_files=derived["typed_dict_violation_files"],
-        total_typed_dict_violations=derived["total_typed_dict_violations"],
         dict_any_count=len(derived["dict_any_annotations"]),
         enum_bypass_count=len(derived["enum_bypass_patterns"]),
     )
@@ -271,8 +252,6 @@ def _abstractions_context(file_contents: dict[str, str]) -> dict:
         wide_param_bags=col.wide_param_bags,
         delegation_classes=col.delegation_classes,
         facade_modules=col.facade_modules,
-        typed_dict_violations=derived["typed_dict_violations"],
-        total_typed_dict_violations=derived["total_typed_dict_violations"],
         sub_axes=sub_axes,
         dict_any_annotations=derived["dict_any_annotations"],
         enum_bypass_patterns=derived["enum_bypass_patterns"],

@@ -162,7 +162,7 @@ Return machine-readable JSON for review imports. For `--external-submit`, includ
       "dimension": "<dimension_from_query>",
       "identifier": "short_id",
       "summary": "one-line defect summary",
-      "related_files": ["relative/path/to/file.py"],
+      "related_files": ["relative/path/to/file.ts"],
       "evidence": ["specific code observation"],
       "suggestion": "concrete fix recommendation",
       "confidence": "high|medium|low"

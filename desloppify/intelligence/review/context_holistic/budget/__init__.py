@@ -18,10 +18,6 @@ from .analysis import (
     _extract_type_names,
     _score_clamped,
 )
-from .patterns_types import (
-    _collect_typed_dict_defs,
-    _find_typed_dict_usage_violations,
-)
 from .patterns_wrappers import (
     _find_delegation_heavy_classes,
     _find_facade_modules,
@@ -48,12 +44,10 @@ __all__ = [
     "_build_type_discipline_context",
     "_codebase_stats",
     "_compute_sub_axes",
-    "_collect_typed_dict_defs",
     "_count_signature_params",
     "_extract_type_names",
     "_find_delegation_heavy_classes",
     "_find_facade_modules",
     "_find_python_passthrough_wrappers",
-    "_find_typed_dict_usage_violations",
     "_score_clamped",
 ]

@@ -37,8 +37,6 @@ def test_budget_abstractions_compute_sub_axes_callable() -> None:
         one_impl_interfaces=[],
         delegation_classes=[],
         facade_modules=[],
-        typed_dict_violation_files=set(),
-        total_typed_dict_violations=0,
     )
     assert set(sub_axes) == {
         "abstraction_leverage",
