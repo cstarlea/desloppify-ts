@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
 from desloppify.base import text_utils as _text_utils
 from desloppify.base.runtime_state import RuntimeContext, resolve_runtime_context

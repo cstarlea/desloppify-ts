@@ -33,7 +33,7 @@ non-``execute`` display phases back to the persisted ``"plan"`` mode.
 
 from __future__ import annotations
 
-from typing import Iterable
+from collections.abc import Iterable
 
 from desloppify.engine._plan.constants import SYNTHETIC_PREFIXES
 from desloppify.engine._plan.schema import PlanModel, ensure_plan_defaults

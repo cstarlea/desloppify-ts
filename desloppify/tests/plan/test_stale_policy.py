@@ -217,7 +217,7 @@ class TestReviewIssueSnapshotHash:
 
     def test_hash_matches_manual_computation(self):
         state = _state_with_review_issues("r1", "r2")
-        expected = hashlib.sha256("r1|r2".encode()).hexdigest()[:16]
+        expected = hashlib.sha256(b"r1|r2").hexdigest()[:16]
         assert review_issue_snapshot_hash(state) == expected
 
     def test_mixed_detectors_only_hashes_review_and_concerns(self):

@@ -26,7 +26,7 @@ from desloppify.engine.policy.zones_data import (
 logger = logging.getLogger(__name__)
 
 
-class Zone(str, Enum):
+class Zone(str, Enum):  # noqa: UP042 - StrEnum changes str()/format() output; not a lint-only change
     """File intent zone — determines scoring and detection policy."""
 
     PRODUCTION = "production"

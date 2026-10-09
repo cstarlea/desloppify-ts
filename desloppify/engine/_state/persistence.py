@@ -411,7 +411,7 @@ def save_state(
     serialized_state = {
         key: value for key, value in state.items() if key != "issues"
     }
-    serialized_state["work_items"] = dict((state.get("work_items") or state.get("issues", {})))
+    serialized_state["work_items"] = dict(state.get("work_items") or state.get("issues", {}))
     content = json.dumps(serialized_state, indent=2, default=json_default) + "\n"
 
     rotation_key = _rotation_key(state_path)
