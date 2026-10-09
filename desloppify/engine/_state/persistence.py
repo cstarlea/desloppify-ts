@@ -14,6 +14,8 @@ from desloppify.base.exception_sets import (
     CORRUPT_JSON_FILE_EXCEPTIONS,
     PLAN_LOAD_EXCEPTIONS,
 )
+from desloppify.engine._state import _recompute_stats
+
 __all__ = [
     "STATE_LOCK_RANK",
     "hold_state_lock",
@@ -55,8 +57,6 @@ logger = logging.getLogger(__name__)
 _STATE_FILE_SENTINEL = object()
 STATE_FILE = _STATE_FILE_SENTINEL
 
-
-from desloppify.engine._state import _recompute_stats
 
 # Lock order: state (10) before plan (20) before progression (30).
 STATE_LOCK_RANK = 10

@@ -35,7 +35,9 @@ def test_coerce_batch_execution_options_normalizes_invalid_types() -> None:
 
 
 def test_coerce_batch_execution_options_keeps_valid_values() -> None:
-    custom_clock = lambda: 42.0
+    def custom_clock() -> float:
+        return 42.0
+
     options = BatchExecutionOptions(
         run_parallel=False,
         max_parallel_workers=4,

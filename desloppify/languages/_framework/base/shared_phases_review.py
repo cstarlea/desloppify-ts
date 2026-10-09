@@ -12,8 +12,6 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-logger = logging.getLogger(__name__)
-
 from desloppify.base.discovery.file_paths import rel
 from desloppify.base.output.terminal import log
 from desloppify.engine.detectors.dupes import detect_duplicates
@@ -41,6 +39,8 @@ from .shared_phases_helpers import (
     _log_phase_summary,
     _record_detector_coverage,
 )
+
+logger = logging.getLogger(__name__)
 
 # Compatibility export for language phase modules that still import the raw
 # security detector symbol from this module.

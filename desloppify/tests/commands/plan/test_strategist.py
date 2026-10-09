@@ -5,7 +5,6 @@ from __future__ import annotations
 import argparse
 from types import SimpleNamespace
 
-import pytest
 
 import desloppify.app.commands.plan.triage.stages.strategize as strategize_mod
 from desloppify.app.commands.plan.triage.workflow import run_triage_workflow

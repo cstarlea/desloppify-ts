@@ -105,7 +105,7 @@ def _print_cluster_members(args: argparse.Namespace, issue_ids: list[str], *, ha
         lines.append(current)
         for line in lines:
             print(colorize(line, "dim"))
-        print(colorize(f"  Full detail: desloppify show <member-id> --no-budget", "dim"))
+        print(colorize("  Full detail: desloppify show <member-id> --no-budget", "dim"))
         return
 
     issues = _load_issues_best_effort(args)

@@ -42,12 +42,12 @@ from desloppify.engine._state.progression import (
     maybe_append_entered_planning,
     maybe_append_execution_drain,
 )
-
-_logger = logging.getLogger(__name__)
 from desloppify.engine.plan_triage import (
     triage_manual_stage_command,
     triage_runner_commands,
 )
+
+_logger = logging.getLogger(__name__)
 
 WORKFLOW_GATE_IDS = frozenset({WORKFLOW_SCORE_CHECKPOINT_ID, WORKFLOW_CREATE_PLAN_ID})
 _WORKFLOW_PLAN_JUST_RESOLVED_KEY = "workflow_plan_just_resolved"

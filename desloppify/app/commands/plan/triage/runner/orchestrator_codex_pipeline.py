@@ -50,20 +50,18 @@ from .orchestrator_codex_pipeline_execution import (
 from .orchestrator_common import STAGES, run_stamp
 from .stage_prompts import build_stage_prompt
 from ..stages.helpers import value_check_targets
-_STAGE_HANDLERS: dict[str, StageHandler] = DEFAULT_STAGE_HANDLERS
 
 # Module-level override for the per-stage runner. The default (``None``)
 # means "use the codex stage runner". The wrapper helpers in
 # :mod:`rovodev_pipeline` swap this for the rovodev stage runner during
 # the lifetime of one ``run_codex_pipeline`` call so that the existing
 # pipeline can drive any subprocess backend without further refactoring.
-from .stage_runner_override import (  # re-exported for backwards compat
+from .stage_runner_override import (
     active_runner_name,
-    active_stage_runner,
-    clear_stage_runner_override,
-    set_stage_runner_override,
     stage_runner_override,
 )
+
+_STAGE_HANDLERS: dict[str, StageHandler] = DEFAULT_STAGE_HANDLERS
 _analyze_reflect_issue_accounting = analyze_reflect_issue_accounting
 _validate_reflect_issue_accounting = validate_reflect_accounting
 

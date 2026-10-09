@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
 
 from desloppify.base.registry import DETECTORS
 from desloppify.engine._plan.cluster_semantics import (
@@ -15,7 +14,6 @@ from desloppify.engine._plan.cluster_semantics import (
     cluster_is_active,
     infer_cluster_execution_policy,
     infer_cluster_execution_status,
-    normalize_cluster_semantics,
 )
 from desloppify.engine._plan.auto_cluster_sync_issue import (
     _auto_cluster_execution_status,
