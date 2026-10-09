@@ -33,7 +33,7 @@ def detect_security_issues(
     entries: list[dict] = []
     scanned = 0
 
-    resolved_scan_root = scan_root.resolve() if isinstance(scan_root, Path) else Path.cwd()
+    resolved_scan_root = scan_root.resolve() if isinstance(scan_root, Path) else None
 
     for filepath in files:
         if not _should_scan_file(filepath, zone_map):

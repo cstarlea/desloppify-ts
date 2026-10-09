@@ -221,3 +221,45 @@ def test_setup_parser_accepts_rovodev_choice() -> None:
     parser = create_parser()
     args = parser.parse_args(["setup", "--interface", "rovodev"])
     assert args.interface == "rovodev"
+
+
+def _fail_if_called(*_args) -> None:
+    raise AssertionError("--grammars must not install skill files")
+
+
+def test_setup_grammars_reports_each_grammar(monkeypatch, capsys) -> None:
+    args = create_parser().parse_args(["setup", "--grammars"])
+    assert args.grammars is True
+    monkeypatch.setattr(
+        setup_cmd_mod,
+        "prepare_grammars",
+        lambda: ({"tsx": None, "typescript": None}, ["typescript"]),
+    )
+    monkeypatch.setattr(setup_cmd_mod, "_run_global_setup", _fail_if_called)
+
+    setup_cmd_mod.cmd_setup(args)
+
+    out = capsys.readouterr().out
+    assert "tsx: ok\n" in out
+    assert "typescript: ok (downloaded)" in out
+    assert "grammars ready" in out
+
+
+def test_setup_grammars_fails_when_a_grammar_cannot_load(monkeypatch, capsys) -> None:
+    monkeypatch.setattr(
+        setup_cmd_mod,
+        "prepare_grammars",
+        lambda: ({"tsx": "DownloadError: Network is unreachable", "typescript": None}, ["tsx"]),
+    )
+    with pytest.raises(CommandError, match="failed to load: tsx"):
+        setup_cmd_mod.cmd_setup(argparse.Namespace(interface=None, grammars=True))
+    assert "tsx: failed — DownloadError: Network is unreachable" in capsys.readouterr().out
+
+
+def test_setup_grammars_without_language_pack(monkeypatch) -> None:
+    def missing():
+        raise ImportError("No module named 'tree_sitter_language_pack'")
+
+    monkeypatch.setattr(setup_cmd_mod, "prepare_grammars", missing)
+    with pytest.raises(CommandError, match=r"desloppify-ts\[treesitter\]"):
+        setup_cmd_mod.cmd_setup(argparse.Namespace(interface=None, grammars=True))

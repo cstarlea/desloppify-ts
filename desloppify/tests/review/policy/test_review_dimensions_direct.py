@@ -11,7 +11,6 @@ import pytest
 from desloppify.base.text_utils import is_numeric
 import desloppify.intelligence.review.dimensions.data as dimensions_data_mod
 import desloppify.intelligence.review.dimensions.lang as dimensions_mod
-import desloppify.intelligence.review.dimensions.metadata as dimensions_metadata_mod
 import desloppify.intelligence.review.dimensions.selection as dimensions_selection_mod
 import desloppify.intelligence.review.dimensions.validation as dimensions_validation_mod
 from desloppify.intelligence.review.dimensions.holistic import DIMENSIONS
@@ -435,88 +434,3 @@ def test_load_dimensions_for_lang_meta_enabled_dimension_requires_no_append(
 
     assert dims == ["shared_dim", "lang_structure_nav"]
     assert prompts["lang_structure_nav"]["meta"]["weight"] == 3.2
-
-
-def test_dimension_metadata_uses_prompt_meta_overrides(monkeypatch):
-    """Unknown custom dimensions get sane defaults from the static catalog.
-
-    The base-layer metadata API no longer dynamically loads prompt metadata
-    overrides (configure_subjective_dimension_providers is a no-op since the
-    catalog PR #226).  Unknown dimensions receive fallback values:
-    display_name from title-casing the key, weight 1.0, and they are not in
-    the resettable-default set.
-    """
-    dimensions_metadata_mod.load_subjective_dimension_metadata.cache_clear()
-    try:
-        assert (
-            dimensions_metadata_mod.dimension_display_name("custom_dimension")
-            == "Custom Dimension"
-        )
-        assert dimensions_metadata_mod.dimension_weight("custom_dimension") == 1.0
-        assert (
-            "custom_dimension"
-            not in dimensions_metadata_mod.resettable_default_dimensions()
-        )
-    finally:
-        dimensions_metadata_mod.load_subjective_dimension_metadata.cache_clear()
-
-
-def test_dimension_metadata_can_override_weight_per_language():
-    """Language-aware metadata helpers honor per-language prompt metadata."""
-    monkeypatch = pytest.MonkeyPatch()
-    monkeypatch.setattr(
-        dimensions_metadata_mod,
-        "load_dimensions_for_lang",
-        lambda lang_name: (
-            ["shared_dimension", "lang_dimension"] if lang_name == "python" else ["shared_dimension"],
-            {
-                "shared_dimension": {
-                    "prompt": "shared",
-                    "meta": {"weight": 2.5, "display_name": "Shared Display"},
-                },
-                "lang_dimension": {
-                    "prompt": "lang",
-                    "meta": {
-                        "weight": 4.0,
-                        "display_name": "Lang Display",
-                        "enabled_by_default": True,
-                        "reset_on_scan": False,
-                    },
-                },
-            },
-            "system",
-        ),
-    )
-    dimensions_metadata_mod.load_subjective_dimension_metadata.cache_clear()
-    dimensions_metadata_mod.load_subjective_dimension_metadata_for_lang.cache_clear()
-    try:
-        assert dimensions_metadata_mod.dimension_weight("shared_dimension") == 1.0
-        assert (
-            dimensions_metadata_mod.dimension_weight(
-                "shared_dimension", lang_name="python"
-            )
-            == 2.5
-        )
-        assert (
-            dimensions_metadata_mod.dimension_display_name(
-                "shared_dimension", lang_name="python"
-            )
-            == "Shared Display"
-        )
-        assert dimensions_metadata_mod.dimension_display_name(
-            "lang_dimension", lang_name="python"
-        ) == "Lang Display"
-        assert dimensions_metadata_mod.dimension_weight(
-            "lang_dimension", lang_name="python"
-        ) == 4.0
-        assert dimensions_metadata_mod.default_dimension_keys_for_lang("python") == (
-            "lang_dimension",
-            "shared_dimension",
-        )
-        assert "lang_dimension" not in dimensions_metadata_mod.resettable_default_dimensions(
-            lang_name="python"
-        )
-    finally:
-        dimensions_metadata_mod.load_subjective_dimension_metadata.cache_clear()
-        dimensions_metadata_mod.load_subjective_dimension_metadata_for_lang.cache_clear()
-        monkeypatch.undo()

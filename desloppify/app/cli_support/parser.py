@@ -14,7 +14,6 @@ from desloppify.app.cli_support.parser_groups import (
     _add_config_parser,
     _add_detect_parser,
     _add_directives_parser,
-    _add_dev_parser,
     _add_exclude_parser,
     _add_autofix_parser,
     _add_move_parser,
@@ -137,7 +136,6 @@ def create_parser(*, detector_names: list[str]) -> argparse.ArgumentParser:
     _add_zone_parser(sub)
     _add_config_parser(sub)
     _add_directives_parser(sub)
-    _add_dev_parser(sub)
     _add_setup_parser(sub)
     _add_update_skill_parser(sub)
     return parser
