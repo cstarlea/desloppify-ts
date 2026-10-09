@@ -171,7 +171,7 @@ def test_phase_security_records_default_coverage_when_missing(monkeypatch) -> No
         file_finder=lambda _path: ["src/a.py", "src/b.py"],
         name="python",
         detector_coverage={},
-        detect_lang_security_detailed=lambda _files, _zones: SimpleNamespace(
+        detect_lang_security_detailed=lambda _files, _zones, **_kw: SimpleNamespace(
             entries=[
                 {
                     "file": "src/lang.py",
@@ -227,7 +227,7 @@ def test_phase_security_reuses_lang_security_cache(monkeypatch, tmp_path) -> Non
         name="python",
         review_cache={},
         detector_coverage={},
-        detect_lang_security_detailed=lambda _files, _zones: (
+        detect_lang_security_detailed=lambda _files, _zones, **_kw: (
             calls.__setitem__("count", calls["count"] + 1),
             LangSecurityResult(
                 entries=[
@@ -308,7 +308,7 @@ def test_phase_security_uses_prefetched_lang_result(monkeypatch, tmp_path) -> No
         name="python",
         review_cache={},
         detector_coverage={},
-        detect_lang_security_detailed=lambda _files, _zones: (
+        detect_lang_security_detailed=lambda _files, _zones, **_kw: (
             calls.__setitem__("count", calls["count"] + 1),
             LangSecurityResult(
                 entries=[],

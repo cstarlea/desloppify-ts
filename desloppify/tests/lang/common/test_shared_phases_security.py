@@ -13,7 +13,7 @@ def _lang_stub(*, files_scanned: int):
         zone_map=None,
         name="python",
         file_finder=lambda _path: ["src/app.py"],
-        detect_lang_security_detailed=lambda _files, _zone: LangSecurityResult(
+        detect_lang_security_detailed=lambda _files, _zone, **_kw: LangSecurityResult(
             entries=[],
             files_scanned=files_scanned,
         ),

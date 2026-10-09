@@ -90,8 +90,8 @@ def _ts_extract_functions(path):
 
 
 class TypeScriptConfig(LangConfig):
-    def detect_lang_security_detailed(self, files, zone_map):
-        result = detect_ts_security(files, zone_map)
+    def detect_lang_security_detailed(self, files, zone_map, settings=None):
+        result = detect_ts_security(files, zone_map, settings)
         return LangSecurityResult(
             entries=result.entries,
             files_scanned=result.population_size,
@@ -151,6 +151,12 @@ class TypeScriptConfig(LangConfig):
             extract_functions=_ts_extract_functions,
             zone_rules=TS_ZONE_RULES,
             setting_specs={
+                "auth_functions": LangValueSpec(
+                    list,
+                    [],
+                    "Extra function names that count as an auth or session check "
+                    "in server actions and route handlers",
+                ),
                 "lint_type_aware_max_files": LangValueSpec(
                     int,
                     DEFAULT_TYPE_AWARE_MAX_FILES,

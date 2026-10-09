@@ -5,6 +5,7 @@ from __future__ import annotations
 import concurrent.futures
 import contextvars
 import hashlib
+import json
 import logging
 import os
 from collections.abc import Callable
@@ -376,7 +377,7 @@ def prewarm_review_phase_detectors(
             files=files,
             zone_map=zone_map,
             include_zone=True,
-            salt=f"security:{getattr(lang, 'name', '')}",
+            salt=_security_salt(lang),
         )
         cached_result = (
             _load_cached_security_result(security_cache, fingerprint=fingerprint)
@@ -388,6 +389,7 @@ def prewarm_review_phase_detectors(
                 lang.detect_lang_security_detailed,
                 files,
                 zone_map,
+                settings=_security_settings(lang),
             )
 
 
@@ -499,6 +501,17 @@ def phase_boilerplate_duplication(
     return issues, {"boilerplate_duplication": distinct_files}
 
 
+def _security_settings(lang: object) -> dict[str, Any]:
+    """The language settings the security scan reads (``config.languages.<lang>``)."""
+    settings = getattr(lang, "runtime_settings", None)
+    return dict(settings) if isinstance(settings, dict) else {}
+
+
+def _security_salt(lang: object) -> str:
+    settings = json.dumps(_security_settings(lang), sort_keys=True, default=str)
+    return f"security:{getattr(lang, 'name', '')}:{settings}"
+
+
 def phase_security(
     path: Path,
     lang: LangRuntimeContract,
@@ -524,7 +537,7 @@ def phase_security(
         files=files,
         zone_map=zone_map,
         include_zone=True,
-        salt=f"security:{getattr(lang, 'name', '')}",
+        salt=_security_salt(lang),
     )
     lang_result = (
         _load_cached_security_result(
@@ -538,7 +551,9 @@ def phase_security(
         prefetched = _consume_prefetch_result(lang, _PREFETCH_SECURITY_KEY)
         lang_result = prefetched if isinstance(prefetched, LangSecurityResult) else None
         if lang_result is None:
-            lang_result = lang.detect_lang_security_detailed(files, zone_map)
+            lang_result = lang.detect_lang_security_detailed(
+                files, zone_map, settings=_security_settings(lang)
+            )
         if isinstance(security_cache, dict):
             _store_cached_security_result(
                 security_cache,

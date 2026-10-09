@@ -71,7 +71,8 @@ class LangRuntimeContract(Protocol):
     extract_functions: FunctionExtractor | None
     get_area: Callable[[str], str] | None
     build_dep_graph: DepGraphBuilder
-    detect_lang_security_detailed: Callable[[list[str], FileZoneMap | None], LangSecurityResult]
+    # (files, zone_map, *, settings=None): settings are config.languages.<lang>.
+    detect_lang_security_detailed: Callable[..., LangSecurityResult]
     detect_private_imports: Callable[
         [dict, FileZoneMap | None], tuple[list[DetectorEntry], int]
     ]
@@ -230,6 +231,7 @@ class LangConfig:
         self,
         files: list[str],
         zone_map: FileZoneMap | None,
+        settings: dict[str, Any] | None = None,
     ) -> LangSecurityResult:
         """Language-specific security checks with optional coverage metadata."""
         return LangSecurityResult(entries=[], files_scanned=0)

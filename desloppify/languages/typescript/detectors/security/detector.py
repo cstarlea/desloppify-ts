@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Mapping
 from pathlib import Path
 
 from desloppify.base.discovery.file_paths import resolve_path
@@ -10,6 +11,10 @@ from desloppify.base.output.fallbacks import log_best_effort_failure
 from desloppify.base.signal_patterns import is_server_only_path
 from desloppify.engine.policy.zones import FileZoneMap, Zone
 from desloppify.languages.typescript.detectors.contracts import DetectorResult
+from desloppify.languages.typescript.detectors.security.backend import (
+    backend_security_issues,
+    make_app_context,
+)
 from desloppify.languages.typescript.detectors.security.entries import (
     _make_security_entry,
 )
@@ -27,10 +32,16 @@ logger = logging.getLogger(__name__)
 def detect_ts_security(
     files: list[str],
     zone_map: FileZoneMap | None,
+    settings: Mapping[str, object] | None = None,
 ) -> DetectorResult[dict]:
-    """Detect TypeScript-specific security issues with explicit population semantics."""
+    """Detect TypeScript-specific security issues with explicit population semantics.
+
+    ``settings`` are the language settings; ``auth_functions`` adds names that
+    count as an auth check for server actions and route handlers.
+    """
     entries: list[dict] = []
     scanned = 0
+    app_context = make_app_context(settings)
 
     for filepath in files:
         if zone_map is not None:
@@ -81,6 +92,14 @@ def detect_ts_security(
                 filepath=filepath,
                 normalized_path=normalized_path,
                 source=source,
+            )
+        )
+        entries.extend(
+            backend_security_issues(
+                filepath=filepath,
+                normalized_path=normalized_path,
+                lines=source.lines,
+                app=app_context,
             )
         )
 
