@@ -189,4 +189,17 @@ def _build_package_size_census(
     return results
 
 
-__all__ = ["gather_mechanical_evidence"]
+def type_strictness_evidence(state: StateModel) -> list[dict[str, str]]:
+    """The open ``tsconfig_health`` issues: how strictly the code is type-checked.
+
+    Not limited to reviewed files, since the issues are on tsconfig files.
+    """
+    issues = state.get("work_items") or state.get("issues", {})
+    return [
+        {"config": str(issue.get("file", "")), "summary": str(issue.get("summary", ""))}
+        for issue in issues.values()
+        if isinstance(issue, dict) and issue.get("detector") == "tsconfig_health" and issue.get("status") == "open"
+    ]
+
+
+__all__ = ["gather_mechanical_evidence", "type_strictness_evidence"]

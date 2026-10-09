@@ -26,7 +26,7 @@ from desloppify.intelligence.review.context_signals.migration import (
 )
 
 from .budget import _abstractions_context, _codebase_stats
-from .mechanical import gather_mechanical_evidence
+from .mechanical import gather_mechanical_evidence, type_strictness_evidence
 from .readers import _read_file_contents
 from .selection import (
     _api_surface_context,
@@ -122,6 +122,9 @@ def _build_holistic_context_inner(
     if evidence:
         context.scan_evidence = evidence
         _enrich_sections_from_evidence(context, evidence)
+    strictness = type_strictness_evidence(state)
+    if strictness:
+        context.abstractions["type_strictness"] = strictness
 
     context.normalize_sections(strict=True)
     return context

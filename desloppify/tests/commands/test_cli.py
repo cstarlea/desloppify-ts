@@ -814,13 +814,111 @@ class TestProjectRootFromScanPath:
             tmp_path / "repo" / "app"
         )
 
-    def test_state_at_cwd_beats_nested_git(self, tmp_path):
+    def test_nested_git_repo_beats_outer_state(self, tmp_path):
+        """A repo copied inside a project with state keeps its own state."""
+        from desloppify.cli import _project_root_from_scan_path
+
+        (tmp_path / ".git").mkdir()
+        (tmp_path / ".desloppify").mkdir()
+        (tmp_path / "copies" / "ky" / ".git").mkdir(parents=True)
+        (tmp_path / "copies" / "ky" / "src").mkdir()
+        assert _project_root_from_scan_path(
+            tmp_path / "copies" / "ky" / "src", tmp_path
+        ) == (tmp_path / "copies" / "ky")
+
+    def test_monorepo_package_with_own_git(self, tmp_path):
+        from desloppify.cli import _project_root_from_scan_path
+
+        (tmp_path / ".git").mkdir()
+        (tmp_path / ".desloppify").mkdir()
+        (tmp_path / "packages" / "a" / ".git").mkdir(parents=True)
+        assert _project_root_from_scan_path(tmp_path / "packages" / "a", tmp_path) == (
+            tmp_path / "packages" / "a"
+        )
+
+    def test_state_at_git_root(self, tmp_path):
+        from desloppify.cli import _project_root_from_scan_path
+
+        (tmp_path / "repo" / ".git").mkdir(parents=True)
+        (tmp_path / "repo" / ".desloppify").mkdir()
+        (tmp_path / "repo" / "packages" / "a").mkdir(parents=True)
+        assert _project_root_from_scan_path(
+            tmp_path / "repo" / "packages" / "a", tmp_path / "other"
+        ) == (tmp_path / "repo")
+
+    def test_state_in_subdirectory_beats_git_root(self, tmp_path):
+        from desloppify.cli import _project_root_from_scan_path
+
+        (tmp_path / "repo" / ".git").mkdir(parents=True)
+        (tmp_path / "repo" / ".desloppify").mkdir()
+        (tmp_path / "repo" / "packages" / "a" / ".desloppify").mkdir(parents=True)
+        assert _project_root_from_scan_path(
+            tmp_path / "repo" / "packages" / "a", tmp_path / "repo"
+        ) == (tmp_path / "repo" / "packages" / "a")
+
+    def test_state_without_git(self, tmp_path):
+        from desloppify.cli import _project_root_from_scan_path
+
+        (tmp_path / "app" / ".desloppify").mkdir(parents=True)
+        (tmp_path / "app" / "src").mkdir()
+        assert _project_root_from_scan_path(tmp_path / "app" / "src", tmp_path) == (
+            tmp_path / "app"
+        )
+
+    def test_desloppify_file_is_not_state(self, tmp_path):
+        from desloppify.cli import _project_root_from_scan_path
+
+        (tmp_path / "repo" / ".git").mkdir(parents=True)
+        (tmp_path / "repo" / "app").mkdir()
+        (tmp_path / "repo" / "app" / ".desloppify").write_text("")
+        assert _project_root_from_scan_path(tmp_path / "repo" / "app", tmp_path) == (
+            tmp_path / "repo"
+        )
+
+    def test_worktree_gitfile_is_a_root(self, tmp_path):
+        """An agent worktree under the main checkout is its own project."""
+        from desloppify.cli import _project_root_from_scan_path
+
+        (tmp_path / ".git" / "worktrees" / "wt").mkdir(parents=True)
+        (tmp_path / ".desloppify").mkdir()
+        wt = tmp_path / ".claude" / "worktrees" / "wt"
+        (wt / "src").mkdir(parents=True)
+        (wt / ".git").write_text(f"gitdir: {tmp_path / '.git' / 'worktrees' / 'wt'}\n")
+        assert _project_root_from_scan_path(wt / "src", tmp_path) == wt
+
+    def test_submodule_stays_with_superproject_state(self, tmp_path):
         """A submodule's .git must not move an existing project's state."""
         from desloppify.cli import _project_root_from_scan_path
 
+        (tmp_path / ".git").mkdir()
         (tmp_path / ".desloppify").mkdir()
-        (tmp_path / "vendor" / "lib" / ".git").mkdir(parents=True)
+        (tmp_path / "vendor" / "lib").mkdir(parents=True)
+        (tmp_path / "vendor" / "lib" / ".git").write_text(
+            "gitdir: ../../.git/modules/vendor/lib\n"
+        )
         assert _project_root_from_scan_path(tmp_path / "vendor" / "lib", tmp_path) == tmp_path
+
+    def test_submodule_without_superproject_state_is_its_own_root(self, tmp_path):
+        from desloppify.cli import _project_root_from_scan_path
+
+        (tmp_path / ".git").mkdir()
+        (tmp_path / "vendor" / "lib" / "src").mkdir(parents=True)
+        (tmp_path / "vendor" / "lib" / ".git").write_text(
+            "gitdir: ../../.git/modules/vendor/lib\n"
+        )
+        assert _project_root_from_scan_path(
+            tmp_path / "vendor" / "lib" / "src", tmp_path
+        ) == (tmp_path / "vendor" / "lib")
+
+    def test_submodule_with_own_state(self, tmp_path):
+        from desloppify.cli import _project_root_from_scan_path
+
+        (tmp_path / ".git").mkdir()
+        (tmp_path / ".desloppify").mkdir()
+        lib = tmp_path / "vendor" / "lib"
+        (lib / ".desloppify").mkdir(parents=True)
+        (lib / ".git").write_text("gitdir: ../../.git/modules/vendor/lib\n")
+        assert _project_root_from_scan_path(lib, tmp_path) == lib
 
     def test_git_work_tree(self, tmp_path):
         from desloppify.cli import _project_root_from_scan_path
@@ -853,6 +951,45 @@ class TestProjectRootFromScanPath:
         target = tmp_path / "app" / "main.ts"
         target.write_text("export {};\n")
         assert _project_root_from_scan_path(target, tmp_path / "cwd") == tmp_path / "app"
+
+
+class TestMainProjectRoot:
+    """``main`` applies the ``--path`` inference unless DESLOPPIFY_ROOT is set."""
+
+    @staticmethod
+    def _root_seen_by_handler(monkeypatch, argv, cwd):
+        from desloppify.base.discovery.paths import get_project_root
+
+        seen = []
+        monkeypatch.chdir(cwd)
+        monkeypatch.setattr("sys.argv", ["desloppify", *argv])
+        monkeypatch.setattr(
+            cli_mod, "_resolve_handler", lambda _cmd: lambda _args: seen.append(get_project_root())
+        )
+        cli_mod.main()
+        return seen[0]
+
+    def _layout(self, tmp_path):
+        (tmp_path / ".git").mkdir()
+        (tmp_path / ".desloppify").mkdir()
+        nested = tmp_path / "copies" / "ky"
+        (nested / ".git").mkdir(parents=True)
+        (nested / "src").mkdir()
+        return nested
+
+    def test_nested_repo_is_root(self, tmp_path, monkeypatch):
+        monkeypatch.delenv("DESLOPPIFY_ROOT", raising=False)
+        nested = self._layout(tmp_path)
+        root = self._root_seen_by_handler(monkeypatch, ["scan", "--path", "copies/ky/src"], tmp_path)
+        assert root == nested
+
+    def test_env_root_overrides_path_inference(self, tmp_path, monkeypatch):
+        self._layout(tmp_path)
+        override = tmp_path / "override"
+        override.mkdir()
+        monkeypatch.setenv("DESLOPPIFY_ROOT", str(override))
+        root = self._root_seen_by_handler(monkeypatch, ["scan", "--path", "copies/ky/src"], tmp_path)
+        assert root == override
 
 
 class TestRemovedLangFlag:

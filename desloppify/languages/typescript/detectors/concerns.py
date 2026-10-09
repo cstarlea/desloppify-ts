@@ -14,7 +14,7 @@ from desloppify.base.discovery.source import find_tsx_and_jsx_files
 from desloppify.base.output.fallbacks import log_best_effort_failure
 from desloppify.base.output.terminal import colorize, print_table
 from desloppify.base.discovery.paths import get_project_root
-from desloppify.languages._framework.node.js_text import code_text
+from desloppify.languages.typescript.syntax.scanner import file_code_text
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +43,7 @@ def detect_mixed_concerns(path: Path) -> tuple[list[dict[str, Any]], int]:
 
             concerns = []
             # Patterns count in code only, not in comments or strings.
-            content = code_text(content)
+            content = file_code_text(content, p)
 
             # UI rendering
             has_jsx = bool(re.search(r"return\s*\(?\s*<", content))

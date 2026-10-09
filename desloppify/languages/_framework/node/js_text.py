@@ -6,7 +6,7 @@ Node layer so they can be used by framework scanners across JS/TS plugins.
 
 from __future__ import annotations
 
-from collections.abc import Generator
+from collections.abc import Generator, Sequence
 
 from desloppify.base.text_utils import strip_c_style_comments
 
@@ -48,14 +48,15 @@ _REGEX_AFTER_WORDS = frozenset(
 )
 
 
-def code_text(text: str) -> str:
+def code_text(text: str, jsx_text: Sequence[tuple[int, int]] = ()) -> str:
     """Blank comments and string, template and regex literals to spaces.
 
     Positions and newlines are kept, and so is the code inside a template's
     ``${...}``. A quote or regex not closed on its own line ends at the line
-    break, so a stray apostrophe (in JSX text, say) hides at most that line.
+    break, so a stray apostrophe hides at most that line. ``jsx_text`` gives
+    the JSX text spans (see ``literal_spans``).
     """
-    return blank_spans(text, literal_spans(text))
+    return blank_spans(text, literal_spans(text, jsx_text))
 
 
 def blank_spans(text: str, spans) -> str:
@@ -68,18 +69,32 @@ def blank_spans(text: str, spans) -> str:
     return "".join(out)
 
 
-def literal_spans(text: str) -> Generator[tuple[int, int, str], None, None]:
+def literal_spans(
+    text: str, jsx_text: Sequence[tuple[int, int]] = ()
+) -> Generator[tuple[int, int, str], None, None]:
     """``(start, end, kind)`` for each comment and literal, in order (see ``code_text``).
 
-    ``kind`` is ``comment``, ``string``, ``template`` or ``regex``. A template
-    with substitutions gives one span per piece of text around its ``${...}``,
-    each piece's delimiters included.
+    ``kind`` is ``comment``, ``string``, ``template``, ``regex`` or ``jsx``. A
+    template with substitutions gives one span per piece of text around its
+    ``${...}``, each piece's delimiters included. ``jsx_text`` is the sorted
+    ``(start, end)`` offsets of JSX text, which the lexer can't tell from code
+    on its own: each one reached in code is a ``jsx`` span, so a quote or
+    ``//`` in it is text.
     """
     n = len(text)
     templates: list[int] = []  # open ``{`` count inside each enclosing ``${``
     prev = ""  # the last code character that isn't whitespace
+    jsx = 0  # the next ``jsx_text`` span
     i = 0
     while i < n:
+        while jsx < len(jsx_text) and jsx_text[jsx][0] < i:
+            jsx += 1
+        if jsx < len(jsx_text) and jsx_text[jsx][0] == i:
+            end = max(jsx_text[jsx][1], i + 1)
+            yield i, end, "jsx"
+            i = end
+            prev = ">"
+            continue
         ch = text[i]
         nxt = text[i + 1] if i + 1 < n else ""
         if ch == "/" and nxt == "/":

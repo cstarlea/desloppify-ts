@@ -8,7 +8,7 @@ from pathlib import Path
 
 from desloppify.base.discovery.paths import get_project_root
 from desloppify.base.discovery.source import find_tsx_and_jsx_files
-from desloppify.languages._framework.node.js_text import code_text
+from desloppify.languages.typescript.syntax.scanner import file_code_text
 from desloppify.languages.typescript.syntax.lines import line_number, split_lines
 from desloppify.languages.typescript.detectors.smells.helpers import scan_code
 
@@ -31,7 +31,7 @@ def detect_hook_return_bloat(path: Path) -> tuple[list[dict], int]:
             logger.debug("Skipping unreadable TSX file %s in hook-bloat pass: %s", filepath, exc)
             continue
 
-        for match in hook_re.finditer(code_text(content)):
+        for match in hook_re.finditer(file_code_text(content, p)):
             hook_name = match.group(1)
             total_hooks += 1
             hook_start = line_number(content, match.start()) - 1
@@ -165,7 +165,7 @@ def detect_boolean_state_explosion(path: Path) -> tuple[list[dict], int]:
             )
             continue
 
-        matches = list(bool_state_re.finditer(code_text(content)))
+        matches = list(bool_state_re.finditer(file_code_text(content, p)))
         if len(matches) < 3:
             continue
 

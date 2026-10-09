@@ -190,6 +190,20 @@
       "summary": "Untested module (16 LOC, 1 importers)"
     },
     {
+      "id": "tsconfig_health::tsconfig.app.json::noUncheckedIndexedAccess",
+      "tier": 3,
+      "confidence": "medium",
+      "zone": "production",
+      "summary": "tsconfig never sets noUncheckedIndexedAccess: `arr[i]` and `record[key]` are typed as never undefined"
+    },
+    {
+      "id": "tsconfig_health::tsconfig.app.json::verbatimModuleSyntax",
+      "tier": 2,
+      "confidence": "medium",
+      "zone": "production",
+      "summary": "tsconfig never sets verbatimModuleSyntax: type-only imports can be emitted as runtime imports"
+    },
+    {
       "id": "unused::src/components/Header.tsx::useMemo:1",
       "tier": 1,
       "confidence": "high",
@@ -216,6 +230,7 @@
     "smells": 18,
     "structural": 18,
     "test_coverage": 54,
+    "tsconfig_health": 3,
     "type_error": 9,
     "unused": 18
   },

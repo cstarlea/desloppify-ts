@@ -111,7 +111,7 @@ If `next` suggests an auto-fixer, run `desloppify autofix <fixer> --dry-run` to 
 
 - **Tiers**: T1 auto-fix → T2 quick manual → T3 judgment call → T4 major refactor.
 - **Auto-clusters**: related findings are auto-grouped in `next`. Drill in with `next --cluster <name>`.
-- **Zones**: production/script (scored), test/config/generated/vendor (not scored). Fix with `zone set`.
+- **Zones**: production/script (scored), test/config/generated/vendor (not scored). Fix with `zone set <file|dir|'glob'> <zone>`; a directory or glob also covers files added later, and an exact file beats a pattern.
 - **Wontfix cost**: widens the lenient↔strict gap. Challenge past decisions when the gap grows.
 
 ### Scoring

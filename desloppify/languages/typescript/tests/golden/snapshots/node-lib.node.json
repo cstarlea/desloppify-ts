@@ -78,6 +78,27 @@
       "summary": "Untested module (17 LOC, 0 importers)"
     },
     {
+      "id": "tsconfig_health::tsconfig.json::noImplicitOverride",
+      "tier": 2,
+      "confidence": "medium",
+      "zone": "production",
+      "summary": "tsconfig never sets noImplicitOverride: a method that overrides a base class method needs no `override`"
+    },
+    {
+      "id": "tsconfig_health::tsconfig.json::noUncheckedIndexedAccess",
+      "tier": 3,
+      "confidence": "medium",
+      "zone": "production",
+      "summary": "tsconfig never sets noUncheckedIndexedAccess: `arr[i]` and `record[key]` are typed as never undefined"
+    },
+    {
+      "id": "tsconfig_health::tsconfig.json::verbatimModuleSyntax",
+      "tier": 2,
+      "confidence": "medium",
+      "zone": "production",
+      "summary": "tsconfig never sets verbatimModuleSyntax: type-only imports can be emitted as runtime imports"
+    },
+    {
       "id": "unused::src/retry.ts::startedAt:8",
       "tier": 2,
       "confidence": "high",
@@ -104,6 +125,7 @@
     "smells": 9,
     "structural": 9,
     "test_coverage": 26,
+    "tsconfig_health": 4,
     "type_error": 8,
     "unused": 9
   },

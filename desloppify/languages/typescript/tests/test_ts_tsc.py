@@ -98,6 +98,7 @@ def test_unused_reuses_the_cached_run(tmp_path, monkeypatch):
     (tmp_path / "src").mkdir()
     (tmp_path / "src" / "a.ts").write_text("const x = 1;\n")
     monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("DESLOPPIFY_ROOT", str(tmp_path))
     calls = []
 
     def fake_check(project_root, tsconfig):

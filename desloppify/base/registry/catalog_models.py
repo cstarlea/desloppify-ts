@@ -9,6 +9,7 @@ DISPLAY_ORDER = [
     "unused",
     "type_error",
     "lint",
+    "tsconfig_health",
     "exports",
     "deprecated",
     "structural",

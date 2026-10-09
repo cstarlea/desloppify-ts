@@ -16,6 +16,7 @@ import desloppify.languages.typescript.detectors.deprecated as deprecated_detect
 import desloppify.languages.typescript.detectors.exports as exports_detector_mod
 import desloppify.languages.typescript.detectors.lint as lint_detector_mod
 import desloppify.languages.typescript.detectors.logs as logs_detector_mod
+import desloppify.languages.typescript.detectors.tsconfig_health as tsconfig_health_detector_mod
 import desloppify.languages.typescript.detectors.type_errors as type_errors_detector_mod
 import desloppify.languages.typescript.detectors.unused as unused_detector_mod
 from desloppify.state_io import Issue
@@ -145,6 +146,26 @@ def phase_lint(path: Path, lang: LangRuntimeContract) -> tuple[list[Issue], dict
         # The retired next_lint detector ran ESLint too; this resolves its open issues.
         potentials["next_lint"] = 0
     return results, potentials
+
+
+def phase_tsconfig_health(
+    path: Path, lang: LangRuntimeContract
+) -> tuple[list[Issue], dict[str, int]]:
+    result = tsconfig_health_detector_mod.detect_tsconfig_health(path, lang.zone_map)
+    results = [
+        make_issue(
+            "tsconfig_health",
+            entry["file"],
+            entry["check"],
+            tier=entry["tier"],
+            confidence=entry["confidence"],
+            summary=entry["summary"],
+            detail=entry["detail"],
+        )
+        for entry in result.entries
+    ]
+    log(f"         {result.population_size} checks → {len(results)} issues")
+    return results, {"tsconfig_health": result.population_size}
 
 
 def phase_exports(path: Path, lang: LangRuntimeContract) -> tuple[list[Issue], dict[str, int]]:
