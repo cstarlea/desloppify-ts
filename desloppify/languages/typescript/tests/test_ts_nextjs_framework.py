@@ -346,3 +346,25 @@ def test_nextjs_smells_phase_scoped_to_a_package_skips_siblings(tmp_path: Path):
     issues, _ = _nextjs_phase().run(tmp_path / "apps" / "web", _FakeLang())
 
     assert _router_issue_files(issues) == ["apps/web/app/legacy.tsx"]
+
+
+def test_env_leak_issue_per_variable_names_it(tmp_path: Path):
+    _write(tmp_path, "package.json", '{"dependencies": {"next": "15"}}\n')
+    _write(
+        tmp_path,
+        "app/providers.tsx",
+        "'use client';\n"
+        "export const url = process.env.APP_URL ?? process.env.NEXT_PUBLIC_SITE;\n"
+        "export const port = process.env['PORT'];\n"
+        "export const again = process.env.APP_URL;\n",
+    )
+    cfg = TypeScriptConfig()
+    phase = next(p for p in cfg.phases if getattr(p, "label", "") == "Next.js framework smells")
+    issues, _ = phase.run(tmp_path, _FakeLang())
+
+    leaks = sorted((i["id"], i["detail"]["line"], i["summary"]) for i in issues if "env_leak" in i["id"])
+    assert [(id_, line) for id_, line, _ in leaks] == [
+        ("nextjs::app/providers.tsx::env_leak_in_client::APP_URL", 2),
+        ("nextjs::app/providers.tsx::env_leak_in_client::PORT", 3),
+    ]
+    assert "process.env.APP_URL" in leaks[0][2]

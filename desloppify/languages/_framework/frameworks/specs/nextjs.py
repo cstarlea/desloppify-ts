@@ -354,7 +354,7 @@ NEXTJS_SCANNERS: tuple[ScannerRule, ...] = (
             detail={"line": entry["line"], "var": entry.get("var")},
         ),
         log_message=lambda count: (
-            "       nextjs: " f"{count} client modules access non-public env vars"
+            "       nextjs: " f"{count} non-public env vars read in client modules"
         ),
     ),
     ScannerRule(
