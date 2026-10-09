@@ -287,6 +287,7 @@ def show_low_dimension_hints(
         "Test health": "run `desloppify show test_coverage` — review coverage gaps (fix code issues first, tests later)",
         "Security": "run `desloppify show security` — fix security issues",
         "Type checks": "run `desloppify show type_error` — fix tsc type errors",
+        "Lint": "run `desloppify show lint` — fix what the project's linter reports",
     }
 
     low = []

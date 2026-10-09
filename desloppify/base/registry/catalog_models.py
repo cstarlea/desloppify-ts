@@ -8,6 +8,7 @@ DISPLAY_ORDER = [
     "logs",
     "unused",
     "type_error",
+    "lint",
     "exports",
     "deprecated",
     "structural",

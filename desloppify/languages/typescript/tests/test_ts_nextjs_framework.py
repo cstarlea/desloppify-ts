@@ -7,7 +7,6 @@ from types import SimpleNamespace
 
 import pytest
 
-from desloppify.engine.planning import scan as plan_scan_mod
 from desloppify.languages._framework.frameworks.detection import detect_ecosystem_frameworks
 from desloppify.languages._framework.node.frameworks.nextjs.info import (
     nextjs_info_from_evidence,
@@ -21,7 +20,6 @@ from desloppify.languages._framework.node.frameworks.nextjs.scanners import (
     scan_nextjs_use_server_not_first,
     scan_rsc_missing_use_client,
 )
-from desloppify.languages.framework import make_lang_run
 from desloppify.languages.typescript import TypeScriptConfig
 
 
@@ -186,12 +184,11 @@ def test_server_modules_in_pages_router_skips_pages_api_routes(tmp_path: Path):
     assert not entries
 
 
-def test_typescript_config_includes_nextjs_framework_phases_and_next_lint_is_slow():
+def test_typescript_config_includes_nextjs_framework_phases_without_next_lint():
     cfg = TypeScriptConfig()
     labels = [getattr(p, "label", "") for p in cfg.phases]
     assert "Next.js framework smells" in labels
-    lint = next(p for p in cfg.phases if getattr(p, "label", "") == "next lint")
-    assert lint.slow is True
+    assert "next lint" not in labels  # replaced by the lint detector
 
 
 def test_nextjs_smells_phase_emits_issues_when_next_present(tmp_path: Path):
@@ -222,46 +219,6 @@ def test_nextjs_smells_phase_emits_issues_when_next_present(tmp_path: Path):
     assert potentials.get("nextjs", 0) >= 1
     assert any(issue.get("detector") == "nextjs" for issue in issues)
     assert any("next_router_in_app_router" in str(issue.get("id", "")) for issue in issues)
-
-
-def test_next_lint_phase_is_skipped_when_include_slow_false():
-    run = make_lang_run(TypeScriptConfig())
-    selected = plan_scan_mod._select_phases(run, include_slow=False, profile="full")
-    labels = [getattr(p, "label", "") for p in selected]
-    assert "Next.js framework smells" in labels
-    assert "next lint" not in labels
-
-
-@pytest.mark.parametrize("version,eslint", [("15.5.0", False), ("16.0.0", True), ("17.0.0-canary.1", True), ("v16.0.0", True)])
-def test_next_lint_uses_installed_version(tmp_path, monkeypatch, version, eslint):
-    import json
-    from desloppify.languages._framework.frameworks import phases
-    from desloppify.languages._framework.frameworks.specs.nextjs import NEXTJS_SPEC
-
-    _write(tmp_path, "package.json", '{"dependencies":{"next":"*"}}')
-    _write(tmp_path, "app/page.tsx", "export default function Page(){return null}")
-    _write(tmp_path, "node_modules/next/package.json", json.dumps({"version": version}))
-    calls = []
-
-    def fake_phase(label, cmd, *args, **kwargs):
-        def run(root, lang):
-            calls.append((cmd, root))
-            return [], {"next_lint": 1}
-        return SimpleNamespace(label=label, run=run, slow=False)
-
-    monkeypatch.setattr(phases, "make_tool_phase", fake_phase)
-    phase = phases._framework_tool_phase(NEXTJS_SPEC, NEXTJS_SPEC.tools[0])
-    assert phase.run(tmp_path, _FakeLang()) == ([], {"next_lint": 1})
-    expected = "npx --no-install eslint . --format json" if eslint else "npx --no-install next lint --format json"
-    assert calls == [(expected, tmp_path.resolve())]
-
-
-@pytest.mark.parametrize("content", [None, "invalid", "[]", '{"version": null}', '{"version":"unknown"}'])
-def test_next_lint_unknown_installation_keeps_legacy_command(tmp_path, content):
-    from desloppify.languages._framework.frameworks.specs.nextjs import _next_lint_command
-    if content is not None:
-        _write(tmp_path, "node_modules/next/package.json", content)
-    assert _next_lint_command(tmp_path) is None
 
 
 def test_browser_globals_missing_use_client_skips_test_and_story_files(tmp_path: Path):

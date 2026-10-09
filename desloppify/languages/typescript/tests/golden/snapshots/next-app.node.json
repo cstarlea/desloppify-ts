@@ -116,7 +116,6 @@
     "unused": 14
   },
   "reduced_coverage": [
-    "next_lint: tool_not_found",
     "type_error: partial"
   ]
 }
