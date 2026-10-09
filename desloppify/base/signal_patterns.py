@@ -34,7 +34,6 @@ SERVER_ONLY_PATH_HINTS = (
     "/server/",
     "/backend/",
     "/functions/",
-    "/supabase/functions/",
     "/scripts/",
 )
 

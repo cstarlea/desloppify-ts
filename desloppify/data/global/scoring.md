@@ -55,7 +55,7 @@ Each detector reports a **potential**, the number of checks it ran, along with i
 | **Code quality** | 1.0 | unused, logs, exports, dependencies, deprecated, smells, react, nextjs, react_router, nestjs, express, hono, fastify, angular, orphaned, flat_dirs, naming, single_use, coupling, cycles, facade, props, patterns, responsibility_cohesion, stale_exclude, tsconfig_health |
 | **Duplication** | 1.0 | dupes, boilerplate_duplication |
 | **Test health** | 1.0 | test_coverage |
-| **Security** | 1.0 | security |
+| **Security** | 1.0 | security, supabase |
 | **Type checks** | 1.0 | type_error |
 | **Lint** | 1.0 | lint |
 
@@ -192,6 +192,15 @@ Four `security` rules read the syntax tree (`detectors/security/backend.py`) and
   - Only functions written in the file are checked. A tRPC procedure or other builder chain, a re-export (`export { POST } from …`) and a destructured handler object (`export const { GET, POST } = handlers`) are left alone, and a route handler that passes its request to another function (`fetchRequestHandler({ req })`, `revalidate(req)`) is assumed to let that function check it.
   - Only apps with user accounts are checked: the nearest `package.json` must depend on an auth library (`next-auth`, `@auth/*`, `@clerk/*`, `lucia`, `better-auth`, `iron-session`, `@supabase/ssr`, `jsonwebtoken`, …), or `auth_functions` must be set. A shop's guest cart or a public form has no user to check, so its actions are public by design.
   - Confidence is medium: the app has accounts and this endpoint checks none, but it may still be public on purpose. It drops to low when the app's `middleware.ts` or `proxy.ts` checks auth, because its matcher may cover the endpoint.
+
+### Supabase
+
+Where Supabase is detected (a client library, the `supabase` CLI or `supabase/config.toml`), the `supabase` detector replays `supabase/migrations/*.sql` and `supabase/schemas/**/*.sql` in file order, the way the database applies them, and scores under Security. Comments, string literals and `$$` function bodies are skipped, and later `alter`, `rename` and `drop` statements count.
+
+- `rls_disabled_in_public` (`supabase::<file>::rls_disabled_in_public::public.<table>`, tier 2, medium confidence): a table in the `public` schema that no migration enables (or forces) row level security on. The Data API serves it, so the anon key can read and write it. This is Supabase's advisor lint 0013.
+- `security_definer_view` (`supabase::<file>::security_definer_view::public.<view>`, tier 2, medium confidence): a `public` view created without `WITH (security_invoker = true)` and never altered to it. It runs as its owner and skips the RLS of the tables it reads. This is lint 0010.
+
+Confidence is medium because a project may have changed the database outside its migrations.
 
 ## Subjective dimensions
 

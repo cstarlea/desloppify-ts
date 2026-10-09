@@ -72,6 +72,10 @@ class FrameworkSpec:
     # Class decorators of the framework's DI container: a class it wires from
     # metadata is imported once by design.
     injected_class_decorators: frozenset[str] = frozenset()
+    # Env-var prefixes the framework's bundler inlines into client code.
+    public_env_prefixes: tuple[str, ...] = ()
+    # Client objects whose calls are data-layer access (``supabase.from(...)``).
+    data_clients: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)

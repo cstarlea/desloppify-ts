@@ -15,7 +15,6 @@ _EVAL_PATTERNS = re.compile(
 _DANGEROUS_HTML_RE = re.compile(r"dangerouslySetInnerHTML")
 # Clearing with an empty string is safe; comparisons (==, ===) are not writes.
 _INNER_HTML_RE = re.compile(r"\.innerHTML\s*=(?!=)(?!\s*(?:''|\"\"|``)\s*;?\s*$)")
-_DEV_CRED_RE = re.compile(r"VITE_\w*(?:PASSWORD|SECRET|TOKEN|API_KEY|APIKEY)\b", re.IGNORECASE)
 _OPEN_REDIRECT_RE = re.compile(
     r"window\.location(?:\.href)?\s*=\s*(?:data\.|response\.|params\.|query\.|\w+\[)"
 )
@@ -28,17 +27,25 @@ _EDGE_ENTRYPOINT_RE = re.compile(
 _AUTH_CHECK_RE = AUTH_GUARD_TOKEN_RE
 _ATOB_JWT_RE = re.compile(r"atob\s*\(")
 _JWT_PAYLOAD_RE = re.compile(r"(?:payload\.sub|\.split\s*\(\s*['\"]\\?\.['\"])")
-_CREATE_VIEW_RE = re.compile(r"CREATE\s+(?:OR\s+REPLACE\s+)?VIEW\b", re.IGNORECASE)
-_SECURITY_INVOKER_RE = re.compile(r"security_invoker\s*=\s*true", re.IGNORECASE)
+
+
+def public_secret_re(prefixes: tuple[str, ...]) -> re.Pattern[str] | None:
+    """A secret-named env var with a public prefix (``VITE_API_TOKEN``):
+    the bundler inlines it into client code. Group 1 is the prefix."""
+    names = sorted({p for p in prefixes if p}, key=len, reverse=True)
+    if not names:
+        return None
+    alternation = "|".join(re.escape(p) for p in names)
+    return re.compile(
+        rf"\b({alternation})\w*(?i:(?:PASSWORD|SECRET)\w*|TOKEN|API_?KEY|PRIVATE_KEY)\b"
+    )
 
 
 __all__ = [
     "_ATOB_JWT_RE",
     "_AUTH_CHECK_RE",
     "_CREATE_CLIENT_RE",
-    "_CREATE_VIEW_RE",
     "_DANGEROUS_HTML_RE",
-    "_DEV_CRED_RE",
     "_EDGE_ENTRYPOINT_RE",
     "_EVAL_PATTERNS",
     "_INNER_HTML_RE",
@@ -46,6 +53,6 @@ __all__ = [
     "_JSON_PARSE_RE",
     "_JWT_PAYLOAD_RE",
     "_OPEN_REDIRECT_RE",
-    "_SECURITY_INVOKER_RE",
     "_SERVE_ASYNC_RE",
+    "public_secret_re",
 ]

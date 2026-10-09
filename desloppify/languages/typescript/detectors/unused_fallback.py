@@ -9,6 +9,9 @@ from pathlib import Path
 from desloppify.base.discovery.paths import get_project_root
 from desloppify.base.discovery.source import find_ts_and_js_files, read_file_text
 from desloppify.base.text_utils import strip_c_style_comments
+from desloppify.languages._framework.node.frameworks.supabase import (
+    FUNCTIONS_DIR as SUPABASE_FUNCTIONS_DIR,
+)
 from desloppify.languages.typescript.syntax.lines import split_lines
 
 _IDENT_RE = re.compile(r"^[A-Za-z_$][A-Za-z0-9_$]*$")
@@ -156,7 +159,7 @@ def _has_deno_import_syntax(ts_files: list[str]) -> bool:
 
 def should_use_deno_fallback(path: Path, ts_files: list[str]) -> bool:
     normalized = path.resolve().as_posix().lower()
-    if normalized.endswith("/supabase/functions") or "/supabase/functions/" in normalized:
+    if normalized.endswith(f"/{SUPABASE_FUNCTIONS_DIR}") or f"/{SUPABASE_FUNCTIONS_DIR}/" in normalized:
         return True
     if _contains_deno_markers(path):
         return True

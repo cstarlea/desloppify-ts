@@ -110,26 +110,21 @@ def test_ts_security_detector_reports_line_and_file_level_issues(tmp_path) -> No
         encoding="utf-8",
     )
 
-    sql = tmp_path / "db" / "schema.sql"
-    sql.parent.mkdir(parents=True, exist_ok=True)
-    sql.write_text("CREATE VIEW public.foo AS SELECT 1;", encoding="utf-8")
-
     security_result = ts_security_mod.detect_ts_security(
-        [str(page), str(edge), str(sql)],
+        [str(page), str(edge)],
         zone_map=None,
     )
     entries = security_result.entries
     scanned = security_result.population_size
     kinds = {entry["detail"]["kind"] for entry in entries}
 
-    assert scanned == 3
+    assert scanned == 2
     assert "eval_injection" in kinds
     assert "innerHTML_assignment" in kinds
     assert "open_redirect" in kinds
     assert "unverified_jwt_decode" in kinds
     assert "edge_function_missing_auth" in kinds
     assert "json_parse_unguarded" in kinds
-    assert "rls_bypass_views" in kinds
 
 
 def test_ts_asset_smells_and_unused_fallback_helpers(monkeypatch, tmp_path) -> None:

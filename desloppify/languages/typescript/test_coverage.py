@@ -12,6 +12,7 @@ from desloppify.base.discovery.file_paths import resolve_path
 from desloppify.base.output.fallbacks import log_best_effort_failure
 from desloppify.base.discovery.paths import get_project_root
 from desloppify.base.text_utils import strip_c_style_comments
+from desloppify.languages._framework.node.frameworks.supabase import is_edge_function_entry
 from desloppify.languages.typescript.detectors.deps.imports import (
     DYNAMIC_PREFIX,
     GLOB,
@@ -271,6 +272,17 @@ def _production_key(resolved: str, production_files: set[str]) -> str | None:
         return resolved
     relative = _relative_if_under_root(resolved)
     return relative if relative in production_files else None
+
+
+def is_runtime_entrypoint(filepath: str, content: str) -> bool:
+    """A module a runtime serves directly: a Supabase Edge Function's index,
+    or a Deno ``serve(...)`` from the std http server."""
+    if is_edge_function_entry(filepath):
+        return True
+    lowered = content.lower()
+    return ("serve((" in lowered or "serve (" in lowered) and (
+        "deno.land/std/http/server" in lowered or "jsr:@std/http/server" in lowered
+    )
 
 
 def public_entry_files(production_files: set[str]) -> set[str]:

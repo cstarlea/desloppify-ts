@@ -235,6 +235,20 @@ def detect_ecosystem_frameworks(
     return result
 
 
+def framework_values(
+    scan_path: Path, lang: LangRuntimeContract | None, field: str
+) -> tuple[str, ...]:
+    """A tuple field (``public_env_prefixes``, ``data_clients``) of every Node
+    framework present for *scan_path*, in registry order without repeats."""
+    detection = detect_ecosystem_frameworks(scan_path, lang, "node")
+    specs = list_framework_specs(ecosystem="node")
+    values: dict[str, None] = {}
+    for framework_id, spec in specs.items():
+        if framework_id in detection.present:
+            values.update(dict.fromkeys(getattr(spec, field)))
+    return tuple(values)
+
+
 def injected_class_decorators(scan_path: Path, lang: LangRuntimeContract | None) -> frozenset[str]:
     """DI class decorators of the Node frameworks present for *scan_path*."""
     detection = detect_ecosystem_frameworks(scan_path, lang, "node")
@@ -244,4 +258,4 @@ def injected_class_decorators(scan_path: Path, lang: LangRuntimeContract | None)
     )
 
 
-__all__ = ["detect_ecosystem_frameworks", "injected_class_decorators"]
+__all__ = ["detect_ecosystem_frameworks", "framework_values", "injected_class_decorators"]

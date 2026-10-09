@@ -188,7 +188,7 @@ def test_phase_structural_and_subdetectors_cover_threshold_and_passthrough_paths
     monkeypatch.setattr(
         phases_structural_mod.concerns_detector_mod,
         "detect_mixed_concerns",
-        lambda _path: ([{"file": "src/service.ts", "concerns": ["io", "db", "auth"]}], 1),
+        lambda _path, _clients=(): ([{"file": "src/service.ts", "concerns": ["io", "db", "auth"]}], 1),
     )
     monkeypatch.setattr(
         phases_structural_mod,

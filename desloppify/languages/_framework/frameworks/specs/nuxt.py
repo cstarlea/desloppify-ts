@@ -38,6 +38,8 @@ NUXT_SPEC = FrameworkSpec(
     ),
     excludes=("vue",),
     entry_conventions=NUXT_ENTRY_CONVENTIONS,
+    # runtimeConfig.public, overridable by NUXT_PUBLIC_* at runtime.
+    public_env_prefixes=("NUXT_PUBLIC_",),
 )
 
 

@@ -80,7 +80,7 @@ desloppify scan --path .
 
 ## Configuration
 
-Settings live in `.desloppify/config.json`; `desloppify config show` lists them and `desloppify config set|unset` changes them. The defaults assume no directory layout. Frameworks (Next.js, Nuxt, SvelteKit, NestJS and others) are detected from `package.json`. Architecture rules apply when you choose a layout preset or describe your own layers:
+Settings live in `.desloppify/config.json`; `desloppify config show` lists them and `desloppify config set|unset` changes them. The defaults assume no directory layout. Frameworks (Next.js, Nuxt, SvelteKit, NestJS, Supabase and others) are detected from `package.json`; they bring their entry points, checks, client-exposed env prefixes and data clients. Architecture rules apply when you choose a layout preset or describe your own layers:
 
 ```bash
 desloppify config set presets feature-sliced     # or bulletproof-react

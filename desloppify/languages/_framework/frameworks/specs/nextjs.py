@@ -591,6 +591,7 @@ NEXTJS_SPEC = FrameworkSpec(
     excludes=(),
     scanners=NEXTJS_SCANNERS,
     entry_conventions=NEXTJS_ENTRY_CONVENTIONS,
+    public_env_prefixes=("NEXT_PUBLIC_",),
 )
 
 

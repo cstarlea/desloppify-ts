@@ -24,9 +24,18 @@ desloppify config unset presets bulletproof-react
 
 \* sliced: each subdirectory is one slice.
 
-The `presets` key also accepts a framework's id (`nextjs`, `nuxt`, `vue`, `sveltekit`, `astro`, `react-router`, `nestjs`, `express`, `hono`, `fastify`, `angular`). That turns its checks on where detection misses it, for example when the dependency is declared in another workspace package. A framework's entry-point conventions still follow the package's own files.
+The `presets` key also accepts a framework's id (`nextjs`, `nuxt`, `vue`, `sveltekit`, `astro`, `react-router`, `nestjs`, `express`, `hono`, `fastify`, `angular`, `supabase`, `vite`, `expo`). That turns its checks on where detection misses it, for example when the dependency is declared in another workspace package. A framework's entry-point conventions still follow the package's own files.
 
 When several layout presets are active, the first one listed wins.
+
+## What frameworks bring
+
+Besides entry points and framework checks, a detected framework supplies two kinds of knowledge that used to be hard-coded:
+
+- **Public env prefixes.** A secret-named variable (`…SECRET…`, `…PASSWORD…`, `…TOKEN`, `…API_KEY`, `…PRIVATE_KEY`) with a prefix the bundler inlines into client code is a `security` issue (`dev_credentials_env`, medium severity): `NEXT_PUBLIC_` (Next.js), `VITE_` (Vite), `PUBLIC_` (SvelteKit, Astro), `EXPO_PUBLIC_` (Expo) and `NUXT_PUBLIC_` (Nuxt). A prefix only counts in a package whose nearest `package.json` uses its framework. Add others (`REACT_APP_`, `GATSBY_`) with `languages.typescript.public_env_prefixes`.
+- **Data clients.** The `concerns` signal counts calls on a data client in a component as data fetching. A property chain such as `supabase.auth.admin.listUsers` counts as a further concern (`direct_supabase`). Supabase brings `supabase`. Add your own client objects (`db`, `prisma`) with `languages.typescript.data_clients`.
+
+**Supabase** is detected from `@supabase/supabase-js`, `@supabase/ssr`, the auth helpers, `@nuxtjs/supabase`, the `supabase` CLI or `supabase/config.toml`. Each `supabase/functions/<name>/index.ts` is an Edge Function entry (never orphaned, and a runtime entry for test coverage). Its checks over `supabase/migrations` (public tables without row level security, views without `security_invoker`) are described in [scoring.md](scoring.md#supabase).
 
 ## Layers
 
@@ -88,4 +97,6 @@ When the project root has a shadcn/ui `components.json`, the UI kit directory it
 | Setting | Default | Meaning |
 |---|---|---|
 | `auth_functions` | `[]` | Extra function names that count as an auth check in server actions and route handlers |
+| `public_env_prefixes` | `[]` | Extra env prefixes your bundler exposes to client code |
+| `data_clients` | `[]` | Extra client objects whose calls are data access |
 | `lint_type_aware_max_files` | `400` | Most files to lint when the ESLint or XO config is type-aware (0 = no limit) |

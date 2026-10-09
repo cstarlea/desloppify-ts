@@ -598,6 +598,15 @@ DETECTORS: dict[str, DetectorMeta] = {
         tier=4,
         subjective_dimensions=("error_consistency",),
     ),
+    "supabase": DetectorMeta(
+        "supabase",
+        "supabase",
+        "Security",
+        "manual_fix",
+        "enable row level security on public tables and create views WITH (security_invoker = true)",
+        tier=4,
+        subjective_dimensions=("authorization_consistency",),
+    ),
     # ── Subjective review ────────────────────────────────────
     "review": DetectorMeta(
         "review",

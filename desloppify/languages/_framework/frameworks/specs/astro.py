@@ -28,6 +28,7 @@ ASTRO_SPEC = FrameworkSpec(
         script_pattern=r"(?:^|\s)astro\s",
     ),
     entry_conventions=ASTRO_ENTRY_CONVENTIONS,
+    public_env_prefixes=("PUBLIC_",),
 )
 
 
