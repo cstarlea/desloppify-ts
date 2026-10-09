@@ -56,7 +56,7 @@ from desloppify.languages.typescript.syntax.validation import count_syntax_error
 
 needs_treesitter = pytest.mark.skipif(
     get_parser("tsx") is None,
-    reason="the syntax-tree fixers need tree-sitter (pip install 'desloppify[full]')",
+    reason="the syntax-tree fixers need tree-sitter (pip install 'desloppify-ts[full]')",
 )
 
 _BOM = "\ufeff"

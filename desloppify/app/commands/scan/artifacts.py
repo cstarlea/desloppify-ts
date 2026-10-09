@@ -114,7 +114,7 @@ def _missing_scorecard_result(args, config: dict[str, object]) -> tuple[Path | N
     if explicit_badge_request:
         print(
             colorize(
-                "  Scorecard support not installed. Install with: pip install \"desloppify[scorecard]\"",
+                "  Scorecard support not installed. Install with: pip install \"desloppify-ts[scorecard]\"",
                 "yellow",
             )
         )

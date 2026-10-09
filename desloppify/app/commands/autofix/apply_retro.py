@@ -141,7 +141,7 @@ _SKIP_REASON_LABELS = {
     "logger_wrapper": "log is the body of a logging helper",
     "not_empty": "an if branch or effect callback has statements or comments",
     "not_found": "not found at the reported position (stale scan?)",
-    "needs_treesitter": "needs tree-sitter (install desloppify[full])",
+    "needs_treesitter": "needs tree-sitter (install desloppify-ts[full])",
     "other": "other patterns (needs manual review)",
 }
 

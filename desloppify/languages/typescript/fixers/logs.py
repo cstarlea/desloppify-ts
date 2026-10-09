@@ -58,7 +58,7 @@ def fix_debug_logs(entries: list[dict], *, dry_run: bool = False) -> FixResult:
     if entries and get_parser("tsx") is None:
         print(
             colorize(
-                "  Skip: the debug-logs fixer needs tree-sitter (install desloppify[full]).",
+                "  Skip: the debug-logs fixer needs tree-sitter (install desloppify-ts[full]).",
                 "yellow",
             ),
             file=sys.stderr,

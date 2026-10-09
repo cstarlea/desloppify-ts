@@ -41,7 +41,7 @@ def fix_empty_if_chain(
     if entries and get_parser("tsx") is None:
         print(
             colorize(
-                "  Skip: the empty-if-chain fixer needs tree-sitter (install desloppify[full]).",
+                "  Skip: the empty-if-chain fixer needs tree-sitter (install desloppify-ts[full]).",
                 "yellow",
             ),
             file=sys.stderr,

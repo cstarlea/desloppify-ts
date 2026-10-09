@@ -51,7 +51,7 @@ def fix_dead_useeffect(
     if entries and get_parser("tsx") is None:
         print(
             colorize(
-                "  Skip: the dead-useeffect fixer needs tree-sitter (install desloppify[full]).",
+                "  Skip: the dead-useeffect fixer needs tree-sitter (install desloppify-ts[full]).",
                 "yellow",
             ),
             file=sys.stderr,

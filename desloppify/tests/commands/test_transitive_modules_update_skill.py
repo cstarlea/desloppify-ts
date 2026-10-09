@@ -188,29 +188,28 @@ class TestCmdUpdateSkill:
 
 class TestUpdateInstalledSkill:
     @patch("desloppify.app.commands.update_skill.colorize", side_effect=lambda t, _c: t)
-    @patch("desloppify.app.commands.update_skill._download")
-    def test_download_failure(self, mock_download, _mock_colorize, capsys):
-        import urllib.error
-        mock_download.side_effect = urllib.error.URLError("no network")
+    @patch("desloppify.app.commands.update_skill._read_bundled")
+    def test_read_failure(self, mock_read, _mock_colorize, capsys):
+        mock_read.side_effect = FileNotFoundError("SKILL.md")
         result = update_installed_skill("claude")
         assert result is False
         out = capsys.readouterr().out
-        assert "Download failed" in out
+        assert "Could not read bundled skill document" in out
 
     @patch("desloppify.app.commands.update_skill.colorize", side_effect=lambda t, _c: t)
-    @patch("desloppify.app.commands.update_skill._download")
-    def test_bad_content(self, mock_download, _mock_colorize, capsys):
-        mock_download.return_value = "random html garbage"
+    @patch("desloppify.app.commands.update_skill._read_bundled")
+    def test_bad_content(self, mock_read, _mock_colorize, capsys):
+        mock_read.return_value = "random html garbage"
         result = update_installed_skill("claude")
         assert result is False
         out = capsys.readouterr().out
         assert "doesn't look like a skill document" in out
 
     @patch("desloppify.app.commands.update_skill.colorize", side_effect=lambda t, _c: t)
-    @patch("desloppify.app.commands.update_skill._download")
-    def test_successful_dedicated_install(self, mock_download, _mock_colorize, capsys, tmp_path):
+    @patch("desloppify.app.commands.update_skill._read_bundled")
+    def test_successful_dedicated_install(self, mock_read, _mock_colorize, capsys, tmp_path):
         skill_content = "# Skill\n<!-- desloppify-skill-version: 1 -->\nContent"
-        mock_download.side_effect = lambda f: {
+        mock_read.side_effect = lambda f: {
             "SKILL.md": skill_content,
             "CLAUDE.md": "overlay",
         }[f]
@@ -228,13 +227,13 @@ class TestUpdateInstalledSkill:
         assert "Updated" in out
 
     @patch("desloppify.app.commands.update_skill.colorize", side_effect=lambda t, _c: t)
-    @patch("desloppify.app.commands.update_skill._download")
+    @patch("desloppify.app.commands.update_skill._read_bundled")
     def test_successful_dedicated_install_rovodev(
-        self, mock_download, _mock_colorize, capsys, tmp_path
+        self, mock_read, _mock_colorize, capsys, tmp_path
     ):
         """Per-project `update-skill rovodev` writes the dedicated `.rovodev/...` file."""
         skill_content = "# Skill\n<!-- desloppify-skill-version: 1 -->\nContent"
-        mock_download.side_effect = lambda f: {
+        mock_read.side_effect = lambda f: {
             "SKILL.md": skill_content,
             "ROVODEV.md": "rovodev overlay",
         }[f]
@@ -255,11 +254,11 @@ class TestUpdateInstalledSkill:
         assert "Updated" in out
 
     @patch("desloppify.app.commands.update_skill.colorize", side_effect=lambda t, _c: t)
-    @patch("desloppify.app.commands.update_skill._download")
-    def test_successful_shared_install(self, mock_download, _mock_colorize, capsys, tmp_path):
+    @patch("desloppify.app.commands.update_skill._read_bundled")
+    def test_successful_shared_install(self, mock_read, _mock_colorize, capsys, tmp_path):
         """Non-dedicated install (e.g. windsurf) replaces section in existing file."""
         skill_content = "# Skill\n<!-- desloppify-skill-version: 1 -->\nContent"
-        mock_download.side_effect = lambda f: {
+        mock_read.side_effect = lambda f: {
             "SKILL.md": skill_content,
             "WINDSURF.md": "windsurf overlay",
         }[f]
