@@ -2,17 +2,37 @@
 
 from __future__ import annotations
 
+import contextlib
+import contextvars
 import os
 import subprocess  # nosec B404
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from desloppify.languages.typescript.detectors.bounded import (
+    MemoryLimitExceeded,
+    RunLimits,
+    run_bounded,
+)
 from desloppify.languages.typescript.detectors.lint.configs import LinterConfig
 
 _proc_runtime = subprocess
 
 LINT_TIMEOUT = 300
+# Set while monorepo mode lints a package: its runs go through run_bounded.
+_LIMITS: contextvars.ContextVar[RunLimits | None] = contextvars.ContextVar("lint_limits", default=None)
+
+
+@contextlib.contextmanager
+def bounded_runs(limits: RunLimits) -> Iterator[None]:
+    """Run the linter processes started inside the block under ``limits``."""
+    token = _LIMITS.set(limits)
+    try:
+        yield
+    finally:
+        _LIMITS.reset(token)
 
 
 @dataclass(frozen=True)
@@ -51,6 +71,10 @@ def run_process(
     cmd: list[str], config: LinterConfig, timeout: int = LINT_TIMEOUT
 ) -> subprocess.CompletedProcess[str]:
     """Run ``cmd`` from the config's directory."""
+    limits = _LIMITS.get()
+    if limits is not None:
+        bounded = RunLimits(min(timeout, limits.timeout), limits.max_memory_mb)
+        return run_bounded(cmd, cwd=config.directory, limits=bounded, env=_env(config))
     return _proc_runtime.run(  # nosec B603
         cmd,
         capture_output=True,
@@ -87,8 +111,11 @@ def run_linter(
     label = run.config.label
     try:
         result = run_process(cmd, run.config)
-    except subprocess.TimeoutExpired:
-        run.failure, run.error = "linter_timeout", f"{label} took over {LINT_TIMEOUT}s"
+    except subprocess.TimeoutExpired as exc:
+        run.failure, run.error = "linter_timeout", f"{label} took over {exc.timeout:.0f}s"
+        return run
+    except MemoryLimitExceeded as exc:
+        run.failure, run.error = "linter_oom", f"{label} went {exc}"
         return run
     except OSError as exc:
         run.failure, run.error = "linter_missing", str(exc)
@@ -103,6 +130,7 @@ __all__ = [
     "LINT_TIMEOUT",
     "LintMessage",
     "LinterRun",
+    "bounded_runs",
     "failure_of",
     "run_linter",
     "run_process",

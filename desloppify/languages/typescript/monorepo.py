@@ -1,4 +1,4 @@
-"""Monorepo mode: per-package tsc runs for a scan of a monorepo's root.
+"""Monorepo mode: per-package tsc and lint runs for a scan of a monorepo's root.
 
 Off by default. ``languages.typescript.monorepo_mode`` turns it on in config
 and ``--lang-opt monorepo_mode=packages`` for one scan (``off`` turns it off).

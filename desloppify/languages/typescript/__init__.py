@@ -190,8 +190,8 @@ class TypeScriptConfig(LangConfig):
                 "monorepo_mode": LangValueSpec(
                     str,
                     "off",
-                    "'packages' also type-checks each package with its own tsconfig"
-                    " (one tsc run per package, within the budget below)",
+                    "'packages' also type-checks and lints each package with its own config"
+                    " (one run per package, within the budget below)",
                 ),
                 "monorepo_budget_seconds": LangValueSpec(
                     int,

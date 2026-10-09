@@ -115,8 +115,12 @@ def phase_lint(path: Path, lang: LangRuntimeContract) -> tuple[list[Issue], dict
         type_aware_max_files=lang.runtime_setting(
             "lint_type_aware_max_files", lint_detector_mod.DEFAULT_TYPE_AWARE_MAX_FILES
         ),
+        monorepo=monorepo_budget(lang),
     )
     record_reduced_coverage(lang, result.coverage)
+    if result.packages:
+        linted = sum(package.skipped is None for package in result.packages)
+        log(f"         monorepo mode: {linted} of {len(result.packages)} packages linted")
     if result.checked_files is None:
         if result.coverage is not None:
             log("         skipped (the project's linter did not run)")

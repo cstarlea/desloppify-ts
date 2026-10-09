@@ -297,6 +297,7 @@ def test_phase_issue_ids_are_rule_and_line(project):
         detector_coverage={},
         coverage_warnings=[],
         runtime_setting=lambda key, default=None: default,
+        runtime_option=lambda key, default=None: default,
     )
     issues, potentials = phases_basic_mod.phase_lint(root / "src", lang)
 
@@ -311,7 +312,11 @@ def test_phase_reports_no_potential_when_skipped(project):
     _write(root, "src/a.ts")
     fake(returncode=2, stderr="boom")
     lang = SimpleNamespace(
-        zone_map=None, detector_coverage={}, coverage_warnings=[], runtime_setting=lambda k, d=None: d
+        zone_map=None,
+        detector_coverage={},
+        coverage_warnings=[],
+        runtime_setting=lambda k, d=None: d,
+        runtime_option=lambda k, d=None: d,
     )
     issues, potentials = phases_basic_mod.phase_lint(root / "src", lang)
 

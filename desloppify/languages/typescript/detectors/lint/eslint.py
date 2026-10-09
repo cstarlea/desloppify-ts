@@ -7,6 +7,7 @@ import subprocess  # nosec B404
 from pathlib import Path
 from typing import Any
 
+from desloppify.languages.typescript.detectors.bounded import MemoryLimitExceeded
 from desloppify.languages.typescript.detectors.lint.configs import LinterConfig
 from desloppify.languages.typescript.detectors.lint.runner import (
     LinterRun,
@@ -35,6 +36,8 @@ def uses_type_information(
         result = run_process([str(binary), *flag], config, PRINT_CONFIG_TIMEOUT)
     except subprocess.TimeoutExpired:
         return False, "linter_timeout", f"--print-config took over {PRINT_CONFIG_TIMEOUT}s"
+    except MemoryLimitExceeded as exc:
+        return False, "linter_oom", f"--print-config went {exc}"
     except OSError as exc:
         return False, "linter_missing", str(exc)
     if result.returncode != 0:
