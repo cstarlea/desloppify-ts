@@ -42,6 +42,7 @@ def _register_builtin_specs() -> None:
     from .specs.nextjs import NEXTJS_SPEC
     from .specs.nuxt import NUXT_SPEC
     from .specs.react_router import REACT_ROUTER_SPEC
+    from .specs.servers import EXPRESS_SPEC, FASTIFY_SPEC, HONO_SPEC
     from .specs.sveltekit import SVELTEKIT_SPEC
     from .specs.vue import VUE_SPEC
 
@@ -53,6 +54,9 @@ def _register_builtin_specs() -> None:
         ASTRO_SPEC,
         REACT_ROUTER_SPEC,
         NESTJS_SPEC,
+        EXPRESS_SPEC,
+        HONO_SPEC,
+        FASTIFY_SPEC,
     ):
         register_framework_spec(spec)
 
