@@ -235,6 +235,40 @@ def detect_ecosystem_frameworks(
     return result
 
 
+def workspace_framework_detections(
+    scan_path: Path,
+    lang: LangRuntimeContract | None,
+    ecosystem: str,
+) -> list[EcosystemFrameworkDetection]:
+    """Framework detection for each workspace package inside the scan path.
+
+    The package the scan path itself belongs to is left out: that one is
+    ``detect_ecosystem_frameworks(scan_path, ...)``.
+    """
+    eco = str(ecosystem or "").strip().lower()
+    if eco != "node":
+        return []
+    scan_root = Path(scan_path).resolve()
+    cache_key = f"{_CACHE_PREFIX}.workspace:{eco}:{scan_root.as_posix()}"
+    cache = _framework_runtime_cache(lang)
+    if cache is not None:
+        cached = cache.get(cache_key)
+        if isinstance(cached, list):
+            return cached
+
+    from desloppify.languages.typescript.detectors.deps.packages import discover_packages
+
+    own_root = detect_ecosystem_frameworks(scan_root, lang, eco).package_root
+    result = [
+        detect_ecosystem_frameworks(package.directory, lang, eco)
+        for package in discover_packages(scan_root, get_project_root())
+        if package.directory != own_root and scan_root in package.directory.parents
+    ]
+    if cache is not None:
+        cache[cache_key] = result
+    return result
+
+
 def framework_values(
     scan_path: Path, lang: LangRuntimeContract | None, field: str
 ) -> tuple[str, ...]:
@@ -258,4 +292,9 @@ def injected_class_decorators(scan_path: Path, lang: LangRuntimeContract | None)
     )
 
 
-__all__ = ["detect_ecosystem_frameworks", "framework_values", "injected_class_decorators"]
+__all__ = [
+    "detect_ecosystem_frameworks",
+    "framework_values",
+    "injected_class_decorators",
+    "workspace_framework_detections",
+]

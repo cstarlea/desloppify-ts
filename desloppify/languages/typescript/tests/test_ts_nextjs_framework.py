@@ -291,3 +291,58 @@ def test_detect_orphaned_applies_scan_zones_and_entries(tmp_path: Path, capsys):
 
     cmd_orphaned(SimpleNamespace(path=str(tmp_path), json=False, top=20))
     assert "Orphaned files: 1 file, 20 LOC" in capsys.readouterr().out
+
+
+_LEGACY_ROUTER = "import { useRouter } from 'next/router'\nexport default function X(){return null}\n"
+
+
+def _nextjs_phase():
+    cfg = TypeScriptConfig()
+    return next(p for p in cfg.phases if getattr(p, "label", "") == "Next.js framework smells")
+
+
+def _router_issue_files(issues) -> list[str]:
+    return sorted(i["file"] for i in issues if "next_router_in_app_router" in i["id"])
+
+
+def test_nextjs_smells_phase_runs_on_workspace_packages(tmp_path: Path):
+    _write(tmp_path, "package.json", '{"private": true, "devDependencies": {"turbo": "2"}}\n')
+    _write(tmp_path, "pnpm-workspace.yaml", "packages:\n  - 'apps/*'\n  - 'packages/*'\n")
+    _write(tmp_path, "apps/web/package.json", '{"name": "web", "dependencies": {"next": "15"}}\n')
+    _write(tmp_path, "apps/web/app/legacy.tsx", _LEGACY_ROUTER)
+    _write(tmp_path, "packages/ui/package.json", '{"name": "ui"}\n')
+    _write(tmp_path, "packages/ui/app/legacy.tsx", _LEGACY_ROUTER)
+
+    issues, potentials = _nextjs_phase().run(tmp_path, _FakeLang())
+
+    assert _router_issue_files(issues) == ["apps/web/app/legacy.tsx"]
+    assert potentials == {"nextjs": 1}
+
+
+def test_nextjs_smells_phase_dedupes_package_nested_in_a_next_root(tmp_path: Path):
+    _write(
+        tmp_path,
+        "package.json",
+        '{"workspaces": ["examples/*"], "dependencies": {"next": "15"}}\n',
+    )
+    _write(tmp_path, "app/legacy.tsx", _LEGACY_ROUTER)
+    _write(tmp_path, "examples/blog/package.json", '{"name": "blog", "dependencies": {"next": "15"}}\n')
+    _write(tmp_path, "examples/blog/app/legacy.tsx", _LEGACY_ROUTER)
+
+    issues, potentials = _nextjs_phase().run(tmp_path, _FakeLang())
+
+    assert _router_issue_files(issues) == ["app/legacy.tsx", "examples/blog/app/legacy.tsx"]
+    assert len({i["id"] for i in issues}) == len(issues)
+    assert potentials == {"nextjs": 2}  # the root walk already counted the example's files
+
+
+def test_nextjs_smells_phase_scoped_to_a_package_skips_siblings(tmp_path: Path):
+    _write(tmp_path, "package.json", '{"workspaces": ["apps/*"]}\n')
+    for name in ("web", "docs"):
+        manifest = f'{{"name": "{name}", "dependencies": {{"next": "15"}}}}\n'
+        _write(tmp_path, f"apps/{name}/package.json", manifest)
+        _write(tmp_path, f"apps/{name}/app/legacy.tsx", _LEGACY_ROUTER)
+
+    issues, _ = _nextjs_phase().run(tmp_path / "apps" / "web", _FakeLang())
+
+    assert _router_issue_files(issues) == ["apps/web/app/legacy.tsx"]

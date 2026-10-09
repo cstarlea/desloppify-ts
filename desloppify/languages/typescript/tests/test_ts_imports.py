@@ -7,7 +7,6 @@ from pathlib import Path
 
 import pytest
 
-import desloppify.base.discovery.paths as paths_api_mod
 import desloppify.languages.typescript.detectors.deps as deps_detector_mod
 import desloppify.languages.typescript.detectors.deps.imports as imports_mod
 import desloppify.languages.typescript.detectors.deps.resolve as deps_resolve_mod
@@ -36,7 +35,6 @@ needs_treesitter = pytest.mark.skipif(
 
 @pytest.fixture(autouse=True)
 def _root(tmp_path, set_project_root, monkeypatch):
-    monkeypatch.setattr(paths_api_mod, "SRC_PATH", tmp_path / "src")
     deps_resolve_mod.load_tsconfig_paths_cached.cache_clear()
 
 

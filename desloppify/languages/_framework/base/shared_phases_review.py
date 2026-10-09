@@ -188,6 +188,27 @@ def _resolve_detector_files(path: Path, lang: LangRuntimeContract) -> list[str]:
     return []
 
 
+def _package_manifests(scan_root: Path, files: list[str]) -> list[str]:
+    """The nearest package.json above each file.
+
+    The security checks read them (which frameworks expose which env
+    prefixes, whether the app has accounts), so they belong in its cache key.
+    """
+    manifests: set[str] = set()
+    seen: set[Path] = set()
+    for filepath in files:
+        directory = _resolve_detector_file_path(scan_root, filepath).parent
+        for candidate in (directory, *directory.parents):
+            if candidate in seen:
+                break
+            seen.add(candidate)
+            manifest = candidate / "package.json"
+            if manifest.is_file():
+                manifests.add(str(manifest))
+                break
+    return sorted(manifests)
+
+
 def _resolve_detector_file_path(scan_root: Path, filepath: str) -> Path:
     """Resolve a detector file path against the active scan root."""
     file_path = Path(filepath)
@@ -534,7 +555,7 @@ def phase_security(
     security_cache = _security_cache(getattr(lang, "review_cache", None))
     security_fingerprint = _file_fingerprint(
         scan_root=path,
-        files=files,
+        files=[*files, *_package_manifests(path, files)],
         zone_map=zone_map,
         include_zone=True,
         salt=_security_salt(lang),
