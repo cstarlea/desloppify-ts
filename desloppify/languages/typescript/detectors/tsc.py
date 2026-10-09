@@ -18,6 +18,11 @@ from pathlib import Path
 from typing import Any
 
 from desloppify.base.discovery.source import find_component_files
+from desloppify.languages.typescript.detectors.bounded import (
+    MemoryLimitExceeded,
+    RunLimits,
+    run_bounded,
+)
 
 logger = logging.getLogger(__name__)
 _proc_runtime = subprocess
@@ -87,21 +92,24 @@ def resolve_tsc_command(*start_dirs: Path) -> list[str]:
 def run_tsc_check(
     project_root: Path,
     tsconfig_path: Path,
+    limits: RunLimits | None = None,
 ) -> subprocess.CompletedProcess[str]:
     """Run tsc on ``tsconfig_path`` with the unused-symbol checks enabled."""
-    cmd = resolve_tsc_command(tsconfig_path.parent, project_root)
+    cmd = [
+        *resolve_tsc_command(tsconfig_path.parent, project_root),
+        "--project",
+        str(tsconfig_path),
+        "--noEmit",
+        "--noUnusedLocals",
+        "--noUnusedParameters",
+        "--listFiles",
+        "--pretty",
+        "false",
+    ]
+    if limits is not None:
+        return run_bounded(cmd, cwd=project_root, limits=limits)
     return _proc_runtime.run(  # nosec B603
-        [
-            *cmd,
-            "--project",
-            str(tsconfig_path),
-            "--noEmit",
-            "--noUnusedLocals",
-            "--noUnusedParameters",
-            "--listFiles",
-            "--pretty",
-            "false",
-        ],
+        cmd,
         capture_output=True,
         text=True,
         encoding="utf-8",
@@ -167,8 +175,12 @@ def run_tsc(
     tsconfig_path: Path,
     *,
     cache: dict[str, Any] | None = None,
+    limits: RunLimits | None = None,
 ) -> TscRun:
-    """Run tsc once for ``tsconfig_path``; later calls with the same cache reuse it."""
+    """Run tsc once for ``tsconfig_path``; later calls with the same cache reuse it.
+
+    With ``limits``, a run that goes over them fails as ``timeout`` or ``memory``.
+    """
     runs = cache.setdefault(_CACHE_KEY, {}) if cache is not None else {}
     key = (str(project_root), str(tsconfig_path))
     if key in runs:
@@ -176,12 +188,22 @@ def run_tsc(
     run = TscRun(project_root=project_root, tsconfig=tsconfig_path)
     runs[key] = run
     try:
-        result = run_tsc_check(project_root, tsconfig_path)
+        result = run_tsc_check(project_root, tsconfig_path, limits) if limits else run_tsc_check(
+            project_root, tsconfig_path
+        )
+    except _proc_runtime.TimeoutExpired as exc:
+        run.failure, run.error = "timeout", str(exc)
+        return run
+    except MemoryLimitExceeded as exc:
+        run.failure, run.error = "memory", str(exc)
+        return run
     except (_proc_runtime.SubprocessError, OSError) as exc:
         logger.debug("tsc did not run: %s", exc)
         run.failure, run.error = "tsc_missing", str(exc)
         return run
     failure = tsc_failure_reason(result)
+    if failure is not None and "heap out of memory" in result.stderr:
+        failure = "memory"
     if failure is not None:
         logger.debug("tsc produced no usable output (%s): %s", failure, result.stderr[-500:])
         run.failure = failure

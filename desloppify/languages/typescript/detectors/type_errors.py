@@ -13,7 +13,7 @@ from __future__ import annotations
 import json
 import re
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -21,11 +21,14 @@ from desloppify.base.discovery.paths import get_project_root
 from desloppify.base.discovery.sfc import is_sfc
 from desloppify.base.discovery.source import find_ts_and_js_files
 from desloppify.languages._framework.base.types import DetectorCoverageStatus
-from desloppify.languages.typescript.detectors.deps.resolve import find_nearest_tsconfig
+from desloppify.languages.typescript.detectors.bounded import Budget
+from desloppify.languages.typescript.detectors.deps.packages import discover_packages
+from desloppify.languages.typescript.detectors.deps.resolve import find_nearest_tsconfig, read_tsconfig
 from desloppify.languages.typescript.detectors.tsc import (
     COMPONENTS_REMEDIATION,
     UNUSED_CODES,
     TscDiagnostic,
+    TscRun,
     run_tsc,
     unchecked_components_note,
 )
@@ -78,8 +81,11 @@ class TypeErrorResult:
     entries: list[dict]
     checked_files: list[str] | None
     coverage: DetectorCoverageStatus | None
+    packages: list[PackageCheck] | None = None  # monorepo mode only
 
 
+# Each package run's own time cap, within the budget's total.
+TSC_PACKAGE_TIMEOUT = 300
 _INSTALL = "Install the project's dependencies (including `typescript`) and rerun scan."
 
 
@@ -158,10 +164,83 @@ def _within(file: Path, root: Path) -> bool:
     return file == root or root in file.parents
 
 
+@dataclass
+class _Collected:
+    """What the tsc runs found, merged: the first run to report a key keeps it."""
+
+    checked: set[Path] = field(default_factory=set)
+    grouped: dict[tuple[Path, str, int], list[TscDiagnostic]] = field(default_factory=dict)
+    environment: set[Path] = field(default_factory=set)
+
+
+@dataclass(frozen=True)
+class PackageCheck:
+    """One package tsconfig in monorepo mode: checked, or the reason it wasn't."""
+
+    tsconfig: Path
+    files: int
+    skipped: str | None = None
+    unbuilt: tuple[str, ...] = ()  # workspace packages it imports that aren't built
+
+
+def _collect(
+    run: TscRun,
+    owner_config: Path,
+    scan_root: Path,
+    owners: _Owners,
+    collected: _Collected,
+) -> dict[Path, set[Path]]:
+    """Add the errors in the files ``owner_config`` owns; return other configs' files."""
+
+    def resolve(name: str) -> Path:
+        file = Path(name)
+        return (file if file.is_absolute() else run.project_root / file).resolve()
+
+    checked: set[Path] = set()
+    foreign: dict[Path, set[Path]] = defaultdict(set)
+    for name in run.files:
+        file = resolve(name)
+        if "node_modules" in file.parts or not _within(file, scan_root):
+            continue
+        owner = owners(file)
+        if owner is not None and owner.resolve() != owner_config:
+            foreign[owner.resolve()].add(file)
+            continue
+        checked.add(file)
+
+    grouped: dict[tuple[Path, str, int], list[TscDiagnostic]] = defaultdict(list)
+    for diagnostic in run.diagnostics:
+        if diagnostic.file is None:
+            continue
+        if diagnostic.code in UNUSED_CODES or _CONFIG_CODE_RE.match(diagnostic.code):
+            continue
+        file = resolve(diagnostic.file)
+        if file not in checked:
+            continue
+        if _imports_component(diagnostic):
+            continue  # a shim-less `import X from './X.vue'`: vue-tsc and friends resolve it
+        if _is_environment(diagnostic):
+            collected.environment.add(file)
+            continue
+        grouped[(file, diagnostic.code, diagnostic.line)].append(diagnostic)
+
+    collected.checked |= checked
+    for key, diagnostics in grouped.items():
+        collected.grouped.setdefault(key, diagnostics)
+    return foreign
+
+
 def detect_type_errors_result(
-    path: Path, *, cache: dict[str, Any] | None = None
+    path: Path,
+    *,
+    cache: dict[str, Any] | None = None,
+    monorepo: Budget | None = None,
 ) -> TypeErrorResult:
-    """Type errors in the scan path from the scan's shared tsc run."""
+    """Type errors in the scan path from the scan's shared tsc run.
+
+    With ``monorepo`` (a budget), every other tsconfig that owns TypeScript
+    files in the scan path gets a tsc run of its own, one at a time.
+    """
     scan_root = path.resolve()
     ts_files = find_ts_and_js_files(path)
     if should_use_deno_fallback(path, ts_files):
@@ -197,47 +276,23 @@ def detect_type_errors_result(
             reason="deps_not_installed",
         )
 
-    run_tsconfig = tsconfig.resolve()
     owners = _Owners()
-
-    def resolve(name: str) -> Path:
-        file = Path(name)
-        return (file if file.is_absolute() else project_root / file).resolve()
-
-    checked: set[Path] = set()
-    foreign: dict[Path, set[Path]] = defaultdict(set)
-    for name in run.files:
-        file = resolve(name)
-        if "node_modules" in file.parts or not _within(file, scan_root):
-            continue
-        owner = owners(file)
-        if owner is not None and owner.resolve() != run_tsconfig:
-            foreign[owner.resolve()].add(file)
-            continue
-        checked.add(file)
-
-    grouped: dict[tuple[Path, str, int], list[TscDiagnostic]] = defaultdict(list)
-    environment: set[Path] = set()
-    for diagnostic in run.diagnostics:
-        if diagnostic.file is None:
-            continue
-        if diagnostic.code in UNUSED_CODES or _CONFIG_CODE_RE.match(diagnostic.code):
-            continue
-        file = resolve(diagnostic.file)
-        if file not in checked:
-            continue
-        if _imports_component(diagnostic):
-            continue  # a shim-less `import X from './X.vue'`: vue-tsc and friends resolve it
-        if _is_environment(diagnostic):
-            environment.add(file)
-            continue
-        grouped[(file, diagnostic.code, diagnostic.line)].append(diagnostic)
+    collected = _Collected()
+    foreign = _collect(run, tsconfig.resolve(), scan_root, owners, collected)
+    packages = None
+    if monorepo is not None:
+        projects = _package_projects(ts_files, project_root, scan_root, tsconfig.resolve(), owners)
+        packages = _check_packages(
+            projects, project_root, scan_root, owners, collected, cache=cache, budget=monorepo
+        )
+        foreign = {}
 
     # A file that can't resolve a package has its other errors in doubt
     # (cascades through the missing types), so none of them are reported.
+    environment = collected.environment
     hidden = 0
     entries = []
-    for (file, code, line), diagnostics in sorted(grouped.items()):
+    for (file, code, line), diagnostics in sorted(collected.grouped.items()):
         if file in environment:
             hidden += 1
             continue
@@ -253,11 +308,161 @@ def detect_type_errors_result(
                 "confidence": "medium" if code in _MEDIUM_CONFIDENCE_CODES else "high",
             }
         )
-    checked_files = sorted(str(file) for file in checked - environment)
-    return TypeErrorResult(
-        entries,
-        checked_files,
-        _coverage(foreign, environment, hidden, tsconfig, unchecked_components_note(path)),
+    checked_files = sorted(str(file) for file in collected.checked - environment)
+    coverage = _coverage(
+        foreign, environment, hidden, tsconfig, unchecked_components_note(path), packages
+    )
+    return TypeErrorResult(entries, checked_files, coverage, packages)
+
+
+# ── monorepo mode ────────────────────────────────────────────
+
+_TS_SUFFIXES = (".ts", ".tsx", ".mts", ".cts")
+_SKIP_REASONS = {
+    "time_budget": "time budget spent",
+    "timeout": "tsc timed out",
+    "memory": "over the memory limit",
+    "deps_not_installed": "dependencies not installed",
+    "tsconfig_extends_missing": "extends a missing (generated?) tsconfig",
+    "deno": "Deno project",
+    "tsc_missing": "tsc not found",
+    "workspace_unbuilt": "imports workspace packages that aren't built",
+}
+
+
+def _package_projects(
+    ts_files: list[str],
+    project_root: Path,
+    scan_root: Path,
+    base_config: Path,
+    owners: _Owners,
+) -> dict[Path, int]:
+    """Other tsconfigs owning TypeScript files in the scan path, with their file counts."""
+    counts: dict[Path, int] = defaultdict(int)
+    for name in ts_files:
+        if not name.endswith(_TS_SUFFIXES):
+            continue
+        file = Path(name)
+        file = (file if file.is_absolute() else project_root / file).resolve()
+        if "node_modules" in file.parts or not _within(file, scan_root):
+            continue
+        owner = owners(file)
+        if owner is not None and owner.resolve() != base_config:
+            counts[owner.resolve()] += 1
+    return dict(sorted(counts.items()))
+
+
+def _project_configs(tsconfig: Path) -> list[Path]:
+    """The configs to run for a project: a solution config's (``"files": []``)
+    references, else the config itself."""
+    data = read_tsconfig(tsconfig) or {}
+    references = data.get("references")
+    if data.get("files") != [] or not isinstance(references, list):
+        return [tsconfig]
+    configs = []
+    for reference in references:
+        target = reference.get("path") if isinstance(reference, dict) else None
+        if not isinstance(target, str):
+            continue
+        candidate = (tsconfig.parent / target).resolve()
+        if candidate.is_dir():
+            candidate = candidate / "tsconfig.json"
+        if candidate.is_file():
+            configs.append(candidate)
+    return configs or [tsconfig]
+
+
+def _unbuilt_imports(run: TscRun, workspace_names: frozenset[str]) -> set[str]:
+    """Workspace packages the run can't find: their manifests point at build output
+    that isn't there, so every type that flows from them is ``any``."""
+    missing = set()
+    for diagnostic in run.diagnostics:
+        if diagnostic.code not in _MODULE_NOT_FOUND:
+            continue
+        match = _QUOTED_RE.search(diagnostic.message)
+        if match is None:
+            continue
+        parts = match.group(1).split("/")
+        name = "/".join(parts[:2]) if parts[0].startswith("@") else parts[0]
+        if name in workspace_names:
+            missing.add(name)
+    return missing
+
+
+def _unusable(run: TscRun, tsconfig: Path) -> str | None:
+    """Why a package run can't be read (a reason code), or None."""
+    if run.failure is not None:
+        return run.failure
+    if any("TS5083" in line for line in run.config_errors):
+        return "tsconfig_extends_missing"
+    if _dependencies_missing(tsconfig):
+        return "deps_not_installed"
+    return None
+
+
+def _check_packages(
+    projects: dict[Path, int],
+    project_root: Path,
+    scan_root: Path,
+    owners: _Owners,
+    collected: _Collected,
+    *,
+    cache: dict[str, Any] | None,
+    budget: Budget,
+) -> list[PackageCheck]:
+    workspace_names = frozenset(
+        package.name for package in discover_packages(scan_root, project_root) if package.name
+    )
+    checks = []
+    for owner_config, files in projects.items():
+        skipped = "deno" if should_use_deno_fallback(owner_config.parent, []) else None
+        unbuilt: set[str] = set()
+        runs = []
+        for config in () if skipped else _project_configs(owner_config):
+            limits = budget.limits(TSC_PACKAGE_TIMEOUT)
+            if limits is None:
+                skipped = "time_budget"
+                break
+            run = run_tsc(project_root, config, cache=cache, limits=limits)
+            skipped = _unusable(run, config)
+            if skipped is not None:
+                break
+            unbuilt |= _unbuilt_imports(run, workspace_names)
+            runs.append(run)
+        if skipped is None and unbuilt:
+            skipped = "workspace_unbuilt"
+        if skipped is None:
+            for run in runs:
+                _collect(run, owner_config, scan_root, owners, collected)
+        checks.append(PackageCheck(owner_config, files, skipped, tuple(sorted(unbuilt))))
+    return checks
+
+
+def _shown(configs: list[str]) -> str:
+    return ", ".join(configs[:3]) + (f" and {len(configs) - 3} more" if len(configs) > 3 else "")
+
+
+def _packages_note(packages: list[PackageCheck]) -> str | None:
+    skipped = [p for p in packages if p.skipped is not None]
+    if not skipped:
+        return None
+    root = get_project_root()
+    by_reason: dict[str, list[str]] = defaultdict(list)
+    for package in skipped:
+        by_reason[package.skipped or ""].append(_display(package.tsconfig, root))
+    unbuilt = sorted({name for package in skipped for name in package.unbuilt})
+
+    def label(reason: str) -> str:
+        text = _SKIP_REASONS.get(reason, reason)
+        return f"{text} ({_shown(unbuilt)})" if reason == "workspace_unbuilt" else text
+
+    reasons = "; ".join(
+        f"{label(reason)}: {_shown(configs)}" for reason, configs in sorted(by_reason.items())
+    )
+    files = sum(p.files for p in skipped)
+    return (
+        f"{len(skipped)} of {len(packages)} package tsconfigs were not type-checked"
+        f" ({files} files; {reasons})"
     )
 
 
@@ -267,17 +472,24 @@ def _coverage(
     hidden: int,
     tsconfig: Path,
     components: str | None = None,
+    packages: list[PackageCheck] | None = None,
 ) -> DetectorCoverageStatus | None:
     notes = []
     remediation = []
     if components:
         notes.append(components)
         remediation.append(COMPONENTS_REMEDIATION)
+    if packages and (note := _packages_note(packages)):
+        notes.append(note)
+        remediation.append(
+            "Build the workspace packages and install dependencies, raise"
+            " languages.typescript.monorepo_budget_seconds or monorepo_max_memory_mb,"
+            " or scan the package's directory."
+        )
     if foreign:
         files = sum(len(group) for group in foreign.values())
         root = get_project_root()
-        configs = sorted(_display(config, root) for config in foreign)
-        shown = ", ".join(configs[:3]) + (f" and {len(configs) - 3} more" if len(configs) > 3 else "")
+        shown = _shown(sorted(_display(config, root) for config in foreign))
         notes.append(
             f"{files} files belong to other tsconfigs ({shown}) and were not type-checked"
             f" with {_display(tsconfig, root)}"
@@ -303,4 +515,4 @@ def _display(config: Path, root: Path) -> str:
         return config.as_posix()
 
 
-__all__ = ["TypeErrorResult", "detect_type_errors_result"]
+__all__ = ["PackageCheck", "TypeErrorResult", "detect_type_errors_result"]
