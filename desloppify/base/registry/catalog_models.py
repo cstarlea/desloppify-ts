@@ -28,6 +28,7 @@ DISPLAY_ORDER = [
     "react",
     "nextjs",
     "react_router",
+    "nestjs",
     "next_lint",
     "dupes",
     "stale_exclude",

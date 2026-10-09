@@ -224,6 +224,18 @@ DETECTORS: dict[str, DetectorMeta] = {
         marks_dims_stale=True,
         subjective_dimensions=("design_coherence", "logic_clarity"),
     ),
+    "nestjs": DetectorMeta(
+        "nestjs",
+        "nestjs",
+        "Code quality",
+        "refactor",
+        "fix NestJS module wiring (unregistered controllers, providers the container can't build)",
+        needs_judgment=True,
+        standalone_threshold="medium",
+        tier=3,
+        marks_dims_stale=True,
+        subjective_dimensions=("design_coherence", "logic_clarity"),
+    ),
     "next_lint": DetectorMeta(
         "next_lint",
         "next lint",

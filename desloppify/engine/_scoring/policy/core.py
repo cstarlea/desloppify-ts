@@ -51,6 +51,7 @@ _FILE_BASED_POLICY_DETECTORS = frozenset(
         "review",
         "nextjs",
         "react_router",
+        "nestjs",
         "next_lint",
         "type_error",
         "lint",
