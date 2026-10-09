@@ -14,12 +14,12 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
+import desloppify.languages.typescript.detectors.tsc as tsc_mod
 from desloppify.base.discovery.file_paths import rel, resolve_path
 from desloppify.base.discovery.paths import get_project_root
 from desloppify.base.discovery.source import find_ts_and_js_files
 from desloppify.base.output.terminal import colorize, print_table
 from desloppify.languages._framework.base.types import DetectorCoverageStatus
-import desloppify.languages.typescript.detectors.tsc as tsc_mod
 from desloppify.languages.typescript.detectors.deps.resolve import find_nearest_tsconfig
 from desloppify.languages.typescript.detectors.unused_fallback import (
     _contains_deno_markers,
@@ -29,6 +29,7 @@ from desloppify.languages.typescript.detectors.unused_fallback import (
     detect_unused_fallback,
     should_use_deno_fallback,
 )
+from desloppify.languages.typescript.syntax.lines import split_lines
 from desloppify.languages.typescript.syntax.nodes import (
     ALL_DESTRUCTURED,
     NameIndex,
@@ -37,7 +38,6 @@ from desloppify.languages.typescript.syntax.nodes import (
     pattern_at,
     same,
 )
-from desloppify.languages.typescript.syntax.lines import split_lines
 from desloppify.languages.typescript.syntax.tree import parse_text
 
 TS6133_RE = re.compile(

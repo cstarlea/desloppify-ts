@@ -6,17 +6,17 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from typing import Literal
 
+from desloppify.base.output.terminal import colorize
+from desloppify.engine._plan.policy.subjective import (
+    SubjectiveVisibility,
+    compute_subjective_visibility,
+)
 from desloppify.engine.plan_state import PlanModel
 from desloppify.engine.plan_triage import (
     TRIAGE_STAGE_IDS,
     TriageStartDecision,
     decide_triage_start,
 )
-from desloppify.engine._plan.policy.subjective import (
-    SubjectiveVisibility,
-    compute_subjective_visibility,
-)
-from desloppify.base.output.terminal import colorize
 from desloppify.state_io import StateModel
 
 from .review_coverage import ensure_active_triage_issue_ids

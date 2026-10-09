@@ -13,9 +13,10 @@ from desloppify.base.config import (
     load_config as _load_config,
 )
 from desloppify.base.discovery.paths import get_project_root
+from desloppify.engine._state.filtering import path_scoped_issues
 from desloppify.engine._state.issue_semantics import (
-    is_review_finding,
     is_assessment_request,
+    is_review_finding,
 )
 from desloppify.intelligence.narrative._constants import STRUCTURAL_MERGE
 from desloppify.intelligence.narrative.types import (
@@ -25,7 +26,6 @@ from desloppify.intelligence.narrative.types import (
     StrictTarget,
     VerificationStep,
 )
-from desloppify.engine._state.filtering import path_scoped_issues
 from desloppify.state_io import Issue, StateModel
 from desloppify.state_scoring import score_snapshot as state_score_snapshot
 

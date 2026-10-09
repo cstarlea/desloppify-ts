@@ -2,13 +2,13 @@
 
 import pytest
 
+from desloppify.languages._framework.base.types import DetectorPhase, LangConfig
 from desloppify.languages.framework import (
     DEFAULT_LANG,
     default_lang,
     get_lang,
     get_lang_hook,
 )
-from desloppify.languages._framework.base.types import DetectorPhase, LangConfig
 
 # ── get_lang ─────────────────────────────────────────────────
 

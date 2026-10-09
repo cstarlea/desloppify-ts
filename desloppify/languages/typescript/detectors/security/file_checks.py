@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import re
 
-from desloppify.languages.typescript.detectors.security.entries import _make_security_entry
+from desloppify.base.signal_patterns import AUTH_LOOKUP_TOKEN_RE
+from desloppify.languages.typescript.detectors.security.entries import (
+    _make_security_entry,
+)
 from desloppify.languages.typescript.detectors.security.patterns import (
     _AUTH_CHECK_RE,
     _EDGE_ENTRYPOINT_RE,
@@ -12,7 +15,6 @@ from desloppify.languages.typescript.detectors.security.patterns import (
     _JSON_PARSE_RE,
     _SERVE_ASYNC_RE,
 )
-from desloppify.base.signal_patterns import AUTH_LOOKUP_TOKEN_RE
 from desloppify.languages.typescript.syntax.scanner import SourceText
 
 _AUTH_DENIAL_RE = re.compile(

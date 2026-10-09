@@ -7,12 +7,12 @@ from types import SimpleNamespace
 import desloppify.engine._plan.auto_cluster_sync_issue as auto_cluster_sync_mod
 import desloppify.engine._plan.constants as plan_constants_mod
 import desloppify.engine._plan.refresh_lifecycle as refresh_lifecycle_mod
-import desloppify.engine._plan.sync as sync_pkg_mod
 import desloppify.engine._plan.scan_issue_reconcile as scan_reconcile_mod
-import desloppify.engine._plan.sync.review_import as reconcile_import_mod
 import desloppify.engine._plan.schema.helpers as schema_helpers_mod
+import desloppify.engine._plan.sync as sync_pkg_mod
 import desloppify.engine._plan.sync.auto_prune as sync_auto_prune_mod
 import desloppify.engine._plan.sync.context as sync_context_mod
+import desloppify.engine._plan.sync.review_import as reconcile_import_mod
 import desloppify.engine._plan.sync.triage_start_policy as triage_start_policy_mod
 import desloppify.engine._plan.sync.workflow as sync_workflow_mod
 import desloppify.engine._plan.triage.dismiss as triage_dismiss_mod

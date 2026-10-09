@@ -6,14 +6,14 @@ import logging
 import re
 from pathlib import Path
 
-from desloppify.base.discovery.source import find_tsx_and_jsx_files
 from desloppify.base.discovery.paths import get_project_root
+from desloppify.base.discovery.source import find_tsx_and_jsx_files
 from desloppify.engine.detectors.base import ClassInfo
-from desloppify.languages.typescript.syntax.lines import line_number
 from desloppify.engine.detectors.passthrough import (
     classify_params,
     classify_passthrough_tier,
 )
+from desloppify.languages.typescript.syntax.lines import line_number
 
 logger = logging.getLogger(__name__)
 

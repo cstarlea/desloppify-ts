@@ -16,15 +16,15 @@ dimensions retain deferral and escalation behavior.
 from __future__ import annotations
 
 from desloppify.base.config import DEFAULT_TARGET_STRICT_SCORE
-from desloppify.engine._plan.policy import stale as stale_policy_mod
 from desloppify.engine._plan.constants import (
     SUBJECTIVE_PREFIX,
     QueueSyncResult,
     is_triage_id,
     is_workflow_id,
 )
-from desloppify.engine._plan.schema import PlanModel, ensure_plan_defaults
+from desloppify.engine._plan.policy import stale as stale_policy_mod
 from desloppify.engine._plan.policy.subjective import SubjectiveVisibility
+from desloppify.engine._plan.schema import PlanModel, ensure_plan_defaults
 from desloppify.engine._state.schema import StateModel
 
 from .context import has_objective_backlog, is_mid_cycle
@@ -34,7 +34,6 @@ from .defer_policy import (
     should_escalate_defer_state,
     update_defer_state,
 )
-
 
 # ---------------------------------------------------------------------------
 # Defer-meta keys (shared with work_queue readers via plan dict)

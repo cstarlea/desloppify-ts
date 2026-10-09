@@ -5,7 +5,6 @@ from pathlib import Path
 
 import pytest
 
-
 from desloppify.engine._state import filtering as state_query_mod
 from desloppify.engine._state.issue_semantics import MECHANICAL_DEFECT, SCAN_ORIGIN
 from desloppify.engine._state.schema import CURRENT_VERSION

@@ -4,16 +4,16 @@ from __future__ import annotations
 
 import pytest
 
-from desloppify.cli import create_parser
 from desloppify.base.registry import DETECTORS, display_order
+from desloppify.cli import create_parser
 from desloppify.intelligence.review import (
     DIMENSION_PROMPTS,
     REVIEW_SYSTEM_PROMPT,
+    hash_file,
 )
 from desloppify.intelligence.review import (
     DIMENSIONS as REVIEW_DIMENSIONS,
 )
-from desloppify.intelligence.review import hash_file
 
 # ── Registry tests ────────────────────────────────────────────────
 

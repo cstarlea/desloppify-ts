@@ -128,7 +128,7 @@ def _render_usage(lines: list[str]) -> None:
     append("4. Run `desloppify scan` to update automated issues and score")
     append("5. To re-evaluate holistic issues, re-run the full cycle:")
     append(
-        f"   `desloppify review --prepare --path <src>`"
+        "   `desloppify review --prepare --path <src>`"
     )
     append("   Then have an agent investigate and import — previously addressed")
     append("   issues auto-resolve if not re-reported.\n")
@@ -181,9 +181,9 @@ def _render_re_evaluate(lines: list[str]) -> None:
     append("## Re-evaluate\n")
     append("After addressing issues, re-run the holistic review cycle:\n")
     append("```bash")
-    append(f"desloppify review --prepare --path <src>")
+    append("desloppify review --prepare --path <src>")
     append("# Agent investigates batches and writes issues.json")
-    append(f"desloppify review --import issues.json")
+    append("desloppify review --import issues.json")
     append("```\n")
     append(
         "Previously addressed issues will auto-resolve if not re-reported by the agent."

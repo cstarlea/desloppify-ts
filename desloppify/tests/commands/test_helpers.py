@@ -14,11 +14,11 @@ from desloppify.app.commands.helpers.state import (
     require_issue_inventory,
     state_path,
 )
+from desloppify.app.commands.helpers.subjective import print_subjective_followup
 from desloppify.engine._state.recovery import (
     has_saved_plan_without_scan,
     recover_state_from_saved_plan,
 )
-from desloppify.app.commands.helpers.subjective import print_subjective_followup
 
 # ── rendering.py: print_agent_plan ────────────────────────────────────
 

@@ -7,7 +7,6 @@ import desloppify.engine._scoring.detection as scoring_detection
 import desloppify.engine._scoring.policy.core as scoring_policy
 import desloppify.engine._work_queue.ranking as work_queue_ranking
 
-
 # ---------------------------------------------------------------------------
 # Behavioral tests for key split-module functions
 # ---------------------------------------------------------------------------

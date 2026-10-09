@@ -12,13 +12,13 @@ import argparse
 from desloppify.base.output.terminal import colorize
 from desloppify.base.output.user_message import print_user_message
 
+from ..services import TriageServices, default_triage_services
+from ..stages.records import TriageStages
 from .basic import MIN_ATTESTATION_LEN
 from .shared import (
     StageConfirmationRequest,
     finalize_stage_confirmation,
 )
-from ..services import TriageServices, default_triage_services
-from ..stages.records import TriageStages
 
 
 def _validate_strategize_attestation(

@@ -10,17 +10,12 @@ from pathlib import Path
 from typing import Any
 
 from desloppify.base.discovery.file_paths import (
-
     matches_exclusion,
-
     rel,
-
     resolve_path,
-
 )
-
-from desloppify.base.discovery.source import get_exclusions
 from desloppify.base.discovery.paths import get_project_root
+from desloppify.base.discovery.source import get_exclusions
 
 
 def finalize_graph(graph: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:

@@ -5,13 +5,13 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from desloppify.engine._state.filtering import make_issue
 from desloppify.languages._framework.base.types import DetectorPhase
 from desloppify.languages._framework.tools.parsers import PARSERS
 from desloppify.languages._framework.tools.runner import (
     ToolRunResult,
     run_tool_result,
 )
-from desloppify.engine._state.filtering import make_issue
 
 
 def _record_tool_failure_coverage(

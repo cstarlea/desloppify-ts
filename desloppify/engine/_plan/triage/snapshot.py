@@ -8,9 +8,11 @@ from desloppify.engine._plan.cluster_membership import cluster_issue_ids
 from desloppify.engine._plan.constants import TRIAGE_IDS, is_synthetic_id
 from desloppify.engine._plan.policy.stale import open_review_ids
 from desloppify.engine._plan.schema import Cluster, PlanModel
-from desloppify.engine._plan.triage.playbook import TriageProgress, compute_triage_progress
+from desloppify.engine._plan.triage.playbook import (
+    TriageProgress,
+    compute_triage_progress,
+)
 from desloppify.engine._state.schema import StateModel
-
 
 _cluster_issue_ids = cluster_issue_ids
 

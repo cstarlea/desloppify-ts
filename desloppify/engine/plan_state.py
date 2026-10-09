@@ -34,14 +34,14 @@ from desloppify.engine._plan.policy.project import (
     save_policy,
 )
 from desloppify.engine._plan.schema import (
-    ActionStep,
-    EpicTriageMeta,
     EPIC_PREFIX,
     PLAN_VERSION,
     VALID_EPIC_DIRECTIONS,
     VALID_SKIP_KINDS,
+    ActionStep,
     Cluster,
     CommitRecord,
+    EpicTriageMeta,
     ExecutionLogEntry,
     ItemOverride,
     PlanModel,

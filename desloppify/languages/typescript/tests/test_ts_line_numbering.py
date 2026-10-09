@@ -12,7 +12,9 @@ import pytest
 
 import desloppify.languages.typescript.syntax.tree as tree_mod
 from desloppify.languages.typescript.detectors.logs import detect_logs
-from desloppify.languages.typescript.detectors.security.detector import detect_ts_security
+from desloppify.languages.typescript.detectors.security.detector import (
+    detect_ts_security,
+)
 from desloppify.languages.typescript.detectors.smells import detect_smells
 from desloppify.languages.typescript.syntax.lines import (
     byte_line_starts,

@@ -7,7 +7,10 @@ from typing import Any
 
 from desloppify.base.discovery.paths import get_project_root
 from desloppify.base.output.terminal import log as _log
-from desloppify.languages._framework.base.types import DetectorPhase, LangRuntimeContract
+from desloppify.languages._framework.base.types import (
+    DetectorPhase,
+    LangRuntimeContract,
+)
 from desloppify.languages._framework.tools.phase import make_tool_phase
 from desloppify.state_io import Issue
 

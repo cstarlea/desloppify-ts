@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from functools import lru_cache
+from functools import cache
 
 from desloppify.base.discovery.file_paths import resolve_path
 from desloppify.base.discovery.sfc import read_code_text
@@ -23,7 +23,7 @@ class CoverageFileReadResult:
     error_message: str | None = None
 
 
-@lru_cache(maxsize=None)
+@cache
 def _warn_read_failure_once(context: str, filepath: str, error_kind: str) -> None:
     """Emit one best-effort warning per unique context/path/error tuple."""
     warn_best_effort(

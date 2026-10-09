@@ -20,9 +20,15 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from desloppify.base.discovery.file_paths import resolve_path
-from desloppify.languages.typescript.detectors.security.entries import _make_security_entry
+from desloppify.languages.typescript.detectors.security.entries import (
+    _make_security_entry,
+)
 from desloppify.languages.typescript.syntax import queries as q
-from desloppify.languages.typescript.syntax.tree import ParsedSource, parse_text, parsed_file
+from desloppify.languages.typescript.syntax.tree import (
+    ParsedSource,
+    parse_text,
+    parsed_file,
+)
 
 # ── Constants and interpolation ─────────────────────────────
 

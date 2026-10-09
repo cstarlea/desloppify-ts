@@ -11,7 +11,6 @@ from pathlib import Path
 from typing import Any
 
 from desloppify.base.discovery.file_paths import rel
-
 from desloppify.base.discovery.source import read_file_text
 from desloppify.engine.policy.zones import (
     REVIEW_SELECTION_EXCLUDED_ZONES,

@@ -22,14 +22,14 @@ from desloppify.intelligence.review._context.patterns import (
     NAME_PREFIX_RE,
     default_review_module_patterns,
 )
+from desloppify.intelligence.review.context_builder import (
+    ReviewContextBuildServices,
+    build_review_context_inner,
+)
 from desloppify.intelligence.review.context_signals.ai import gather_ai_debt_signals
 from desloppify.intelligence.review.context_signals.auth import gather_auth_context
 from desloppify.intelligence.review.context_signals.migration import (
     classify_error_strategy,
-)
-from desloppify.intelligence.review.context_builder import (
-    ReviewContextBuildServices,
-    build_review_context_inner,
 )
 
 # ── Shared helpers ────────────────────────────────────────────────

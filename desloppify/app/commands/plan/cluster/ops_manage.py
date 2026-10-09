@@ -7,10 +7,6 @@ from pathlib import Path
 from typing import Any
 
 from desloppify.base.output.terminal import colorize
-from desloppify.engine.plan_state import (
-    load_plan,
-    save_plan,
-)
 from desloppify.engine.plan_ops import (
     append_log_entry,
     create_cluster,
@@ -19,6 +15,10 @@ from desloppify.engine.plan_ops import (
     merge_clusters,
     normalize_step,
     parse_steps_file,
+)
+from desloppify.engine.plan_state import (
+    load_plan,
+    save_plan,
 )
 from desloppify.state_io import utc_now
 

@@ -7,7 +7,6 @@ from pathlib import Path
 
 import pytest
 
-from desloppify.base.exception_sets import CommandError
 from desloppify.app.commands.plan.triage import workflow as triage_workflow_mod
 from desloppify.app.commands.plan.triage.validation import (
     reflect_accounting as reflect_accounting_mod,
@@ -15,6 +14,7 @@ from desloppify.app.commands.plan.triage.validation import (
 from desloppify.app.commands.plan.triage.validation import (
     stage_policy as stage_policy_mod,
 )
+from desloppify.base.exception_sets import CommandError
 from desloppify.engine.plan_triage import compute_triage_progress
 
 

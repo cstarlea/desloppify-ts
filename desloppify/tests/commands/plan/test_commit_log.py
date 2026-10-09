@@ -7,7 +7,6 @@ from types import SimpleNamespace
 
 import desloppify.app.commands.plan.commit_log.dispatch as commit_log_mod
 
-
 # ---------------------------------------------------------------------------
 # Helpers — realistic plan/state builders
 # ---------------------------------------------------------------------------
@@ -389,7 +388,7 @@ def test_history_top_limits(monkeypatch, capsys) -> None:
     lines = out.strip().split("\n")
     # Should contain records for index 3 and 4, not 0-2
     # SHAs are "sha0000000003" -> "sha0000" (7 chars), etc.
-    issue_lines = [l for l in lines if "x::" in l]
+    issue_lines = [line for line in lines if "x::" in line]
     assert len(issue_lines) == 2
     assert "x::4" in out
     assert "x::3" in out

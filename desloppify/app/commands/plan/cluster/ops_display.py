@@ -105,7 +105,7 @@ def _print_cluster_members(args: argparse.Namespace, issue_ids: list[str], *, ha
         lines.append(current)
         for line in lines:
             print(colorize(line, "dim"))
-        print(colorize(f"  Full detail: desloppify show <member-id> --no-budget", "dim"))
+        print(colorize("  Full detail: desloppify show <member-id> --no-budget", "dim"))
         return
 
     issues = _load_issues_best_effort(args)
@@ -316,7 +316,9 @@ def _cmd_cluster_list(args: argparse.Namespace) -> None:
     sorted_clusters, min_pos_cache = _sorted_clusters_by_queue_pos(clusters, queue_order)
 
     if missing_steps:
-        from desloppify.app.commands.plan.triage.stages.helpers import unenriched_clusters
+        from desloppify.app.commands.plan.triage.stages.helpers import (
+            unenriched_clusters,
+        )
 
         gaps = unenriched_clusters(plan)
         if not gaps:

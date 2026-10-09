@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from desloppify.engine._work_queue.ranking import item_sort_key
 import desloppify.engine._work_queue.synthetic_workflow as workflow_mod
+from desloppify.engine._work_queue.ranking import item_sort_key
 
 
 def test_build_score_checkpoint_item_returns_none_when_not_queued() -> None:

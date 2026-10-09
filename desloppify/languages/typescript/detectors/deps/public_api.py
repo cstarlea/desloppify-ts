@@ -18,8 +18,14 @@ from collections.abc import Callable, Iterable
 from pathlib import Path
 
 from desloppify.base.discovery.file_paths import rel
-from desloppify.languages.typescript.detectors.deps.packages import Package, package_entries
-from desloppify.languages.typescript.detectors.deps.reexports import NAMESPACE, module_exports
+from desloppify.languages.typescript.detectors.deps.packages import (
+    Package,
+    package_entries,
+)
+from desloppify.languages.typescript.detectors.deps.reexports import (
+    NAMESPACE,
+    module_exports,
+)
 from desloppify.languages.typescript.detectors.deps.resolver import project_resolver
 
 logger = logging.getLogger(__name__)

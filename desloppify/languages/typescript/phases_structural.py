@@ -4,20 +4,20 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import desloppify.languages.typescript.detectors.concerns as concerns_detector_mod
+import desloppify.languages.typescript.detectors.props as props_detector_mod
 from desloppify.base.output.terminal import log
+from desloppify.engine._state.filtering import make_issue
 from desloppify.engine.detectors import complexity as complexity_detector_mod
 from desloppify.engine.detectors import flat_dirs as flat_dirs_detector_mod
 from desloppify.engine.detectors import gods as gods_detector_mod
 from desloppify.engine.detectors import large as large_detector_mod
-from desloppify.engine._state.filtering import make_issue
 from desloppify.engine.policy.zones import adjust_potential
 from desloppify.languages._framework.base.structural import (
     add_structural_signal,
     merge_structural_signals,
 )
 from desloppify.languages._framework.base.types import LangRuntimeContract
-import desloppify.languages.typescript.detectors.concerns as concerns_detector_mod
-import desloppify.languages.typescript.detectors.props as props_detector_mod
 from desloppify.languages.typescript.extractors_classes import extract_ts_classes
 from desloppify.languages.typescript.extractors_components import (
     detect_passthrough_components,

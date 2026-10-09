@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from desloppify.intelligence.review.context_holistic.budget import (
     axes as axes_mod,
+)
+from desloppify.intelligence.review.context_holistic.budget import (
     scan as scan_mod,
 )
 

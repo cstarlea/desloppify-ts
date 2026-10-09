@@ -9,10 +9,12 @@ from functools import lru_cache
 from pathlib import Path
 
 from desloppify.base.discovery.file_paths import resolve_path
-from desloppify.base.output.fallbacks import log_best_effort_failure
 from desloppify.base.discovery.paths import get_project_root
+from desloppify.base.output.fallbacks import log_best_effort_failure
 from desloppify.base.text_utils import strip_c_style_comments
-from desloppify.languages._framework.node.frameworks.supabase import is_edge_function_entry
+from desloppify.languages._framework.node.frameworks.supabase import (
+    is_edge_function_entry,
+)
 from desloppify.languages.typescript.detectors.deps.imports import (
     DYNAMIC_PREFIX,
     GLOB,
@@ -20,10 +22,17 @@ from desloppify.languages.typescript.detectors.deps.imports import (
     ImportExtractor,
 )
 from desloppify.languages.typescript.detectors.deps.packages import workspace_entries
-from desloppify.languages.typescript.detectors.deps.reexports import NAMESPACE, definition_files
+from desloppify.languages.typescript.detectors.deps.reexports import (
+    NAMESPACE,
+    definition_files,
+)
 from desloppify.languages.typescript.detectors.deps.resolver import project_resolver
 from desloppify.languages.typescript.plugin_contract import TS_BARREL_NAMES
-from desloppify.languages.typescript.syntax.queries import descendants, directive, imports
+from desloppify.languages.typescript.syntax.queries import (
+    descendants,
+    directive,
+    imports,
+)
 from desloppify.languages.typescript.syntax.tree import (
     ParsedSource,
     get_parser,

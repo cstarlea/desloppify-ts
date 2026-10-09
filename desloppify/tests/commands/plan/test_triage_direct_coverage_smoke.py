@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-
-from desloppify.app.commands.plan.triage.plan_state_access import ensure_execution_log
 import desloppify.app.commands.plan.triage.helpers as triage_helpers_mod
+from desloppify.app.commands.plan.triage.plan_state_access import ensure_execution_log
 
 
 def test_count_log_activity_since_ignores_malformed_entries() -> None:

@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 from desloppify.app.commands.plan.triage.review_coverage import triage_coverage
-from desloppify.engine._plan.schema import empty_plan
 from desloppify.engine._plan.constants import TRIAGE_STAGE_IDS
+from desloppify.engine._plan.schema import empty_plan
 
 
 def _plan_with_queue(*issue_ids: str, clustered: list[str] | None = None) -> dict:

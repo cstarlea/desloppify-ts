@@ -6,8 +6,9 @@ import re
 from pathlib import Path
 
 from desloppify.base.signal_patterns import SERVICE_ROLE_TOKEN_RE
-from desloppify.languages.typescript.detectors.security.entries import _make_security_entry
-from desloppify.languages.typescript.syntax.scanner import SourceText
+from desloppify.languages.typescript.detectors.security.entries import (
+    _make_security_entry,
+)
 from desloppify.languages.typescript.detectors.security.patterns import (
     _ATOB_JWT_RE,
     _CREATE_CLIENT_RE,
@@ -17,6 +18,7 @@ from desloppify.languages.typescript.detectors.security.patterns import (
     _JWT_PAYLOAD_RE,
     _OPEN_REDIRECT_RE,
 )
+from desloppify.languages.typescript.syntax.scanner import SourceText
 
 
 def _line_security_issues(

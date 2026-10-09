@@ -13,8 +13,6 @@ from dataclasses import dataclass
 from typing import Any
 
 from desloppify.engine._plan.schema import PlanModel, ensure_plan_defaults
-from desloppify.engine._state.schema import StateModel
-
 from desloppify.engine._plan.triage.apply import (
     TriageMutationResult,
     apply_triage_to_plan,
@@ -33,6 +31,7 @@ from desloppify.engine._plan.triage.prompt import (
     build_triage_prompt,
     collect_triage_input,
 )
+from desloppify.engine._state.schema import StateModel
 
 logger = logging.getLogger(__name__)
 

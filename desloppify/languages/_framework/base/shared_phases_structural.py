@@ -6,6 +6,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from desloppify.engine._state.filtering import make_issue
 from desloppify.engine.detectors.base import ComplexitySignal
 from desloppify.engine.detectors.complexity import detect_complexity
 from desloppify.engine.detectors.flat_dirs import (
@@ -20,14 +21,15 @@ from desloppify.engine.detectors.orphaned import (
     detect_orphaned_files,
 )
 from desloppify.engine.detectors.single_use import detect_single_use_abstractions
-from desloppify.engine._state.filtering import make_issue
 from desloppify.engine.policy.zones import adjust_potential, filter_entries
 from desloppify.languages._framework.base.structural import (
     add_structural_signal,
     merge_structural_signals,
 )
 from desloppify.languages._framework.base.types import LangRuntimeContract
-from desloppify.languages._framework.frameworks.registry import framework_entry_conventions
+from desloppify.languages._framework.frameworks.registry import (
+    framework_entry_conventions,
+)
 from desloppify.languages._framework.issue_factories import (
     make_cycle_issues,
     make_orphaned_issues,

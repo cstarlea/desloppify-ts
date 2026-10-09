@@ -18,7 +18,9 @@ from desloppify.languages.typescript.detectors.bounded import (
     RunLimits,
     run_bounded,
 )
-from desloppify.languages.typescript.detectors.type_errors import detect_type_errors_result
+from desloppify.languages.typescript.detectors.type_errors import (
+    detect_type_errors_result,
+)
 from desloppify.languages.typescript.monorepo import monorepo_budget, monorepo_mode
 
 

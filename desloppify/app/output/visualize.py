@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from importlib import resources
 from pathlib import Path
 
+from desloppify.app.output.tree_text import render_tree_lines
 from desloppify.app.output.visualize_data import (
     _build_dep_graph_for_path,
     _build_tree,
@@ -12,7 +13,6 @@ from desloppify.app.output.visualize_data import (
     _issues_by_file,
     scan_root_label,
 )
-from desloppify.app.output.tree_text import render_tree_lines
 from desloppify.base.discovery.file_paths import safe_write_text
 from desloppify.base.output.contract import OutputResult
 from desloppify.base.output.fallbacks import print_write_error

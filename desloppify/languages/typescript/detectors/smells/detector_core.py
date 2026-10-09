@@ -5,7 +5,11 @@ from __future__ import annotations
 import re
 
 from desloppify.languages.typescript.syntax.scanner import scan_code
-from desloppify.languages.typescript.syntax.tree import ParsedSource, parse_text, parsed_file
+from desloppify.languages.typescript.syntax.tree import (
+    ParsedSource,
+    parse_text,
+    parsed_file,
+)
 
 from .helpers import (
     _code_text,

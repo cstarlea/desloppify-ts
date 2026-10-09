@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 
 from desloppify.base.output.terminal import colorize, print_table
+
 from .analysis import (
     _build_census,
     detect_pattern_anomalies,

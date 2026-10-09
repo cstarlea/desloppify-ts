@@ -7,13 +7,13 @@ import argparse
 from desloppify.base.output.terminal import colorize
 from desloppify.base.output.user_message import print_user_message
 
+from ..services import TriageServices, default_triage_services
+from ..stages.records import TriageStages
 from .shared import (
     StageConfirmationRequest,
     ensure_stage_is_confirmable,
     finalize_stage_confirmation,
 )
-from ..services import TriageServices, default_triage_services
-from ..stages.records import TriageStages
 
 # Observe verdicts that trigger auto-skip on confirmation
 _AUTO_SKIP_VERDICTS = frozenset({"false positive", "exaggerated"})

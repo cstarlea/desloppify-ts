@@ -14,6 +14,8 @@ from desloppify.base.exception_sets import (
     CORRUPT_JSON_FILE_EXCEPTIONS,
     PLAN_LOAD_EXCEPTIONS,
 )
+from desloppify.engine._state import _recompute_stats
+
 __all__ = [
     "STATE_LOCK_RANK",
     "hold_state_lock",
@@ -28,12 +30,13 @@ from desloppify.base.discovery.file_paths import (
     exclusive_file_lock,
     safe_copy_file,
     safe_write_text,
+)
+from desloppify.base.discovery.file_paths import (
     set_aside_corrupted as _set_aside_corrupted,
 )
 from desloppify.base.text_utils import is_numeric
 from desloppify.engine._plan.persistence import load_plan as load_plan_state
 from desloppify.engine._plan.persistence import plan_path_for_state
-from desloppify.engine.plan_state import PlanLoadStatus
 from desloppify.engine._state.recovery import (
     has_saved_plan_without_scan,
     reconstruct_state_from_saved_plan,
@@ -49,14 +52,13 @@ from desloppify.engine._state.schema import (
     scan_source,
     validate_state_invariants,
 )
+from desloppify.engine.plan_state import PlanLoadStatus
 
 logger = logging.getLogger(__name__)
 
 _STATE_FILE_SENTINEL = object()
 STATE_FILE = _STATE_FILE_SENTINEL
 
-
-from desloppify.engine._state import _recompute_stats
 
 # Lock order: state (10) before plan (20) before progression (30).
 STATE_LOCK_RANK = 10
@@ -409,7 +411,7 @@ def save_state(
     serialized_state = {
         key: value for key, value in state.items() if key != "issues"
     }
-    serialized_state["work_items"] = dict((state.get("work_items") or state.get("issues", {})))
+    serialized_state["work_items"] = dict(state.get("work_items") or state.get("issues", {}))
     content = json.dumps(serialized_state, indent=2, default=json_default) + "\n"
 
     rotation_key = _rotation_key(state_path)

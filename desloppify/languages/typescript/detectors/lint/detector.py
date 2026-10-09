@@ -31,13 +31,13 @@ from desloppify.languages.typescript.detectors.lint.configs import (
     find_local_bin,
     nested_config_dirs,
 )
+from desloppify.languages.typescript.detectors.lint.rules import classify
 from desloppify.languages.typescript.detectors.lint.runner import (
     LINT_TIMEOUT,
     LinterRun,
     LintMessage,
     bounded_runs,
 )
-from desloppify.languages.typescript.detectors.lint.rules import classify
 
 DEFAULT_TYPE_AWARE_MAX_FILES = 400
 _DEPENDENCY_FIELDS = ("dependencies", "devDependencies", "peerDependencies")

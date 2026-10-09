@@ -13,10 +13,10 @@ from desloppify.app.commands.helpers.queue_progress import format_plan_delta
 from desloppify.base.output.terminal import colorize
 from desloppify.engine._state.issue_semantics import is_review_finding
 from desloppify.engine._work_queue.helpers import is_auto_fix_item
-from desloppify.engine.work_queue import group_queue_items
 from desloppify.engine.planning.scorecard_projection import (
     scorecard_subjective_entries,
 )
+from desloppify.engine.work_queue import group_queue_items
 from desloppify.intelligence.integrity import subjective_review_open_breakdown
 
 _ACTION_TYPE_LABELS = {

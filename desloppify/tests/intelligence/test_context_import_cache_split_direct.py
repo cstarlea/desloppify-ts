@@ -5,8 +5,8 @@ from __future__ import annotations
 import pytest
 
 import desloppify.intelligence.review.context_holistic.budget.axes as axes_mod
-import desloppify.intelligence.review.context_holistic.budget.scan as scan_mod
 import desloppify.intelligence.review.context_holistic.budget.patterns_wrappers as wrappers_mod
+import desloppify.intelligence.review.context_holistic.budget.scan as scan_mod
 import desloppify.intelligence.review.importing.cache as cache_mod
 from desloppify.languages.typescript.syntax.tree import get_parser, parse_text
 

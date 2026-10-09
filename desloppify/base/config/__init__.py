@@ -10,6 +10,10 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from desloppify.base.discovery.file_paths import safe_write_text
+from desloppify.base.discovery.paths import get_project_root
+from desloppify.base.output.fallbacks import log_best_effort_failure
+
 from .migration import (
     _migrate_from_state_files as _migrate_from_state_files_impl,
 )
@@ -23,9 +27,6 @@ from .schema import (
     default_config,
     target_strict_score_from_config,
 )
-from desloppify.base.discovery.file_paths import safe_write_text
-from desloppify.base.discovery.paths import get_project_root
-from desloppify.base.output.fallbacks import log_best_effort_failure
 
 
 def _rename_key(d: dict, old: str, new: str) -> bool:

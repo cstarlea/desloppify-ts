@@ -8,11 +8,23 @@ from collections.abc import Generator, Iterator
 from functools import cached_property
 from pathlib import Path
 
-from desloppify.languages._framework.node.js_text import blank_spans, code_text, literal_spans
+from desloppify.languages._framework.node.js_text import (
+    blank_spans,
+    code_text,
+    literal_spans,
+)
 from desloppify.languages._framework.treesitter import PARSE_INIT_ERRORS
 from desloppify.languages._framework.treesitter.parsing import _make_query, _run_query
-from desloppify.languages.typescript.syntax.lines import line_at, line_starts, split_lines
-from desloppify.languages.typescript.syntax.tree import grammar_for, parse_text, parsed_file
+from desloppify.languages.typescript.syntax.lines import (
+    line_at,
+    line_starts,
+    split_lines,
+)
+from desloppify.languages.typescript.syntax.tree import (
+    grammar_for,
+    parse_text,
+    parsed_file,
+)
 
 _JSX_TEXT_QUERIES: dict[int, object] = {}
 
@@ -109,7 +121,7 @@ class SourceText:
 
     def _split(self, text: str) -> list[str]:
         """``text`` (the same length as the source) cut where the source's lines are."""
-        return [text[start : start + len(line)] for start, line in zip(self.line_starts, self.lines)]
+        return [text[start : start + len(line)] for start, line in zip(self.line_starts, self.lines, strict=True)]
 
     def line_of(self, offset: int) -> int:
         """The 1-based line holding ``offset``."""

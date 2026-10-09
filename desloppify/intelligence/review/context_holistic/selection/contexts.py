@@ -9,11 +9,8 @@ from pathlib import Path
 from typing import Any
 
 from desloppify.base.discovery.file_paths import (
-
     rel,
-
     resolve_path,
-
 )
 from desloppify.base.output.fallbacks import log_best_effort_failure
 from desloppify.engine._state.schema import StateModel

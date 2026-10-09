@@ -8,7 +8,11 @@ from typing import NamedTuple
 
 from desloppify.languages.typescript.syntax.nodes import FUNCTIONS
 from desloppify.languages.typescript.syntax.queries import definitions, descendants
-from desloppify.languages.typescript.syntax.tree import ParsedSource, parse_text, parsed_file
+from desloppify.languages.typescript.syntax.tree import (
+    ParsedSource,
+    parse_text,
+    parsed_file,
+)
 
 from .detector_core import (
     _ARROW_RE,
@@ -27,8 +31,8 @@ from .detector_core import (
     _SINGLE_EMPTY_ELSE,
     _SINGLE_EMPTY_ELSE_IF,
     _SINGLE_EMPTY_IF,
-    _count_pattern_in_body,
     _compute_ts_cyclomatic_complexity,
+    _count_pattern_in_body,
     _emit,
     _extract_function_body,
     _find_function_start,

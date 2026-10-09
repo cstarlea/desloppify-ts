@@ -9,6 +9,7 @@ from desloppify.engine._state.schema import StateModel
 from desloppify.engine._work_queue.helpers import slugify
 from desloppify.engine.planning.scorecard_projection import all_subjective_entries
 
+
 def open_review_ids(state: StateModel) -> set[str]:
     """Return IDs of open review/concerns issues from state.
 

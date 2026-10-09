@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from desloppify.base.config import target_strict_score_from_config
 from desloppify.base import config as config_mod
+from desloppify.base.config import target_strict_score_from_config
 from desloppify.base.output.terminal import colorize
 from desloppify.state_scoring import ScoreSnapshot, score_snapshot
 

@@ -10,9 +10,9 @@ import desloppify.intelligence.review.importing.holistic_cache as holistic_cache
 import desloppify.intelligence.review.importing.holistic_issue_flow as issue_flow_mod
 import desloppify.intelligence.review.importing.resolution as resolution_mod
 import desloppify.intelligence.review.importing.state_helpers as state_helpers_mod
-import desloppify.intelligence.review.prepare_batches_core as prepare_batches_core_mod
 import desloppify.intelligence.review.prepare_batches_collectors_quality as collectors_quality_mod
 import desloppify.intelligence.review.prepare_batches_collectors_structure as collectors_structure_mod
+import desloppify.intelligence.review.prepare_batches_core as prepare_batches_core_mod
 import desloppify.intelligence.review.prepare_holistic_batches as holistic_batches_mod
 import desloppify.intelligence.review.prepare_holistic_orchestration as orchestration_mod
 import desloppify.intelligence.review.prepare_holistic_payload_parts as payload_parts_mod

@@ -8,6 +8,7 @@ from desloppify.app.commands.helpers.command_runtime import command_runtime
 from desloppify.base.config import save_config
 from desloppify.base.exception_sets import CommandError
 from desloppify.base.output.terminal import colorize
+
 # Display phase names accepted as directive hooks.
 _DISPLAY_PHASES = frozenset({
     "review_initial", "review", "assessment", "workflow", "triage", "execute", "scan",

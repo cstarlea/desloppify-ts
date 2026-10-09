@@ -3,13 +3,7 @@
 from __future__ import annotations
 
 from desloppify.engine._plan.constants import TRIAGE_STAGE_IDS
-from desloppify.engine._plan.triage.core import (
-    DismissedIssue,
-    TriageResult,
-    apply_triage_to_plan,
-    collect_triage_input,
-    parse_triage_result,
-)
+from desloppify.engine._plan.policy.stale import review_issue_snapshot_hash
 from desloppify.engine._plan.schema import (
     EPIC_PREFIX,
     VALID_EPIC_DIRECTIONS,
@@ -17,10 +11,16 @@ from desloppify.engine._plan.schema import (
     empty_plan,
     ensure_plan_defaults,
 )
-from desloppify.engine._plan.policy.stale import review_issue_snapshot_hash
 from desloppify.engine._plan.sync.triage import (
     is_triage_stale,
     sync_triage_needed,
+)
+from desloppify.engine._plan.triage.core import (
+    DismissedIssue,
+    TriageResult,
+    apply_triage_to_plan,
+    collect_triage_input,
+    parse_triage_result,
 )
 from desloppify.engine._work_queue.synthetic import build_triage_stage_items
 

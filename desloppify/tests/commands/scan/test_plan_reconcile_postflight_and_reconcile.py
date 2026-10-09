@@ -7,7 +7,6 @@ from types import SimpleNamespace
 
 import desloppify.app.commands.scan.plan_reconcile as reconcile_mod
 from desloppify.engine._plan.schema import empty_plan
-
 from desloppify.tests.commands.scan.test_plan_reconcile import (
     _make_issue,
     _make_state,

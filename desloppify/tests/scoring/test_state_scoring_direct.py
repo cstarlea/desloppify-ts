@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import desloppify.state_scoring as state_scoring_mod
-from desloppify.engine._state.scoring import suppression_metrics as engine_suppression_metrics
+from desloppify.engine._state.scoring import (
+    suppression_metrics as engine_suppression_metrics,
+)
 
 
 def test_score_snapshot_loads_all_canonical_scores(monkeypatch) -> None:

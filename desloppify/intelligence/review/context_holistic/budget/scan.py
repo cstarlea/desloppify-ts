@@ -9,7 +9,9 @@ from pathlib import Path
 
 from desloppify.base.discovery.file_paths import rel, resolve_path
 from desloppify.base.discovery.paths import get_project_root
-from desloppify.languages.typescript.detectors.deps.public_api import published_entry_files
+from desloppify.languages.typescript.detectors.deps.public_api import (
+    published_entry_files,
+)
 from desloppify.languages.typescript.detectors.deps.resolver import project_resolver
 from desloppify.languages.typescript.syntax.queries import definitions
 from desloppify.languages.typescript.syntax.tree import ParsedSource, parse_text

@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from desloppify.engine._plan.cluster_semantics import (
     ACTION_TYPE_MANUAL_FIX,
-    EXECUTION_STATUS_ACTIVE,
     EXECUTION_POLICY_PLANNED_ONLY,
+    EXECUTION_STATUS_ACTIVE,
 )
 from desloppify.engine._plan.operations.lifecycle import clear_focus_if_cluster_empty
 from desloppify.engine._plan.operations.queue import move_items

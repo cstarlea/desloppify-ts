@@ -18,7 +18,6 @@ from desloppify.base.tooling import compute_tool_hash
 from desloppify.engine.policy.zones import FileZoneMap, Zone
 from desloppify.languages.framework import get_lang
 
-
 _REPO_ROOT = Path(__file__).resolve().parents[4]
 
 

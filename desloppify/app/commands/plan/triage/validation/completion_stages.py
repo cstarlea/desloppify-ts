@@ -9,14 +9,13 @@ from desloppify.engine.plan_triage import (
     compute_triage_progress,
 )
 
-from .enrich_checks import _underspecified_steps
 from ..review_coverage import manual_clusters_with_issues
 from ..stages.helpers import unenriched_clusters
+from .enrich_checks import _underspecified_steps
 from .stage_policy import (
     AutoConfirmStageRequest,
     confirm_stage,
 )
-
 
 _COMPLETE_AUTO_CONFIRM_STAGE_CONFIG = {
     "organize": {

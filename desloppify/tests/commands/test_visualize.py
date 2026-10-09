@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 from types import SimpleNamespace
 
-
 from desloppify.app.output.tree_text import _aggregate, _print_tree
 from desloppify.app.output.visualize import TreeTextOptions, generate_tree_text
 from desloppify.app.output.visualize_data import (

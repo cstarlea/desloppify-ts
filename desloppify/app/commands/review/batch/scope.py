@@ -13,7 +13,6 @@ from desloppify.intelligence.review.feedback_contract import (
     TRUSTED_IMPORT_COVERAGE_OVERRIDE_FLAG,
 )
 
-
 _SUPPORTED_RUNNERS = {"codex", "opencode", "rovodev"}
 
 

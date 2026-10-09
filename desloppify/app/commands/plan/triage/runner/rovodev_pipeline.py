@@ -22,7 +22,7 @@ def run_rovodev_pipeline(
     args: argparse.Namespace,
     *,
     stages_to_run: list[str],
-    services: "TriageServices | None" = None,
+    services: TriageServices | None = None,
 ) -> None:
     """Run triage stages via ``acli rovodev run`` subprocesses.
 

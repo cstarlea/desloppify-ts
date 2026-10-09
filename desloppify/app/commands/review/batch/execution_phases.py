@@ -18,6 +18,11 @@ from ..batches_runtime import (
 from ..prompt_sections import explode_to_single_dimension
 from ..runner_parallel import BatchExecutionOptions
 from ..runtime.policy import resolve_batch_run_policy
+from .execution import (
+    CollectBatchResultsRequest,
+    LoadOrPreparePacketRequest,
+    PrepareRunArtifactsRequest,
+)
 from .execution_dry_run import maybe_handle_dry_run
 from .execution_progress import (
     build_initial_batch_status,
@@ -33,11 +38,6 @@ from .execution_results import (
     merge_and_write_results,
 )
 from .execution_summary import build_run_summary_writer
-from .execution import (
-    CollectBatchResultsRequest,
-    LoadOrPreparePacketRequest,
-    PrepareRunArtifactsRequest,
-)
 from .scope import (
     normalize_dimension_list,
     print_preflight_dimension_scope_notice,

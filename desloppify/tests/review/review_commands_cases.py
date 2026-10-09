@@ -28,7 +28,9 @@ from desloppify.app.commands.review.importing.cmd import (
 )
 from desloppify.app.commands.review.importing.flags import ReviewImportConfig
 from desloppify.app.commands.review.prepare import do_prepare as _do_prepare
-from desloppify.app.commands.review.runtime.setup import setup_lang_concrete as _setup_lang
+from desloppify.app.commands.review.runtime.setup import (
+    setup_lang_concrete as _setup_lang,
+)
 from desloppify.base.exception_sets import CommandError
 from desloppify.engine.policy.zones import Zone, ZoneRule
 from desloppify.intelligence.review import (

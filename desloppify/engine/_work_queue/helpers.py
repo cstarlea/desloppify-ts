@@ -11,8 +11,8 @@ from desloppify.base.registry import DETECTORS
 from desloppify.engine._plan.cluster_semantics import ACTION_TYPE_AUTO_FIX
 from desloppify.engine._plan.constants import is_triage_id
 from desloppify.engine._state.issue_semantics import (
-    is_review_finding,
     is_assessment_request,
+    is_review_finding,
 )
 from desloppify.engine._state.schema import StateModel
 from desloppify.engine._work_queue.types import WorkQueueItem

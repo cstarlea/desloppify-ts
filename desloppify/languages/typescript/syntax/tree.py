@@ -24,7 +24,10 @@ from desloppify.base.discovery.sfc import is_sfc, read_sfc
 from desloppify.languages._framework.treesitter import PARSE_INIT_ERRORS, is_available
 from desloppify.languages._framework.treesitter.cache import get_or_parse_tree
 from desloppify.languages._framework.treesitter.parsing import _get_parser
-from desloppify.languages.typescript.syntax.lines import LINE_BREAK_BYTES, byte_line_starts
+from desloppify.languages.typescript.syntax.lines import (
+    LINE_BREAK_BYTES,
+    byte_line_starts,
+)
 
 logger = logging.getLogger(__name__)
 

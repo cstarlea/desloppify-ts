@@ -2,7 +2,14 @@
 
 from __future__ import annotations
 
-from desloppify.app.output.scorecard_parts.theme import BG, BORDER, DIM, TEXT, scale, score_color
+from desloppify.app.output.scorecard_parts.theme import (
+    BG,
+    BORDER,
+    DIM,
+    TEXT,
+    scale,
+    score_color,
+)
 
 
 def draw_left_panel_version(

@@ -14,6 +14,8 @@ from typing import Any
 from .catalog_entries import DETECTORS as _CATALOG_DETECTORS
 from .catalog_models import (
     DISPLAY_ORDER as _CATALOG_DISPLAY_ORDER,
+)
+from .catalog_models import (
     DetectorMeta,
 )
 

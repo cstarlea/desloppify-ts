@@ -6,10 +6,11 @@ import json
 import logging
 import threading
 from concurrent.futures import ThreadPoolExecutor
-from pathlib import Path
 
 from desloppify.base.discovery.file_paths import safe_write_text
 
+from ..batch.execution import CollectBatchResultsRequest
+from ..runner_process_impl.io import extract_payload_from_log
 from .execution import (
     _drain_parallel_completions,
     _execute_serial,
@@ -23,8 +24,6 @@ from .types import (
     BatchResult,
     BatchTask,
 )
-from ..batch.execution import CollectBatchResultsRequest
-from ..runner_process_impl.io import extract_payload_from_log
 
 logger = logging.getLogger(__name__)
 

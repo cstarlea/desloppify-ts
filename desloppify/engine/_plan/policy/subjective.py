@@ -12,7 +12,9 @@ from dataclasses import dataclass
 from desloppify.base.config import DEFAULT_TARGET_STRICT_SCORE
 from desloppify.base.enums import Status
 from desloppify.base.registry import DETECTORS
-from desloppify.engine._plan.schema import executable_objective_ids as _executable_objective_ids
+from desloppify.engine._plan.schema import (
+    executable_objective_ids as _executable_objective_ids,
+)
 from desloppify.engine._state.filtering import issue_in_scan_scope
 from desloppify.engine._state.issue_semantics import counts_toward_objective_backlog
 from desloppify.engine._state.schema import StateModel

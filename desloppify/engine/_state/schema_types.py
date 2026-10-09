@@ -8,12 +8,12 @@ from desloppify.engine._state.schema_types_issues import (
     DimensionScore,
     Issue,
     QuarantinedWorkItem,
-    WorkItem,
     ScanHistoryEntry,
     ScoreConfidenceDetector,
     ScoreConfidenceModel,
     StateStats,
     TierStats,
+    WorkItem,
 )
 from desloppify.engine._state.schema_types_review import (
     AssessmentImportAuditEntry,

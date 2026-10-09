@@ -10,13 +10,14 @@ from desloppify.engine._plan.cluster_semantics import (
     infer_cluster_action_type,
     infer_cluster_execution_policy,
 )
+from desloppify.engine._work_queue.types import WorkQueueItem
 from desloppify.engine.plan_ops import (
     get_issue_description,
     get_issue_note,
     get_issue_override,
 )
-from desloppify.engine._work_queue.types import WorkQueueItem
 from desloppify.state_io import StateModel
+
 
 def new_item_ids(state: StateModel) -> set[str]:
     """Return issue IDs added in the most recent scan."""

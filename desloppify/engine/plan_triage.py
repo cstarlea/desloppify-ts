@@ -9,6 +9,11 @@ from desloppify.engine._plan.constants import (
     TRIAGE_STAGE_ORDER,
     TRIAGE_STAGE_SPECS,
 )
+from desloppify.engine._plan.sync.context import has_objective_backlog, is_mid_cycle
+from desloppify.engine._plan.sync.triage_start_policy import (
+    TriageStartDecision,
+    decide_triage_start,
+)
 from desloppify.engine._plan.triage.core import (
     TriageInput,
     build_triage_prompt,
@@ -17,9 +22,6 @@ from desloppify.engine._plan.triage.core import (
     extract_issue_citations,
 )
 from desloppify.engine._plan.triage.playbook import (
-    StagePrerequisite,
-    StageReadiness,
-    TriageProgress,
     TRIAGE_CMD_CLUSTER_ADD,
     TRIAGE_CMD_CLUSTER_CREATE,
     TRIAGE_CMD_CLUSTER_ENRICH,
@@ -40,6 +42,9 @@ from desloppify.engine._plan.triage.playbook import (
     TRIAGE_STAGE_DEPENDENCIES,
     TRIAGE_STAGE_LABELS,
     TRIAGE_STAGE_PREREQUISITES,
+    StagePrerequisite,
+    StageReadiness,
+    TriageProgress,
     compute_triage_progress,
     triage_manual_stage_command,
     triage_run_stages_command,
@@ -57,11 +62,6 @@ from desloppify.engine._plan.triage.snapshot import (
     triage_coverage,
     undispositioned_triage_issue_ids,
 )
-from desloppify.engine._plan.sync.triage_start_policy import (
-    TriageStartDecision,
-    decide_triage_start,
-)
-from desloppify.engine._plan.sync.context import has_objective_backlog, is_mid_cycle
 from desloppify.engine.plan_state import PlanModel, ensure_plan_defaults
 
 

@@ -5,8 +5,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from desloppify.app.commands.helpers.lang import resolve_lang
 from desloppify.app.commands.helpers.command_runtime import command_runtime
+from desloppify.app.commands.helpers.lang import resolve_lang
 from desloppify.base.output.fallbacks import warn_best_effort
 from desloppify.state_io import load_state
 

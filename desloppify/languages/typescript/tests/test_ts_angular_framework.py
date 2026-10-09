@@ -10,7 +10,9 @@ from desloppify.languages._framework.frameworks.detection import (
     detect_ecosystem_frameworks,
     injected_class_decorators,
 )
-from desloppify.languages._framework.frameworks.specs.angular import ANGULAR_ENTRY_CONVENTIONS
+from desloppify.languages._framework.frameworks.specs.angular import (
+    ANGULAR_ENTRY_CONVENTIONS,
+)
 from desloppify.languages._framework.node.frameworks.angular import (
     scan_missing_component_resources,
     scan_standalone_mismatches,

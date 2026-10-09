@@ -14,8 +14,12 @@ from desloppify.base.discovery.paths import get_project_root
 from desloppify.base.discovery.source import find_ts_and_js_files
 from desloppify.base.output.terminal import colorize, print_table
 from desloppify.languages._framework.base.types import DetectorCoverageStatus
-from desloppify.languages.typescript.detectors.deps.public_api import public_export_names
-from desloppify.languages.typescript.detectors.knip_adapter import detect_with_knip_result
+from desloppify.languages.typescript.detectors.deps.public_api import (
+    public_export_names,
+)
+from desloppify.languages.typescript.detectors.knip_adapter import (
+    detect_with_knip_result,
+)
 
 _EXPORT_STATEMENT_RE = re.compile(r"^\s*export\b", re.MULTILINE)
 _KNIP_REMEDIATION = {

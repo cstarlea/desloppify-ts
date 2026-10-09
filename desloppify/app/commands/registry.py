@@ -20,12 +20,12 @@ def _build_handlers() -> dict[str, CommandHandler]:
     from desloppify.app.commands.move import cmd_move
     from desloppify.app.commands.next import cmd_next
     from desloppify.app.commands.plan import cmd_plan
-    from desloppify.app.commands.suppress import cmd_suppress
     from desloppify.app.commands.review import cmd_review
     from desloppify.app.commands.scan import cmd_scan
     from desloppify.app.commands.setup import cmd_setup
     from desloppify.app.commands.show import cmd_show
     from desloppify.app.commands.status import cmd_status
+    from desloppify.app.commands.suppress import cmd_suppress
     from desloppify.app.commands.update_skill import cmd_update_skill
     from desloppify.app.commands.viz import cmd_tree, cmd_viz
     from desloppify.app.commands.zone import cmd_zone

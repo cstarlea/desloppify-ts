@@ -14,6 +14,8 @@ from desloppify.base.discovery.paths import get_project_root
 from desloppify.base.discovery.source import find_ts_and_js_files
 from desloppify.languages._framework.node.js_text import (
     code_text as _code_text,
+)
+from desloppify.languages._framework.node.js_text import (
     strip_js_ts_comments as _strip_ts_comments,
 )
 

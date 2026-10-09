@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from desloppify.base.coercions import coerce_confidence
 from desloppify.base.discovery.paths import get_project_root

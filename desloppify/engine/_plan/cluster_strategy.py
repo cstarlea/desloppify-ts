@@ -5,8 +5,8 @@ from __future__ import annotations
 from desloppify.base.registry import DetectorMeta
 from desloppify.engine._plan.constants import AUTO_PREFIX
 from desloppify.engine._state.issue_semantics import (
-    is_review_finding,
     is_assessment_request,
+    is_review_finding,
 )
 
 

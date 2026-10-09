@@ -5,12 +5,12 @@ from __future__ import annotations
 import argparse
 import logging
 
+from desloppify.app.commands.helpers.command_runtime import command_runtime
 from desloppify.app.commands.helpers.queue_progress import (
     format_queue_headline,
     plan_aware_queue_breakdown,
 )
 from desloppify.app.commands.helpers.rendering import print_agent_plan
-from desloppify.app.commands.helpers.command_runtime import command_runtime
 from desloppify.app.commands.helpers.state import require_issue_inventory
 from desloppify.app.commands.plan.cluster import cmd_cluster_dispatch
 from desloppify.app.commands.plan.commit_log import cmd_commit_log_dispatch
@@ -27,22 +27,13 @@ from desloppify.app.commands.plan.override import (
 )
 from desloppify.app.commands.plan.policy_cmd import cmd_policy_dispatch
 from desloppify.app.commands.plan.queue_render import cmd_plan_queue
+from desloppify.app.commands.plan.reorder_handlers import (
+    cmd_plan_promote,
+    cmd_plan_reorder,
+)
 from desloppify.app.commands.plan.repair_state import cmd_plan_repair_state
-from desloppify.app.commands.plan.reorder_handlers import cmd_plan_reorder
-from desloppify.app.commands.plan.reorder_handlers import cmd_plan_promote
 from desloppify.app.commands.plan.shared.cluster_membership import cluster_issue_ids
 from desloppify.app.commands.plan.triage.command import cmd_plan_triage
-from desloppify.engine.plan_state import (
-    commit_tracking_summary,
-    load_plan,
-    save_plan,
-)
-from desloppify.engine.plan_ops import (
-    USER_SKIP_KINDS,
-    annotation_counts,
-    append_log_entry,
-    reset_plan,
-)
 from desloppify.base.config import load_config
 from desloppify.base.discovery.file_paths import safe_write_text
 from desloppify.base.exception_sets import PLAN_LOAD_EXCEPTIONS
@@ -50,6 +41,17 @@ from desloppify.base.output.fallbacks import warn_best_effort
 from desloppify.base.output.terminal import colorize
 from desloppify.base.tooling import check_config_staleness
 from desloppify.engine import planning as planning_mod
+from desloppify.engine.plan_ops import (
+    USER_SKIP_KINDS,
+    annotation_counts,
+    append_log_entry,
+    reset_plan,
+)
+from desloppify.engine.plan_state import (
+    commit_tracking_summary,
+    load_plan,
+    save_plan,
+)
 
 logger = logging.getLogger(__name__)
 

@@ -6,10 +6,10 @@ import copy
 from pathlib import Path
 from types import SimpleNamespace
 
+from desloppify.app.commands.scan.artifacts import emit_scorecard_badge
 from desloppify.app.commands.scan.reporting import (
     dimensions as reporting_dimensions_mod,
 )
-from desloppify.app.commands.scan.artifacts import emit_scorecard_badge
 from desloppify.base.exception_sets import CommandError, PacketValidationError
 from desloppify.base.output.terminal import colorize
 from desloppify.engine._plan.constants import WORKFLOW_IMPORT_SCORES_ID
@@ -25,16 +25,17 @@ from desloppify.engine._plan.sync.workflow_gates import (
 from desloppify.engine._state.persistence import load_state, save_state
 from desloppify.engine._state.schema import utc_now
 from desloppify.intelligence import integrity as subjective_integrity_mod
-from desloppify.intelligence.review.importing.holistic import import_holistic_issues
 from desloppify.intelligence.review.importing.contracts_models import (
     AssessmentImportPolicyModel,
 )
+from desloppify.intelligence.review.importing.holistic import import_holistic_issues
 from desloppify.state_score_snapshot import score_snapshot
 
 from ..assessment_integrity import (
     bind_scorecard_subjective_at_target,
     subjective_at_target_dimensions,
 )
+from ..state_payloads import append_assessment_import_audit
 from .flags import (
     ReviewImportConfig,
     build_import_load_config,
@@ -47,14 +48,13 @@ from .output import (
     print_assessment_policy_notice,
     print_import_load_errors,
 )
-from ..state_payloads import append_assessment_import_audit
-from .policy import assessment_policy_model_from_payload
 from .parse import (
     ImportPayloadLoadError,
     load_import_issues_data,
     resolve_override_context,
 )
 from .plan_sync import PlanImportSyncRequest, sync_plan_after_import
+from .policy import assessment_policy_model_from_payload
 from .results import report_review_import_outcome
 
 _SCORECARD_SUBJECTIVE_AT_TARGET = bind_scorecard_subjective_at_target(

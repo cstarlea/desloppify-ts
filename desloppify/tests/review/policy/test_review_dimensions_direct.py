@@ -8,11 +8,11 @@ from types import SimpleNamespace
 
 import pytest
 
-from desloppify.base.text_utils import is_numeric
 import desloppify.intelligence.review.dimensions.data as dimensions_data_mod
 import desloppify.intelligence.review.dimensions.lang as dimensions_mod
 import desloppify.intelligence.review.dimensions.selection as dimensions_selection_mod
 import desloppify.intelligence.review.dimensions.validation as dimensions_validation_mod
+from desloppify.base.text_utils import is_numeric
 from desloppify.intelligence.review.dimensions.holistic import DIMENSIONS
 
 

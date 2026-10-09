@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, TypedDict
 
 from desloppify.base.coercions import coerce_optional_str
+from desloppify.engine._state.resolution import coerce_assessment_score
 from desloppify.intelligence.review.dimensions.data import load_dimensions_for_lang
 from desloppify.intelligence.review.feedback_contract import (
     ASSESSMENT_FEEDBACK_THRESHOLD,
@@ -28,7 +29,6 @@ from desloppify.intelligence.review.importing.contracts_validation import (
 from desloppify.intelligence.review.importing.payload import (
     normalize_legacy_findings_alias,
 )
-from desloppify.engine._state.resolution import coerce_assessment_score
 
 from .policy import (
     ASSESSMENT_POLICY_KEY,

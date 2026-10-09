@@ -33,11 +33,18 @@ from desloppify.languages._framework.treesitter import (
     is_parse_cache_enabled,
 )
 from desloppify.languages.typescript.detectors.contracts import DetectorResult
-from desloppify.languages.typescript.detectors.deps.reexports import NAMESPACE, module_exports
+from desloppify.languages.typescript.detectors.deps.reexports import (
+    NAMESPACE,
+    module_exports,
+)
 from desloppify.languages.typescript.detectors.deps.resolver import project_resolver
 from desloppify.languages.typescript.syntax.nodes import binding_names
 from desloppify.languages.typescript.syntax.queries import descendants, exports, imports
-from desloppify.languages.typescript.syntax.tree import ParsedSource, get_parser, parsed_file
+from desloppify.languages.typescript.syntax.tree import (
+    ParsedSource,
+    get_parser,
+    parsed_file,
+)
 
 logger = logging.getLogger(__name__)
 

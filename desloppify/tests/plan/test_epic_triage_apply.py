@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
+from desloppify.engine._plan.policy.stale import review_issue_snapshot_hash
+from desloppify.engine._plan.schema import empty_plan
 from desloppify.engine._plan.triage.apply import (
     TriageMutationResult,
     apply_triage_to_plan,
 )
 from desloppify.engine._plan.triage.prompt import DismissedIssue, TriageResult
-from desloppify.engine._plan.schema import empty_plan
-from desloppify.engine._plan.policy.stale import review_issue_snapshot_hash
 
 # ---------------------------------------------------------------------------
 # Helpers

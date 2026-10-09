@@ -5,7 +5,6 @@ from __future__ import annotations
 import desloppify.engine._plan.auto_cluster_sync as sync_mod
 from desloppify.engine._plan.policy.subjective import SubjectiveVisibility
 
-
 NOW = "2026-03-08T00:00:00Z"
 
 

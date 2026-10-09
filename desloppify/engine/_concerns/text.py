@@ -5,7 +5,11 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
-from .constants import ELEVATED_MAX_NESTING, ELEVATED_MAX_PARAMS, MIN_DETECTORS_FOR_MIXED
+from .constants import (
+    ELEVATED_MAX_NESTING,
+    ELEVATED_MAX_PARAMS,
+    MIN_DETECTORS_FOR_MIXED,
+)
 from .types import ConcernSignals
 
 

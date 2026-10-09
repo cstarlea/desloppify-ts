@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from desloppify.base import subjective_dimensions_constants as constants_mod
 from desloppify.base import subjective_dimensions as metadata_mod
+from desloppify.base import subjective_dimensions_constants as constants_mod
 from desloppify.base import subjective_dimensions_merge as merge_mod
 from desloppify.base import subjective_dimensions_providers as providers_mod
 from desloppify.intelligence.review.dimensions import data as dimensions_data

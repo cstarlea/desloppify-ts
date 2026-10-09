@@ -4,37 +4,45 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import desloppify.languages.typescript.detectors.deps as deps_detector_mod
+import desloppify.languages.typescript.detectors.deps.packages as packages_mod
+import desloppify.languages.typescript.detectors.facade as facade_detector_mod
+import desloppify.languages.typescript.detectors.knip_adapter as knip_adapter_mod
+import desloppify.languages.typescript.detectors.patterns.analysis as patterns_detector_mod
 from desloppify.base.discovery.file_paths import rel, resolve_path
 from desloppify.base.discovery.paths import get_project_root
 from desloppify.base.discovery.sfc import SFC_SUFFIXES
 from desloppify.base.output.terminal import log
+from desloppify.engine._state.filtering import make_issue
 from desloppify.engine.detectors import coupling as coupling_detector_mod
 from desloppify.engine.detectors import graph as graph_detector_mod
 from desloppify.engine.detectors import naming as naming_detector_mod
 from desloppify.engine.detectors import orphaned as orphaned_detector_mod
 from desloppify.engine.detectors import single_use as single_use_detector_mod
-from desloppify.engine._state.filtering import make_issue
 from desloppify.engine.detectors.coupling import Layer
 from desloppify.engine.policy.zones import adjust_potential, filter_entries
 from desloppify.languages._framework.base.types import LangRuntimeContract
-from desloppify.languages._framework.frameworks.detection import injected_class_decorators
-from desloppify.languages._framework.frameworks.registry import framework_entry_conventions
-from desloppify.languages._framework.node.js_classes import iter_classes
+from desloppify.languages._framework.frameworks.detection import (
+    injected_class_decorators,
+)
+from desloppify.languages._framework.frameworks.registry import (
+    framework_entry_conventions,
+)
 from desloppify.languages._framework.issue_factories import (
     make_cycle_issues,
     make_facade_issues,
     make_orphaned_issues,
     make_single_use_issues,
 )
-import desloppify.languages.typescript.detectors.deps as deps_detector_mod
-from desloppify.languages.typescript.detectors.deps.auto_imports import auto_import_entries
-import desloppify.languages.typescript.detectors.deps.packages as packages_mod
-import desloppify.languages.typescript.detectors.facade as facade_detector_mod
-import desloppify.languages.typescript.detectors.knip_adapter as knip_adapter_mod
-import desloppify.languages.typescript.detectors.patterns.analysis as patterns_detector_mod
+from desloppify.languages._framework.node.js_classes import iter_classes
+from desloppify.languages.typescript.detectors.deps.auto_imports import (
+    auto_import_entries,
+)
+from desloppify.languages.typescript.detectors.patterns.catalog import (
+    configured_pattern_families,
+)
 from desloppify.languages.typescript.phases_config import TS_SKIP_NAMES
 from desloppify.languages.typescript.plugin_contract import TS_BARREL_NAMES
-from desloppify.languages.typescript.detectors.patterns.catalog import configured_pattern_families
 from desloppify.languages.typescript.presets import resolve_layers, shadcn_ui_dirs
 from desloppify.state_io import Issue
 

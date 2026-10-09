@@ -7,8 +7,8 @@ still allowing explicit overrides for broader scans.
 from __future__ import annotations
 
 from desloppify.languages._framework.facade_common import (
-    facade_tier_confidence,
     detect_reexport_facades_common,
+    facade_tier_confidence,
 )
 
 # ── facade_tier_confidence ──────────────────────────────

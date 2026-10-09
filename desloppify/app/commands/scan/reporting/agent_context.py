@@ -8,12 +8,12 @@ from pathlib import Path
 from typing import Any
 
 from desloppify import state as state_mod
-from desloppify.base.output.user_message import print_user_message
-from desloppify.base import registry as registry_mod
 from desloppify.app import skill_docs as skill_docs_mod
+from desloppify.base import registry as registry_mod
+from desloppify.base.discovery.paths import get_project_root
 from desloppify.base.exception_sets import PLAN_LOAD_EXCEPTIONS
 from desloppify.base.output.fallbacks import log_best_effort_failure
-from desloppify.base.discovery.paths import get_project_root
+from desloppify.base.output.user_message import print_user_message
 from desloppify.engine._scoring.results.core import compute_health_breakdown
 from desloppify.engine._scoring.subjective.core import DISPLAY_NAMES
 from desloppify.engine._state.schema import StateModel

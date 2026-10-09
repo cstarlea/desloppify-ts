@@ -7,9 +7,9 @@ from dataclasses import dataclass
 
 from desloppify.base.registry import DETECTORS
 from desloppify.engine._plan.cluster_semantics import (
+    EXECUTION_POLICY_EPHEMERAL_AUTOPROMOTE,
     EXECUTION_STATUS_ACTIVE,
     EXECUTION_STATUS_REVIEW,
-    EXECUTION_POLICY_EPHEMERAL_AUTOPROMOTE,
     infer_cluster_execution_policy,
     normalize_cluster_semantics,
 )

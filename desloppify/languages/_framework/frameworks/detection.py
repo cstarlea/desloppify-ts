@@ -256,7 +256,9 @@ def workspace_framework_detections(
         if isinstance(cached, list):
             return cached
 
-    from desloppify.languages.typescript.detectors.deps.packages import discover_packages
+    from desloppify.languages.typescript.detectors.deps.packages import (
+        discover_packages,
+    )
 
     own_root = detect_ecosystem_frameworks(scan_root, lang, eco).package_root
     result = [

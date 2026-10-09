@@ -5,7 +5,10 @@ from __future__ import annotations
 import pytest
 
 from desloppify.engine._scoring.detection import detector_stats_by_mode
-from desloppify.engine._scoring.policy.core import CARRIED_FORWARD_MAX_SCANS, SCORING_MODES
+from desloppify.engine._scoring.policy.core import (
+    CARRIED_FORWARD_MAX_SCANS,
+    SCORING_MODES,
+)
 from desloppify.intelligence.review.dimensions.data import load_dimensions_for_lang
 from desloppify.state import (
     MergeScanOptions,

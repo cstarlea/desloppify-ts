@@ -5,8 +5,8 @@ from __future__ import annotations
 from collections import defaultdict
 
 from desloppify.app.commands.helpers.issue_id_display import short_issue_id
+from desloppify.base.output.terminal import colorize
 from desloppify.engine._plan.constants import is_synthetic_id
-from desloppify.engine.plan_triage import TriageSnapshot
 from desloppify.engine.plan_triage import (
     TRIAGE_CMD_CLUSTER_ADD,
     TRIAGE_CMD_CLUSTER_CREATE,
@@ -21,12 +21,11 @@ from desloppify.engine.plan_triage import (
     TRIAGE_CMD_RUN_STAGES_CLAUDE,
     TRIAGE_CMD_RUN_STAGES_CODEX,
     TRIAGE_CMD_RUN_STAGES_ROVODEV,
-    triage_runner_commands,
     TRIAGE_CMD_STRATEGIZE,
+    TriageSnapshot,
+    triage_runner_commands,
 )
-from desloppify.base.output.terminal import colorize
 
-from .primitives import print_stage_progress
 from ..review_coverage import (
     cluster_issue_ids,
     find_cluster_for,
@@ -35,6 +34,7 @@ from ..review_coverage import (
     triage_coverage,
 )
 from ..stages.helpers import unenriched_clusters
+from .primitives import print_stage_progress
 
 
 def _print_runner_paths(

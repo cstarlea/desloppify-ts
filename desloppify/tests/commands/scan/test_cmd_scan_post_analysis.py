@@ -5,7 +5,10 @@ from __future__ import annotations
 import pytest
 
 import desloppify.intelligence.narrative.core as narrative_mod
-from desloppify.app.commands.scan.cmd import show_dimension_deltas, show_post_scan_analysis
+from desloppify.app.commands.scan.cmd import (
+    show_dimension_deltas,
+    show_post_scan_analysis,
+)
 from desloppify.engine._scoring.policy.core import DIMENSIONS
 
 

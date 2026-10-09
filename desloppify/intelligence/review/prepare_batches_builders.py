@@ -82,7 +82,7 @@ def build_investigation_batches(
 
         batches.append(batch)
 
-    for batch, persona in zip(batches, assign_personas(len(batches))):
+    for batch, persona in zip(batches, assign_personas(len(batches)), strict=True):
         batch["persona"] = persona.name
 
     return batches

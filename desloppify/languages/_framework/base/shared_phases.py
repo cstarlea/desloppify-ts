@@ -10,29 +10,41 @@ from desloppify.base.output.terminal import log
 from desloppify.engine.detectors.security.detector import (
     detect_security_issues as _detect_security_issues_default,
 )
-from desloppify.languages._framework.base.types import DetectorEntry, LangRuntimeContract
+from desloppify.languages._framework.base.types import (
+    DetectorEntry,
+    LangRuntimeContract,
+)
 from desloppify.state_io import Issue
 
 from .shared_phases_helpers import (
     _entries_to_issues as _entries_to_issues_impl,
+)
+from .shared_phases_helpers import (
     _filter_boilerplate_entries_by_zone as _filter_boilerplate_entries_by_zone_impl,
+)
+from .shared_phases_helpers import (
     _find_external_test_files,
+)
+from .shared_phases_helpers import (
     _log_phase_summary as _log_phase_summary_impl,
 )
 from .shared_phases_review import (
     phase_boilerplate_duplication,
     phase_dupes,
-    phase_security as _phase_security_review,
     phase_private_imports,
     phase_signature,
     phase_subjective_review,
     phase_test_coverage,
+)
+from .shared_phases_review import (
+    phase_security as _phase_security_review,
 )
 from .shared_phases_structural import (
     make_structural_coupling_phase_pair,
     run_coupling_phase,
     run_structural_phase,
 )
+
 
 def find_external_test_files(path: Path, lang: LangRuntimeContract) -> set[str]:
     """Compatibility wrapper with patchable get_project_root dependency."""

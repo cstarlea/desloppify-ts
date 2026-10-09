@@ -9,7 +9,8 @@ incrementally without losing semantic clarity.
 
 from __future__ import annotations
 
-from typing import Any, Mapping, TypeAlias
+from collections.abc import Mapping
+from typing import Any, TypeAlias
 
 WorkItemKind: TypeAlias = str
 WorkItemOrigin: TypeAlias = str

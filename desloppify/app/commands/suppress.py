@@ -4,30 +4,30 @@ from __future__ import annotations
 
 import argparse
 
+import desloppify.intelligence.narrative.core as narrative_mod
 from desloppify import state as state_mod
 from desloppify.app.commands.helpers.attestation import (
     show_attestation_requirement,
     validate_attestation,
 )
+from desloppify.app.commands.helpers.command_runtime import command_runtime
 from desloppify.app.commands.helpers.lang import resolve_lang
+from desloppify.app.commands.helpers.query import write_query
+from desloppify.app.commands.helpers.queue_progress import show_score_with_plan_context
 from desloppify.app.commands.helpers.state_persistence import (
     save_config_or_exit,
     save_state_or_exit,
 )
-from desloppify.app.commands.helpers.query import write_query
-from desloppify.app.commands.helpers.queue_progress import show_score_with_plan_context
-from desloppify.app.commands.helpers.command_runtime import command_runtime
 from desloppify.base import config as config_mod
 from desloppify.base.exception_sets import CommandError
 from desloppify.base.output.terminal import colorize
 from desloppify.base.tooling import check_config_staleness
-from desloppify.engine._work_queue.core import ATTEST_EXAMPLE
 from desloppify.engine._state.filtering import (
     issue_suppression_fingerprint,
     matched_ignore_pattern,
 )
 from desloppify.engine._state.schema import utc_now
-import desloppify.intelligence.narrative.core as narrative_mod
+from desloppify.engine._work_queue.core import ATTEST_EXAMPLE
 
 _JUDGMENT_ATTESTATION_REQUIRED = ("not gaming",)
 _JUDGMENT_ATTESTATION_ALTERNATIVES = (("i have actually", "reviewed"),)

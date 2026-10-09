@@ -5,8 +5,8 @@ from __future__ import annotations
 import json
 from types import SimpleNamespace
 
-from desloppify.state_io import empty_state
 import desloppify.app.commands.status.cmd as status_cmd_mod
+from desloppify.state_io import empty_state
 
 
 def _runtime(*, state: dict | None = None, config: dict | None = None) -> SimpleNamespace:

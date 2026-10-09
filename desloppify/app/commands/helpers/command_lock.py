@@ -17,7 +17,11 @@ from pathlib import Path
 
 from desloppify.base.exception_sets import CommandError
 from desloppify.base.output.terminal import colorize
-from desloppify.engine._plan.persistence import get_plan_file, plan_lock, plan_path_for_state
+from desloppify.engine._plan.persistence import (
+    get_plan_file,
+    plan_lock,
+    plan_path_for_state,
+)
 from desloppify.engine._state.persistence import hold_state_lock
 from desloppify.engine._state.schema import get_state_file
 

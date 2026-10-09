@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from desloppify.engine._state.schema import StateModel
 from desloppify.engine._work_queue.models import QueueBuildOptions, WorkQueueResult
 from desloppify.engine._work_queue.plan_order import (
     enrich_plan_metadata,
@@ -17,7 +18,6 @@ from desloppify.engine._work_queue.ranking import (
     item_sort_key,
 )
 from desloppify.engine._work_queue.types import WorkQueueItem
-from desloppify.engine._state.schema import StateModel
 
 
 def finalize_queue(

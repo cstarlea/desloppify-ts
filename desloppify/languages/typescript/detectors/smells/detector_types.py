@@ -8,9 +8,16 @@ from pathlib import Path
 from desloppify.base.discovery.file_paths import rel, resolve_path
 from desloppify.engine.policy.zones import Zone, classify_file
 from desloppify.languages.typescript._zones import TS_ZONE_RULES
-from desloppify.languages.typescript.detectors.deps.resolve import compiler_option, find_nearest_tsconfig
+from desloppify.languages.typescript.detectors.deps.resolve import (
+    compiler_option,
+    find_nearest_tsconfig,
+)
 from desloppify.languages.typescript.syntax.queries import descendants
-from desloppify.languages.typescript.syntax.tree import ParsedSource, parse_text, parsed_file
+from desloppify.languages.typescript.syntax.tree import (
+    ParsedSource,
+    parse_text,
+    parsed_file,
+)
 
 from .detector_core import _emit
 from .helpers import _regex_line_matches

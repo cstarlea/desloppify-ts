@@ -21,6 +21,12 @@ from typing import Any
 
 from desloppify.base.output.terminal import colorize
 from desloppify.languages._framework.base.types import FixResult
+from desloppify.languages.typescript.syntax.nodes import (
+    STATEMENT_PARENTS,
+    asi_hazards,
+    node_key,
+    reads_only,
+)
 from desloppify.languages.typescript.syntax.tree import (
     ParsedSource,
     get_parser,
@@ -29,7 +35,6 @@ from desloppify.languages.typescript.syntax.tree import (
 
 from .edits import apply_edits, whole_statement_range
 from .fixer_io import apply_fixer
-from desloppify.languages.typescript.syntax.nodes import STATEMENT_PARENTS, asi_hazards, node_key, reads_only
 
 
 def fix_empty_if_chain(

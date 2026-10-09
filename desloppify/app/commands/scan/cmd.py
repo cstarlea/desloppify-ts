@@ -10,7 +10,6 @@ from desloppify.app.commands.helpers.runtime_options import (
     LangRuntimeOptionsError,
     print_lang_runtime_options_error,
 )
-from desloppify.base.config import target_strict_score_from_config
 from desloppify.app.commands.scan.artifacts import (
     build_scan_query_payload,
     emit_scorecard_badge,
@@ -23,15 +22,15 @@ from desloppify.app.commands.scan.reporting.agent_context import (
     auto_update_skill,
     print_llm_summary,
 )
-from desloppify.app.commands.scan.reporting.dimensions import (
-    show_dimension_deltas,
-    show_score_model_breakdown,
-    show_scorecard_subjective_measures,
-)
 from desloppify.app.commands.scan.reporting.ci import (
     ScoreGate,
     ci_report_lines,
     score_gate_from_args,
+)
+from desloppify.app.commands.scan.reporting.dimensions import (
+    show_dimension_deltas,
+    show_score_model_breakdown,
+    show_scorecard_subjective_measures,
 )
 from desloppify.app.commands.scan.reporting.integrity_report import (
     post_scan_analysis,
@@ -49,6 +48,7 @@ from desloppify.app.commands.scan.workflow import (
     resolve_noise_snapshot,
     run_scan_generation,
 )
+from desloppify.base.config import target_strict_score_from_config
 from desloppify.base.exception_sets import CommandError
 from desloppify.base.output.terminal import colorize
 from desloppify.base.search.query import write_query

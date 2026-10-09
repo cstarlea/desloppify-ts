@@ -7,15 +7,15 @@ from collections.abc import Mapping
 from typing import Any
 
 from desloppify.base.discovery.file_paths import matches_exclusion
-from desloppify.engine.policy.zones import should_skip_issue
 from desloppify.engine._state.filtering import (
     issue_suppression_fingerprint,
     matched_ignore_pattern,
 )
 from desloppify.engine._state.issue_semantics import (
-    is_import_only_issue,
     is_assessment_request,
+    is_import_only_issue,
 )
+from desloppify.engine.policy.zones import should_skip_issue
 
 
 def find_suspect_detectors(

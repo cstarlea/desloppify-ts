@@ -10,8 +10,8 @@ from desloppify.app.commands.plan.triage.confirmations.basic import (
     validate_attestation,
 )
 from desloppify.app.commands.plan.triage.services import TriageServices
-from desloppify.engine._plan.schema import empty_plan
 from desloppify.engine._plan.constants import TRIAGE_STAGE_IDS
+from desloppify.engine._plan.schema import empty_plan
 
 # ---------------------------------------------------------------------------
 # Helpers

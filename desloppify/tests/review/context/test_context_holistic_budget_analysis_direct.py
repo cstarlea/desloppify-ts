@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from desloppify.intelligence.review.context_holistic.budget import analysis as analysis_mod
+from desloppify.intelligence.review.context_holistic.budget import (
+    analysis as analysis_mod,
+)
 
 
 def test_budget_analysis_exports_expected_symbols() -> None:

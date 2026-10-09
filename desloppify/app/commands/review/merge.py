@@ -5,8 +5,8 @@ from __future__ import annotations
 import argparse
 from typing import Any, NamedTuple, TypedDict
 
-from desloppify.app.commands.helpers.query import write_query
 from desloppify.app.commands.helpers.command_runtime import command_runtime
+from desloppify.app.commands.helpers.query import write_query
 from desloppify.app.commands.helpers.queue_progress import show_score_with_plan_context
 from desloppify.base.output.issues import issue_weight
 from desloppify.base.output.terminal import colorize

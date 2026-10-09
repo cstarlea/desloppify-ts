@@ -110,7 +110,7 @@ class WorkItemQueueItem(QueueItemCommon, total=False):
 class ClusterQueueItem(QueueItemCommon, total=False):
     """Collapsed plan/work queue cluster item."""
 
-    members: list["WorkQueueItem"]
+    members: list[WorkQueueItem]
     member_count: int
     cluster_name: str
     cluster_auto: bool
@@ -184,7 +184,7 @@ class SerializedQueueItem(TypedDict, total=False):
     plan_skip_reason: str
     action_type: str
     member_count: int
-    members: list["SerializedClusterMember"]
+    members: list[SerializedClusterMember]
     cluster_name: str
     cluster_auto: bool
     members_truncated: bool

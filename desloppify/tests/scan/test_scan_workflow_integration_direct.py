@@ -13,8 +13,8 @@ from desloppify.app.commands.scan.workflow import (
     merge_scan_results,
     prepare_scan_runtime,
 )
-from desloppify.base.runtime_state import RuntimeContext, runtime_scope
 from desloppify.base.discovery.file_paths import rel
+from desloppify.base.runtime_state import RuntimeContext, runtime_scope
 from desloppify.engine.plan_state import empty_plan, load_plan, save_plan
 from desloppify.languages._framework.frameworks.detection import (
     detect_ecosystem_frameworks,

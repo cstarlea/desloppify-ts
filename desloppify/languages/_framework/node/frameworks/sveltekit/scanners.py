@@ -12,7 +12,10 @@ from collections.abc import Iterator
 from pathlib import Path
 
 from desloppify.languages._framework.node.js_classes import matching
-from desloppify.languages._framework.node.js_functions import FunctionLiteral, function_at
+from desloppify.languages._framework.node.js_functions import (
+    FunctionLiteral,
+    function_at,
+)
 
 from ..component_sources import SourceFile, body_span, imports, package_sources
 

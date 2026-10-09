@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-
 from desloppify.app.commands.plan.triage.stages.evidence_parsing import (
     ObserveAssessment,
     ObserveEvidence,
@@ -12,7 +11,6 @@ from desloppify.app.commands.plan.triage.stages.evidence_parsing import (
     validate_report_has_file_paths,
     validate_report_references_clusters,
 )
-
 
 # ---------------------------------------------------------------------------
 # parse_observe_evidence — YAML-like template format

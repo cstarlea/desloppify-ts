@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+
 import desloppify.app.commands.autofix as autofix_pkg
 import desloppify.app.commands.autofix.cmd as autofix_cmd_mod
 import desloppify.app.commands.backlog as backlog_pkg

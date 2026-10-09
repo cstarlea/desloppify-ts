@@ -5,10 +5,13 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 
-from desloppify.engine._plan.annotations import get_issue_note
-from desloppify.engine._plan.constants import SYNTHETIC_PREFIXES
 from desloppify.base.enums import resolved_statuses
-from desloppify.engine._plan.cluster_semantics import EXECUTION_STATUS_DONE, cluster_is_active
+from desloppify.engine._plan.annotations import get_issue_note
+from desloppify.engine._plan.cluster_semantics import (
+    EXECUTION_STATUS_DONE,
+    cluster_is_active,
+)
+from desloppify.engine._plan.constants import SYNTHETIC_PREFIXES
 from desloppify.engine._plan.operations.lifecycle import clear_focus_if_cluster_empty
 from desloppify.engine._plan.operations.meta import append_log_entry
 from desloppify.engine._plan.operations.skip import resurface_stale_skips

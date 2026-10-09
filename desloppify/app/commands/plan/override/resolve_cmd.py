@@ -17,11 +17,11 @@ from desloppify.base.exception_sets import PLAN_LOAD_EXCEPTIONS
 from desloppify.base.output.fallbacks import log_best_effort_failure
 from desloppify.base.output.terminal import colorize
 from desloppify.engine._work_queue.core import ATTEST_EXAMPLE
+from desloppify.engine.plan_ops import append_log_entry
 from desloppify.engine.plan_state import (
     load_plan,
     save_plan,
 )
-from desloppify.engine.plan_ops import append_log_entry
 
 from .resolve_helpers import (
     check_cluster_guard,

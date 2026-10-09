@@ -7,7 +7,9 @@ from typing import Any
 
 from desloppify.base.discovery.paths import get_project_root
 from desloppify.engine._state.schema import StateModel, utc_now
-from desloppify.intelligence.review.importing.state_helpers import ensure_review_file_cache
+from desloppify.intelligence.review.importing.state_helpers import (
+    ensure_review_file_cache,
+)
 
 
 def resolve_import_project_root(project_root: Path | str | None) -> Path:

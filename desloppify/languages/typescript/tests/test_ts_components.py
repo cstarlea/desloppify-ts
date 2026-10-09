@@ -15,10 +15,17 @@ from desloppify.base.discovery.sfc import (
     script_blocks,
     sfc_code,
 )
-from desloppify.engine.detectors.orphaned import OrphanedDetectionOptions, detect_orphaned_files
-from desloppify.languages._framework.frameworks.registry import framework_entry_conventions
+from desloppify.engine.detectors.orphaned import (
+    OrphanedDetectionOptions,
+    detect_orphaned_files,
+)
+from desloppify.languages._framework.frameworks.registry import (
+    framework_entry_conventions,
+)
 from desloppify.languages.typescript._fixers import get_ts_fixers
-from desloppify.languages.typescript.detectors.deps.auto_imports import auto_import_entries
+from desloppify.languages.typescript.detectors.deps.auto_imports import (
+    auto_import_entries,
+)
 from desloppify.languages.typescript.detectors.deps.resolver import clear_resolver_cache
 from desloppify.languages.typescript.detectors.io import iter_typescript_sources
 from desloppify.languages.typescript.detectors.smells import detect_smells

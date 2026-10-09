@@ -6,8 +6,8 @@ import argparse
 from pathlib import Path
 from types import SimpleNamespace
 
-from desloppify import state as state_mod
 import desloppify.app.commands.review.merge as merge_mod
+from desloppify import state as state_mod
 
 
 def _holistic_review_issue(

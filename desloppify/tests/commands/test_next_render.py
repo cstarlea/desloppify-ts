@@ -248,6 +248,33 @@ def test_render_single_issue_with_plan_cluster_and_steps(monkeypatch, capsys) ->
     assert "2. Sort remaining" in out
 
 
+def test_render_relevant_steps_keep_their_cluster_step_number(monkeypatch, capsys) -> None:
+    """"Your step(s)" shows the 1-based step number used by ``--done-step N``."""
+    monkeypatch.setattr(render_mod, "read_code_snippet", lambda *a, **k: None)
+    monkeypatch.setattr(render_mod, "colorize", lambda t, _s: t)
+
+    item = _issue_item(
+        plan_cluster={
+            "name": "import-cleanup",
+            "total_items": 2,
+            "action_steps": [
+                {"title": "Remove unused imports", "issue_refs": ["other::x"]},
+                {"title": "Split long_fn", "detail": "Extract helpers.", "issue_refs": [
+                    "smells::src/util.py::long_fn",
+                ]},
+            ],
+        },
+    )
+    render_mod.render_terminal_items(
+        [item], {}, {}, group="item", explain=False,
+    )
+    out = capsys.readouterr().out
+    assert "Your step(s):" in out
+    assert "    2. Split long_fn" in out
+    assert "      Extract helpers." in out
+    assert "Remove unused imports" not in out
+
+
 def test_render_single_issue_with_category_and_importers(monkeypatch, capsys) -> None:
     """Category and importers are shown when present in detail."""
     monkeypatch.setattr(render_mod, "read_code_snippet", lambda *a, **k: None)

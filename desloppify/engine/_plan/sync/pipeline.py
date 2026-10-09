@@ -4,22 +4,20 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from desloppify.state_scoring import score_snapshot
 from desloppify.engine._plan.auto_cluster import auto_cluster_issues
 from desloppify.engine._plan.constants import (
     PRE_REVIEW_WORKFLOW_IDS,
     WORKFLOW_COMMUNICATE_SCORE_ID,
     WORKFLOW_CREATE_PLAN_ID,
     WORKFLOW_DEFERRED_DISPOSITION_ID,
-    WORKFLOW_IMPORT_SCORES_ID,
     WORKFLOW_RUN_SCAN_ID,
     WORKFLOW_SCORE_CHECKPOINT_ID,
     QueueSyncResult,
     is_synthetic_id,
 )
 from desloppify.engine._plan.operations.meta import append_log_entry
-from desloppify.engine._plan.policy.subjective import compute_subjective_visibility
 from desloppify.engine._plan.policy.stale import open_review_ids
+from desloppify.engine._plan.policy.subjective import compute_subjective_visibility
 from desloppify.engine._plan.refresh_lifecycle import (
     _set_lifecycle_phase,
     derive_display_phase,
@@ -28,12 +26,13 @@ from desloppify.engine._plan.refresh_lifecycle import (
 from desloppify.engine._plan.sync.dimensions import sync_subjective_dimensions
 from desloppify.engine._plan.sync.phase_cleanup import prune_synthetic_for_phase
 from desloppify.engine._plan.sync.triage import sync_triage_needed
-from desloppify.engine._plan.triage.snapshot import build_triage_snapshot
 from desloppify.engine._plan.sync.workflow import (
     ScoreSnapshot,
     sync_communicate_score_needed,
     sync_create_plan_needed,
 )
+from desloppify.engine._plan.triage.snapshot import build_triage_snapshot
+from desloppify.state_scoring import score_snapshot
 
 _SCAN_PHASE_WORKFLOW_IDS = {
     WORKFLOW_DEFERRED_DISPOSITION_ID,

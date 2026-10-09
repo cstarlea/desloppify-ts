@@ -12,8 +12,11 @@ import desloppify.app.commands.review.importing.output as import_output_mod
 import desloppify.app.commands.review.importing.plan_sync as plan_sync_mod
 import desloppify.app.commands.review.importing.results as results_mod
 import desloppify.engine._plan.constants as plan_constants_mod
-from desloppify.engine._state.progression import append_progression_event, load_progression
 import desloppify.intelligence.review.importing.holistic as holistic_import_mod
+from desloppify.engine._state.progression import (
+    append_progression_event,
+    load_progression,
+)
 from desloppify.state import empty_state as build_empty_state
 
 

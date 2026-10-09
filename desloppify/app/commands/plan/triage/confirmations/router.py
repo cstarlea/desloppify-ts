@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 
+from ..services import TriageServices, default_triage_services
 from .basic import (
     MIN_ATTESTATION_LEN,
     confirm_observe,
@@ -13,7 +14,6 @@ from .basic import (
 from .enrich import confirm_enrich, confirm_sense_check
 from .organize import confirm_organize
 from .strategize import confirm_strategize
-from ..services import TriageServices, default_triage_services
 
 
 def cmd_confirm_stage(

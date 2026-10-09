@@ -8,11 +8,11 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
 
-from desloppify.engine._state.issue_semantics import is_assessment_request
 from desloppify.engine._scoring.policy.core import (
     SUBJECTIVE_TARGET_MATCH_TOLERANCE,
     matches_target_score,
 )
+from desloppify.engine._state.issue_semantics import is_assessment_request
 
 __all__ = [
     "SUBJECTIVE_TARGET_MATCH_TOLERANCE",
@@ -88,7 +88,7 @@ def subjective_review_open_breakdown(
     dimension_counts: dict[str, int] = {}
     total = 0
 
-    for issue_id, issue in _iter_issues(issues):
+    for _issue_id, issue in _iter_issues(issues):
         if not is_subjective_review_open(issue):
             continue
 

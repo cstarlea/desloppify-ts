@@ -113,7 +113,7 @@ class TestResponsibilityCohesion:
                   ("http", ["Serve", "Route", "Respond"])]
         code = ""
         for prefix, names in groups:
-            for name, nxt in zip(names, [*names[1:], None]):
+            for name, nxt in zip(names, [*names[1:], None], strict=True):
                 call = f"{prefix}{nxt}();" if nxt else "return 1;"
                 code += f"function {prefix}{name}() {{ {call} }}\n"
             code += "\n"
