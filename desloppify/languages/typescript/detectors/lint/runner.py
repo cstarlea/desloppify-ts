@@ -55,6 +55,8 @@ def run_process(
         cmd,
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
         stdin=subprocess.DEVNULL,
         cwd=config.directory,
         env=_env(config),

@@ -271,7 +271,7 @@ class TestGenerateRemediationPlan:
         plan = generate_remediation_plan(state, output_path=output)
 
         assert output.exists()
-        assert output.read_text() == plan
+        assert output.read_text(encoding="utf-8") == plan
         assert "Issue" in output.read_text()
 
     def test_commands_take_no_lang_flag(self):

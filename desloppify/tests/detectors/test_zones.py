@@ -1,5 +1,7 @@
 """Tests for desloppify.zones — zone classification, policies, and filtering."""
 
+from pathlib import Path
+
 import pytest
 
 from desloppify.engine.policy.zones import (
@@ -455,7 +457,7 @@ class TestGeneratedHeader:
         zone_map = FileZoneMap(
             files,
             COMMON_ZONE_RULES,
-            rel_fn=lambda p: str(p).removeprefix(str(tmp_path) + "/"),
+            rel_fn=lambda p: Path(p).relative_to(tmp_path).as_posix(),
         )
         assert zone_map.get(files[0]) == Zone.GENERATED
         assert zone_map.get(files[1]) == Zone.PRODUCTION
@@ -759,7 +761,7 @@ class TestPatternOverrides:
         zone_map = FileZoneMap(
             [str(target)],
             COMMON_ZONE_RULES,
-            rel_fn=lambda p: str(p).removeprefix(str(tmp_path) + "/"),
+            rel_fn=lambda p: Path(p).relative_to(tmp_path).as_posix(),
             overrides={"www/**": "production"},
         )
         assert zone_map.get(str(target)) == Zone.PRODUCTION

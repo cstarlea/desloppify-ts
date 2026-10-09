@@ -204,6 +204,8 @@ def _run_jscpd_command(cmd: list[str], *, timeout: int) -> subprocess.CompletedP
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
+        encoding="utf-8",
+        errors="replace",
         start_new_session=True,
     )
     try:

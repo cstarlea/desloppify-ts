@@ -19,6 +19,8 @@ LINT_IMPORTS := $(shell python -c "import pathlib,sys; print(pathlib.Path(sys.ex
 IMPORTLINTER_CONFIG ?= .github/importlinter.ini
 PYTEST_XML ?=
 PYTEST_XML_FLAG := $(if $(PYTEST_XML),--junitxml=$(PYTEST_XML),)
+PYTEST_TIMEOUT ?= 120
+PYTEST := pytest --timeout=$(PYTEST_TIMEOUT)
 
 sync-docs:
 	mkdir -p desloppify/data/global
@@ -33,11 +35,11 @@ install-hooks:
 
 install-ci-tools: install-hooks
 	$(PIP) install --upgrade pip
-	$(PIP) install -e . pytest mypy ruff import-linter build twine pyyaml
+	$(PIP) install -e . pytest mypy ruff import-linter build twine pyyaml pytest-timeout
 
 install-full-tools: install-hooks
 	$(PIP) install --upgrade pip
-	$(PIP) install -e ".[full]" pytest ruff
+	$(PIP) install -e ".[full]" pytest pytest-timeout ruff
 
 lint: install-ci-tools
 	ruff check . --select E9,F63,F7,F82
@@ -53,20 +55,20 @@ arch: install-ci-tools
 	$(LINT_IMPORTS) --config $(IMPORTLINTER_CONFIG)
 
 ci-contracts: install-ci-tools
-	pytest -q desloppify/tests/ci/test_ci_contracts.py
-	pytest -q desloppify/tests/commands/test_lifecycle_transitions.py -k "assessment_then_score_when_no_review_followup"
+	$(PYTEST) -q desloppify/tests/ci/test_ci_contracts.py
+	$(PYTEST) -q desloppify/tests/commands/test_lifecycle_transitions.py -k "assessment_then_score_when_no_review_followup"
 
 tests: install-ci-tools
-	pytest -q $(PYTEST_XML_FLAG)
+	$(PYTEST) -q $(PYTEST_XML_FLAG)
 
 tests-full: install-full-tools
-	pytest -q $(PYTEST_XML_FLAG)
+	$(PYTEST) -q $(PYTEST_XML_FLAG)
 
 GOLDEN_NODE_DIR := desloppify/languages/typescript/tests/golden/node
 
 tests-golden-node: install-full-tools
 	npm ci --prefix $(GOLDEN_NODE_DIR) --no-audit --no-fund
-	DESLOPPIFY_REQUIRE_NODE_GOLDEN=1 pytest -q -rs desloppify/languages/typescript/tests/test_ts_golden.py \
+	DESLOPPIFY_REQUIRE_NODE_GOLDEN=1 $(PYTEST) -q -rs desloppify/languages/typescript/tests/test_ts_golden.py \
 		desloppify/languages/typescript/tests/test_ts_fixer_roundtrip.py
 
 package-smoke: install-ci-tools

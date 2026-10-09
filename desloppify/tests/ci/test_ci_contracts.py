@@ -50,6 +50,7 @@ def test_ci_workflow_jobs_are_bound_to_make_targets() -> None:
         "arch-contracts": "make arch",
         "ci-contracts": "make ci-contracts",
         "tests-core": "make tests PYTEST_XML=pytest-core.xml",
+        "tests-windows": "make tests PYTEST_XML=pytest-windows.xml",
         "tests-full": "make tests-full PYTEST_XML=pytest-full.xml",
         "tests-golden-node": "make tests-golden-node",
         "package-smoke": "make package-smoke",
@@ -65,6 +66,60 @@ def test_ci_workflow_jobs_are_bound_to_make_targets() -> None:
         )
         assert any(step.get("uses") == "actions/setup-python@v5" for step in job["steps"]), (
             f"{job_name} should use actions/setup-python@v5."
+        )
+
+
+def _matrix_versions(job: dict) -> list[str]:
+    return [str(v) for v in job.get("strategy", {}).get("matrix", {}).get("python-version", [])]
+
+
+def _check_names(job_name: str, job: dict) -> list[str]:
+    versions = _matrix_versions(job)
+    if not versions:
+        return [job_name]
+    return [f"{job_name} ({version})" for version in versions]
+
+
+def test_ci_tests_cover_supported_python_versions() -> None:
+    jobs = _load_yaml(CI_WORKFLOW)["jobs"]
+    classifiers = tomllib.loads(PYPROJECT.read_text())["project"]["classifiers"]
+    declared = sorted(
+        c.rsplit("::", 1)[1].strip()
+        for c in classifiers
+        if c.startswith("Programming Language :: Python :: 3.")
+    )
+    assert declared, "pyproject declares no Python versions."
+    core = jobs["tests-core"]
+    assert sorted(_matrix_versions(core)) == declared, (
+        "tests-core must run on every Python version pyproject declares."
+    )
+    full = _matrix_versions(jobs["tests-full"])
+    assert {declared[0], declared[-1]} <= set(full), (
+        "tests-full must run on the oldest and newest supported Python."
+    )
+    for job_name in ("tests-core", "tests-full"):
+        setup = next(
+            step for step in jobs[job_name]["steps"]
+            if step.get("uses") == "actions/setup-python@v5"
+        )
+        assert setup["with"]["python-version"] == "${{ matrix.python-version }}"
+        assert jobs[job_name]["name"] == f"{job_name} (${{{{ matrix.python-version }}}})"
+
+
+def test_ci_has_a_windows_core_job() -> None:
+    job = _load_yaml(CI_WORKFLOW)["jobs"]["tests-windows"]
+    assert job["runs-on"].startswith("windows-")
+    assert job.get("defaults", {}).get("run", {}).get("shell") == "bash"
+
+
+def test_makefile_tests_run_with_a_timeout() -> None:
+    text = MAKEFILE.read_text()
+    assert re.search(r"^PYTEST := pytest --timeout=", text, flags=re.MULTILINE)
+    for target in ("tests", "tests-full", "tests-golden-node", "ci-contracts"):
+        body = text.split(f"\n{target}:", 1)[1].split("\n\n", 1)[0]
+        assert "$(PYTEST)" in body, f"{target} must run pytest with --timeout."
+        assert not re.search(r"\bpytest -q", body), (
+            f"{target} runs pytest without the timeout."
         )
 
 
@@ -124,7 +179,7 @@ def test_makefile_contains_ci_gate_targets() -> None:
 def test_ci_contracts_target_includes_phase_order_invariant() -> None:
     text = MAKEFILE.read_text()
     assert (
-        'pytest -q desloppify/tests/commands/test_lifecycle_transitions.py '
+        '$(PYTEST) -q desloppify/tests/commands/test_lifecycle_transitions.py '
         '-k "assessment_then_score_when_no_review_followup"'
     ) in text
 
@@ -160,17 +215,19 @@ def test_full_extra_includes_all_optional_dependency_groups() -> None:
 def test_ci_plan_required_checks_match_ci_workflow() -> None:
     ci = _load_yaml(CI_WORKFLOW)
     expected_contexts = [
-        f"CI / {name}"
+        f"CI / {check}"
         for name in (
             "lint",
             "typecheck",
             "arch-contracts",
             "ci-contracts",
             "tests-core",
+            "tests-windows",
             "tests-full",
             "tests-golden-node",
             "package-smoke",
         )
+        for check in _check_names(name, ci["jobs"][name])
     ]
 
     doc = CI_PLAN.read_text()
@@ -179,5 +236,5 @@ def test_ci_plan_required_checks_match_ci_workflow() -> None:
 
     assert documented == expected_contexts
     for context in expected_contexts:
-        job_name = context.split("CI / ", 1)[1]
+        job_name = context.split("CI / ", 1)[1].split(" (", 1)[0]
         assert job_name in ci["jobs"], f"{context} has no matching CI workflow job."

@@ -25,9 +25,11 @@ Required jobs:
   - `make arch`
 - `ci-contracts`:
   - `make ci-contracts` (workflow/docs/policy contract tests)
-- `tests-core`:
+- `tests-core` (Python 3.11, 3.12, 3.13 and 3.14):
   - `make tests PYTEST_XML=pytest-core.xml`
-- `tests-full`:
+- `tests-windows` (Python 3.11 on `windows-latest`, bash shell):
+  - `make tests PYTEST_XML=pytest-windows.xml`
+- `tests-full` (Python 3.11 and 3.14):
   - `make tests-full PYTEST_XML=pytest-full.xml`
 - `tests-golden-node`:
   - `make tests-golden-node` (TypeScript golden scans with pinned tsc/knip from
@@ -35,9 +37,13 @@ Required jobs:
 - `package-smoke`:
   - `make package-smoke`
 
+Every pytest run has a per-test `--timeout` (`PYTEST_TIMEOUT`, default 120s,
+from pytest-timeout).
+
 Artifacts uploaded:
-- `pytest-core-report`
-- `pytest-full-report`
+- `pytest-core-report-<python>`
+- `pytest-windows-report`
+- `pytest-full-report-<python>`
 - `dist-packages`
 
 ### 2) Publish (`.github/workflows/python-publish.yml`)
@@ -59,8 +65,13 @@ Required status checks:
 - `CI / typecheck`
 - `CI / arch-contracts`
 - `CI / ci-contracts`
-- `CI / tests-core`
-- `CI / tests-full`
+- `CI / tests-core (3.11)`
+- `CI / tests-core (3.12)`
+- `CI / tests-core (3.13)`
+- `CI / tests-core (3.14)`
+- `CI / tests-windows`
+- `CI / tests-full (3.11)`
+- `CI / tests-full (3.14)`
 - `CI / tests-golden-node`
 - `CI / package-smoke`
 

@@ -5,6 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import patch
 
+import sys
+
 import pytest
 
 from desloppify.engine.detectors.coupling import (
@@ -191,6 +193,7 @@ class TestDetectCouplingViolations:
         assert entries == []
         assert total_edges.eligible_edges == 0
 
+    @pytest.mark.skipif(sys.platform == "win32", reason="POSIX absolute prefixes")
     def test_accepts_relative_graph_keys_with_absolute_prefixes(self):
         """Relative graph keys still match when prefixes are absolute."""
         graph = {

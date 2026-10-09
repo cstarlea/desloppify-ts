@@ -182,8 +182,8 @@ Every adversarial input in the original review broke one of the line-regex fixer
 
 ### 2E. Engineering foundation
 
-- **CI:** a Python 3.11–3.14 matrix (E7), a Windows core job (CE-16), and pytest `--timeout` (E12).
-- **Lint and types:** enforce the configured ruff `E,F,I,B,UP` and `ruff format --check`. CI checks only `E9,F63,F7,F82` today, and some F401/F841 debt remains. Extend mypy past its 16 files into `languages/typescript` and `_framework`, ratcheting with per-module ignores. Add import-linter contracts that already hold: `languages` ↛ `app`, `engine` ↛ `app` (E6).
+- **CI, done.** `tests-core` runs on Python 3.11–3.14, every version pyproject declares (3.14 classifier added); `tests-full` runs on 3.11 and 3.14 (E7). A `tests-windows` job runs the core suite on `windows-latest` (CE-16). It found real bugs, now fixed: subprocess output and source files were decoded with the locale encoding (cp1252), which broke the Codex runner's readers and shifted lines and columns in non-ASCII files; coverage discovery left backslash-separated graph keys; tsc/lint coverage notes used native separators. Every pytest run has a per-test `--timeout` (pytest-timeout, `PYTEST_TIMEOUT`, default 120s) (E12).
+- **Lint and types:** enforce the configured ruff `E,F,I,B,UP` and `ruff format --check` (deferred: the whole-codebase fix and format sweep would conflict with every open PR, so it waits for a quiet moment). CI checks only `E9,F63,F7,F82` today, and some F401/F841 debt remains. Extend mypy past its 16 files into `languages/typescript` and `_framework`, ratcheting with per-module ignores. Add import-linter contracts that already hold: `languages` ↛ `app`, `engine` ↛ `app` (E6).
 - **Dev tooling:** a `dev` extra with pinned pytest, ruff, mypy, import-linter and pytest-xdist, and make targets that don't `pip install`. Fix the release checklist (E11).
 - **Tests:**
   - an autouse isolation fixture plus a guard that fails if the repo's `.desloppify/` is touched (E5);
@@ -322,7 +322,7 @@ Status key: **done** (with PR), **partial** (what's left is in §2), **open**, *
 | CE-13 | medium | Exclusions applied after language and state resolution | dropped |
 | CE-14 | medium | Auto-detect walks to an ancestor package.json | dropped |
 | CE-15 | low | No detector or domain disable | done (#85) |
-| CE-16 | medium | Codex runner Popen is locale-dependent on Windows | open → §2E |
+| CE-16 | medium | Codex runner Popen is locale-dependent on Windows | done (§2E: UTF-8 subprocess decoding, `tests-windows` job) |
 | CE-17 | medium | JS ESLint on Windows | dropped |
 
 ### Tests, CI, packaging, architecture, upstream
@@ -335,12 +335,12 @@ Status key: **done** (with PR), **partial** (what's left is in §2), **open**, *
 | E4 | medium | Glob-order test fails on tmpfs | done (#1, upstream #617) |
 | E5 | medium | Tests write into the repo's `.desloppify` | open → §2E |
 | E6 | low | Lint 4 codes, mypy 16 files, 1 import contract | open → §2E |
-| E7 | low | CI only on py3.11 | open → §2E |
+| E7 | low | CI only on py3.11 | done (§2E: core on 3.11–3.14, full on 3.11 and 3.14) |
 | E8 | medium | Ruby and R tests never collected | dropped |
 | E9 | medium | getsource and callable tripwire tests | open → §2E |
 | E10 | low | Review tests run twice | open → §2E |
 | E11 | low | Make targets reinstall; release checklist drift | open → §2E |
-| E12 | low | No test timeout | open → §2E |
+| E12 | low | No test timeout | done (§2E: pytest-timeout, 120s per test) |
 | E13 | low | TS tests in two trees | open → §2E |
 | PK-1 | medium | tree-sitter floor crashes; cap blocks working releases | done (#1) |
 | PK-2 | medium | Offline grammar download silently drops findings | done (#1 reduced coverage; `setup --grammars`, grammar-loading `is_available()`) |

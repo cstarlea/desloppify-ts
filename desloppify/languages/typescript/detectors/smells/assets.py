@@ -36,7 +36,7 @@ def detect_non_ts_asset_smells(path: Path, smell_counts: dict[str, list[dict]]) 
     for filepath in css_files:
         try:
             full = Path(filepath) if Path(filepath).is_absolute() else get_project_root() / filepath
-            content = full.read_text()
+            content = full.read_text(encoding="utf-8")
             lines = content.splitlines()
         except (OSError, UnicodeDecodeError) as exc:
             log_best_effort_failure(logger, f"read stylesheet smell candidate {filepath}", exc)
@@ -72,8 +72,8 @@ def detect_non_ts_asset_smells(path: Path, smell_counts: dict[str, list[dict]]) 
 
     scanned_files += 1
     try:
-        readme_text = readme_path.read_text()
-        package_payload = json.loads(package_path.read_text())
+        readme_text = readme_path.read_text(encoding="utf-8")
+        package_payload = json.loads(package_path.read_text(encoding="utf-8"))
     except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
         log_best_effort_failure(logger, "read package/readme for docs drift smell", exc)
         return scanned_files

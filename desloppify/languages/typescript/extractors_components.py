@@ -41,7 +41,7 @@ def extract_ts_components(path: Path) -> list[ClassInfo]:
                 if Path(filepath).is_absolute()
                 else get_project_root() / filepath
             )
-            content = p.read_text()
+            content = p.read_text(encoding="utf-8")
             lines = content.splitlines()
             loc = len(lines)
             if loc < 100:
@@ -126,7 +126,7 @@ def detect_passthrough_components(path: Path) -> list[dict]:
                 if Path(filepath).is_absolute()
                 else get_project_root() / filepath
             )
-            content = p.read_text()
+            content = p.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError) as exc:
             logger.debug(
                 "Skipping unreadable TSX file %s in passthrough detection: %s",

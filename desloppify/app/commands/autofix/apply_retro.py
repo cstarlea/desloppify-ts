@@ -54,6 +54,8 @@ def _warn_uncommitted_changes() -> None:
             [git_path, "status", "--porcelain"],
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=5,
         )  # nosec B603
         if result.stdout.strip():

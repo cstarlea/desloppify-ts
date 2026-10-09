@@ -64,9 +64,9 @@ def _reduced(
 
 def _display(path: Path) -> str:
     try:
-        return str(path.relative_to(get_project_root().resolve()))
+        return path.relative_to(get_project_root().resolve()).as_posix()
     except ValueError:
-        return str(path)
+        return path.as_posix()
 
 
 def _dependencies_missing(directory: Path) -> bool:

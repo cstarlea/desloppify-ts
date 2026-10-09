@@ -37,7 +37,7 @@ _BOUNDARY_DIRECTIVES = frozenset({"use client", "use server"})
 def is_ts_facade(filepath: str) -> dict | None:
     """Check if a TypeScript file is a pure re-export facade."""
     try:
-        content = Path(resolve_path(filepath)).read_text()
+        content = Path(resolve_path(filepath)).read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError):
         return None
 

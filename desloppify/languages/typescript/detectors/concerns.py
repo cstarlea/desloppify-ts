@@ -36,7 +36,7 @@ def detect_mixed_concerns(path: Path) -> tuple[list[dict[str, Any]], int]:
                 if Path(filepath).is_absolute()
                 else get_project_root() / filepath
             )
-            content = p.read_text()
+            content = p.read_text(encoding="utf-8")
             loc = len(content.splitlines())
             if loc < 100:
                 continue

@@ -4,6 +4,7 @@ Covers: __init__, common, imports, vars, logs, params, if_chain, useeffect.
 """
 
 import importlib.util
+import sys
 import textwrap
 
 import pytest
@@ -866,7 +867,8 @@ class TestFixerWritePreservation:
 
         assert results and results[0]["removed"] == ["DROP"]
         assert target.read_bytes() == b"\xef\xbb\xbfimport { a } from './a';\r\nexport {};\r\n"
-        assert stat.S_IMODE(target.stat().st_mode) == 0o644
+        if sys.platform != "win32":
+            assert stat.S_IMODE(target.stat().st_mode) == 0o644
 
     def test_mixed_line_endings_are_preserved(self, tmp_path):
         target = tmp_path / "mixed.ts"
