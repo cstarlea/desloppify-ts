@@ -13,6 +13,7 @@ import signal
 import subprocess  # nosec B404
 import threading
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -32,14 +33,17 @@ class Budget:
     ``seconds`` of 0 means no total limit; each run still gets at most ``cap``.
     """
 
-    def __init__(self, seconds: float, max_memory_mb: int) -> None:
+    def __init__(
+        self, seconds: float, max_memory_mb: int, clock: Callable[[], float] = time.monotonic
+    ) -> None:
         self.seconds = seconds
         self.max_memory_mb = max_memory_mb
+        self._clock = clock
         self._start: float | None = None
 
     def limits(self, cap: float) -> RunLimits | None:
         """Limits for the next run, or None once the total time is spent."""
-        now = time.monotonic()
+        now = self._clock()
         if self._start is None:
             self._start = now
         if not self.seconds:
