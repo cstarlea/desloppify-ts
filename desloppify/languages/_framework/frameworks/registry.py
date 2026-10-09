@@ -38,8 +38,10 @@ def _register_builtin_specs() -> None:
     if FRAMEWORK_SPECS:
         return
     from .specs.nextjs import NEXTJS_SPEC
+    from .specs.react_router import REACT_ROUTER_SPEC
 
     register_framework_spec(NEXTJS_SPEC)
+    register_framework_spec(REACT_ROUTER_SPEC)
 
 
 def ensure_builtin_specs_loaded() -> None:

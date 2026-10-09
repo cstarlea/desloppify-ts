@@ -27,6 +27,7 @@ DISPLAY_ORDER = [
     "smells",
     "react",
     "nextjs",
+    "react_router",
     "next_lint",
     "dupes",
     "stale_exclude",

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -12,80 +13,6 @@ from desloppify.base.discovery.file_paths import count_lines, resolve_path
 
 _DUNDER_ALL_RE = re.compile(r"^__all__\s*[:=]", re.MULTILINE)
 
-# ---------------------------------------------------------------------------
-# React Router / Remix convention files
-# ---------------------------------------------------------------------------
-
-# Everything under app/routes/ is a route module, loaded by the framework's
-# file-based router and imported by nothing.
-_REACT_ROUTER_ROUTE_DIRS: tuple[str, ...] = ("routes",)
-
-# Framework entry points that sit beside the routes directory.
-_REACT_ROUTER_CONVENTIONS: set[str] = {
-    "root",
-    "entry.client",
-    "entry.server",
-}
-
-_REACT_ROUTER_EXTENSIONS: frozenset[str] = frozenset({".ts", ".tsx", ".js", ".jsx"})
-
-_REACT_ROUTER_CONFIGS: tuple[str, ...] = (
-    "react-router.config.js",
-    "react-router.config.mjs",
-    "react-router.config.ts",
-    "remix.config.js",
-    "remix.config.mjs",
-    "remix.config.ts",
-)
-
-
-def _detect_react_router_project(path: Path) -> bool:
-    """Return True if the scan root looks like a React Router or Remix project.
-
-    A config file is the cheap signal. Failing that, the dependency is checked,
-    because the framework's own template ships a Vite config rather than a
-    react-router.config file.
-    """
-    for name in _REACT_ROUTER_CONFIGS:
-        if (path / name).exists():
-            return True
-
-    package_json = path / "package.json"
-    if package_json.exists():
-        try:
-            text = package_json.read_text(encoding="utf-8", errors="replace")
-        except OSError:
-            return False
-        return '"@react-router/' in text or '"@remix-run/' in text
-    return False
-
-
-def _is_react_router_convention_entry(rel_path: str) -> bool:
-    """Return True if *rel_path* is a React Router / Remix convention file.
-
-    Route modules and the framework entry points have no importers by design —
-    the router loads them from the filesystem — so reporting them as orphaned
-    is a false positive on every project of this shape.
-    """
-    p = Path(rel_path)
-    if p.suffix not in _REACT_ROUTER_EXTENSIONS:
-        return False
-
-    parts = p.parts
-
-    # Any file beneath an app/routes/ (or src/routes/) directory.
-    for routes_dir in _REACT_ROUTER_ROUTE_DIRS:
-        if routes_dir in parts[:-1]:
-            return True
-
-    # root.jsx, entry.client.jsx, entry.server.jsx beside the routes directory.
-    # `.stem` only strips the last suffix, so entry.client.jsx stems to
-    # "entry.client", which is exactly what is being matched.
-    if p.stem in _REACT_ROUTER_CONVENTIONS and len(parts) <= 3:
-        return True
-
-    return False
-
 
 @dataclass(frozen=True)
 class EntryConventions:
@@ -94,33 +21,71 @@ class EntryConventions:
     A framework spec declares these (``FrameworkSpec.entry_conventions``) and
     the language passes them in; a matching file is an entry point. Paths are
     matched relative to a package root, and only for packages that have one
-    of ``config_files`` at their root.
+    of ``config_files`` at their root or one of ``dependencies`` in their
+    package.json.
     """
 
     config_files: tuple[str, ...]
     extensions: frozenset[str]
-    # Stems that are entry points at the package root or one level down (``src/``).
+    # A name ending in "/" matches every package in that scope.
+    dependencies: tuple[str, ...] = ()
+    # Stems that are entry points near the package root: at most ``root_depth``
+    # path parts, so 2 is the root or one directory down (``src/``).
     root_stems: frozenset[str] = frozenset()
+    root_depth: int = 2
     # Stems that are entry points anywhere beneath a ``route_dir`` segment.
     route_dir: str | None = None
     route_stems: frozenset[str] = frozenset()
+    # Every file beneath one of these directory segments is an entry point.
+    entry_dirs: frozenset[str] = frozenset()
+    # Entry points a package names in its own files (a route config, a
+    # loader's directory), relative to the package root. A path ending in
+    # "/" covers everything beneath that directory.
+    declared_entries: Callable[[Path], frozenset[str]] | None = None
 
     def applies_to(self, package_root: Path) -> bool:
         """Whether the package at *package_root* uses this framework."""
-        return any((package_root / name).exists() for name in self.config_files)
+        if any((package_root / name).exists() for name in self.config_files):
+            return True
+        if not self.dependencies:
+            return False
+        names = package_dependency_names(package_root)
+        return any(
+            name.startswith(dep) if dep.endswith("/") else name == dep
+            for dep in self.dependencies
+            for name in names
+        )
 
     def is_entry(self, rel_path: str) -> bool:
         """Whether *rel_path* (relative to the package root) is a convention file."""
         path = Path(rel_path)
         if path.suffix not in self.extensions:
             return False
-        if path.stem in self.root_stems and len(path.parts) <= 2:
+        if path.stem in self.root_stems and len(path.parts) <= self.root_depth:
+            return True
+        if self.entry_dirs and not self.entry_dirs.isdisjoint(path.parts[:-1]):
             return True
         return (
             self.route_dir is not None
             and path.stem in self.route_stems
             and self.route_dir in path.parts
         )
+
+
+def package_dependency_names(package_root: Path) -> set[str]:
+    """Every dependency name the package.json at *package_root* declares."""
+    try:
+        payload = json.loads((package_root / "package.json").read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, ValueError):
+        return set()
+    if not isinstance(payload, dict):
+        return set()
+    names: set[str] = set()
+    for key in ("dependencies", "devDependencies", "peerDependencies", "optionalDependencies"):
+        deps = payload.get(key)
+        if isinstance(deps, dict):
+            names.update(str(name) for name in deps)
+    return names
 
 
 @dataclass
@@ -137,7 +102,7 @@ class OrphanedDetectionOptions:
     # Package directories inside the scan; framework conventions are detected
     # per package and matched relative to it.
     package_roots: list[Path] | None = None
-    # File-system conventions of the frameworks the language knows (Next.js).
+    # File-system conventions of the frameworks the language knows.
     entry_conventions: tuple[EntryConventions, ...] = ()
 
 
@@ -153,7 +118,7 @@ class _FrameworkConventions:
         roots = {scan_path.resolve(), *(Path(r).resolve() for r in package_roots or ())}
         self._roots = sorted(roots, key=lambda p: len(p.parts), reverse=True)
         self._conventions = conventions
-        self._detected: dict[Path, tuple[tuple[EntryConventions, ...], bool]] = {}
+        self._detected: dict[Path, tuple[tuple[EntryConventions, ...], frozenset[str]]] = {}
 
     def is_entry(self, filepath: str) -> bool:
         file_path = Path(resolve_path(filepath))
@@ -161,15 +126,19 @@ class _FrameworkConventions:
         if root is None:
             return False
         if root not in self._detected:
-            self._detected[root] = (
-                tuple(c for c in self._conventions if c.applies_to(root)),
-                _detect_react_router_project(root),
-            )
-        conventions, is_react_router = self._detected[root]
+            applicable = tuple(c for c in self._conventions if c.applies_to(root))
+            declared: set[str] = set()
+            for convention in applicable:
+                if convention.declared_entries is not None:
+                    declared |= convention.declared_entries(root)
+            self._detected[root] = (applicable, frozenset(declared))
+        conventions, declared = self._detected[root]
         relative = file_path.relative_to(root).as_posix()
-        if any(c.is_entry(relative) for c in conventions):
+        if relative in declared or any(
+            d.endswith("/") and relative.startswith(d) for d in declared
+        ):
             return True
-        return is_react_router and _is_react_router_convention_entry(relative)
+        return any(c.is_entry(relative) for c in conventions)
 
 
 def _has_dunder_all(filepath: str) -> bool:

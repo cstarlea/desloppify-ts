@@ -52,7 +52,7 @@ Each detector reports a **potential**, the number of checks it ran, along with i
 | Dimension | Weight in pool | Detectors that TypeScript scans emit |
 |---|---|---|
 | **File health** | 2.0 | structural |
-| **Code quality** | 1.0 | unused, logs, exports, dependencies, deprecated, smells, react, nextjs, orphaned, flat_dirs, naming, single_use, coupling, cycles, facade, props, patterns, responsibility_cohesion, stale_exclude, tsconfig_health |
+| **Code quality** | 1.0 | unused, logs, exports, dependencies, deprecated, smells, react, nextjs, react_router, orphaned, flat_dirs, naming, single_use, coupling, cycles, facade, props, patterns, responsibility_cohesion, stale_exclude, tsconfig_health |
 | **Duplication** | 1.0 | dupes, boilerplate_duplication |
 | **Test health** | 1.0 | test_coverage |
 | **Security** | 1.0 | security |
@@ -98,7 +98,7 @@ Some issues don't count at all:
 
 ### File-based detectors
 
-For smells, security, test_coverage, type_error, lint and nextjs (plus some excluded or unused ones, see `_FILE_BASED_POLICY_DETECTORS`), the potential is a number of files. A file's failures are capped so that one bad file can't dominate:
+For smells, security, test_coverage, type_error, lint, nextjs and the other framework detectors (plus some excluded or unused ones, see `_FILE_BASED_POLICY_DETECTORS`), the potential is a number of files. A file's failures are capped so that one bad file can't dominate:
 
 - 1–2 issues: up to 1.0;
 - 3–5 issues: up to 1.5;

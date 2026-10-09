@@ -876,6 +876,7 @@ def test_registry_standalone_threshold_count():
         "dupes",
         "naming",
         "nextjs",
+        "react_router",
         "patterns",
         "props",
         "react",
