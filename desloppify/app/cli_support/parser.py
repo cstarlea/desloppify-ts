@@ -8,6 +8,7 @@ import sys
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as get_version
 
+from desloppify import DIST_NAME
 from desloppify.app.cli_support.parser_groups import (
     _add_backlog_parser,
     _add_config_parser,
@@ -84,7 +85,7 @@ class _NoAbbrevArgumentParser(argparse.ArgumentParser):
 def _cli_version_string() -> str:
     """Return the best available CLI version label."""
     try:
-        version_label = f"desloppify {get_version('desloppify')}"
+        version_label = f"desloppify {get_version(DIST_NAME)}"
     except PackageNotFoundError:
         version_label = "desloppify (version unknown)"
     return f"{version_label}\nPython {platform.python_version()} at {sys.executable}"

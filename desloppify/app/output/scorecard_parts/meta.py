@@ -9,6 +9,7 @@ import subprocess  # nosec B404
 from collections.abc import Callable
 from pathlib import Path
 
+from desloppify import DIST_NAME
 from desloppify.base.output.fallbacks import log_best_effort_failure
 
 logger = logging.getLogger(__name__)
@@ -78,7 +79,7 @@ def resolve_package_version(
 ) -> str:
     """Resolve package version from installed metadata or local pyproject."""
     try:
-        return version_getter("desloppify")
+        return version_getter(DIST_NAME)
     except package_not_found_error as exc:
         log_best_effort_failure(logger, "read package metadata version", exc)
 
