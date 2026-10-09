@@ -4,7 +4,6 @@ from pathlib import Path
 
 import pytest
 
-import desloppify.base.discovery.paths as paths_api_mod
 import desloppify.languages.typescript.detectors.deprecated as deprecated_detector_mod
 from desloppify.languages.typescript.detectors.deps.resolver import clear_resolver_cache
 from desloppify.languages.typescript.syntax.tree import get_parser
@@ -15,7 +14,6 @@ needs_treesitter = pytest.mark.skipif(get_parser("tsx") is None, reason="needs t
 @pytest.fixture(autouse=True)
 def _root(tmp_path, set_project_root, monkeypatch):
     """Point PROJECT_ROOT at the tmp directory via RuntimeContext."""
-    monkeypatch.setattr(paths_api_mod, "SRC_PATH", tmp_path)
     clear_resolver_cache()
 
 
