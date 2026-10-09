@@ -124,6 +124,19 @@ class _PackageScopeLookup:
         return result
 
 
+_DOCUSAURUS_SITE_PREFIX = "@site/"
+_DOCUSAURUS_CONFIGS = tuple(f"docusaurus.config.{ext}" for ext in ("ts", "mts", "js", "mjs", "cjs"))
+
+
+def _resolve_docusaurus_site(specifier: str, from_abs: str) -> str | None:
+    """``@site/x``: Docusaurus's alias for the site directory (the nearest one
+    with a ``docusaurus.config``), set by its bundler config, not a tsconfig."""
+    for directory in Path(from_abs).parents:
+        if any((directory / name).is_file() for name in _DOCUSAURUS_CONFIGS):
+            return resolve_target(directory / specifier[len(_DOCUSAURUS_SITE_PREFIX) :])
+    return None
+
+
 class ModuleResolver:
     """Resolve TypeScript import specifiers for files under one project."""
 
@@ -145,6 +158,8 @@ class ModuleResolver:
         resolved = resolve_target(target) if target is not None else None
         if resolved is None and specifier.startswith("#"):
             return self._resolve_package_import(specifier, from_abs)
+        if resolved is None and specifier.startswith(_DOCUSAURUS_SITE_PREFIX):
+            return _resolve_docusaurus_site(specifier, from_abs)
         if resolved is None and self.workspace and is_bare(specifier):
             # tsconfig paths take precedence, as in TypeScript; then the
             # workspace package that node_modules would symlink to.

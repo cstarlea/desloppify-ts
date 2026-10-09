@@ -47,6 +47,8 @@ from desloppify.languages.typescript.detectors.deps.runtime import (
 )
 
 _FRAMEWORK_EXTENSIONS = (".svelte", ".vue", ".astro")
+# Documents whose ESM imports are edges: MDX docs import components.
+_DOCUMENT_EXTENSIONS = (".mdx",)
 _DENO_EXTERNAL_PREFIXES = ("http://", "https://", "npm:", "jsr:")
 _DECLARATION_SUFFIXES = (".d.ts", ".d.mts", ".d.cts")
 
@@ -159,7 +161,7 @@ def build_dep_graph(
 
     runtime_edges: dict[str, set[str]] = defaultdict(set)
     pattern_refs: list[tuple[str, str, ImportRef]] = []
-    fw_files = find_source_files(path, list(_FRAMEWORK_EXTENSIONS))
+    fw_files = find_source_files(path, [*_FRAMEWORK_EXTENSIONS, *_DOCUMENT_EXTENSIONS])
     for filepath in [*ts_files, *fw_files]:
         source_resolved = resolve_path(filepath)
         refs = extractor.extract(source_resolved)

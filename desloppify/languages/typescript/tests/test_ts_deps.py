@@ -554,6 +554,62 @@ class TestFrameworkFiles:
         assert svelte_key in graph[utils_key]["importers"]
         assert utils_key in graph[svelte_key]["imports"]
 
+    def test_mdx_import_creates_graph_edge(self, tmp_path):
+        """An MDX doc importing a component makes it imported, not orphaned;
+        imports inside code fences are examples, not edges."""
+
+        _write(tmp_path, "components/gold.tsx", "export const Gold = () => null;\n")
+        _write(tmp_path, "components/example.ts", "export const x = 1;\n")
+        _write(
+            tmp_path,
+            "content/index.mdx",
+            (
+                "---\ntitle: Home\n---\n"
+                'import { Gold } from "../components/gold";\n\n'
+                "# Sponsors\n\n"
+                "```ts\nimport { x } from '../components/example';\n```\n\n"
+                "<Gold />\n"
+            ),
+        )
+
+        graph = deps_detector_mod.build_dep_graph(tmp_path)
+        gold_key = str((tmp_path / "components/gold.tsx").resolve())
+        example_key = str((tmp_path / "components/example.ts").resolve())
+        mdx_key = str((tmp_path / "content/index.mdx").resolve())
+        assert graph[gold_key]["importers"] == {mdx_key}
+        assert graph[example_key]["importers"] == set()
+
+    def test_mdx_docusaurus_site_alias(self, tmp_path):
+        """``@site/`` is the Docusaurus site directory, set by its bundler."""
+
+        _write(tmp_path, "www/docusaurus.config.ts", "export default {};\n")
+        _write(tmp_path, "www/src/components/Snippet.tsx", "export const Snippet = () => null;\n")
+        _write(
+            tmp_path,
+            "www/docs/setup.mdx",
+            "import { Snippet } from '@site/src/components/Snippet';\n\n<Snippet />\n",
+        )
+
+        graph = deps_detector_mod.build_dep_graph(tmp_path)
+        snippet_key = str((tmp_path / "www/src/components/Snippet.tsx").resolve())
+        assert graph[snippet_key]["importers"] == {str((tmp_path / "www/docs/setup.mdx").resolve())}
+
+    def test_mdx_esm_forms(self):
+        from desloppify.languages.typescript.detectors.deps.imports import extract_mdx_imports
+
+        text = (
+            "import Hero, {\n  Logo,\n} from '@/components/hero';\n"
+            "import './styles.css'\n"
+            'export { meta } from "./meta";\n\n'
+            'Prose: import the thing from "nowhere".\n\n'
+            "~~~\nexport * from './fenced'\n~~~\n"
+        )
+        assert [(r.specifier, r.kind) for r in extract_mdx_imports(text)] == [
+            ("@/components/hero", "static"),
+            ("./styles.css", "side_effect"),
+            ("./meta", "static"),
+        ]
+
     def test_vue_import_creates_graph_edge(self, tmp_path):
         """.vue file importing .ts creates a graph edge."""
 
