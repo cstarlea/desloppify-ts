@@ -27,7 +27,7 @@ def read_code_snippet(
         full = Path(filepath)
         if not full.is_absolute():
             full = root / full
-        content = full.read_text(errors="replace")
+        content = full.read_text(encoding="utf-8", errors="replace")
     except OSError:
         return None
     lines = content.splitlines()

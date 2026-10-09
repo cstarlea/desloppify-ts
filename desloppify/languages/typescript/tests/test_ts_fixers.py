@@ -4,15 +4,13 @@ Covers: __init__, common, imports, vars, logs, params, if_chain, useeffect.
 """
 
 import importlib.util
+import sys
 import textwrap
 
 import pytest
 
 from desloppify.languages.typescript.fixers import __all__
 from desloppify.languages.typescript.fixers.fixer_io import apply_fixer
-from desloppify.languages.typescript.fixers.if_chain import (
-    fix_empty_if_chain,
-)
 from desloppify.languages.typescript.fixers.imports import fix_unused_imports
 from desloppify.languages.typescript.fixers.logs import fix_debug_logs
 from desloppify.languages.typescript.fixers.params import fix_unused_params
@@ -21,7 +19,6 @@ from desloppify.languages.typescript.fixers.syntax_scan import (
     extract_body_between_braces,
     find_balanced_end,
 )
-from desloppify.languages.typescript.fixers.useeffect import fix_dead_useeffect
 from desloppify.languages.typescript.fixers.vars import fix_unused_vars
 
 # =====================================================================
@@ -43,19 +40,6 @@ class TestFixerInit:
             "fix_empty_if_chain",
         ]
         assert set(__all__) == set(expected)
-
-    def test_imports_resolve(self):
-        """All exported names can be imported."""
-        for fn in [
-            fix_debug_logs,
-            fix_unused_imports,
-            fix_unused_vars,
-            fix_unused_params,
-            fix_dead_useeffect,
-            fix_empty_if_chain,
-        ]:
-            assert callable(fn)
-
 
 # =====================================================================
 # common.py — find_balanced_end, extract_body_between_braces, apply_fixer,
@@ -866,7 +850,8 @@ class TestFixerWritePreservation:
 
         assert results and results[0]["removed"] == ["DROP"]
         assert target.read_bytes() == b"\xef\xbb\xbfimport { a } from './a';\r\nexport {};\r\n"
-        assert stat.S_IMODE(target.stat().st_mode) == 0o644
+        if sys.platform != "win32":
+            assert stat.S_IMODE(target.stat().st_mode) == 0o644
 
     def test_mixed_line_endings_are_preserved(self, tmp_path):
         target = tmp_path / "mixed.ts"

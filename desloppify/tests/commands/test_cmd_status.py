@@ -1,6 +1,5 @@
 """Tests for desloppify.app.commands.status — display helpers."""
 
-from desloppify.app.commands.status.cmd import cmd_status
 from desloppify.app.commands.status.render import (
     show_dimension_table,
     show_focus_suggestion,
@@ -20,9 +19,6 @@ from desloppify.app.commands.status.summary import (
 
 class TestStatusModuleSanity:
     """Verify the module exports work with minimal inputs."""
-
-    def test_cmd_status_callable(self):
-        assert callable(cmd_status)
 
     def test_show_dimension_table_with_empty_dims(self, capsys):
         """show_dimension_table with empty dim_scores prints header only."""

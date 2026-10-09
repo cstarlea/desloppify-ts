@@ -29,7 +29,7 @@ def load_policy_result(path: Path | None = None) -> PolicyLoadResult:
     if not p.exists():
         return PolicyLoadResult(ok=True, policy={"rules": []})
     try:
-        data = json.loads(p.read_text())
+        data = json.loads(p.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
         return PolicyLoadResult(
             ok=False,

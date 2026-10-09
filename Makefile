@@ -11,14 +11,16 @@
 	sync-docs \
 	package-smoke \
 	install-hooks \
-	install-ci-tools \
-	install-full-tools
+	install-dev \
+	install-full
 
 PIP := python -m pip
 LINT_IMPORTS := $(shell python -c "import pathlib,sys; print(pathlib.Path(sys.executable).with_name('lint-imports'))")
 IMPORTLINTER_CONFIG ?= .github/importlinter.ini
 PYTEST_XML ?=
 PYTEST_XML_FLAG := $(if $(PYTEST_XML),--junitxml=$(PYTEST_XML),)
+PYTEST_TIMEOUT ?= 120
+PYTEST := pytest --timeout=$(PYTEST_TIMEOUT)
 
 sync-docs:
 	mkdir -p desloppify/data/global
@@ -26,50 +28,54 @@ sync-docs:
 	cp docs/*.md desloppify/data/global/
 
 install-hooks:
-	mkdir -p .git/hooks
-	cp .githooks/pre-commit .git/hooks/pre-commit
-	chmod +x .git/hooks/pre-commit
+	@hooks=$$(git rev-parse --git-path hooks 2>/dev/null || echo .git/hooks) && \
+		mkdir -p "$$hooks" && \
+		cp .githooks/pre-commit "$$hooks/pre-commit" && \
+		chmod +x "$$hooks/pre-commit"
 	@echo "Git hooks installed."
 
-install-ci-tools: install-hooks
+# The gates below run with whatever is installed; install once with one of these.
+install-dev: install-hooks
 	$(PIP) install --upgrade pip
-	$(PIP) install -e . pytest mypy ruff import-linter build twine pyyaml
+	$(PIP) install -e ".[dev]"
 
-install-full-tools: install-hooks
+install-full: install-hooks
 	$(PIP) install --upgrade pip
-	$(PIP) install -e ".[full]" pytest ruff
+	$(PIP) install -e ".[full,dev]"
 
-lint: install-ci-tools
+lint:
 	ruff check . --select E9,F63,F7,F82
 
-typecheck: install-ci-tools
+typecheck:
 	python -m mypy
 
-arch: install-ci-tools
+arch:
 	@if [ ! -f "$(IMPORTLINTER_CONFIG)" ]; then \
 		echo "Missing $(IMPORTLINTER_CONFIG). Add import contracts before running arch gate."; \
 		exit 1; \
 	fi
 	$(LINT_IMPORTS) --config $(IMPORTLINTER_CONFIG)
 
-ci-contracts: install-ci-tools
-	pytest -q desloppify/tests/ci/test_ci_contracts.py
-	pytest -q desloppify/tests/commands/test_lifecycle_transitions.py -k "assessment_then_score_when_no_review_followup"
+ci-contracts:
+	$(PYTEST) -q desloppify/tests/ci/test_ci_contracts.py
+	$(PYTEST) -q desloppify/tests/commands/test_lifecycle_transitions.py -k "assessment_then_score_when_no_review_followup"
 
-tests: install-ci-tools
-	pytest -q $(PYTEST_XML_FLAG)
+tests:
+	$(PYTEST) -q $(PYTEST_XML_FLAG)
 
-tests-full: install-full-tools
-	pytest -q $(PYTEST_XML_FLAG)
+tests-full:
+	@python -c "import tree_sitter_language_pack" 2>/dev/null || \
+		{ echo "tests-full needs the [full] extra: run make install-full."; exit 1; }
+	$(PYTEST) -q $(PYTEST_XML_FLAG)
 
 GOLDEN_NODE_DIR := desloppify/languages/typescript/tests/golden/node
 
-tests-golden-node: install-full-tools
+tests-golden-node:
 	npm ci --prefix $(GOLDEN_NODE_DIR) --no-audit --no-fund
-	DESLOPPIFY_REQUIRE_NODE_GOLDEN=1 pytest -q -rs desloppify/languages/typescript/tests/test_ts_golden.py \
+	DESLOPPIFY_REQUIRE_NODE_GOLDEN=1 $(PYTEST) -q -rs desloppify/languages/typescript/tests/test_ts_golden.py \
 		desloppify/languages/typescript/tests/test_ts_fixer_roundtrip.py
 
-package-smoke: install-ci-tools
+package-smoke:
 	rm -rf dist .pkg-smoke
 	python -m build
 	twine check dist/*

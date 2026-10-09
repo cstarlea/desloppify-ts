@@ -251,32 +251,34 @@ class TestBuildHolisticContext:
     def test_abstraction_hotspots_detected(self, tmp_path):
         wrapper_file = _make_file(
             str(tmp_path),
-            "wrappers.py",
+            "wrappers.ts",
             content=(
-                "def outer(*args, **kwargs):\n"
-                "    return inner(*args, **kwargs)\n\n"
-                "def inner(*args, **kwargs):\n"
-                "    return args\n\n"
-                "def wide(a, b, c, d, e, f, g, h):\n"
-                "    return a\n"
+                "function outer(...args) {\n"
+                "  return inner(...args);\n"
+                "}\n\n"
+                "function inner(...args) {\n"
+                "  return args;\n"
+                "}\n\n"
+                "function wide(a, b, c, d, e, f, g, h) {\n"
+                "  return a;\n"
+                "}\n"
             ),
         )
         iface_file = _make_file(
             str(tmp_path),
-            "iface.py",
+            "iface.ts",
             content=(
-                "class PaymentProtocol:\n"
-                "    pass\n\n"
-                "class StripeGateway(PaymentProtocol):\n"
-                "    pass\n"
+                "interface PaymentGateway {}\n\n"
+                "class StripeGateway implements PaymentGateway {}\n"
             ),
         )
         chain_file = _make_file(
             str(tmp_path),
-            "chain.py",
+            "chain.ts",
             content=(
-                "def run():\n"
-                "    return services.billing.client.gateway.adapter.fetch.value\n"
+                "export function run() {\n"
+                "  return services.billing.client.gateway.adapter.fetch.value;\n"
+                "}\n"
             ),
         )
         lang = _mock_lang([wrapper_file, iface_file, chain_file])

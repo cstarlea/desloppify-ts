@@ -726,3 +726,21 @@ def test_no_orphaned_cluster_warning() -> None:
     ok, msg = validate_stage("organize", plan, state, Path("/tmp"))
     assert ok
     assert "orphan" not in msg.lower()
+
+
+def test_steps_with_bad_paths_any_layout(tmp_path: Path) -> None:
+    """Paths outside src/ count too (ky keeps its code in source/); URLs and
+    import aliases aren't paths."""
+    (tmp_path / "source").mkdir()
+    (tmp_path / "source" / "core.ts").write_text("export {}")
+    plan = _plan_with_steps([
+        {
+            "title": "fix",
+            "detail": (
+                "In source/core.ts:10-20 and source/guessed.ts; see https://ky.dev/docs/a.md, "
+                "and @/lib/x.ts"
+            ),
+        },
+    ])
+    result = _steps_with_bad_paths(plan, tmp_path)
+    assert result == [("test-cluster", 1, ["source/guessed.ts"])]

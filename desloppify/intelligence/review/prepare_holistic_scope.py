@@ -6,7 +6,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from desloppify.base.discovery.file_paths import rel
+from desloppify.base.discovery.file_paths import rel, resolve_path
 
 _NON_PRODUCTION_ZONES = frozenset({"test", "config", "generated", "vendor"})
 logger = logging.getLogger(__name__)
@@ -42,7 +42,7 @@ def collect_allowed_review_files(
         allowed.add(rel(filepath))
         if resolved_base is not None:
             try:
-                resolved_path = Path(filepath).resolve()
+                resolved_path = Path(resolve_path(filepath))
             except OSError as exc:
                 logger.debug("Skipping invalid review file path %s: %s", filepath, exc)
                 continue

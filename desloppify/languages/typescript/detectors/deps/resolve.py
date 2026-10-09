@@ -487,27 +487,3 @@ def specifier_target(
     if module_path.startswith("/"):
         return Path(module_path)
     return resolve_alias(module_path, tsconfig_paths, project_root)
-
-
-def resolve_module(
-    module_path: str,
-    filepath: str,
-    tsconfig_paths: dict[str, str],
-    project_root: Path,
-    graph: dict[str, dict[str, Any]],
-    source_resolved: str,
-    *,
-    source_root: Path | None = None,
-) -> str | None:
-    """Resolve an import specifier, add the edge to the graph, return the target."""
-    target = specifier_target(
-        module_path, filepath, tsconfig_paths, project_root, source_root=source_root
-    )
-    if target is None:
-        return None
-    target_resolved = resolve_target(target)
-    if target_resolved is None:
-        return None
-    graph[source_resolved]["imports"].add(target_resolved)
-    graph[target_resolved]["importers"].add(source_resolved)
-    return target_resolved

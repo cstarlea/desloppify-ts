@@ -62,20 +62,6 @@ def test_detector_phase_boilerplate_duplication_is_slow():
 # ── All factory functions produce callable run ────────────────
 
 
-def test_all_factories_produce_callable_run():
-    factories = [
-        detector_phase_test_coverage,
-        detector_phase_security,
-        detector_phase_signature,
-        detector_phase_subjective_review,
-        detector_phase_duplicates,
-        detector_phase_boilerplate_duplication,
-    ]
-    for factory in factories:
-        phase = factory()
-        assert callable(phase.run), f"{factory.__name__} produced non-callable run"
-
-
 # ── shared_subjective_duplicates_tail ─────────────────────────
 
 

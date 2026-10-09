@@ -527,3 +527,21 @@ def test_prepare_batches_core_directory_profile_mapping_and_context_coercion() -
         )
         == []
     )
+
+
+def test_allowed_review_files_resolve_against_the_project_root(tmp_path, monkeypatch):
+    """Finder paths are project-relative, so a scan path below the root still matches them."""
+    from desloppify.base.runtime_state import current_runtime_context
+
+    project = tmp_path / "project"
+    (project / "src").mkdir(parents=True)
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    monkeypatch.setattr(current_runtime_context(), "project_root", project)
+    monkeypatch.chdir(elsewhere)
+
+    allowed = scope_mod.collect_allowed_review_files(
+        ["src/a.py"], SimpleNamespace(zone_map=None), base_path=project / "src"
+    )
+
+    assert "a.py" in allowed

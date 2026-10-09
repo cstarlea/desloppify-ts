@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-import inspect
+import json
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from desloppify.languages.typescript.detectors.deprecated import (
@@ -60,6 +61,11 @@ def test_security_result_contract():
     assert result.entries and result.entries[0]["detail"]["kind"] == "eval_injection"
 
 
-def test_cmd_deprecated_uses_structured_result_api():
-    source = inspect.getsource(cmd_deprecated)
-    assert "detect_deprecated_result" in source
+def test_cmd_deprecated_json_reports_the_detector_result(tmp_path, capsys):
+    _write(tmp_path, "a.ts", "/** @deprecated use b */\nexport function a() {}\nexport function b() {}\n")
+    cmd_deprecated(SimpleNamespace(path=str(tmp_path), json=True))
+    payload = json.loads(capsys.readouterr().out)
+    result = detect_deprecated_result(tmp_path)
+    assert payload["count"] == len(result.entries) == 1
+    assert payload["population_size"] == result.population_size
+    assert payload["entries"][0]["kind"] == "top-level"

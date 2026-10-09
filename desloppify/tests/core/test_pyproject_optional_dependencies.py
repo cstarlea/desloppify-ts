@@ -30,7 +30,8 @@ def test_full_extra_matches_union_of_other_extras() -> None:
     full_specs = optional.get("full")
     assert isinstance(full_specs, list), "optional extra 'full' must be a list"
 
-    other_extra_names = [name for name in optional if name != "full"]
+    # "dev" holds the pinned gate tools, not runtime features.
+    other_extra_names = [name for name in optional if name not in {"full", "dev"}]
     expected = sorted(
         {
             str(spec)

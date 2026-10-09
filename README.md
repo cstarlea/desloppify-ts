@@ -18,7 +18,7 @@ uv tool install "desloppify-ts[full]"     # or install it as a tool
 pip install --upgrade "desloppify-ts[full]"
 ```
 
-The `[full]` extra adds tree-sitter (accurate import parsing and the syntax-tree fixers), scorecard images and YAML plan export. A `desloppify-ts` command is installed as an alias of `desloppify`, which is what makes the bare `uvx desloppify-ts` work.
+The `[full]` extra adds tree-sitter (accurate import parsing and the syntax-tree fixers), scorecard images and YAML plan export. A `desloppify-ts` command is installed as an alias of `desloppify`, which is what makes the bare `uvx desloppify-ts` work. The language pack fetches its grammars on first use; run `desloppify setup --grammars` once with network access (for example before going offline or in a CI image) to download and check them.
 
 Coming from upstream `desloppify`? Uninstall it first (`pip uninstall desloppify`), because both packages install the same `desloppify` module and command. Existing `.desloppify/` state, config and skill files keep working.
 

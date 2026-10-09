@@ -50,9 +50,6 @@ def _patch_common(monkeypatch, *, state, config=None):
 
 
 class TestNextModuleSanity:
-    def test_cmd_next_callable(self):
-        assert callable(cmd_next)
-
     def test_cmd_next_signature(self):
         sig = inspect.signature(cmd_next)
         assert list(sig.parameters.keys()) == ["args"]

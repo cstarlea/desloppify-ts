@@ -143,6 +143,8 @@ def _execute(argv: list[str], cwd: Path, timeout: int) -> KnipRun:
             argv,
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             stdin=subprocess.DEVNULL,
             cwd=str(cwd),
             timeout=timeout,

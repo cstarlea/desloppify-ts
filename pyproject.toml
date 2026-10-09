@@ -25,6 +25,7 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Software Development :: Quality Assurance",
     "Topic :: Software Development :: Testing",
     "Typing :: Typed",
@@ -49,6 +50,18 @@ full = [
   "tree-sitter-language-pack>=1.6.2,!=1.6.3,<1.8",
   "Pillow>=9.0.0",
   "PyYAML>=6.0",
+]
+# Pinned tools for the make gates and CI: pip install -e ".[dev]".
+dev = [
+  "pytest==9.1.1",
+  "pytest-xdist==3.8.0",
+  "pytest-timeout==2.4.0",
+  "ruff==0.16.10",
+  "mypy==2.4.0",
+  "import-linter==2.15",
+  "PyYAML==6.0.3",
+  "build==1.6.1",
+  "twine==7.0.0",
 ]
 
 [project.scripts]

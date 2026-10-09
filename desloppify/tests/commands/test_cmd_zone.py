@@ -7,7 +7,6 @@ from desloppify.app.commands.helpers.command_runtime import CommandRuntime
 from desloppify.app.commands.zone import (
     _zone_clear,
     _zone_set,
-    _zone_show,
     cmd_zone,
 )
 from desloppify.base.exception_sets import CommandError
@@ -16,22 +15,6 @@ from desloppify.state_io import load_state, save_state
 # ---------------------------------------------------------------------------
 # Module-level sanity
 # ---------------------------------------------------------------------------
-
-
-class TestZoneModuleSanity:
-    """Verify the module imports and has expected exports."""
-
-    def test_cmd_zone_callable(self):
-        assert callable(cmd_zone)
-
-    def test_zone_show_callable(self):
-        assert callable(_zone_show)
-
-    def test_zone_set_callable(self):
-        assert callable(_zone_set)
-
-    def test_zone_clear_callable(self):
-        assert callable(_zone_clear)
 
 
 # ---------------------------------------------------------------------------
