@@ -192,11 +192,11 @@ Every adversarial input in the original review broke one of the line-regex fixer
   - fold `tests/lang/typescript/` into `languages/typescript/tests/` (E13).
 - **Grammar preflight:** `desloppify setup --grammars`, and make `is_available()` actually load the tsx grammar (PK-2).
 - **Dead code:**
-  - `dev test-hermes` (AR-4);
-  - `base/optional_deps`;
-  - `intelligence/review/dimensions/metadata.py` and `metadata_legacy.py`;
-  - the unused `base.registry.register_detector` path, which only plugins used;
-  - review the cwd-relative file reads in engine code that the TS-path audit (#6) didn't cover.
+  - done: the `dev` command, whose only action was `test-hermes` (AR-4);
+  - done: `base/optional_deps`;
+  - done: `intelligence/review/dimensions/metadata.py` and `metadata_legacy.py`, compat layers nothing imported;
+  - done: `register_detector`/`unregister_detector`/`reset_registered_detectors` and the `on_detector_registered` callbacks. The registry is now the static catalog, so the CLI name cache and narrative tool map no longer refresh;
+  - done: the cwd-relative reads. The cross-language security detector fell back to the cwd when given no scan root, and holistic review scoping resolved finder paths against the cwd; both now use the project root. The rest of `engine/` already goes through `resolve_path`/`resolve_scan_file`. `context_holistic/selection/contexts.py` still calls `Path(filepath).resolve()`; it was left alone during the review-context work.
 - **Declarative detector spec (AR-1, L):** one dataclass covering DetectorMeta, zone policy, the phase and the detect command, registered by the plugin. That turns a new detector from a 6–8-file change into 2 files plus a test.
 - **Scope (CE-8):** the plan, triage and review machinery is about 50k lines, much more than the TS plugin's 10k. Freeze it, collapse the state facades, replace the `work_items`/`issues` fallbacks with one accessor, and spend effort on detection accuracy.
 
@@ -349,7 +349,7 @@ Status key: **done** (with PR), **partial** (what's left is in §2), **open**, *
 | AR-1 | medium | New TS detector touches 6–8 files | open → §2E |
 | AR-2 | medium | Regex-based TS plugin | partial (#3 imports on tree-sitter, #40 shared helper, 2.33 one parse per file) |
 | AR-3 | medium | Plugin guide describes nonexistent files | done (#14) |
-| AR-4 | low | Dead compat shims, `dev test-hermes` | partial (#12 removed the shims) → §2E |
+| AR-4 | low | Dead compat shims, `dev test-hermes` | done (#12 shims; §2E `dev`, `optional_deps`, metadata layers, runtime detector registration) |
 | UP-1 | high | Upstream abandoned | — |
 | UP-2 | high | #744 + #617 + #760 + #629 merge clean | done (#1) |
 | UP-3 | medium | MercurialUroboros TS false-positive commits | open → §2F |

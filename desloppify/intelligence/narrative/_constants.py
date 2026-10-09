@@ -6,24 +6,9 @@ instead of from __init__.py.
 
 from __future__ import annotations
 
-from desloppify.base.registry import (
-    detector_tools as _detector_tools,
-)
-from desloppify.base.registry import (
-    on_detector_registered,
-)
+from desloppify.base.registry import detector_tools as _detector_tools
 
 DETECTOR_TOOLS = _detector_tools()
-
-
-def _refresh_detector_tools() -> None:
-    """Rebuild DETECTOR_TOOLS from current DETECTORS."""
-    DETECTOR_TOOLS.clear()
-    DETECTOR_TOOLS.update(_detector_tools())
-
-
-# Auto-refresh when new detectors are registered at runtime.
-on_detector_registered(_refresh_detector_tools)
 
 
 # Structural sub-detectors that merge under "structural"

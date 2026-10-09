@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from desloppify.engine.detectors.security.detector import detect_security_issues
 from desloppify.engine.detectors.security.filters import (
     _EXCLUDED_SECURITY_ZONES,
@@ -185,6 +187,35 @@ def test_detect_security_issues_finds_aws_key(tmp_path):
     # At least one entry should reference the secret
     kinds = {e.get("detail", {}).get("kind") for e in entries}
     assert "hardcoded_secret_value" in kinds or "hardcoded_secret_name" in kinds
+
+
+@pytest.fixture
+def patch_project_root(monkeypatch):
+    from desloppify.base.discovery.source import clear_source_file_cache_for_tests
+    from desloppify.base.runtime_state import current_runtime_context
+
+    def _patch(root):
+        monkeypatch.setattr(current_runtime_context(), "project_root", root)
+        clear_source_file_cache_for_tests()
+
+    return _patch
+
+
+def test_detect_security_issues_reads_relative_files_from_the_project_root(
+    tmp_path, monkeypatch, patch_project_root
+):
+    """Without a scan root, finder paths are project-relative, not cwd-relative."""
+    project = tmp_path / "project"
+    (project / "src").mkdir(parents=True)
+    (project / "src" / "creds.py").write_text('aws_key = "AKIAIOSFODNN7EXAMPLE"\n')
+    elsewhere = tmp_path / "elsewhere"
+    (elsewhere / "src").mkdir(parents=True)
+    (elsewhere / "src" / "creds.py").write_text("x = 1\n")
+    patch_project_root(project)
+    monkeypatch.chdir(elsewhere)
+    entries, scanned = detect_security_issues(["src/creds.py"], None, "python")
+    assert scanned == 1
+    assert entries, "read the cwd's src/creds.py instead of the project's"
 
 
 def test_detect_security_issues_skips_excluded_zone(tmp_path):
