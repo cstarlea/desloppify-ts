@@ -18,6 +18,7 @@ def detect_gods(classes, rules, min_reasons: int = 2) -> tuple[list[dict], int]:
                 {
                     "file": cls.file,
                     "name": cls.name,
+                    "line": cls.line,
                     "loc": cls.loc,
                     "reasons": reasons,
                     "signal_text": f"{cls.name} ({', '.join(reasons[:2])})",
