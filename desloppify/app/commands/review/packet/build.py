@@ -58,7 +58,7 @@ def resolve_review_packet_context(args: Any) -> ReviewPacketContext:
     return ReviewPacketContext(
         path=Path(getattr(args, "path", ".") or "."),
         state_path=(
-            Path(getattr(args, "state"))
+            Path(args.state)
             if getattr(args, "state", None)
             else None
         ),

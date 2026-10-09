@@ -131,7 +131,10 @@ def _render_plan_cluster_detail(
         # Show full detail for relevant steps — this is the execution view
         print(colorize("\n  Your step(s):", "bold"))
         for idx, step in relevant:
-            for line in _step_full(step, indent="    "):
+            # Number the step so it matches ``--done-step N``.
+            lines = _step_full(step, indent="    ")
+            lines[0] = f"    {idx}. {lines[0].lstrip()}"
+            for line in lines:
                 print(colorize(line, "dim"))
     elif single_item and not header_showed_plan:
         # No matching steps — show the full plan as context

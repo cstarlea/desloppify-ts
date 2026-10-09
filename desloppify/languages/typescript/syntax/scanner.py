@@ -121,7 +121,7 @@ class SourceText:
 
     def _split(self, text: str) -> list[str]:
         """``text`` (the same length as the source) cut where the source's lines are."""
-        return [text[start : start + len(line)] for start, line in zip(self.line_starts, self.lines)]
+        return [text[start : start + len(line)] for start, line in zip(self.line_starts, self.lines, strict=True)]
 
     def line_of(self, offset: int) -> int:
         """The 1-based line holding ``offset``."""

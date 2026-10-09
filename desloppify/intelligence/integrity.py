@@ -88,7 +88,7 @@ def subjective_review_open_breakdown(
     dimension_counts: dict[str, int] = {}
     total = 0
 
-    for issue_id, issue in _iter_issues(issues):
+    for _issue_id, issue in _iter_issues(issues):
         if not is_subjective_review_open(issue):
             continue
 

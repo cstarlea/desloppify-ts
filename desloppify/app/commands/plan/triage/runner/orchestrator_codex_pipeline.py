@@ -185,11 +185,7 @@ def _run_stage_sequence(
         si = pipeline_context.services.collect_triage_input(plan, pipeline_context.state)
         if stage == "sense-check":
             si.value_check_targets = value_check_targets(plan, pipeline_context.state)
-            setattr(
-                pipeline_context.args,
-                "sense_check_value_targets",
-                list(si.value_check_targets),
-            )
+            pipeline_context.args.sense_check_value_targets = list(si.value_check_targets)
         last_triage_input = si
         execution_result = execute_stage_impl(
             StageRunContext(
