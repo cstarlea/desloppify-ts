@@ -11,20 +11,30 @@ from .analysis import (
     _build_census,
     detect_pattern_anomalies,
 )
-from .catalog import PATTERN_FAMILIES
+from .catalog import configured_pattern_families
 
 
 def cmd_patterns(args: argparse.Namespace) -> None:
     """Show full pattern census matrix plus competing-pattern anomalies."""
     path = Path(args.path)
-    census, _evidence = _build_census(path)
-    result = detect_pattern_anomalies(path)
+    families = configured_pattern_families(getattr(args, "lang_run", None))
+    if not families:
+        print(
+            colorize(
+                "\nNo pattern families configured: add languages.typescript.pattern_families "
+                "to .desloppify/config.json.",
+                "yellow",
+            )
+        )
+        return
+    census, _evidence = _build_census(path, families)
+    result = detect_pattern_anomalies(path, families)
     anomalies = result.entries
 
     if args.json:
         serializable = {
-            area: {family: sorted(patterns) for family, patterns in families.items()}
-            for area, families in census.items()
+            area: {family: sorted(patterns) for family, patterns in area_families.items()}
+            for area, area_families in census.items()
         }
         print(
             json.dumps(
@@ -36,7 +46,7 @@ def cmd_patterns(args: argparse.Namespace) -> None:
                             "type": fam["type"],
                             "description": fam["description"],
                         }
-                        for name, fam in PATTERN_FAMILIES.items()
+                        for name, fam in families.items()
                     },
                     "census": serializable,
                     "anomaly_details": anomalies,
@@ -46,7 +56,7 @@ def cmd_patterns(args: argparse.Namespace) -> None:
         )
         return
 
-    family_names = sorted(PATTERN_FAMILIES.keys())
+    family_names = sorted(families.keys())
     if census:
         print(
             colorize(
@@ -56,7 +66,7 @@ def cmd_patterns(args: argparse.Namespace) -> None:
         )
 
         for name in family_names:
-            fam = PATTERN_FAMILIES[name]
+            fam = families[name]
             marker = colorize("▶", "yellow") if fam["type"] == "competing" else colorize("·", "dim")
             print(f"  {marker} {name}: {fam['description']}")
         print()

@@ -131,6 +131,22 @@ def _node_framework_evidence(
     return present, evidence
 
 
+_EVIDENCE_KEYS = (
+    "dep_hits",
+    "dev_dep_hits",
+    "config_hits",
+    "marker_file_hits",
+    "marker_dir_hits",
+    "script_hits",
+)
+
+
+def _selected_frameworks(lang: LangRuntimeContract | None) -> list[str]:
+    getter = getattr(lang, "runtime_setting", None)
+    selected = getter("presets") if callable(getter) else None
+    return [str(name) for name in selected] if isinstance(selected, list) else []
+
+
 def detect_ecosystem_frameworks(
     scan_path: Path,
     lang: LangRuntimeContract | None,
@@ -192,6 +208,11 @@ def detect_ecosystem_frameworks(
             continue
         for excluded in spec.excludes:
             present.pop(str(excluded), None)
+
+    # The ``presets`` config can turn a framework on where detection misses it.
+    for framework_id in _selected_frameworks(lang):
+        if framework_id in specs and framework_id not in present:
+            present[framework_id] = {**{key: [] for key in _EVIDENCE_KEYS}, "selected": True}
 
     result = EcosystemFrameworkDetection(
         ecosystem=eco,

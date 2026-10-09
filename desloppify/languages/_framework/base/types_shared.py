@@ -94,15 +94,6 @@ class FixerConfig:
     unsafe: bool = False
 
 
-@dataclass
-class BoundaryRule:
-    """A coupling boundary: `protected` dir should not be imported from `forbidden_from`."""
-
-    protected: str  # e.g. "shared/"
-    forbidden_from: str  # e.g. "tools/"
-    label: str  # e.g. "shared→tools"
-
-
 @dataclass(frozen=True)
 class LangValueSpec:
     """Typed language option/setting schema entry."""
@@ -113,7 +104,6 @@ class LangValueSpec:
 
 
 __all__ = [
-    "BoundaryRule",
     "CoverageStatus",
     "DetectorEntry",
     "DetectorCoverageRecord",

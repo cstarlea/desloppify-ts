@@ -48,6 +48,12 @@ CONFIG_SCHEMA: dict[str, ConfigKey] = {
         [],
         "Detectors or mechanical dimensions removed from scoring (their issues are hidden)",
     ),
+    "presets": ConfigKey(
+        list,
+        [],
+        "Layout presets (feature-sliced, bulletproof-react) and frameworks to turn on; "
+        "frameworks are also detected from package.json",
+    ),
     "ignore_metadata": ConfigKey(dict, {}, "Ignore metadata {pattern: {note, added_at}}"),
     "zone_overrides": ConfigKey(
         dict, {}, "Manual zone overrides {rel_path or glob: zone_name}"

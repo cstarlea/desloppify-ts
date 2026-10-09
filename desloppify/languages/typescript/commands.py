@@ -8,7 +8,6 @@ from collections.abc import Callable
 from pathlib import Path
 
 from desloppify.base.discovery.file_paths import rel
-from desloppify.base.discovery.paths import get_src_path
 from desloppify.base.discovery.source import find_ts_and_js_files
 from desloppify.base.output.terminal import colorize, display_entries, plural, print_table
 from desloppify.engine.detectors import coupling as coupling_detector_mod
@@ -53,9 +52,9 @@ from desloppify.languages.typescript.phases_config import (
     TS_CLASS_GOD_RULES,
     TS_COMPLEXITY_SIGNALS,
     TS_GOD_RULES,
-    TS_SKIP_DIRS,
     TS_SKIP_NAMES,
 )
+from desloppify.languages.typescript.presets import resolve_layers, shadcn_ui_dirs
 from desloppify.languages.typescript.plugin_contract import (
     TS_BARREL_NAMES,
     TS_LARGE_THRESHOLD,
@@ -87,7 +86,7 @@ cmd_passthrough = make_cmd_passthrough(
 cmd_naming = make_cmd_naming(
     find_ts_and_js_files,
     skip_names=TS_SKIP_NAMES,
-    skip_dirs=TS_SKIP_DIRS,
+    skip_dirs=lambda: set(shadcn_ui_dirs()),
     module_name=__name__,
 )
 cmd_smells = make_cmd_smells(
@@ -219,27 +218,36 @@ def cmd_dupes(args: argparse.Namespace) -> None:
 
 
 def cmd_coupling(args: argparse.Namespace) -> None:
-    graph = build_dep_graph(Path(args.path))
-    src_path = get_src_path()
-    shared_prefix = f"{src_path}/shared/"
-    tools_prefix = f"{src_path}/tools/"
-    violations, _ = coupling_detector_mod.detect_coupling_violations(
-        Path(args.path), graph, shared_prefix=shared_prefix, tools_prefix=tools_prefix
-    )
+    path = Path(args.path)
+    graph = build_dep_graph(path)
+    layers = resolve_layers(path, getattr(args, "lang_run", None))
+    if not layers:
+        print(
+            colorize(
+                "\nNo layers configured: set `presets` (feature-sliced, bulletproof-react) "
+                "or languages.typescript.layers in .desloppify/config.json.",
+                "yellow",
+            )
+        )
+        return
+    violations, _ = coupling_detector_mod.detect_layer_violations(path, graph, layers)
     candidates, _ = coupling_detector_mod.detect_boundary_candidates(
-        Path(args.path),
+        path,
         graph,
-        shared_prefix=shared_prefix,
-        tools_prefix=tools_prefix,
+        layers,
         skip_basenames=TS_BARREL_NAMES,
+        skip_dirs=shadcn_ui_dirs(),
     )
     if getattr(args, "json", False):
         print(
             json.dumps(
                 {
+                    "layers": [layer.name for layer in layers],
                     "violations": len(violations),
                     "boundary_candidates": len(candidates),
-                    "coupling_violations": violations,
+                    "coupling_violations": [
+                        {**entry, "file": rel(entry["file"])} for entry in violations
+                    ],
                     "boundary_candidates_detail": [
                         {**entry, "file": rel(entry["file"])} for entry in candidates
                     ],
@@ -248,52 +256,35 @@ def cmd_coupling(args: argparse.Namespace) -> None:
             )
         )
         return
+    top = getattr(args, "top", 20)
+    print(colorize(f"\nLayers (top first): {' > '.join(layer.name for layer in layers)}", "dim"))
     if violations:
-        print(colorize(f"\nCoupling violations (shared -> tools): {len(violations)}\n", "bold"))
-        rows = []
-        for entry in violations[: getattr(args, "top", 20)]:
-            rows.append([rel(entry["file"]), entry["target"], entry["tool"]])
-        print_table(["Shared File", "Imports From", "Tool"], rows, [50, 50, 20])
+        print(colorize(f"\nLayer violations: {len(violations)}\n", "bold"))
+        rows = [
+            [rel(entry["file"]), entry["target"], entry["direction"]]
+            for entry in violations[:top]
+        ]
+        print_table(["File", "Imports", "Direction"], rows, [50, 50, 25])
     else:
-        print(colorize("\nNo coupling violations (shared -> tools).", "green"))
-
-    cross_tool, _ = coupling_detector_mod.detect_cross_tool_imports(
-        Path(args.path), graph, tools_prefix=tools_prefix
-    )
-    print()
-    if cross_tool:
-        print(colorize(f"Cross-tool imports (tools -> tools): {len(cross_tool)}\n", "bold"))
-        rows = []
-        for entry in cross_tool[: getattr(args, "top", 20)]:
-            rows.append(
-                [
-                    rel(entry["file"]),
-                    entry["target"],
-                    f"{entry['source_tool']}->{entry['target_tool']}",
-                ]
-            )
-        print_table(["Source File", "Imports From", "Direction"], rows, [50, 50, 20])
-    else:
-        print(colorize("No cross-tool imports.", "green"))
+        print(colorize("\nNo layer violations.", "green"))
 
     print()
     if candidates:
         print(
             colorize(
-                f"Boundary candidates (shared files used by 1 tool): {len(candidates)}\n",
+                f"Boundary candidates (shared files used by one slice): {len(candidates)}\n",
                 "bold",
             )
         )
-        rows = []
-        for entry in candidates[: getattr(args, "top", 20)]:
-            rows.append(
-                [
-                    rel(entry["file"]),
-                    str(entry["loc"]),
-                    entry["sole_tool"],
-                    str(entry["importer_count"]),
-                ]
-            )
+        rows = [
+            [
+                rel(entry["file"]),
+                str(entry["loc"]),
+                entry["sole_slice"],
+                str(entry["importer_count"]),
+            ]
+            for entry in candidates[:top]
+        ]
         print_table(
             ["Shared File", "LOC", "Only Used By", "Importers"],
             rows,

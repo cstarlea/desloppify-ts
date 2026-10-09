@@ -34,7 +34,7 @@ def test_logs_result_contract(tmp_path):
 def test_pattern_result_contract(tmp_path):
     _write(tmp_path, "src/a.ts", "const x = 1;\n")
     _write(tmp_path, "src/b.ts", "const y = 2;\n")
-    result = detect_pattern_anomalies(tmp_path)
+    result = detect_pattern_anomalies(tmp_path, {"f": {"type": "competing", "fragmentation_threshold": 2, "patterns": {"z": r"\buseZ\("}}})
     assert result.population_kind == "areas"
     assert result.entries == []
     assert result.population_size == 0

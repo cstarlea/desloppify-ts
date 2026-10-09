@@ -36,11 +36,16 @@ def resolve_lang(args: object) -> LangConfig:
 
 
 def resolve_lang_settings(config: dict, lang: LangConfig) -> dict[str, object]:
-    """Resolve persisted per-language settings from config.languages.<lang>."""
+    """Resolve persisted per-language settings from config.languages.<lang>.
+
+    The top-level ``presets`` list is passed on as the ``presets`` setting.
+    """
     if not isinstance(config, dict):
         return lang.normalize_settings({})
     languages = config.get("languages", {})
-    if not isinstance(languages, dict):
-        return lang.normalize_settings({})
-    raw = languages.get(lang.name, {})
-    return lang.normalize_settings(raw if isinstance(raw, dict) else {})
+    raw = languages.get(lang.name, {}) if isinstance(languages, dict) else {}
+    settings = dict(raw) if isinstance(raw, dict) else {}
+    presets = config.get("presets")
+    if isinstance(presets, list) and presets:
+        settings["presets"] = [str(name) for name in presets]
+    return lang.normalize_settings(settings)

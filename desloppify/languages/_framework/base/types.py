@@ -15,7 +15,6 @@ from desloppify.languages._framework.base.lang_config_runtime import (
     runtime_value,
 )
 from desloppify.languages._framework.base.types_shared import (
-    BoundaryRule,
     CoverageStatus,
     DetectorEntry,
     DetectorCoverageRecord,
@@ -128,9 +127,6 @@ class LangConfig:
 
     # Function extractor (for duplicate detection). Returns a list of FunctionInfo items.
     extract_functions: FunctionExtractor | None = None
-
-    # Coupling boundaries (optional, project-specific)
-    boundaries: list[BoundaryRule] = field(default_factory=list)
 
     # Unused detection tool command (for post-fix checklist)
     typecheck_cmd: str = ""
@@ -248,7 +244,6 @@ class LangConfig:
 
 
 __all__ = [
-    "BoundaryRule",
     "CoverageStatus",
     "DepGraphBuilder",
     "DetectorEntry",

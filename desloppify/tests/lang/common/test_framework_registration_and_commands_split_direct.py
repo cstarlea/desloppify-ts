@@ -49,7 +49,6 @@ def test_framework_root_contract_is_types_only_and_explicit() -> None:
     assert "types only" in src.lower()
     assert "catch-all entrypoint" in src
     assert framework_root_mod.__all__ == [
-        "BoundaryRule",
         "DetectorPhase",
         "FixerConfig",
         "FixResult",
