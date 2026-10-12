@@ -240,8 +240,60 @@ def _detect_switch_no_default(ctx, smell_counts: dict[str, list[dict]]) -> None:
         if (
             kinds.count("switch_case") >= _SWITCH_CASE_MINIMUM
             and "switch_default" not in kinds
+            and not _exhaustive_by_construction(parsed, switch, body)
         ):
             _emit(smell_counts, "switch_no_default", ctx, *_node_line(parsed, switch))
+
+
+# A return type tsc can't hold a missing branch against: falling off the end is allowed.
+_IMPLICIT_RETURN_TYPE_RE = re.compile(r"\b(?:void|undefined|any|unknown)\b")
+_NEVER_CHECK_RE = re.compile(
+    r"^(?:return\s+)?(?:assertNever|exhaustiveCheck)\s*\("
+    r"|\bsatisfies\s+never\b"
+    r"|^(?:const|let)\s+\w+\s*:\s*never\s*="
+)
+
+
+def _exhaustive_by_construction(parsed: ParsedSource, switch, body) -> bool:
+    """Whether the compiler already proves ``switch`` handles every case.
+
+    Either an exhaustiveness check (``assertNever(x)``, ``x satisfies never``)
+    follows it, or it ends a function with a non-void return type and every
+    case returns or throws, so a missing case is a tsc error.
+    """
+    block = switch.parent
+    if block is None:
+        return False
+    siblings = statements(block)
+    following = siblings[siblings.index(switch) + 1 :] if switch in siblings else []
+    if following and _NEVER_CHECK_RE.search(parsed.text(following[0])):
+        return True
+    if following or block.type != "statement_block":
+        return False
+    function = block.parent
+    if function is None or function.type not in FUNCTIONS:
+        return False
+    return_type = function.child_by_field_name("return_type")
+    if return_type is None or _IMPLICIT_RETURN_TYPE_RE.search(parsed.text(return_type)):
+        return False
+    cases = [child for child in body.named_children if child.type == "switch_case"]
+    # Empty cases fall through to the next; the last one can't.
+    return (
+        bool(cases)
+        and _case_exits(cases[-1])
+        and all(_case_exits(case) for case in cases if _case_body(case))
+    )
+
+
+def _case_body(case) -> list:
+    return [s for s in statements(case) if s != case.child_by_field_name("value")]
+
+
+def _case_exits(case) -> bool:
+    body = _case_body(case)
+    while body and body[-1].type == "statement_block":
+        body = statements(body[-1])
+    return bool(body) and body[-1].type in ("return_statement", "throw_statement")
 
 
 def _switch_no_default_regex(ctx, smell_counts: dict[str, list[dict]]) -> None:
