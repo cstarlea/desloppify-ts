@@ -70,6 +70,12 @@ class TestStripTestMarkers:
     def test_typescript_spec_ts(self):
         assert _strip_test_markers("helpers.spec.ts", "typescript") == "helpers.ts"
 
+    def test_typescript_qualified_keeps_full_stem(self):
+        assert (
+            _strip_test_markers("invoice.rbac.integration.test.ts", "typescript")
+            == "invoice.rbac.integration.ts"
+        )
+
     def test_go_no_marker(self):
         assert _strip_test_markers("utils.go", "go") is None
 

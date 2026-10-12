@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import ntpath
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -291,3 +293,92 @@ def test_line_heuristic_without_treesitter(monkeypatch):
     monkeypatch.setattr(ts_coverage_mod, "parse_text", lambda *_args: None)
     assert has_testable_logic("src/a.ts", "export type A = { a: 1 };\n") is False
     assert has_testable_logic("src/a.ts", "export const a = 1;\n") is True
+
+
+# ── qualified test names ────────────────────────────────────
+
+
+@pytest.mark.parametrize(
+    ("test_name", "expected"),
+    [
+        ("routers/widget.integration.test.ts", "routers/widget.ts"),
+        ("routers/invoice.rbac.integration.test.ts", "routers/invoice.ts"),
+        ("routers/invoice.rbac.integration.spec.ts", "routers/invoice.ts"),
+        ("ui/Card.visual.test.tsx", "ui/Card.tsx"),
+        ("routers/account/index.integration.test.ts", "routers/account/index.ts"),
+    ],
+)
+def test_qualified_test_name_maps_to_stem(tmp_path, test_name, expected):
+    test = _touch(tmp_path, test_name)
+    prod = _touch(tmp_path, expected)
+    other = _touch(tmp_path, "routers/other.ts")
+    assert map_test_to_source(test, {prod, other}) == expected
+
+
+def test_qualified_test_name_maps_to_tsx_stem(tmp_path):
+    test = _touch(tmp_path, "app/widget.integration.test.ts")
+    prod = _touch(tmp_path, "app/widget.tsx")
+    assert map_test_to_source(test, {prod}) == prod
+
+
+def test_longest_dotted_prefix_wins(tmp_path):
+    test = _touch(tmp_path, "src/a.b.test.ts")
+    specific = _touch(tmp_path, "src/a.b.ts")
+    general = _touch(tmp_path, "src/a.ts")
+    assert map_test_to_source(test, {specific, general}) == specific
+    assert map_test_to_source(test, {general}) == general
+
+
+def test_longest_prefix_elsewhere_beats_shorter_prefix_beside(tmp_path):
+    test = _touch(tmp_path, "test/config.schema.test.ts")
+    specific = _touch(tmp_path, "src/config.schema.ts")
+    general = _touch(tmp_path, "test/config.ts")
+    assert map_test_to_source(test, {specific, general}) == specific
+
+
+def test_qualified_name_does_not_match_unrelated_stems(tmp_path):
+    test = _touch(tmp_path, "src/invoice.rbac.integration.test.ts")
+    prods = {
+        _touch(tmp_path, "src/rbac.ts"),
+        _touch(tmp_path, "src/integration.ts"),
+        _touch(tmp_path, "src/invoice-utils.ts"),
+        _touch(tmp_path, "src/invoices.ts"),
+    }
+    assert map_test_to_source(test, prods) is None
+
+
+def test_qualified_index_test_only_maps_to_its_own_index(tmp_path):
+    test = _touch(tmp_path, "src/account/index.integration.test.ts")
+    elsewhere = _touch(tmp_path, "src/profile/index.ts")
+    assert map_test_to_source(test, {elsewhere}) is None
+    own = _touch(tmp_path, "src/account/index.ts")
+    assert map_test_to_source(test, {own, elsewhere}) == own
+
+
+def test_qualified_names_map_through_naming_based_mapping(tmp_path):
+    tests = {
+        _touch(tmp_path, "routers/widget.integration.test.ts"),
+        _touch(tmp_path, "routers/widget.rbac.integration.test.ts"),
+        _touch(tmp_path, "routers/account/index.integration.test.ts"),
+    }
+    widget = _touch(tmp_path, "routers/widget.ts")
+    account = _touch(tmp_path, "routers/account/index.ts")
+    untested = _touch(tmp_path, "routers/invoice.ts")
+    assert naming_based_mapping(tests, {widget, account, untested}, "typescript") == {
+        widget,
+        account,
+    }
+
+
+@pytest.fixture
+def windows_paths(monkeypatch):
+    monkeypatch.setattr(ts_coverage_mod, "os", SimpleNamespace(path=ntpath))
+
+
+@pytest.mark.parametrize("sep", ["/", "\\"])
+def test_qualified_index_maps_with_windows_path_module(tmp_path, windows_paths, sep):
+    test = _touch(tmp_path, "src/account/index.integration.test.ts").replace("/", sep)
+    own = _touch(tmp_path, "src/account/index.ts").replace("/", sep)
+    elsewhere = _touch(tmp_path, "src/profile/index.ts").replace("/", sep)
+    assert map_test_to_source(test, {elsewhere}) is None
+    assert map_test_to_source(test, {own, elsewhere}) == own

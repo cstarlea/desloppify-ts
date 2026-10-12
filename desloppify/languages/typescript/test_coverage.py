@@ -495,60 +495,83 @@ def basename_match_allowed(test_path: str, prod_path: str) -> bool:
     return _package_dir(test_path) == _package_dir(prod_path)
 
 
+def _source_basenames(basename: str) -> list[str]:
+    """Source basenames a test name points at, most specific first.
+
+    ``a.b.test.ts`` names ``a.b.ts`` and, failing that, ``a.ts``: the dotted
+    qualifiers between the stem and the marker (``widget.rbac.integration``)
+    are tried from longest to shortest.
+    """
+    for marker in (".test.", ".spec."):
+        idx = basename.find(marker)
+        if idx <= 0:
+            continue
+        parts = basename[:idx].split(".")
+        rest = basename[idx + len(marker) :]
+        return [".".join(parts[:n]) + "." + rest for n in range(len(parts), 0, -1)]
+    return []
+
+
+def _joined(directory: str, name: str) -> tuple[str, ...]:
+    """*name* in *directory*, joined with either separator: the paths may use
+    ``/`` even on Windows, where ``os.path`` would join with a backslash."""
+    if not directory:
+        return (name,)
+    return (f"{directory}/{name}", f"{directory}\\{name}")
+
+
 def map_test_to_source(test_path: str, production_set: set[str]) -> str | None:
     """Map a TypeScript test file path to a production file by naming convention."""
     basename = os.path.basename(test_path)
     dirname = os.path.dirname(test_path)
     parent = os.path.dirname(dirname)
 
-    candidates: list[str] = []
+    levels = [_cross_extension_candidates(n) for n in _source_basenames(basename)]
+    if os.path.basename(dirname) == "__tests__" and parent:
+        levels.insert(min(1, len(levels)), [basename])
+        dirs = [dirname, parent]
+    else:
+        dirs = [dirname, parent] if parent else [dirname]
 
-    for pattern in (".test.", ".spec."):
-        if pattern in basename:
-            src = basename.replace(pattern, ".")
-            for alt in _cross_extension_candidates(src):
-                candidates.append(os.path.join(dirname, alt))
-                if parent:
-                    candidates.append(os.path.join(parent, alt))
-
-    dir_basename = os.path.basename(dirname)
-    if dir_basename == "__tests__" and parent:
-        candidates.append(os.path.join(parent, basename))
-
-    for c in candidates:
-        if c in production_set:
-            return c
-
-    # Same file name elsewhere (tests/ beside src/): only within the package,
-    # preferring the file whose directory shares the most with the test's.
-    names = {os.path.basename(c) for c in candidates}
-    matches = [
-        prod
-        for prod in production_set
-        if os.path.basename(prod) in names and basename_match_allowed(test_path, prod)
-    ]
-    if not matches:
-        return None
     test_parts = Path(dirname).parts
-    return max(
-        sorted(matches),
-        key=lambda prod: len(
-            os.path.commonprefix([Path(prod).parent.parts, test_parts])
-        ),
-    )
+    for depth, names in enumerate(levels):
+        for directory in dirs:
+            for name in names:
+                for candidate in _joined(directory, name):
+                    if candidate in production_set:
+                        return candidate
+        # Same file name elsewhere (tests/ beside src/): only within the
+        # package, preferring the file whose directory shares the most with
+        # the test's. A qualifier-stripped ``index`` names only its own dir.
+        if depth > 0 and names[0].startswith("index."):
+            continue
+        wanted = set(names)
+        matches = [
+            prod
+            for prod in production_set
+            if os.path.basename(prod) in wanted
+            and basename_match_allowed(test_path, prod)
+        ]
+        if matches:
+            return max(
+                sorted(matches),
+                key=lambda prod: len(
+                    os.path.commonprefix([Path(prod).parent.parts, test_parts])
+                ),
+            )
+    return None
 
 
 def strip_test_markers(basename: str) -> str | None:
     """Strip TypeScript test naming markers to derive a source basename.
 
     Returns the direct replacement (e.g. ``Foo.test.ts`` → ``Foo.ts``).
-    Cross-extension matching (``Foo.test.ts`` → ``Foo.tsx``) is handled by
-    ``map_test_to_source`` which tries all TS/JS extensions.
+    Qualified names (``Foo.rbac.test.ts`` → ``Foo.ts``) and cross-extension
+    matches (``Foo.test.ts`` → ``Foo.tsx``) are handled by
+    ``map_test_to_source``, which tries each of them.
     """
-    for marker in (".test.", ".spec."):
-        if marker in basename:
-            return basename.replace(marker, ".")
-    return None
+    names = _source_basenames(basename)
+    return names[0] if names else None
 
 
 def strip_comments(content: str) -> str:
