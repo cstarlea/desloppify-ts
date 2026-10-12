@@ -69,18 +69,29 @@ class EntryConventions:
 
     def is_entry(self, rel_path: str) -> bool:
         """Whether *rel_path* (relative to the package root) is a convention file."""
+        if self.is_reserved_name(rel_path):
+            return True
         path = Path(rel_path)
         if path.suffix not in self.extensions:
             return False
-        if path.stem in self.root_stems and len(path.parts) <= self.root_depth:
-            return True
         if self.entry_dir_names and not self.entry_dir_names.isdisjoint(
             path.parts[:-1]
         ):
             return True
-        if self.entry_dirs and rel_path.startswith(
+        return bool(self.entry_dirs) and rel_path.startswith(
             tuple(d + "/" for d in self.entry_dirs)
-        ):
+        )
+
+    def is_reserved_name(self, rel_path: str) -> bool:
+        """Whether the framework dictates *rel_path*'s file name (``page``, ``+layout``).
+
+        Unlike ``is_entry`` this ignores whole entry directories, whose files
+        are named freely.
+        """
+        path = Path(rel_path)
+        if path.suffix not in self.extensions:
+            return False
+        if path.stem in self.root_stems and len(path.parts) <= self.root_depth:
             return True
         if self.entry_paths and path.with_suffix("").as_posix() in self.entry_paths:
             return True
@@ -133,7 +144,7 @@ class OrphanedDetectionOptions:
     entry_conventions: tuple[EntryConventions, ...] = ()
 
 
-class _FrameworkConventions:
+class FrameworkConventions:
     """Framework convention checks, detected for the package owning each file."""
 
     def __init__(
@@ -149,11 +160,14 @@ class _FrameworkConventions:
             Path, tuple[tuple[EntryConventions, ...], frozenset[str]]
         ] = {}
 
-    def is_entry(self, filepath: str) -> bool:
+    def _package(
+        self, filepath: str
+    ) -> tuple[str, tuple[EntryConventions, ...], frozenset[str]] | None:
+        """The path relative to the owning package, and that package's conventions."""
         file_path = Path(resolve_path(filepath))
         root = next((r for r in self._roots if file_path.is_relative_to(r)), None)
         if root is None:
-            return False
+            return None
         if root not in self._detected:
             applicable = tuple(c for c in self._conventions if c.applies_to(root))
             declared: set[str] = set()
@@ -162,12 +176,26 @@ class _FrameworkConventions:
                     declared |= convention.declared_entries(root)
             self._detected[root] = (applicable, frozenset(declared))
         conventions, declared = self._detected[root]
-        relative = file_path.relative_to(root).as_posix()
+        return file_path.relative_to(root).as_posix(), conventions, declared
+
+    def is_entry(self, filepath: str) -> bool:
+        package = self._package(filepath)
+        if package is None:
+            return False
+        relative, conventions, declared = package
         if relative in declared or any(
             d.endswith("/") and relative.startswith(d) for d in declared
         ):
             return True
         return any(c.is_entry(relative) for c in conventions)
+
+    def is_reserved_name(self, filepath: str) -> bool:
+        """Whether a framework the owning package uses dictates this file's name."""
+        package = self._package(filepath)
+        if package is None:
+            return False
+        relative, conventions, _ = package
+        return any(c.is_reserved_name(relative) for c in conventions)
 
 
 def _has_dunder_all(filepath: str) -> bool:
@@ -221,7 +249,7 @@ def detect_orphaned_files(
 
     entry_files = resolved_options.entry_files or set()
     conventions = (
-        _FrameworkConventions(
+        FrameworkConventions(
             path, resolved_options.package_roots, resolved_options.entry_conventions
         )
         if resolved_options.detect_frameworks

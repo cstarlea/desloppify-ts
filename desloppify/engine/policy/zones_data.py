@@ -39,6 +39,7 @@ TEST_SKIP_DETECTORS = {
     "test_coverage",
     "security",
     "private_imports",
+    "naming",
 }
 
 CONFIG_SKIP_DETECTORS = {

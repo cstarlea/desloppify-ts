@@ -137,7 +137,7 @@ def test_phase_coupling_passes_orphaned_options(monkeypatch, tmp_path: Path):
     )
     monkeypatch.setattr(
         "desloppify.engine.detectors.naming.detect_naming_inconsistencies",
-        lambda _path, file_finder, skip_names, skip_dirs: ([], 0),
+        lambda _path, file_finder, skip_names, skip_dirs, skip_file: ([], 0),
     )
 
     lang = _FakeCouplingLang()

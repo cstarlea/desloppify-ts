@@ -8,6 +8,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from desloppify.base.discovery.file_paths import rel
+from desloppify.base.discovery.paths import get_project_root
 from desloppify.base.discovery.source import find_ts_and_js_files
 from desloppify.base.output.terminal import (
     colorize,
@@ -20,10 +21,10 @@ from desloppify.engine.detectors import dupes as dupes_detector_mod
 from desloppify.engine.detectors import gods as gods_detector_mod
 from desloppify.engine.policy.zones import FileZoneMap
 from desloppify.languages._framework.commands.base import (
+    display_naming_entries,
     make_cmd_complexity,
     make_cmd_facade,
     make_cmd_large,
-    make_cmd_naming,
     make_cmd_passthrough,
     make_cmd_single_use,
     make_cmd_smells,
@@ -39,6 +40,7 @@ from desloppify.languages.typescript.detectors.deps import (
     cmd_cycles,
     cmd_deps,
 )
+from desloppify.languages.typescript.detectors.deps.packages import discover_packages
 from desloppify.languages.typescript.detectors.exports import cmd_exports
 from desloppify.languages.typescript.detectors.facade import detect_reexport_facades
 from desloppify.languages.typescript.detectors.logs import cmd_logs
@@ -57,9 +59,9 @@ from desloppify.languages.typescript.phases_config import (
     TS_CLASS_GOD_RULES,
     TS_COMPLEXITY_SIGNALS,
     TS_GOD_RULES,
-    TS_SKIP_NAMES,
 )
 from desloppify.languages.typescript.phases_coupling import (
+    find_naming_entries,
     find_orphans,
     package_context,
 )
@@ -89,12 +91,6 @@ cmd_passthrough = make_cmd_passthrough(
     noun="component",
     name_key="component",
     total_key="total_props",
-    module_name=__name__,
-)
-cmd_naming = make_cmd_naming(
-    find_ts_and_js_files,
-    skip_names=TS_SKIP_NAMES,
-    skip_dirs=lambda: set(shadcn_ui_dirs()),
     module_name=__name__,
 )
 cmd_smells = make_cmd_smells(
@@ -133,11 +129,10 @@ def cmd_gods(args: argparse.Namespace) -> None:
     )
 
 
-def cmd_orphaned(args: argparse.Namespace) -> None:
-    """Orphaned files exactly as ``scan`` reports them: same zones, entries, confidence."""
+def _zoned_lang(path: Path, args: argparse.Namespace):
+    """A TypeScript run with the zone map ``scan`` would build for *path*."""
     from desloppify.languages.framework import get_lang, make_lang_run
 
-    path = Path(args.path)
     lang = make_lang_run(get_lang("typescript"))
     config = getattr(getattr(args, "runtime", None), "config", None) or {}
     lang.zone_map = FileZoneMap(
@@ -146,6 +141,21 @@ def cmd_orphaned(args: argparse.Namespace) -> None:
         rel_fn=rel,
         overrides=config.get("zone_overrides") or None,
     )
+    return lang
+
+
+def cmd_naming(args: argparse.Namespace) -> None:
+    """Naming inconsistencies exactly as ``scan`` reports them (zones, framework names)."""
+    path = Path(args.path)
+    packages = discover_packages(path, get_project_root())
+    entries, _ = find_naming_entries(path, _zoned_lang(path, args), packages)
+    display_naming_entries(args, entries)
+
+
+def cmd_orphaned(args: argparse.Namespace) -> None:
+    """Orphaned files exactly as ``scan`` reports them: same zones, entries, confidence."""
+    path = Path(args.path)
+    lang = _zoned_lang(path, args)
     graph = build_dep_graph(path)
     packages, package_entries = package_context(path, graph)
     entries, _ = find_orphans(path, graph, lang, packages, package_entries)

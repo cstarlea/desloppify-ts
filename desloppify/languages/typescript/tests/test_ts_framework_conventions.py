@@ -8,6 +8,7 @@ import desloppify.languages.typescript.detectors.deps as deps_detector_mod
 import desloppify.languages.typescript.detectors.deps.resolve as deps_resolve_mod
 from desloppify.engine.detectors.orphaned import (
     EntryConventions,
+    FrameworkConventions,
     OrphanedDetectionOptions,
     detect_orphaned_files,
 )
@@ -76,10 +77,52 @@ def test_entry_convention_matching(tmp_path):
     assert conventions.is_entry("src/params/integer.ts")
     assert conventions.is_entry("src/content/config.ts")
     assert not conventions.is_entry("src/content/config.css")
+    # Reserved names are the ones the framework dictates, not whole entry dirs.
+    assert conventions.is_reserved_name("src/routes/blog/+page.server.ts")
+    assert conventions.is_reserved_name("src/content/config.ts")
+    assert not conventions.is_reserved_name("src/params/integer.ts")
+    assert not conventions.is_reserved_name("src/routes/blog/helpers.ts")
     (tmp_path / "x.config.ts").write_text("")
     assert not conventions.applies_to(tmp_path)
     (tmp_path / "package.json").write_text('{"devDependencies": {"x": "1"}}')
     assert conventions.applies_to(tmp_path)
+
+
+def test_reserved_names_of_detected_frameworks(tmp_path):
+    _write(
+        tmp_path,
+        {
+            "next/package.json": '{"dependencies": {"next": "15.0.0"}}',
+            "next/next.config.ts": "",
+            "kit/package.json": '{"devDependencies": {"@sveltejs/kit": "2.0.0"}}',
+            "kit/svelte.config.js": "",
+        },
+    )
+    conventions = FrameworkConventions(
+        tmp_path,
+        [tmp_path / "next", tmp_path / "kit"],
+        framework_entry_conventions(),
+    )
+    for name in (
+        "next/src/app/p/[id]/page.tsx",
+        "next/src/app/layout.tsx",
+        "next/src/app/not-found.tsx",
+        "next/app/api/x/route.ts",
+        "next/src/middleware.ts",
+        "next/proxy.ts",
+        "kit/src/routes/blog/+page.ts",
+        "kit/src/hooks.server.ts",
+    ):
+        assert conventions.is_reserved_name(str(tmp_path / name)), name
+    for name in (
+        "next/src/lib/page.tsx",
+        "next/src/app/format.ts",
+        "next/src/lib/deep/middleware.ts",
+        "kit/src/lib/+page.ts",
+        # A Next name in a package that doesn't use Next.
+        "kit/src/routes/page.ts",
+    ):
+        assert not conventions.is_reserved_name(str(tmp_path / name)), name
 
 
 def test_nuxt_aliases_and_virtual_modules(tmp_path, set_project_root):

@@ -20,7 +20,11 @@ from desloppify.engine.detectors import naming as naming_detector_mod
 from desloppify.engine.detectors import orphaned as orphaned_detector_mod
 from desloppify.engine.detectors import single_use as single_use_detector_mod
 from desloppify.engine.detectors.coupling import Layer
-from desloppify.engine.policy.zones import adjust_potential, filter_entries
+from desloppify.engine.policy.zones import (
+    adjust_potential,
+    filter_entries,
+    should_skip_issue,
+)
 from desloppify.languages._framework.base.types import LangRuntimeContract
 from desloppify.languages._framework.frameworks.detection import (
     injected_class_decorators,
@@ -316,16 +320,38 @@ def detect_pattern_anomalies(
     return results, total_areas
 
 
-def detect_naming_inconsistencies(
-    path: Path, lang: LangRuntimeContract
-) -> tuple[list[Issue], int]:
-    """Detect naming convention inconsistencies within directories."""
-    naming_entries, total_dirs = naming_detector_mod.detect_naming_inconsistencies(
+def find_naming_entries(
+    path: Path,
+    lang: LangRuntimeContract,
+    packages: list[packages_mod.Package] | None = None,
+) -> tuple[list[dict], int]:
+    """Naming entries as the scan reports them; ``detect naming`` uses this too.
+
+    Files in zones that skip naming (tests) and files whose names a framework
+    dictates (Next's ``page.tsx``, SvelteKit's ``+page.svelte``) don't count.
+    """
+    conventions = orphaned_detector_mod.FrameworkConventions(
+        path, [p.directory for p in packages or ()], framework_entry_conventions()
+    )
+    return naming_detector_mod.detect_naming_inconsistencies(
         path,
         file_finder=lang.file_finder,
         skip_names=TS_SKIP_NAMES,
         skip_dirs=set(shadcn_ui_dirs()),
+        skip_file=lambda filepath: (
+            should_skip_issue(lang.zone_map, filepath, "naming")
+            or conventions.is_reserved_name(filepath)
+        ),
     )
+
+
+def detect_naming_inconsistencies(
+    path: Path,
+    lang: LangRuntimeContract,
+    packages: list[packages_mod.Package] | None = None,
+) -> tuple[list[Issue], int]:
+    """Detect naming convention inconsistencies within directories."""
+    naming_entries, total_dirs = find_naming_entries(path, lang, packages)
     results: list[Issue] = []
     for entry in naming_entries:
         results.append(
@@ -439,7 +465,7 @@ def phase_coupling(
     pattern_issues, total_areas = detect_pattern_anomalies(path, lang)
     results.extend(pattern_issues)
 
-    naming_issues, total_dirs = detect_naming_inconsistencies(path, lang)
+    naming_issues, total_dirs = detect_naming_inconsistencies(path, lang, packages)
     results.extend(naming_issues)
 
     log(f"         → {len(results)} coupling/structural issues total")
@@ -463,6 +489,7 @@ __all__ = [
     "detect_naming_inconsistencies",
     "detect_pattern_anomalies",
     "detect_single_use",
+    "find_naming_entries",
     "make_boundary_issues",
     "orphaned_detector_mod",
     "package_context",

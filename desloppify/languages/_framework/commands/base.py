@@ -165,23 +165,28 @@ def make_cmd_naming(
         entries, _ = naming_detector.detect_naming_inconsistencies(
             Path(args.path), **kwargs
         )
-        display_entries(
-            args,
-            entries,
-            label="Naming inconsistencies",
-            empty_msg="\nNo naming inconsistencies found.",
-            columns=["Directory", "Majority", "Minority", "Outliers"],
-            widths=[45, 20, 20, 40],
-            row_fn=lambda e: [
-                e["directory"],
-                f"{e['majority']} ({e['majority_count']})",
-                f"{e['minority']} ({e['minority_count']})",
-                ", ".join(e["outliers"][:5])
-                + (f" (+{len(e['outliers']) - 5})" if len(e["outliers"]) > 5 else ""),
-            ],
-        )
+        display_naming_entries(args, entries)
 
     return _set_module(cmd_naming, module_name)
+
+
+def display_naming_entries(args: argparse.Namespace, entries: list[dict]) -> None:
+    """Print naming-inconsistency entries as ``detect naming`` shows them."""
+    display_entries(
+        args,
+        entries,
+        label="Naming inconsistencies",
+        empty_msg="\nNo naming inconsistencies found.",
+        columns=["Directory", "Majority", "Minority", "Outliers"],
+        widths=[45, 20, 20, 40],
+        row_fn=lambda e: [
+            e["directory"],
+            f"{e['majority']} ({e['majority_count']})",
+            f"{e['minority']} ({e['minority_count']})",
+            ", ".join(e["outliers"][:5])
+            + (f" (+{len(e['outliers']) - 5})" if len(e["outliers"]) > 5 else ""),
+        ],
+    )
 
 
 def make_cmd_facade(

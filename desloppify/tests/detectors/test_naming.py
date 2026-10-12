@@ -43,6 +43,14 @@ class TestClassifyConvention:
     def test_snake_case_no_ext(self):
         assert _classify_convention("my_script") == "snake_case"
 
+    def test_all_extensions_stripped(self):
+        assert _classify_convention("csv.test.ts") == "flat_lower"
+        assert _classify_convention("bulk-import.integration.test.ts") == "kebab-case"
+        assert _classify_convention("dashboard.live-feed.integration.test.ts") == (
+            "flat_lower"
+        )
+        assert _classify_convention("globalTypes.d.ts") == "camelCase"
+
 
 class TestDetectNamingInconsistencies:
     def _build_files(self, tmp_path, dir_name, filenames):
@@ -217,3 +225,64 @@ class TestDetectNamingInconsistencies:
         )
         assert len(entries) == 2
         assert entries[0]["minority_count"] >= entries[1]["minority_count"]
+
+    def _detect(self, tmp_path, monkeypatch, dir_name, filenames, **kwargs):
+        files = self._build_files(tmp_path, dir_name, filenames)
+        monkeypatch.setattr(naming_mod, "rel", lambda p: os.path.relpath(p, tmp_path))
+        entries, _ = detect_naming_inconsistencies(
+            tmp_path, file_finder=lambda p: files, **kwargs
+        )
+        return entries
+
+    def test_single_word_stems_fit_kebab_case(self, tmp_path, monkeypatch):
+        """``csv.ts`` is valid kebab-case: no clash however many there are."""
+        kebab = [f"user-edit-{i}.ts" for i in range(10)]
+        flat = [f"{w}.ts" for w in ("csv", "parse", "render", "modes", "dash")]
+        flat += [f"word{c}.ts" for c in "abcdefghijklmnop"]
+        assert self._detect(tmp_path, monkeypatch, "domain", kebab + flat) == []
+
+    def test_single_word_stems_fit_snake_and_camel_case(self, tmp_path, monkeypatch):
+        flat = [f"word{c}.ts" for c in "abcdef"]
+        snake = [f"my_mod_{i}.ts" for i in range(10)]
+        camel = [f"myMod{i}.ts" for i in range(10)]
+        assert self._detect(tmp_path, monkeypatch, "snake", snake + flat) == []
+        assert self._detect(tmp_path, monkeypatch, "camel", camel + flat) == []
+
+    def test_single_word_stems_still_clash_with_pascal_case(
+        self, tmp_path, monkeypatch
+    ):
+        pascal = [f"Comp{i}.tsx" for i in range(15)]
+        flat = [f"word{c}.ts" for c in "abcdef"]
+        entries = self._detect(tmp_path, monkeypatch, "ui", pascal + flat)
+        assert [(e["majority"], e["minority"]) for e in entries] == [
+            ("PascalCase", "flat_lower")
+        ]
+
+    def test_real_camel_and_kebab_mix_still_reported(self, tmp_path, monkeypatch):
+        """Single-word stems join the majority; a real minority is still found."""
+        kebab = [f"foo-bar-{i}.ts" for i in range(12)]
+        camel = [f"fooBar{i}.ts" for i in range(6)]
+        flat = [f"word{c}.ts" for c in "abcd"]
+        entries = self._detect(tmp_path, monkeypatch, "lib", kebab + camel + flat)
+        assert len(entries) == 1
+        assert entries[0]["majority"] == "kebab-case"
+        assert entries[0]["majority_count"] == 16
+        assert entries[0]["minority"] == "camelCase"
+        assert entries[0]["minority_count"] == 6
+
+    def test_test_suffixes_do_not_change_the_stem(self, tmp_path, monkeypatch):
+        kebab = [f"foo-bar-{i}.ts" for i in range(10)]
+        tests = [f"word{c}.integration.test.ts" for c in "abcdef"]
+        assert self._detect(tmp_path, monkeypatch, "svc", kebab + tests) == []
+
+    def test_skip_file_excludes_files(self, tmp_path, monkeypatch):
+        kebab = [f"comp-{i}.tsx" for i in range(15)]
+        pascal = [f"Comp{i}.tsx" for i in range(6)]
+        entries = self._detect(
+            tmp_path,
+            monkeypatch,
+            "components",
+            kebab + pascal,
+            skip_file=lambda f: os.path.basename(f).startswith("Comp"),
+        )
+        assert entries == []

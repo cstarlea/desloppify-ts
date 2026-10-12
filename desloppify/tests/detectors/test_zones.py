@@ -693,6 +693,7 @@ class TestZonePolicies:
             "test_coverage",
             "security",
             "private_imports",
+            "naming",
         }
         assert policy.skip_detectors == expected_skips
 

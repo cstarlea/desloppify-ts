@@ -315,6 +315,33 @@ def test_detect_orphaned_applies_scan_zones_and_entries(tmp_path: Path, capsys):
     assert "Orphaned files: 1 file, 20 LOC" in capsys.readouterr().out
 
 
+def test_detect_naming_skips_tests_and_framework_names(tmp_path: Path, capsys):
+    """`detect naming` ignores test files and Next's reserved route file names."""
+    import json
+
+    from desloppify.languages.typescript.commands import cmd_naming
+
+    body = "export const v = 1;\n"
+    _write(tmp_path, "package.json", '{"dependencies": {"next": "15.0.0"}}\n')
+    _write(tmp_path, "next.config.ts", body)
+    for i in range(6):
+        _write(tmp_path, f"src/app/dash/Widget{i}.tsx", body)
+        # Kebab-case test files beside PascalCase components.
+        _write(tmp_path, f"src/app/dash/widget-case-{i}.test.tsx", body)
+    for name in ("page", "layout", "loading", "error", "template", "not-found"):
+        _write(tmp_path, f"src/app/dash/{name}.tsx", body)
+    for i in range(12):
+        _write(tmp_path, f"src/lib/foo-bar-{i}.ts", body)
+    for i in range(6):
+        _write(tmp_path, f"src/lib/fooBar{i}.ts", body)
+
+    cmd_naming(SimpleNamespace(path=str(tmp_path), json=True, top=20))
+    payload = json.loads(capsys.readouterr().out)
+    assert [(e["directory"], e["minority"]) for e in payload["entries"]] == [
+        ("src/lib", "camelCase")
+    ]
+
+
 _LEGACY_ROUTER = "import { useRouter } from 'next/router'\nexport default function X(){return null}\n"
 
 
