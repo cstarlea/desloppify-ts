@@ -21,6 +21,7 @@ ASTRO_ENTRY_CONVENTIONS = EntryConventions(
     extensions=SCRIPT_EXTENSIONS | {".astro", ".vue", ".svelte"},
     root_stems=frozenset({"middleware", "content.config", "live.config"}),
     entry_dirs=("src/pages",),
+    route_roots=("src/pages",),
     entry_paths=frozenset(
         {"src/content/config", "src/middleware/index", "src/actions/index"}
     ),

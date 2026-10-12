@@ -5,19 +5,24 @@ from __future__ import annotations
 from pathlib import Path
 
 import desloppify.languages.typescript.detectors.concerns as concerns_detector_mod
+import desloppify.languages.typescript.detectors.deps.packages as packages_mod
 import desloppify.languages.typescript.detectors.props as props_detector_mod
+from desloppify.base.discovery.paths import get_project_root
 from desloppify.base.output.terminal import log
 from desloppify.engine._state.filtering import make_issue
 from desloppify.engine.detectors import complexity as complexity_detector_mod
 from desloppify.engine.detectors import flat_dirs as flat_dirs_detector_mod
 from desloppify.engine.detectors import gods as gods_detector_mod
 from desloppify.engine.detectors import large as large_detector_mod
-from desloppify.engine.policy.zones import adjust_potential
+from desloppify.engine.policy.zones import Zone, adjust_potential
 from desloppify.languages._framework.base.structural import (
     add_structural_signal,
     merge_structural_signals,
 )
 from desloppify.languages._framework.base.types import LangRuntimeContract
+from desloppify.languages._framework.frameworks.registry import (
+    framework_route_roots,
+)
 from desloppify.languages.typescript.extractors_classes import extract_ts_classes
 from desloppify.languages.typescript.extractors_components import (
     detect_passthrough_components,
@@ -137,10 +142,21 @@ def _add_god_class_signals(
 def _detect_flat_dirs(path: Path, lang: LangRuntimeContract) -> tuple[list[Issue], int]:
     """Detect flat directories with too many files or missing sub-organization."""
     results: list[Issue] = []
+    zone_map = lang.zone_map
+
+    def non_test_files(scan_path: Path) -> list[str]:
+        # Co-located *.test.ts files would otherwise double many counts.
+        files = lang.file_finder(scan_path)
+        if zone_map is None:
+            return files
+        return [f for f in files if zone_map.get(f) != Zone.TEST]
+
+    packages = packages_mod.discover_packages(path, get_project_root())
     flat_entries, dir_count = flat_dirs_detector_mod.detect_flat_dirs(
         path,
-        file_finder=lang.file_finder,
+        file_finder=non_test_files,
         config=flat_dirs_detector_mod.FlatDirDetectionConfig(),
+        route_roots=framework_route_roots(path, [p.directory for p in packages]),
     )
     for entry in flat_entries:
         child_dir_count = int(entry.get("child_dir_count", 0))

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Collection
 from pathlib import Path
 
 from .config import (
@@ -18,14 +19,40 @@ from .entries import (
 )
 from .stats import all_tracked_dirs, build_dir_stats
 
+# The API subtree of a file-based router holds one handler per endpoint.
+_ROUTE_API_DIR = "api"
+
+
+def _route_position(
+    dir_path: str, route_roots: Collection[str]
+) -> tuple[str, ...] | None:
+    """Path parts of *dir_path* below its router root, or None outside every root."""
+    path = Path(dir_path)
+    for root in route_roots:
+        if path.is_relative_to(root):
+            return path.relative_to(root).parts
+    return None
+
+
+def _is_routing_segment(name: str) -> bool:
+    """Route groups ``(name)``, dynamic ``[x]``/``[...x]``/``[[...x]]``, slots ``@x``."""
+    return name.startswith(("(", "[", "@"))
+
 
 def detect_flat_dirs(
     path: Path,
     file_finder,
     config: FlatDirDetectionConfig | None = None,
+    *,
+    route_roots: Collection[str] = (),
     **legacy_settings: object,
 ) -> tuple[list[dict], int]:
-    """Find overloaded/fragmented directories using count and fan-out heuristics."""
+    """Find overloaded/fragmented directories using count and fan-out heuristics.
+
+    Beneath a file-based router root (absolute paths in *route_roots*) the
+    subdirectories are URL segments: they don't count as child dirs, and
+    routing-only segments and the API subtree are skipped outright.
+    """
     if config is not None and legacy_settings:
         raise TypeError(
             "detect_flat_dirs accepts either config=FlatDirDetectionConfig(...) "
@@ -98,9 +125,17 @@ def detect_flat_dirs(
         thin_names = set(THIN_WRAPPER_NAMES)
 
     entries: list[dict] = []
+    analyzed = 0
     for dir_path in sorted(tracked_dirs):
+        route_parts = _route_position(dir_path, route_roots)
+        in_router = route_parts is not None
+        if route_parts and (
+            _is_routing_segment(route_parts[-1]) or _ROUTE_API_DIR in route_parts
+        ):
+            continue
+        analyzed += 1
         file_count = int(dir_counts.get(dir_path, 0))
-        direct_children = child_dirs.get(dir_path, set())
+        direct_children = set() if in_router else child_dirs.get(dir_path, set())
         direct_child_count = len(direct_children)
         combined_score = file_count + (settings.child_dir_weight * direct_child_count)
         has_local_files = dir_path in dir_counts
@@ -134,6 +169,8 @@ def detect_flat_dirs(
                 entries.append(fragmented)
                 continue
 
+        if in_router:
+            continue
         thin_wrapper = thin_wrapper_entry(
             dir_path=dir_path,
             thin_names=thin_names,
@@ -145,7 +182,7 @@ def detect_flat_dirs(
         )
         if thin_wrapper is not None:
             entries.append(thin_wrapper)
-    return sort_entries(entries), len(tracked_dirs)
+    return sort_entries(entries), analyzed
 
 
 __all__ = ["detect_flat_dirs"]

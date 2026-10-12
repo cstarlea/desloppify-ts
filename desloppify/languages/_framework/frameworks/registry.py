@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from .types import EntryConventions, FrameworkSpec
 
 FRAMEWORK_SPECS: dict[str, FrameworkSpec] = {}
@@ -88,10 +90,35 @@ def framework_entry_conventions(
     return tuple(conventions)
 
 
+def framework_route_roots(
+    scan_root: Path, package_roots: list[Path] | None = None
+) -> frozenset[str]:
+    """Absolute file-based router roots (``app/``, ``src/routes/``) in the scan.
+
+    Each package (and the scan root) is checked against the built-in
+    framework conventions it uses; only directories that exist are returned.
+    """
+    roots: set[str] = set()
+    conventions = [c for c in framework_entry_conventions() if c.route_roots]
+    for package_root in {
+        scan_root.resolve(),
+        *(p.resolve() for p in package_roots or ()),
+    }:
+        for convention in conventions:
+            if not convention.applies_to(package_root):
+                continue
+            for route_root in convention.route_roots:
+                directory = package_root / route_root
+                if directory.is_dir():
+                    roots.add(str(directory.resolve()))
+    return frozenset(roots)
+
+
 __all__ = [
     "FRAMEWORK_SPECS",
     "ensure_builtin_specs_loaded",
     "framework_entry_conventions",
+    "framework_route_roots",
     "get_framework_spec",
     "list_framework_specs",
     "register_framework_spec",

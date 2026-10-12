@@ -561,6 +561,7 @@ NEXTJS_ENTRY_CONVENTIONS = EntryConventions(
     ),
     # App Router files, anywhere inside an app/ directory.
     route_dir="app",
+    route_roots=("app", "src/app", "pages", "src/pages"),
     route_stems=frozenset(
         {
             "page",

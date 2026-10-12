@@ -54,6 +54,10 @@ class EntryConventions:
     # app entries of a CLI config), relative to the package root. A path
     # ending in "/" covers everything beneath that directory.
     declared_entries: Callable[[Path], frozenset[str]] | None = None
+    # Package-relative directories of a file-based router: the directories
+    # beneath them are URL segments (Next's ``app/``, SvelteKit's
+    # ``src/routes/``), so their layout is dictated rather than designed.
+    route_roots: tuple[str, ...] = ()
 
     def applies_to(self, package_root: Path) -> bool:
         """Whether the package at *package_root* uses this framework."""

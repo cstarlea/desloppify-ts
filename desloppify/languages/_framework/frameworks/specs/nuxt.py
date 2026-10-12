@@ -39,6 +39,7 @@ NUXT_ENTRY_CONVENTIONS = EntryConventions(
         "shared/utils",
         "shared/types",
     ),
+    route_roots=("pages", "app/pages", "server/api", "server/routes"),
 )
 
 NUXT_SCANNERS: tuple[ScannerRule, ...] = (

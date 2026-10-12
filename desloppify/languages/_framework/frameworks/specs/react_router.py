@@ -43,6 +43,7 @@ REACT_ROUTER_ENTRY_CONVENTIONS = EntryConventions(
     root_depth=3,
     # Everything under app/routes/ is a route module.
     entry_dir_names=frozenset({"routes"}),
+    route_roots=("app/routes",),
     # Route modules app/routes.ts names from elsewhere in the app directory.
     declared_entries=declared_route_modules,
 )

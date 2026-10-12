@@ -442,3 +442,60 @@ class TestDetectFlatDirs:
         )
         assert "Thin wrapper directory" in summary
         assert "parent with 12 sibling dirs" in summary
+
+
+def _touch_all(root, names):
+    files = []
+    for name in names:
+        path = root / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("export {};")
+        files.append(str(path))
+    return files
+
+
+class TestRouteRoots:
+    def _detect(self, root, files, route_roots):
+        return detect_flat_dirs(
+            root,
+            file_finder=lambda p: files,
+            config=FlatDirDetectionConfig(),
+            route_roots=route_roots,
+        )
+
+    def test_url_segments_are_not_child_dirs(self, tmp_path):
+        segments = [f"app/segment{i}/page.tsx" for i in range(17)]
+        files = _touch_all(tmp_path, ["app/page.tsx", *segments])
+        app = str((tmp_path / "app").resolve())
+
+        entries, _ = self._detect(tmp_path, files, ())
+        assert [e["directory"] for e in entries] == [app]
+
+        entries, _ = self._detect(tmp_path, files, (app,))
+        assert entries == []
+
+    def test_routing_segments_and_api_subtree_skipped(self, tmp_path):
+        names = ["app/page.tsx"]
+        for segment in ("(group)", "[id]", "[...rest]", "[[...opt]]", "@modal"):
+            names += [f"app/{segment}/part{i}.tsx" for i in range(25)]
+        names += [f"app/api/hooks/handler{i}.ts" for i in range(25)]
+        names += ["app/api/auth.ts", *(f"app/api/v{i}/route.ts" for i in range(12))]
+        files = _touch_all(tmp_path, names)
+        app = str((tmp_path / "app").resolve())
+
+        assert len(self._detect(tmp_path, files, ())[0]) == 7
+        entries, analyzed = self._detect(tmp_path, files, (app,))
+        assert entries == []
+        assert analyzed == 1  # app/ itself; the skipped dirs aren't analysed
+
+    def test_file_overload_in_a_static_segment_still_reported(self, tmp_path):
+        names = [f"app/(shop)/checkout/part{i}.tsx" for i in range(25)]
+        names += [f"lib/util{i}.ts" for i in range(25)]
+        files = _touch_all(tmp_path, names)
+        app = str((tmp_path / "app").resolve())
+
+        entries, _ = self._detect(tmp_path, files, (app,))
+        assert sorted(e["directory"] for e in entries) == [
+            str((tmp_path / "app/(shop)/checkout").resolve()),
+            str((tmp_path / "lib").resolve()),
+        ]
