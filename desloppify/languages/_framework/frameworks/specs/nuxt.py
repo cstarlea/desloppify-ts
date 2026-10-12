@@ -39,6 +39,8 @@ NUXT_ENTRY_CONVENTIONS = EntryConventions(
         "shared/utils",
         "shared/types",
     ),
+    # public/ in Nuxt 3, static/ in Nuxt 2.
+    static_dirs=("public", "static"),
     route_roots=("pages", "app/pages", "server/api", "server/routes"),
 )
 

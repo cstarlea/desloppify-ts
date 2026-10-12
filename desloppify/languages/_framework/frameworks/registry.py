@@ -114,11 +114,22 @@ def framework_route_roots(
     return frozenset(roots)
 
 
+def framework_static_dirs(*, ecosystem: str = "node") -> tuple[str, ...]:
+    """Static asset directory names (``public``, ``static``) the frameworks serve."""
+    names = {
+        name
+        for convention in framework_entry_conventions(ecosystem=ecosystem)
+        for name in convention.static_dirs
+    }
+    return tuple(sorted(names))
+
+
 __all__ = [
     "FRAMEWORK_SPECS",
     "ensure_builtin_specs_loaded",
     "framework_entry_conventions",
     "framework_route_roots",
+    "framework_static_dirs",
     "get_framework_spec",
     "list_framework_specs",
     "register_framework_spec",

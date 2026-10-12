@@ -559,6 +559,7 @@ NEXTJS_ENTRY_CONVENTIONS = EntryConventions(
             "instrumentation-client",
         }
     ),
+    static_dirs=("public",),
     # App Router files, anywhere inside an app/ directory.
     route_dir="app",
     route_roots=("app", "src/app", "pages", "src/pages"),

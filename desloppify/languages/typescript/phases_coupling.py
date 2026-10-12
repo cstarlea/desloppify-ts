@@ -31,6 +31,7 @@ from desloppify.languages._framework.frameworks.detection import (
 )
 from desloppify.languages._framework.frameworks.registry import (
     framework_entry_conventions,
+    framework_static_dirs,
 )
 from desloppify.languages._framework.issue_factories import (
     make_cycle_issues,
@@ -42,6 +43,7 @@ from desloppify.languages._framework.node.js_classes import iter_classes
 from desloppify.languages.typescript.detectors.deps.auto_imports import (
     auto_import_entries,
 )
+from desloppify.languages.typescript.detectors.deps.url_entries import url_entries
 from desloppify.languages.typescript.detectors.patterns.catalog import (
     configured_pattern_families,
 )
@@ -241,7 +243,9 @@ def find_orphans(
             extra_barrel_names=lang.barrel_names,
             # Dynamic imports, import.meta.glob and mocks are graph edges
             # already, so no suffix-matched dynamic import fallback here.
-            entry_files=(entries.all if entries else set()) | auto_import_entries(path),
+            entry_files=(entries.all if entries else set())
+            | auto_import_entries(path)
+            | url_entries(path, framework_static_dirs()),
             package_roots=[p.directory for p in packages or ()],
             entry_conventions=framework_entry_conventions(),
         ),

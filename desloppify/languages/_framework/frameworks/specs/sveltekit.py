@@ -34,6 +34,7 @@ SVELTEKIT_ENTRY_CONVENTIONS = EntryConventions(
     route_roots=("src/routes",),
     route_stem_prefix="+",
     entry_dirs=("src/params", "src/service-worker"),
+    static_dirs=("static",),
     dependencies=("@sveltejs/kit",),
 )
 

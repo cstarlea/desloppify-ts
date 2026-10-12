@@ -40,6 +40,10 @@ class EntryConventions:
     entry_dirs: tuple[str, ...] = ()
     # Package-relative paths without their extension (``src/content/config``).
     entry_paths: frozenset[str] = frozenset()
+    # Package-relative directories the framework serves as static assets
+    # (Next's ``public/``, SvelteKit's ``static/``). A script there is loaded
+    # by URL, never imported, whatever its extension.
+    static_dirs: tuple[str, ...] = ()
     # When set, the package must also list one of these in package.json:
     # a convention of a Vite plugin applies only where the plugin is used.
     dependencies: tuple[str, ...] = ()
@@ -74,6 +78,10 @@ class EntryConventions:
     def is_entry(self, rel_path: str) -> bool:
         """Whether *rel_path* (relative to the package root) is a convention file."""
         if self.is_reserved_name(rel_path):
+            return True
+        if self.static_dirs and rel_path.startswith(
+            tuple(d + "/" for d in self.static_dirs)
+        ):
             return True
         path = Path(rel_path)
         if path.suffix not in self.extensions:

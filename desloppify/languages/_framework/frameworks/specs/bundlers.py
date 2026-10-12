@@ -16,6 +16,14 @@ EXPO_ROUTER_ENTRY_CONVENTIONS = EntryConventions(
     marker_dependencies=("expo-router",),
 )
 
+# Vite serves public/ as-is at the site root.
+VITE_ENTRY_CONVENTIONS = EntryConventions(
+    config_files=config_names("vite.config"),
+    extensions=SCRIPT_EXTENSIONS,
+    static_dirs=("public",),
+    marker_dependencies=("vite",),
+)
+
 VITE_SPEC = FrameworkSpec(
     id="vite",
     label="Vite",
@@ -25,6 +33,7 @@ VITE_SPEC = FrameworkSpec(
         dev_dependencies=("vite",),
         config_files=config_names("vite.config"),
     ),
+    entry_conventions=VITE_ENTRY_CONVENTIONS,
     public_env_prefixes=("VITE_",),
 )
 
@@ -38,4 +47,9 @@ EXPO_SPEC = FrameworkSpec(
 )
 
 
-__all__ = ["EXPO_ROUTER_ENTRY_CONVENTIONS", "EXPO_SPEC", "VITE_SPEC"]
+__all__ = [
+    "EXPO_ROUTER_ENTRY_CONVENTIONS",
+    "EXPO_SPEC",
+    "VITE_ENTRY_CONVENTIONS",
+    "VITE_SPEC",
+]
