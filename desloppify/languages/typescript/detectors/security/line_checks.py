@@ -30,8 +30,13 @@ def _line_security_issues(
     is_server_only: bool,
     has_dev_guard: bool,
     public_secret: re.Pattern[str] | None = None,
+    safe_html: set[int] | frozenset[int] = frozenset(),
 ) -> list[dict[str, object]]:
-    """Detect per-line security patterns that start in code and return issues."""
+    """Detect per-line security patterns that start in code and return issues.
+
+    ``safe_html`` holds the lines whose HTML sinks only receive escaped or
+    sanitized markup (see ``html_sinks``).
+    """
     line_issues: list[dict[str, object]] = []
     index = line_num - 1
     line = source.lines[index]
@@ -72,7 +77,7 @@ def _line_security_issues(
             )
         )
 
-    if found(_DANGEROUS_HTML_RE):
+    if found(_DANGEROUS_HTML_RE) and line_num not in safe_html:
         line_issues.append(
             _make_security_entry(
                 filepath,
@@ -86,7 +91,7 @@ def _line_security_issues(
             )
         )
 
-    if found(_INNER_HTML_RE):
+    if found(_INNER_HTML_RE) and line_num not in safe_html:
         line_issues.append(
             _make_security_entry(
                 filepath,

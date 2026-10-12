@@ -25,6 +25,9 @@ from desloppify.languages.typescript.detectors.security.entries import (
 from desloppify.languages.typescript.detectors.security.file_checks import (
     _file_level_security_issues,
 )
+from desloppify.languages.typescript.detectors.security.html_sinks import (
+    safe_html_lines,
+)
 from desloppify.languages.typescript.detectors.security.line_checks import (
     _line_security_issues,
 )
@@ -108,6 +111,7 @@ def detect_ts_security(
         source = SourceText(content, filepath)
         has_dev_guard = "import.meta.env.DEV" in content or "isDev" in content
         public_secret = public_env.pattern_for(filepath)
+        safe_html = safe_html_lines(content, filepath)
 
         # Only matches that start in code count: "allow eval (HMR)" in a doc
         # comment or `<div dangerouslySetInnerHTML>` in a string isn't a call.
@@ -121,6 +125,7 @@ def detect_ts_security(
                     is_server_only=is_server_only,
                     has_dev_guard=has_dev_guard,
                     public_secret=public_secret,
+                    safe_html=safe_html,
                 )
             )
 

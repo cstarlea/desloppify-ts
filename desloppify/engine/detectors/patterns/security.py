@@ -70,6 +70,12 @@ SECRET_NAMES = re.compile(
     r"auth_token|private_key|access_key|client_secret|secret_key)",
 )
 
+# Names that hold a label for a secret, not the secret: ``TOKEN_ERROR_CODE``,
+# ``SECRET_FIELD``, ``passwordType``.
+NON_SECRET_NAME_SUFFIX = re.compile(
+    r"(?:_(?i:code|field|type|name)|[a-z](?:Code|Field|Type|Name))$"
+)
+
 PLACEHOLDER_VALUES = {
     "",
     "changeme",
@@ -214,6 +220,36 @@ def _looks_like_non_secret_value(value: str) -> bool:
         return True
 
     return False
+
+
+# Enum-like codes (``UNREGISTERED``, ``INVALID_ARGUMENT``), dotted paths
+# (``request.token``) and short plain words (``Bearer``, ``x-api-key``).
+_UPPER_SNAKE_RE = re.compile(r"^[A-Z]+(?:_[A-Z0-9]+)*$")
+_DOTTED_PATH_RE = re.compile(r"^[A-Za-z_$][\w$-]*(?:\.[A-Za-z_$][\w$-]*)+$")
+_PLAIN_WORD_RE = re.compile(r"^[A-Za-z]+(?:[-_][A-Za-z]+)*$")
+_PLAIN_WORD_MAX = 16
+_LONG_SECRET_MIN = 20
+_CHAR_CLASSES = (
+    re.compile(r"[a-z]"),
+    re.compile(r"[A-Z]"),
+    re.compile(r"[0-9]"),
+    re.compile(r"[^A-Za-z0-9]"),
+)
+
+
+def looks_like_secret(value: str) -> bool:
+    """Whether a literal assigned to a secret-named variable looks like a secret:
+    a known secret format, or a mix of character classes or a long run
+    that is not an enum code, a dotted path or a short plain word."""
+    stripped = value.strip()
+    if has_secret_format_match(stripped):
+        return True
+    if _UPPER_SNAKE_RE.match(stripped) or _DOTTED_PATH_RE.match(stripped):
+        return False
+    if _PLAIN_WORD_RE.match(stripped) and len(stripped) <= _PLAIN_WORD_MAX:
+        return False
+    classes = sum(1 for pattern in _CHAR_CLASSES if pattern.search(stripped))
+    return classes >= 2 or len(stripped) >= _LONG_SECRET_MIN
 
 
 def is_placeholder(value: str) -> bool:

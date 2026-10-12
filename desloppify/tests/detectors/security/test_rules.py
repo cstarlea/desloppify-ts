@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import pytest
+
 from desloppify.engine.detectors.patterns.security import (
     _looks_like_non_secret_value,
     is_placeholder,
+    looks_like_secret,
 )
 from desloppify.engine.detectors.security import rules as rules_mod
 
@@ -235,3 +238,65 @@ class TestSecretNameFalsePositives:
         )
         assert len(entries) == 1
         assert entries[0]["detail"]["kind"] == "hardcoded_secret_name"
+
+
+# ── _secret_name_entries: the value must look like a secret ──
+
+# Split so the fake key doesn't trip push protection.
+_STRIPE_LIKE = "sk_" + "live_51HxQ2bKz8YwXpLmN0aBcDeFg"
+
+
+def _secret_names(line: str) -> list[dict]:
+    return rules_mod._secret_name_entries(
+        filepath="src/lib/notify.ts", line_num=1, line=line, is_test=False
+    )
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "const TOKEN_ERROR_CODE = 'UNREGISTERED'",
+        "const SECRET_FIELD = 'request.token'",
+        "const TOKEN_ERROR = 'INVALID_ARGUMENT'",
+        "const tokenPath = 'session.auth.token'",
+        "const TOKEN_TYPE = 'Bearer'",
+        "const API_KEY_NAME = 'x-api-key-header'",
+        "const passwordField = 'password1'",
+        "const authToken = 'Authorization'",
+        "const SECRET_HEADER = 'x-webhook-secret'",
+    ],
+)
+def test_secret_name_non_secret_values_skipped(line):
+    assert _secret_names(line) == []
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "const API_KEY = 'aB3kF9mZ2xQ7wR'",
+        "const password = 'hunter2secret'",
+        f"const STRIPE_SECRET = '{_STRIPE_LIKE}'",
+        "const token = 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.abc123_-xyz'",
+        "const SECRET = 'correcthorsebatterystaple'",
+        "const CLIENT_SECRET = 'Q2hhbmdlTWVQbGVhc2VOb3dUaGFua3M='",
+    ],
+)
+def test_secret_name_real_secrets_still_fire(line):
+    entries = _secret_names(line)
+    assert len(entries) == 1
+    assert entries[0]["detail"]["kind"] == "hardcoded_secret_name"
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        ("UNREGISTERED", False),
+        ("request.token", False),
+        ("Bearer", False),
+        ("supersecret123", True),
+        (_STRIPE_LIKE, True),
+        ("ABCDEFGHIJ1234567890", True),
+    ],
+)
+def test_looks_like_secret(value, expected):
+    assert looks_like_secret(value) is expected

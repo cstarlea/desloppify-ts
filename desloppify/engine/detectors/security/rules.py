@@ -8,6 +8,9 @@ from typing import Any
 
 from desloppify.base.discovery.file_paths import rel
 from desloppify.engine.detectors.patterns.security import LOG_CALLS as _LOG_CALLS
+from desloppify.engine.detectors.patterns.security import (
+    NON_SECRET_NAME_SUFFIX as _NON_SECRET_NAME_SUFFIX,
+)
 from desloppify.engine.detectors.patterns.security import RANDOM_CALLS as _RANDOM_CALLS
 from desloppify.engine.detectors.patterns.security import (
     SECRET_FORMAT_PATTERNS as _SECRET_FORMAT_PATTERNS,
@@ -30,6 +33,9 @@ from desloppify.engine.detectors.patterns.security import (
 )
 from desloppify.engine.detectors.patterns.security import (
     is_placeholder as _is_placeholder,
+)
+from desloppify.engine.detectors.patterns.security import (
+    looks_like_secret as _looks_like_secret,
 )
 
 _LOGGED_VALUE = re.compile(r"[\w$]")
@@ -121,11 +127,13 @@ def _secret_name_entries(
             continue
         var_name = secret_match.group(1)
         value = secret_match.group(3)
-        if not _SECRET_NAMES.search(var_name):
+        if not _SECRET_NAMES.search(var_name) or _NON_SECRET_NAME_SUFFIX.search(
+            var_name
+        ):
             continue
         if _is_env_lookup(line):
             continue
-        if _is_placeholder(value):
+        if _is_placeholder(value) or not _looks_like_secret(value):
             continue
         entries.append(
             make_security_entry(
