@@ -17,6 +17,9 @@ TS_ZONE_RULES = [
             "_pb.ts",  # protobuf-ts / ts-proto
             "_pb.js",
             "/gql/",  # graphql-codegen client preset default output
+            # Capacitor's `cap sync` copies of the web build
+            "/ios/App/App/public/",
+            "/android/app/src/main/assets/public/",
         ],
     ),
     ZoneRule(
@@ -75,6 +78,13 @@ TS_ZONE_RULES = [
             "commitlint.config",
             "knip.config",
         ],
+    ),
+    # Any tool's config file: vitest.integration.config.ts, capacitor.config.ts.
+    # Angular's src/app/app.config.ts and Nuxt's app.config.ts are app code.
+    ZoneRule(
+        Zone.CONFIG,
+        [f"*.config.{ext}" for ext in ("ts", "mts", "cts", "js", "mjs", "cjs")],
+        exclude=["app.config.*"],
     ),
 ] + COMMON_ZONE_RULES
 

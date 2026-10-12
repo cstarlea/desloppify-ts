@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import os
+import shutil
+import subprocess  # nosec B404
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -186,6 +188,65 @@ def _is_excluded_dir(name: str, rel_path: str, extra: tuple[str, ...]) -> bool:
 _ISTANBUL_HTML_ASSETS = frozenset({"prettify.js", "sorter.js", "block-navigation.js"})
 
 
+_GIT_LS_FILES_TIMEOUT = 60
+
+
+@dataclass(frozen=True)
+class _GitListing:
+    """Paths git does not ignore under a scan root, root-relative with ``/``.
+
+    A submodule or nested repository is listed as one entry for its
+    directory; its contents are walked unfiltered.
+    """
+
+    entries: frozenset[str]
+    dirs: frozenset[str]
+
+    def keeps_dir(self, rel_dir: str) -> bool:
+        return rel_dir in self.dirs or rel_dir in self.entries
+
+    def is_opaque(self, rel_dir: str) -> bool:
+        """Whether *rel_dir* (``""`` or ending in ``/``) lies in a listed directory."""
+        parts = rel_dir.rstrip("/").split("/")
+        return any("/".join(parts[: i + 1]) in self.entries for i in range(len(parts)))
+
+
+def _git_listing(root: Path) -> _GitListing | None:
+    """List tracked and untracked, unignored files under *root* in one git call.
+
+    Returns ``None`` when *root* is not in a git work tree, git is missing or
+    fails, or git lists nothing (the root itself is ignored); callers then
+    walk the tree unfiltered.
+    """
+    git_path = shutil.which("git")
+    if not git_path or not root.is_dir():
+        return None
+    command = [git_path, "-C", str(root), "ls-files", "-z"]
+    command += ["--cached", "--others", "--exclude-standard"]
+    try:
+        result = subprocess.run(  # nosec B603
+            command, capture_output=True, timeout=_GIT_LS_FILES_TIMEOUT, check=False
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if result.returncode != 0:
+        return None
+    entries: set[str] = set()
+    dirs: set[str] = set()
+    for raw in result.stdout.split(b"\0"):
+        if not raw:
+            continue
+        entry = os.fsdecode(raw).rstrip("/")
+        entries.add(entry)
+        parent = os.path.dirname(entry)
+        while parent and parent not in dirs:
+            dirs.add(parent)
+            parent = os.path.dirname(parent)
+    if not entries:
+        return None
+    return _GitListing(frozenset(entries), frozenset(dirs))
+
+
 def _find_source_files_cached(
     path: str,
     extensions: tuple[str, ...],
@@ -193,7 +254,11 @@ def _find_source_files_cached(
     *,
     runtime: RuntimeContext | None = None,
 ) -> tuple[str, ...]:
-    """Cached file discovery using os.walk with traversal-time pruning."""
+    """Cached file discovery using os.walk with traversal-time pruning.
+
+    Inside a git work tree, files git ignores (``.gitignore``,
+    ``.git/info/exclude``, the global excludes file) are left out.
+    """
     resolved_runtime = resolve_runtime_context(runtime)
     resolved_options = options or SourceDiscoveryOptions()
     resolved_project_root = (
@@ -221,6 +286,7 @@ def _find_source_files_cached(
     ) + resolved_options.extra_exclusions
     ext_set = set(extensions)
     files: list[str] = []
+    listing = _git_listing(root)
     for dirpath, dirnames, filenames in os.walk(root):
         if _ISTANBUL_HTML_ASSETS.issubset(filenames):
             dirnames[:] = []
@@ -233,7 +299,17 @@ def _find_source_files_cached(
             for d in dirnames
             if not _is_excluded_dir(d, rel_dir + "/" + d, all_exclusions)
         )
+        listed: frozenset[str] | None = None
+        git_dir = ""
+        if listing is not None:
+            git_dir = _normalize_path_separators(os.path.relpath(dirpath, root))
+            git_dir = "" if git_dir == "." else git_dir + "/"
+            if not listing.is_opaque(git_dir):
+                listed = listing.entries
+                dirnames[:] = [d for d in dirnames if listing.keeps_dir(git_dir + d)]
         for fname in filenames:
+            if listed is not None and git_dir + fname not in listed:
+                continue
             if any(fname.endswith(ext) for ext in ext_set):
                 full = os.path.join(dirpath, fname)
                 rel_file = _normalize_path_separators(

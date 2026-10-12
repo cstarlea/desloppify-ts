@@ -6,6 +6,7 @@ based on path patterns. Zone metadata flows through issues, scoring, and the LLM
 
 from __future__ import annotations
 
+import fnmatch
 import functools
 import logging
 import os
@@ -81,11 +82,16 @@ class ZoneRule:
       - ".ext"    → basename ends-with (suffix/extension, e.g. ".d.ts", ".test.")
       - "prefix_" → basename starts-with (trailing underscore)
       - "name.py" → basename exact match (has extension, no /)
+      - "*.x.ts"  → basename glob (contains ``*`` or ``?``)
+      - "^dir/"   → path starts-with (anchored at the project root)
       - fallback  → substring on full path
+
+    A file matching any ``exclude`` pattern skips the rule.
     """
 
     zone: Zone
     patterns: list[str]
+    exclude: list[str] = field(default_factory=list)
 
 
 def _match_pattern(rel_path: str, pattern: str) -> bool:
@@ -94,6 +100,14 @@ def _match_pattern(rel_path: str, pattern: str) -> bool:
     See ZoneRule docstring for pattern type conventions.
     """
     basename = os.path.basename(rel_path)
+
+    # Anchored pattern: "^tools/" → path starts-with
+    if pattern.startswith("^"):
+        return rel_path.startswith(pattern[1:])
+
+    # Glob pattern: "*.config.ts" → fnmatch on basename
+    if "*" in pattern or "?" in pattern:
+        return fnmatch.fnmatchcase(basename, pattern)
 
     # Directory pattern: "/dir/" → substring on padded path
     if pattern.startswith("/") and pattern.endswith("/"):
@@ -129,7 +143,8 @@ COMMON_ZONE_RULES = [
     ZoneRule(Zone.GENERATED, ["/generated/", "/__generated__/"]),
     ZoneRule(Zone.TEST, ["/tests/", "/test/", "/fixtures/"]),
     # Example apps are runnable demos, untested by convention like scripts.
-    ZoneRule(Zone.SCRIPT, ["/scripts/", "/bin/", "/examples/", "/example/"]),
+    # Root tools/ only: src/agent/tools/ is often production (LLM tool definitions).
+    ZoneRule(Zone.SCRIPT, ["/scripts/", "/bin/", "^tools/", "/examples/", "/example/"]),
 ]
 
 
@@ -179,11 +194,11 @@ def _classify_directory(
     """Zone for a directory: its directory patterns, else its files' common zone."""
     for rule in rules:
         for pattern in rule.patterns:
-            if (
-                pattern.startswith("/")
-                and pattern.endswith("/")
-                and _match_pattern(rel_dir, pattern)
-            ):
+            if not pattern.endswith("/"):
+                continue
+            if pattern.startswith("/") and _match_pattern(rel_dir, pattern):
+                return rule.zone
+            if pattern.startswith("^") and _match_pattern(rel_dir + "/", pattern):
                 return rule.zone
     zones = set(file_zones)
     if len(zones) == 1:
@@ -296,6 +311,8 @@ def classify_file(
         except ValueError as exc:
             log_best_effort_failure(logger, f"parse zone override for {rel_path}", exc)
     for rule in rules:
+        if any(_match_pattern(rel_path, pattern) for pattern in rule.exclude):
+            continue
         for pattern in rule.patterns:
             if _match_pattern(rel_path, pattern):
                 return rule.zone

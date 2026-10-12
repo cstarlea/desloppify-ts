@@ -23,6 +23,8 @@ from desloppify.languages.typescript.phases_coupling import (
 )
 
 _RUN = "desloppify.languages.typescript.detectors.knip_adapter.subprocess.run"
+# _RUN patches subprocess.run itself; keep discovery's git listing out of the count.
+_NO_GIT_LISTING = "desloppify.base.discovery.source._git_listing"
 
 
 def _write(root: Path, name: str, text: str = "") -> Path:
@@ -48,7 +50,10 @@ def project(tmp_path):
             _RUN, return_value=SimpleNamespace(stdout=stdout, stderr="", returncode=1)
         )
 
-    with runtime_scope(RuntimeContext(project_root=tmp_path)):
+    with (
+        runtime_scope(RuntimeContext(project_root=tmp_path)),
+        patch(_NO_GIT_LISTING, return_value=None),
+    ):
         clear_source_file_cache_for_tests()
         yield tmp_path, report
         clear_source_file_cache_for_tests()

@@ -9,6 +9,7 @@ from types import SimpleNamespace
 
 import pytest
 
+import desloppify.base.discovery.source as source_mod
 import desloppify.languages.typescript.detectors.tsc as tsc_mod
 import desloppify.languages.typescript.detectors.unused as ts_unused_mod
 from desloppify.languages.typescript.detectors.unused import (
@@ -207,6 +208,8 @@ class TestDenoFallback:
         def _should_not_run(*args, **kwargs):
             raise AssertionError("tsc subprocess should not run in Deno fallback mode")
 
+        # _proc_runtime is the subprocess module; skip discovery's git listing.
+        monkeypatch.setattr(source_mod, "_git_listing", lambda _root: None)
         monkeypatch.setattr(tsc_mod._proc_runtime, "run", _should_not_run)
         entries, total = detect_unused(tmp_path / "supabase/functions")
         names = {entry["name"] for entry in entries}
@@ -226,6 +229,7 @@ class TestDenoFallback:
             ),
         )
         _write(tmp_path, "supabase/functions/dep.ts", "export const x = 1;\n")
+        monkeypatch.setattr(source_mod, "_git_listing", lambda _root: None)
         monkeypatch.setattr(
             tsc_mod._proc_runtime,
             "run",

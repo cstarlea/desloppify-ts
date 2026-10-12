@@ -16,6 +16,7 @@ from desloppify.engine.policy.zones import (
     ZoneRule,
     _match_pattern,
     classify_file,
+    filter_entries,
     has_generated_header,
     is_override_pattern,
     matching_override,
@@ -48,6 +49,19 @@ class TestMatchPattern:
     def test_directory_pattern_must_be_component(self):
         """'/test/' does not match 'testimony/foo.py' — needs directory boundary."""
         assert _match_pattern("testimony/foo.py", "/test/") is False
+
+    def test_anchored_pattern_matches_path_prefix(self):
+        """'^tools/' matches only at the project root."""
+        assert _match_pattern("tools/a.ts", "^tools/")
+        assert not _match_pattern("src/tools/a.ts", "^tools/")
+        assert not _match_pattern("devtools/a.ts", "^tools/")
+
+    def test_glob_pattern_matches_basename(self):
+        """'*.config.ts' globs the basename, anchored at both ends."""
+        assert _match_pattern("a/vitest.integration.config.ts", "*.config.ts")
+        assert not _match_pattern("a/config.ts", "*.config.ts")
+        assert not _match_pattern("a/x.config.tsx", "*.config.ts")
+        assert not _match_pattern("x.config.ts/a.js", "*.config.ts")
 
     def test_suffix_extension_pattern(self):
         """'.test.' matches 'foo.test.ts' via contains on basename."""
@@ -205,6 +219,61 @@ class TestClassifyFile:
             classify_file("examples/app/vite.config.ts", TS_ZONE_RULES) == Zone.CONFIG
         )
         assert classify_file("examples/app/src/a.ts", TS_ZONE_RULES) == Zone.SCRIPT
+
+    def test_tools_dir_is_script(self):
+        """Dev tooling under tools/ is not production code."""
+        from desloppify.languages.typescript._zones import TS_ZONE_RULES
+
+        for path in (
+            "tools/dev-dashboard/server.mjs",
+            "tools/dev-dashboard/public/app.mjs",
+        ):
+            assert classify_file(path, TS_ZONE_RULES) == Zone.SCRIPT, path
+        for path in (
+            "src/agent/tools/search.ts",
+            "packages/web/src/tools/gen.ts",
+            "src/devtools/panel.ts",
+            "src/tooling.ts",
+            "devtools/x.ts",
+        ):
+            assert classify_file(path, TS_ZONE_RULES) == Zone.PRODUCTION, path
+
+    def test_any_config_basename_is_config(self):
+        """``*.config.{ts,mts,cts,js,mjs,cjs}`` is config, whatever the tool."""
+        from desloppify.languages.typescript._zones import TS_ZONE_RULES
+
+        for path in (
+            "vitest.integration.config.ts",
+            "capacitor.config.ts",
+            "packages/client/tsdown.config.ts",
+            "docs/source.config.mts",
+            "x.config.cts",
+            "x.config.js",
+            "x.config.mjs",
+            "x.config.cjs",
+        ):
+            assert classify_file(path, TS_ZONE_RULES) == Zone.CONFIG, path
+        for path in (
+            "src/lib/email/config.ts",
+            "src/components/device/device-config.ts",
+            "src/app.config.service.ts",
+            "src/app/app.config.ts",
+            "src/app/app.config.server.ts",
+            "src/config.tsx",
+        ):
+            assert classify_file(path, TS_ZONE_RULES) == Zone.PRODUCTION, path
+
+    def test_capacitor_web_copies_are_generated(self):
+        """``cap sync`` copies the web build into the native projects."""
+        from desloppify.languages.typescript._zones import TS_ZONE_RULES
+
+        for path in (
+            "ios/App/App/public/native-bridge.js",
+            "android/app/src/main/assets/public/sw.js",
+            "apps/mobile/ios/App/App/public/assets/index.js",
+        ):
+            assert classify_file(path, TS_ZONE_RULES) == Zone.GENERATED, path
+        assert classify_file("public/sw.js", TS_ZONE_RULES) == Zone.PRODUCTION
 
     def test_production_default(self):
         """File not matching any rule defaults to PRODUCTION."""
@@ -509,6 +578,15 @@ class TestDirectoryZones:
         assert zone_map.get("test-d") == Zone.TEST
         assert zone_map.get("vendor/lib") == Zone.VENDOR
 
+    def test_anchored_directory_pattern(self):
+        zone_map = FileZoneMap(
+            ["tools/dash/a.ts", "tools/dash/a.test.ts", "src/agent/tools/b.ts"],
+            [ZoneRule(Zone.TEST, [".test."])] + COMMON_ZONE_RULES,
+        )
+        assert zone_map.get("tools") == Zone.SCRIPT
+        assert zone_map.get("tools/dash") == Zone.SCRIPT
+        assert zone_map.get("src/agent/tools") == Zone.PRODUCTION
+
     def test_directory_of_one_zone(self, zone_map):
         assert zone_map.get("src/widgets") == Zone.TEST
         assert zone_map.get("src/widgets/") == Zone.TEST
@@ -701,6 +779,20 @@ class TestZonePolicies:
     def test_production_does_not_skip_test_coverage(self):
         """PRODUCTION zone does NOT skip test_coverage."""
         assert "test_coverage" not in ZONE_POLICIES[Zone.PRODUCTION].skip_detectors
+
+    def test_config_files_not_orphaned_or_untested(self):
+        """Tool configs nothing imports are neither orphaned nor untested."""
+        from desloppify.languages.typescript._zones import TS_ZONE_RULES
+
+        files = ["capacitor.config.ts", "vitest.integration.config.ts", "src/a.ts"]
+        zone_map = FileZoneMap(files, TS_ZONE_RULES)
+        entries = [{"file": f} for f in files]
+        for detector in ("orphaned", "test_coverage"):
+            kept = filter_entries(zone_map, entries, detector)
+            assert [e["file"] for e in kept] == ["src/a.ts"], detector
+        assert zone_map.include_only(files, Zone.PRODUCTION, Zone.SCRIPT) == [
+            "src/a.ts"
+        ]
 
     def test_every_zone_has_policy(self):
         """Every Zone enum value has a corresponding policy."""
