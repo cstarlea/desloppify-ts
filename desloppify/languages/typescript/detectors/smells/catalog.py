@@ -64,7 +64,7 @@ TS_SMELL_CHECKS = [
     {
         "id": "magic_number",
         "label": "Magic numbers (>1000 in logic)",
-        "pattern": r"(?:===?|!==?|>=?|<=?|[+\-*/])\s*\d{4,}",
+        "pattern": None,
         "severity": "low",
     },
     {

@@ -29,6 +29,7 @@ from .detector_flow import (
     _detect_nested_closures,
     _detect_stub_functions,
 )
+from .detector_numbers import _detect_magic_numbers
 from .detector_safety import (
     _detect_catch_return_default,
     _detect_dead_useeffects,
@@ -52,6 +53,7 @@ _MULTI_LINE_DETECTORS = (
     _detect_empty_if_chains,
     _detect_error_no_throw,
     _detect_high_cyclomatic_complexity,
+    _detect_magic_numbers,
     _detect_monster_functions,
     _detect_nested_closures,
     _detect_statement_smells,
