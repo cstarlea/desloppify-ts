@@ -6,8 +6,11 @@ import logging
 import re
 from pathlib import Path
 
+from desloppify.base.discovery.file_paths import rel
 from desloppify.base.discovery.sfc import is_sfc, read_code_text, read_sfc
 from desloppify.base.output.fallbacks import log_best_effort_failure
+from desloppify.engine.policy.zones import Zone, classify_file
+from desloppify.languages.typescript._zones import TS_ZONE_RULES
 from desloppify.languages.typescript.detectors.io import (
     iter_typescript_sources,
     resolve_typescript_source,
@@ -66,11 +69,18 @@ _MULTI_LINE_DETECTORS = (
 
 
 def detect_smells(path: Path) -> tuple[list[dict], int]:
-    """Detect TypeScript/React smell patterns across project sources."""
+    """Detect TypeScript/React smell patterns across project sources.
+
+    Checks marked ``skip_in_tests`` in the catalog report nothing in test files."""
     checks = TS_SMELL_CHECKS
     smell_counts: dict[str, list[dict]] = {s["id"]: [] for s in checks}
     files = iter_typescript_sources(path)
     loc: dict[str, int] = {}
+    test_files = {
+        filepath
+        for filepath in files
+        if classify_file(rel(filepath), TS_ZONE_RULES) == Zone.TEST
+    }
 
     for filepath in files:
         try:
@@ -114,6 +124,8 @@ def detect_smells(path: Path) -> tuple[list[dict], int]:
     entries = []
     for check in checks:
         matches = smell_counts[check["id"]]
+        if check.get("skip_in_tests"):
+            matches = [m for m in matches if m["file"] not in test_files]
         if matches:
             entry = {
                 "id": check["id"],

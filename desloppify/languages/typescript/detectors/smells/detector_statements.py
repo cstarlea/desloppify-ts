@@ -6,7 +6,6 @@ from desloppify.languages.typescript.syntax.queries import descendants
 from desloppify.languages.typescript.syntax.tree import ParsedSource
 
 from .detector_core import _emit, _node_line, _parsed
-from .detector_types import _is_test_file
 from .helpers import _regex_line_matches
 from .sort_strings import FALLBACK_STRING_SORT_RE, declarations, string_sort
 
@@ -22,23 +21,18 @@ def _detect_statement_smells(ctx, smell_counts: dict[str, list[dict]]) -> None:
     """Find empty catch blocks (comments count as content), ``.sort()`` calls
     without a comparator, and ``void name;`` statements that silence an unused symbol.
 
-    A ``.sort()`` that plainly sorts strings (see ``sort_strings``) is fine, and
-    test files are not checked for it."""
-    skip_sort = _is_test_file(ctx.filepath)
+    A ``.sort()`` that plainly sorts strings (see ``sort_strings``) is fine."""
     parsed = _parsed(ctx)
     if parsed is None:
         for smell_id, pattern in _FALLBACK_PATTERNS.items():
             for index, line in _regex_line_matches(ctx, pattern):
-                if smell_id == "sort_no_comparator" and (
-                    skip_sort
-                    or FALLBACK_STRING_SORT_RE.search(ctx.source.code_lines[index])
+                if smell_id == "sort_no_comparator" and FALLBACK_STRING_SORT_RE.search(
+                    ctx.source.code_lines[index]
                 ):
                     continue
                 _emit(smell_counts, smell_id, ctx, index + 1, line.strip()[:100])
         return
     for smell_id, node in _statement_smells(parsed):
-        if smell_id == "sort_no_comparator" and skip_sort:
-            continue
         _emit(smell_counts, smell_id, ctx, *_node_line(parsed, node))
 
 

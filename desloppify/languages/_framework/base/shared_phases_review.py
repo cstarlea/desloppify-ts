@@ -24,7 +24,11 @@ from desloppify.engine.detectors.test_coverage.detector import (
     CoverageResult,
     run_test_coverage,
 )
-from desloppify.engine.policy.zones import EXCLUDED_ZONES, filter_entries
+from desloppify.engine.policy.zones import (
+    EXCLUDED_ZONES,
+    filter_entries,
+    should_skip_issue,
+)
 from desloppify.languages._framework.base.types import (
     DetectorCoverageStatus,
     DetectorEntry,
@@ -757,7 +761,13 @@ def phase_signature(
     """Shared phase runner: detect signature variance via lang.extract_functions."""
     from desloppify.engine.detectors.signature import detect_signature_variance
 
-    functions = _resolve_review_functions(path, lang)
+    # A definition in a skipped zone (test helpers) neither raises nor joins a group.
+    zone_map = getattr(lang, "zone_map", None)
+    functions = [
+        fn
+        for fn in _resolve_review_functions(path, lang)
+        if not should_skip_issue(zone_map, fn.file, "signature")
+    ]
 
     issues: list[Issue] = []
     potentials: dict[str, int] = {}

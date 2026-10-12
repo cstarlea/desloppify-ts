@@ -5,9 +5,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from desloppify.base.discovery.file_paths import rel, resolve_path
-from desloppify.engine.policy.zones import Zone, classify_file
-from desloppify.languages.typescript._zones import TS_ZONE_RULES
+from desloppify.base.discovery.file_paths import resolve_path
 from desloppify.languages.typescript.detectors.deps.resolve import (
     compiler_option,
     find_nearest_tsconfig,
@@ -54,26 +52,19 @@ _FALLBACK_PATTERNS = {
 def _detect_type_safety(ctx, smell_counts: dict[str, list[dict]]) -> None:
     """Find type-safety escape hatches, one match per occurrence.
 
-    In a test file ``@ts-expect-error`` is how a test asserts a type error,
-    so it needs no explanation there. Under ``noUncheckedIndexedAccess`` an
-    index access is ``T | undefined``, and ``x[i]!`` is the idiom for a known
-    index.
+    Under ``noUncheckedIndexedAccess`` an index access is ``T | undefined``,
+    and ``x[i]!`` is the idiom for a known index.
     """
-    skip = {"ts_expect_error_undocumented"} if _is_test_file(ctx.filepath) else set()
     parsed = parsed_file(ctx.filepath) or parse_text(ctx.content, ctx.filepath)
     if parsed is None:
         for smell_id, pattern in _FALLBACK_PATTERNS.items():
-            if smell_id in skip:
-                continue
             anchor = "comment" if smell_id.startswith("ts_") else "code"
             for index, line in _regex_line_matches(ctx, pattern, anchor):
                 _emit(smell_counts, smell_id, ctx, index + 1, line.strip()[:100])
         return
     unchecked_index = _unchecked_index_access(ctx.filepath)
     for smell_id, node in _type_safety_nodes(parsed):
-        if smell_id in skip or (
-            unchecked_index and smell_id == "non_null_assert" and _is_index_access(node)
-        ):
+        if unchecked_index and smell_id == "non_null_assert" and _is_index_access(node):
             continue
         _emit(
             smell_counts,
@@ -82,10 +73,6 @@ def _detect_type_safety(ctx, smell_counts: dict[str, list[dict]]) -> None:
             parsed.line(node),
             parsed.line_text(node).strip()[:100],
         )
-
-
-def _is_test_file(filepath: str) -> bool:
-    return classify_file(rel(filepath), TS_ZONE_RULES) == Zone.TEST
 
 
 def _unchecked_index_access(filepath: str) -> bool:

@@ -11,6 +11,19 @@ from desloppify.app.commands.helpers.queue_progress import (
 from desloppify.base.discovery.file_paths import rel
 from desloppify.base.output.terminal import colorize
 
+_ZONE_NAMES = {"test": "tests"}
+
+
+def unscored_open_note(stats: dict) -> str:
+    """`` (42 in tests, not scored)`` for open issues in zones scoring skips, else ``""``."""
+    by_zone = stats.get("open_unscored") or {}
+    parts = [
+        f"{count} in {_ZONE_NAMES.get(zone, zone)}"
+        for zone, count in sorted(by_zone.items(), key=lambda item: -item[1])
+        if count
+    ]
+    return f" ({', '.join(parts)}, not scored)" if parts else ""
+
 
 def print_agent_plan(
     steps: list[str],
@@ -119,4 +132,5 @@ __all__ = [
     "print_agent_plan",
     "print_ranked_actions",
     "print_replacement_groups",
+    "unscored_open_note",
 ]

@@ -157,3 +157,24 @@ def test_update_objective_health_applies_scan_coverage_confidence_metadata():
     assert security_dim["coverage_confidence"] == 0.6
     assert state["score_confidence"]["status"] == "reduced"
     assert "Security" in state["score_confidence"]["dimensions"]
+
+
+def test_count_open_unscored_counts_open_issues_in_unscored_zones():
+    issues = {
+        "a": {"detector": "smells", "status": "open", "zone": "test"},
+        "b": {"detector": "smells", "status": "open", "zone": "test"},
+        "c": {"detector": "smells", "status": "fixed", "zone": "test"},
+        "d": {"detector": "smells", "status": "open", "zone": "production"},
+        "e": {"detector": "smells", "status": "open"},
+        "f": {"detector": "security", "status": "open", "zone": "config"},
+        # tsconfig_health is scored in the config zone.
+        "g": {"detector": "tsconfig_health", "status": "open", "zone": "config"},
+        "h": {
+            "detector": "smells",
+            "status": "open",
+            "zone": "test",
+            "suppressed": True,
+        },
+    }
+
+    assert scoring_mod._count_open_unscored(issues) == {"config": 1, "test": 2}

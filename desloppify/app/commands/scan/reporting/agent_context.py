@@ -9,6 +9,7 @@ from typing import Any
 
 from desloppify import state as state_mod
 from desloppify.app import skill_docs as skill_docs_mod
+from desloppify.app.commands.helpers.rendering import unscored_open_note
 from desloppify.base import registry as registry_mod
 from desloppify.base.discovery.paths import get_project_root
 from desloppify.base.exception_sets import PLAN_LOAD_EXCEPTIONS
@@ -185,7 +186,7 @@ def _print_stats_summary(
     )
     print(
         f"Total issues: {stats.get('total', 0)} | "
-        f"Open: {stats.get('open', 0)} | "
+        f"Open: {stats.get('open', 0)}{unscored_open_note(stats)} | "
         f"Fixed: {stats.get('fixed', 0)} | "
         f"Wontfix: {wontfix}"
         + (f" ({wontfix_debt} still present)" if wontfix_debt != wontfix else "")

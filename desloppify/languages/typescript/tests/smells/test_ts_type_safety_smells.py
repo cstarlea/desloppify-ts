@@ -1,6 +1,7 @@
 """Tests for the type-safety smells (``detector_types``)."""
 
 import importlib.util
+from pathlib import Path
 
 import pytest
 
@@ -170,11 +171,14 @@ class TestProjectContext:
     ):
         (tmp_path / name).parent.mkdir(parents=True, exist_ok=True)
         source = "// @ts-expect-error\nf(1);\n// @ts-ignore\ng();\n"
-        assert _smells(tmp_path, source, name) == {"ts_ignore": [3]}
-        assert _smells(tmp_path, source, "src.ts") == {
-            "ts_expect_error_undocumented": [1],
-            "ts_ignore": [3],
+        (tmp_path / name).write_text(source)
+        (tmp_path / "src.ts").write_text(source)
+        entries, _ = detect_smells(tmp_path)
+        files = {
+            e["id"]: sorted(Path(m["file"]).name for m in e["matches"]) for e in entries
         }
+        assert files["ts_expect_error_undocumented"] == ["src.ts"]
+        assert len(files["ts_ignore"]) == 2
 
 
 class TestRegexFallback:

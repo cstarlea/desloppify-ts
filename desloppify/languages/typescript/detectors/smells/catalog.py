@@ -5,6 +5,9 @@ from __future__ import annotations
 # A line pattern counts where its match starts in code, or with an
 # ``anchor``, where it opens a string literal or is in a comment (see
 # ``SourceText.search``). Checks without a pattern have their own detectors.
+# ``skip_in_tests`` drops a check's matches in test-zone files, where it is
+# the normal idiom: fixture URLs and colours, mocks cast through
+# ``unknown``, ``!`` on known results, expected type errors.
 TS_SMELL_CHECKS = [
     {
         "id": "empty_catch",
@@ -29,6 +32,7 @@ TS_SMELL_CHECKS = [
         "label": "@ts-expect-error without an explanation",
         "pattern": None,
         "severity": "low",
+        "skip_in_tests": True,
     },
     {
         "id": "ts_nocheck",
@@ -42,12 +46,14 @@ TS_SMELL_CHECKS = [
         "label": "Non-null assertions (`!`)",
         "pattern": None,
         "severity": "low",
+        "skip_in_tests": True,
     },
     {
         "id": "hardcoded_color",
         "label": "Hardcoded color values",
         "pattern": r"""(?:color|background|border|fill|stroke)\s*[:=]\s*['"]#[0-9a-fA-F]{3,8}['"]""",
         "severity": "medium",
+        "skip_in_tests": True,
     },
     {
         "id": "hardcoded_rgb",
@@ -66,6 +72,7 @@ TS_SMELL_CHECKS = [
         "label": "Magic numbers (>1000 in logic)",
         "pattern": None,
         "severity": "low",
+        "skip_in_tests": True,
     },
     {
         "id": "console_error_no_throw",
@@ -97,6 +104,7 @@ TS_SMELL_CHECKS = [
         "pattern": r"""(?:['\"])https?://[^\s'\"]+(?:['\"])""",
         "anchor": "literal",
         "severity": "medium",
+        "skip_in_tests": True,
     },
     {
         "id": "todo_fixme",
@@ -160,12 +168,14 @@ TS_SMELL_CHECKS = [
         "label": "Double casts through `unknown` (`as unknown as T`)",
         "pattern": None,
         "severity": "medium",
+        "skip_in_tests": True,
     },
     {
         "id": "sort_no_comparator",
         "label": ".sort() without comparator function",
         "pattern": None,
         "severity": "medium",
+        "skip_in_tests": True,
     },
     {
         "id": "switch_no_default",

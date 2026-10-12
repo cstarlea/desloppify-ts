@@ -693,14 +693,16 @@ class TestZonePolicies:
             "test_coverage",
             "security",
             "private_imports",
+            "signature",
+            "structural",
             "naming",
         }
         assert policy.skip_detectors == expected_skips
 
     def test_test_zone_downgrades(self):
-        """TEST zone downgrades smells and structural."""
+        """TEST zone downgrades the smells it still reports."""
         policy = ZONE_POLICIES[Zone.TEST]
-        assert policy.downgrade_detectors == {"smells", "structural"}
+        assert policy.downgrade_detectors == {"smells"}
 
     def test_test_zone_excluded_from_score(self):
         """TEST zone is excluded from scoring."""

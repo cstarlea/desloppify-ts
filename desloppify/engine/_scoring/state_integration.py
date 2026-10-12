@@ -12,6 +12,7 @@ from desloppify.base.enums import issue_status_tokens
 from desloppify.engine._scoring.detection import merge_potentials
 from desloppify.engine._scoring.policy.core import (
     CARRIED_FORWARD_MAX_SCANS,
+    detector_policy,
     is_wontfix_debt,
 )
 from desloppify.engine._scoring.results.core import (
@@ -77,6 +78,18 @@ def _count_wontfix_debt(issues: dict) -> tuple[int, dict[str, int]]:
         tier = str(issue.get("tier", 3))
         by_tier[tier] = by_tier.get(tier, 0) + 1
     return total, dict(sorted(by_tier.items()))
+
+
+def _count_open_unscored(issues: dict) -> dict[str, int]:
+    """Open issues per zone that scoring leaves out (test, config, ...)."""
+    by_zone: dict[str, int] = {}
+    for issue in issues.values():
+        if issue.get("suppressed") or issue.get("status") != "open":
+            continue
+        zone = issue.get("zone", "production")
+        if zone in detector_policy(issue.get("detector", "")).excluded_zones:
+            by_zone[zone] = by_zone.get(zone, 0) + 1
+    return dict(sorted(by_zone.items()))
 
 
 def _aggregate_scores(dim_scores: dict) -> dict[str, float]:
@@ -279,6 +292,7 @@ def recompute_stats(
         **counters,
         "wontfix_debt": wontfix_debt,
         "wontfix_debt_by_tier": wontfix_debt_by_tier,
+        "open_unscored": _count_open_unscored(issues),
         "by_tier": {
             str(tier): tier_counts for tier, tier_counts in sorted(tier_stats.items())
         },

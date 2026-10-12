@@ -554,6 +554,34 @@ def test_phase_signature_reports_variance(monkeypatch) -> None:
     assert potentials == {"signature": 1}
 
 
+def test_phase_signature_ignores_test_zone_definitions() -> None:
+    from desloppify.engine.policy.zones import COMMON_ZONE_RULES, FileZoneMap
+
+    def fn(name: str, file: str, params: list[str]) -> SimpleNamespace:
+        return SimpleNamespace(name=name, file=file, line=1, params=params)
+
+    files = ["src/a.ts", "src/b.ts", "src/c.ts", "tests/x.ts", "tests/y.ts"]
+    lang = SimpleNamespace(
+        extract_functions=lambda _path: [
+            # Varies across production files: still reported.
+            fn("load", "src/a.ts", ["id"]),
+            fn("load", "src/b.ts", ["id", "opts"]),
+            fn("load", "src/c.ts", []),
+            # Per-test-file helpers only.
+            fn("makeTeam", "tests/x.ts", []),
+            fn("makeTeam", "tests/y.ts", ["name"]),
+            fn("makeTeam", "src/a.ts", ["id"]),
+        ],
+        zone_map=FileZoneMap(files, COMMON_ZONE_RULES),
+    )
+
+    issues, _ = review_mod.phase_signature(Path("."), lang)
+
+    assert [issue["summary"] for issue in issues] == [
+        "'load' has 3 different signatures across 3 files"
+    ]
+
+
 def test_run_structural_phase_merges_large_complexity_and_flat_dirs(
     monkeypatch,
 ) -> None:

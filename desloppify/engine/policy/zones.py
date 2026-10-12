@@ -467,7 +467,7 @@ ZONE_POLICIES: dict[Zone, ZonePolicy] = {
     Zone.PRODUCTION: ZonePolicy(),
     Zone.TEST: ZonePolicy(
         skip_detectors=TEST_SKIP_DETECTORS,
-        downgrade_detectors={"smells", "structural"},
+        downgrade_detectors={"smells"},
         exclude_from_score=True,
     ),
     Zone.CONFIG: ZonePolicy(

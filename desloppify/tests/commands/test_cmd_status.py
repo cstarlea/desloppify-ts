@@ -1,5 +1,6 @@
 """Tests for desloppify.app.commands.status — display helpers."""
 
+from desloppify.app.commands.helpers.rendering import unscored_open_note
 from desloppify.app.commands.status.render import (
     show_dimension_table,
     show_focus_suggestion,
@@ -105,6 +106,27 @@ class TestStatusModuleSanity:
         assert "open (in-scope): 1" in out
         assert "open (out-of-scope carried): 1" in out
         assert "open (global): 2" in out
+
+    def test_print_open_scope_breakdown_notes_unscored_zones(self, capsys):
+        print_open_scope_breakdown(
+            {
+                "issues": {
+                    "a": {"status": "open", "file": "src/a.ts"},
+                    "b": {"status": "open", "file": "src/a.test.ts"},
+                },
+                "stats": {"open_unscored": {"test": 1}},
+            }
+        )
+        out = capsys.readouterr().out
+        assert "open (in-scope): 2 (1 in tests, not scored) · " in out
+
+    def test_unscored_open_note(self):
+        assert unscored_open_note({}) == ""
+        assert unscored_open_note({"open_unscored": {"test": 0}}) == ""
+        assert (
+            unscored_open_note({"open_unscored": {"config": 3, "test": 42}})
+            == " (42 in tests, 3 in config, not scored)"
+        )
 
 
 # ---------------------------------------------------------------------------

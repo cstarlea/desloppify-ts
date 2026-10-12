@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from desloppify.app.commands.helpers.rendering import unscored_open_note
 from desloppify.base.output.terminal import LOC_COMPACT_THRESHOLD, colorize
 from desloppify.engine._state.filtering import open_scope_breakdown
 from desloppify.state_io import (
@@ -149,10 +150,11 @@ def print_open_scope_breakdown(state: dict) -> None:
         return
 
     counts = open_scope_breakdown(issues, state.get("scan_path"))
+    note = unscored_open_note(state.get("stats") or {})
     print(
         colorize(
             "  "
-            f"open (in-scope): {counts['in_scope']} · "
+            f"open (in-scope): {counts['in_scope']}{note} · "
             f"open (out-of-scope carried): {counts['out_of_scope']} · "
             f"open (global): {counts['global']}",
             "dim",
