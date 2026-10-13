@@ -9,6 +9,7 @@ from typing import Any
 
 from desloppify.base.coercions import coerce_confidence
 from desloppify.base.discovery.paths import get_project_root
+from desloppify.base.output.fallbacks import warn_best_effort
 from desloppify.base.output.terminal import log
 from desloppify.engine._state.filtering import make_issue
 from desloppify.engine.policy.zones import should_skip_issue
@@ -58,6 +59,16 @@ def _filter_boilerplate_entries_by_zone(
 
     if skipped:
         log(f"         zones: {skipped} boilerplate clusters excluded")
+    if entries and not any(
+        loc.get("file") in known_files
+        for entry in entries
+        for loc in entry.get("locations", [])
+    ):
+        warn_best_effort(
+            f"Boilerplate duplication: none of the {len(entries)} jscpd clusters "
+            "point at a scanned file; their paths don't match the scan. "
+            "Duplication is not measured."
+        )
     return filtered
 
 

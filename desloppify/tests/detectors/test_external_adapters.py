@@ -146,6 +146,9 @@ from desloppify.engine.detectors.jscpd_adapter import (  # noqa: E402
     detect_with_jscpd,
     detect_with_jscpd_result,
 )
+from desloppify.languages._framework.base.shared_phases_helpers import (  # noqa: E402
+    _filter_boilerplate_entries_by_zone,
+)
 
 
 def _fake_bin(directory: Path, name: str) -> Path:
@@ -222,9 +225,14 @@ class TestResolveJscpdCommand:
 
 
 class TestJscpdRunsFromScanRoot:
-    def test_runs_with_relative_target_under_dot_claude(self, tmp_path):
+    @pytest.fixture(autouse=True)
+    def _project_root(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("DESLOPPIFY_ROOT", str(tmp_path))
+
+    def test_runs_with_relative_target_under_dot_claude(self, tmp_path, monkeypatch):
         root = tmp_path / ".claude" / "worktrees" / "copy"
         root.mkdir(parents=True)
+        monkeypatch.setenv("DESLOPPIFY_ROOT", str(root))
         seen = {}
 
         def fake_run(cmd, *, timeout, cwd=None):
@@ -278,6 +286,193 @@ class TestJscpdRunsFromScanRoot:
         }
         entries = _parse_jscpd_report(report, tmp_path)
         assert [loc["file"] for loc in entries[0]["locations"]] == ["a.ts", "b.ts"]
+
+
+def _jscpd_side(name: str, start: int, end: int) -> dict:
+    """One side of a duplicate, shaped like jscpd 5's JSON reporter output."""
+    return {
+        "name": name,
+        "start": start,
+        "end": end,
+        "startLoc": {"line": start, "column": 0, "position": 0},
+        "endLoc": {"line": end, "column": 1, "position": 228},
+    }
+
+
+_REAL_FRAGMENT = (
+    "export function handler(input: number) {\n"
+    "  const doubled = input * 2;\n"
+    "  const tripled = input * 3;\n"
+    "  const total = doubled + tripled + input;\n"
+    "  if (total > 100) {\n"
+    "    return total - 100;\n"
+    "  }\n"
+    "  return total + doubled * tripled;\n"
+    "}"
+)
+
+
+def _jscpd_report(first: str, second: str) -> dict:
+    return {
+        "duplicates": [
+            {
+                "format": "typescript",
+                "lines": 9,
+                "fragment": _REAL_FRAGMENT,
+                "tokens": 53,
+                "kind": "exact",
+                "isNew": False,
+                "firstFile": _jscpd_side(first, 1, 9),
+                "secondFile": _jscpd_side(second, 12, 20),
+            }
+        ],
+        "statistics": {"total": {"clones": 1, "duplicatedLines": 9}},
+    }
+
+
+def _write_sources(root: Path, *rel_paths: str) -> None:
+    for rel_path in rel_paths:
+        target = root / rel_path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(_REAL_FRAGMENT)
+
+
+class TestJscpdReportPathMapping:
+    """jscpd runs from the scan root and names files relative to it; issues
+    need project-relative paths whatever ``--path`` is."""
+
+    @pytest.fixture
+    def project(self, tmp_path, monkeypatch):
+        root = tmp_path / "proj"
+        root.mkdir()
+        monkeypatch.setenv("DESLOPPIFY_ROOT", str(root))
+        elsewhere = tmp_path / "elsewhere"
+        elsewhere.mkdir()
+        monkeypatch.chdir(elsewhere)
+        return root
+
+    @staticmethod
+    def _files(entries: list[dict]) -> list[str]:
+        assert len(entries) == 1
+        return [loc["file"] for loc in entries[0]["locations"]]
+
+    def test_scan_root_is_project_root(self, project):
+        _write_sources(project, "src/app/a.ts", "src/app/b.ts")
+        report = _jscpd_report("src/app/a.ts", "src/app/b.ts")
+        entries = _parse_jscpd_report(report, project)
+        assert self._files(entries) == ["src/app/a.ts", "src/app/b.ts"]
+        assert entries[0]["locations"][1]["line"] == 12
+
+    def test_src_subdirectory(self, project):
+        _write_sources(project, "src/app/(app)/a.tsx", "src/lib/b.ts")
+        report = _jscpd_report("app/(app)/a.tsx", "lib/b.ts")
+        entries = _parse_jscpd_report(report, project / "src")
+        assert self._files(entries) == ["src/app/(app)/a.tsx", "src/lib/b.ts"]
+
+    def test_nested_package_path(self, project):
+        pkg = project / "packages" / "web" / "src"
+        _write_sources(pkg, "routes/a.ts", "routes/b.ts")
+        report = _jscpd_report("./routes/a.ts", "routes/b.ts")
+        entries = _parse_jscpd_report(report, pkg)
+        assert self._files(entries) == [
+            "packages/web/src/routes/a.ts",
+            "packages/web/src/routes/b.ts",
+        ]
+
+    def test_absolute_names(self, project):
+        _write_sources(project, "src/a.ts", "src/b.ts")
+        report = _jscpd_report(str(project / "src/a.ts"), str(project / "src/b.ts"))
+        entries = _parse_jscpd_report(report, project / "src")
+        assert self._files(entries) == ["src/a.ts", "src/b.ts"]
+
+    def test_windows_separators(self, project):
+        _write_sources(project, "src/app/a.ts", "src/app/nested/b.ts")
+        report = _jscpd_report("app\\a.ts", "app\\nested\\b.ts")
+        entries = _parse_jscpd_report(report, project / "src")
+        assert self._files(entries) == ["src/app/a.ts", "src/app/nested/b.ts"]
+
+    def test_artifact_checks_use_scan_relative_paths(self, project):
+        _write_sources(project, "src/dist/a.ts", "src/b.ts")
+        report = _jscpd_report("dist/a.ts", "b.ts")
+        assert _parse_jscpd_report(report, project / "src") == []
+
+    def test_names_outside_scan_root_are_dropped_with_warning(self, project, capsys):
+        _write_sources(project, "src/a.ts", "other/b.ts")
+        report = _jscpd_report("../other/b.ts", str(project / "other/a.ts"))
+        assert _parse_jscpd_report(report, project / "src") == []
+        assert "none mapped to files under" in capsys.readouterr().err
+
+    def test_no_warning_when_some_pairs_map(self, project, capsys):
+        _write_sources(project, "src/a.ts", "src/b.ts")
+        report = _jscpd_report("a.ts", "b.ts")
+        report["duplicates"].append(
+            {**report["duplicates"][0], "firstFile": _jscpd_side("../x.ts", 1, 9)}
+        )
+        assert len(_parse_jscpd_report(report, project / "src")) == 1
+        assert "WARNING" not in capsys.readouterr().err
+
+    def test_detect_maps_src_scan_end_to_end(self, project):
+        _write_sources(project, "src/app/a.ts", "src/app/b.ts")
+        seen = {}
+
+        def fake_run(cmd, *, timeout, cwd=None):
+            seen["cwd"] = cwd
+            out = Path(cmd[cmd.index("--output") + 1])
+            report = _jscpd_report("app/a.ts", "app/b.ts")
+            out.joinpath("jscpd-report.json").write_text(json.dumps(report))
+
+        with (
+            patch(
+                "desloppify.engine.detectors.jscpd_adapter._resolve_jscpd_command",
+                return_value=["jscpd"],
+            ),
+            patch(
+                "desloppify.engine.detectors.jscpd_adapter._run_jscpd_command",
+                side_effect=fake_run,
+            ),
+        ):
+            entries = detect_with_jscpd(project / "src")
+        assert seen["cwd"] == (project / "src").resolve()
+        assert entries is not None
+        assert self._files(entries) == ["src/app/a.ts", "src/app/b.ts"]
+
+
+class TestBoilerplateZoneFilterWarning:
+    @staticmethod
+    def _zone_map(files: list[str]) -> MagicMock:
+        zone_map = MagicMock()
+        zone_map.all_files.return_value = files
+        return zone_map
+
+    @staticmethod
+    def _entry(*files: str) -> dict:
+        return {
+            "id": "abc",
+            "distinct_files": len(files),
+            "window_size": 9,
+            "locations": [{"file": f, "line": 1} for f in files],
+            "sample": [],
+        }
+
+    def test_warns_when_no_cluster_matches_scanned_files(self, capsys):
+        zone_map = self._zone_map(["src/app/a.ts", "src/app/b.ts"])
+        result = _filter_boilerplate_entries_by_zone(
+            [self._entry("app/a.ts", "app/b.ts")], zone_map
+        )
+        assert result == []
+        assert "point at a scanned file" in capsys.readouterr().err
+
+    def test_no_warning_when_clusters_match(self, capsys):
+        zone_map = self._zone_map(["src/app/a.ts", "src/app/b.ts"])
+        with patch(
+            "desloppify.languages._framework.base.shared_phases_helpers.should_skip_issue",
+            return_value=False,
+        ):
+            result = _filter_boilerplate_entries_by_zone(
+                [self._entry("src/app/a.ts", "src/app/b.ts")], zone_map
+            )
+        assert len(result) == 1
+        assert "WARNING" not in capsys.readouterr().err
 
 
 class TestJscpdAdapter:

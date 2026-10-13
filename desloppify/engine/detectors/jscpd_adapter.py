@@ -22,6 +22,8 @@ import subprocess  # nosec B404
 import tempfile
 from pathlib import Path
 
+from desloppify.base.discovery.file_paths import normalize_path_separators, rel
+from desloppify.base.discovery.paths import get_project_root
 from desloppify.base.discovery.source import (
     collect_exclude_dirs,
     get_exclusions,
@@ -49,22 +51,45 @@ _ARTIFACT_PREFIXES = ("build/", "dist/", ".desloppify/", ".claude/")
 _BUILD_MIRROR_PREFIX = "build/lib/"
 
 
-def _to_scan_relative(path_resolved: Path, name: str) -> str | None:
-    """Return scan-relative path, or None when file is outside scan path."""
+def _report_name_path(scan_root: Path, name: str) -> Path | None:
+    """Absolute, resolved path for a jscpd report ``name``.
+
+    jscpd runs from the scan root, so relative names are relative to it (not
+    to the process cwd or the project root). Windows reports use ``\\``.
+    """
     if not name:
         return None
-    candidate = Path(name)
+    candidate = Path(name.replace("\\", "/"))
     if not candidate.is_absolute():
-        # jscpd runs from the scan root and reports names relative to it.
-        candidate = path_resolved / candidate
+        candidate = scan_root / candidate
     if not candidate.exists() and ":" in candidate.name:
         # Blocks embedded in another format come back as ``file:format``.
         candidate = candidate.with_name(candidate.name.rsplit(":", 1)[0])
     try:
-        rel = candidate.resolve().relative_to(path_resolved)
-    except (ValueError, OSError):
+        return candidate.resolve()
+    except OSError:
         return None
-    return str(rel).replace("\\", "/")
+
+
+def _map_report_name(
+    scan_root: Path, project_root: Path, name: str
+) -> tuple[str, str] | None:
+    """(scan-relative, project-relative) paths, or None outside the scan root.
+
+    Issues and the zone map key files by their project-relative path; the
+    scan-relative one is for the artifact checks.
+    """
+    resolved = _report_name_path(scan_root, name)
+    if resolved is None:
+        return None
+    try:
+        scan_rel = resolved.relative_to(scan_root)
+    except ValueError:
+        return None
+    return (
+        normalize_path_separators(str(scan_rel)),
+        rel(resolved, project_root=project_root),
+    )
 
 
 def _is_artifact_path(rel_path: str) -> bool:
@@ -127,21 +152,26 @@ def _is_import_only(fragment: str) -> bool:
     return not text.strip()
 
 
-def _parse_jscpd_report(report: dict, scan_path: Path) -> list[dict]:
+def _parse_jscpd_report(
+    report: dict, scan_path: Path, *, project_root: Path | None = None
+) -> list[dict]:
     """Parse a jscpd JSON report dict and return clustered duplication entries.
 
     Clusters pairwise duplicates that share the same fragment into multi-file
     groups, producing the same output shape as the old boilerplate_duplication
     detector so that phase_boilerplate_duplication() needs no further changes.
+    Locations are project-relative, like every other detector's files.
     """
     duplicates = report.get("duplicates", [])
     if not duplicates:
         return []
 
-    path_resolved = scan_path.resolve()
+    scan_root = scan_path.resolve()
+    root = get_project_root(project_root=project_root)
 
     # Cluster pairs by SHA256(fragment.strip()[:200])[:16]
     clusters: dict[str, dict] = {}
+    unmapped = 0
 
     for dup in duplicates:
         fragment = dup.get("fragment", "")
@@ -153,18 +183,17 @@ def _parse_jscpd_report(report: dict, scan_path: Path) -> list[dict]:
 
         first = dup.get("firstFile", {})
         second = dup.get("secondFile", {})
-        first_name = first.get("name", "")
-        second_name = second.get("name", "")
-
-        first_rel = _to_scan_relative(path_resolved, first_name)
-        second_rel = _to_scan_relative(path_resolved, second_name)
-        if first_rel is None or second_rel is None:
+        first_paths = _map_report_name(scan_root, root, first.get("name", ""))
+        second_paths = _map_report_name(scan_root, root, second.get("name", ""))
+        if first_paths is None or second_paths is None:
+            unmapped += 1
             continue
+        (first_scan, first_rel), (second_scan, second_rel) = first_paths, second_paths
         if (
             first_rel == second_rel
-            or _is_artifact_path(first_rel)
-            or _is_artifact_path(second_rel)
-            or _is_build_mirror_pair(first_rel, second_rel)
+            or _is_artifact_path(first_scan)
+            or _is_artifact_path(second_scan)
+            or _is_build_mirror_pair(first_scan, second_scan)
         ):
             continue
 
@@ -181,6 +210,12 @@ def _parse_jscpd_report(report: dict, scan_path: Path) -> list[dict]:
         for name, info in [(first_rel, first), (second_rel, second)]:
             if name not in cluster["files"]:
                 cluster["files"][name] = info.get("start", 0)
+
+    if unmapped and not clusters:
+        warn_best_effort(
+            f"Boilerplate duplication: jscpd reported {unmapped} duplicates but "
+            f"none mapped to files under {scan_root}; the result is likely wrong."
+        )
 
     entries: list[dict] = []
     for cluster in clusters.values():
