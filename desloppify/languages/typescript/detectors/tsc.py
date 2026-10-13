@@ -4,10 +4,15 @@ tsc runs once on the scan's nearest tsconfig with ``noUnusedLocals`` and
 ``noUnusedParameters`` forced on. Those flags only add the TS6133 family of
 diagnostics, so the same output serves both detectors. ``--listFiles`` adds
 the program's files, which is what tsc actually checked.
+
+The run is incremental with its build info in desloppify's state directory,
+so a tsconfig with ``incremental`` or ``composite`` never gets a
+``.tsbuildinfo`` written into the project, and repeat scans reuse the cache.
 """
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import os
 import re
@@ -17,6 +22,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from desloppify.base.discovery.paths import get_state_dir
 from desloppify.base.discovery.source import find_component_files
 from desloppify.languages.typescript.detectors.bounded import (
     MemoryLimitExceeded,
@@ -39,6 +45,7 @@ _TS_CONFIG_ERROR_RE = re.compile(r"error TS(5\d{3}|18003):")
 _BOGUS_TSC_MARKER = "This is not the tsc command you are looking for"
 TSC_TIMEOUT = 120
 _CACHE_KEY = "typescript.tsc_runs"
+_IS_WINDOWS = os.name == "nt"
 
 
 @dataclass(frozen=True)
@@ -78,7 +85,7 @@ def resolve_tsc_command(*start_dirs: Path) -> list[str]:
     ``tsc``. ``npx tsc`` is deliberately avoided: without a local install it
     fetches an unrelated npm package named ``tsc``.
     """
-    names = ("tsc.cmd", "tsc") if os.name == "nt" else ("tsc",)
+    names = ("tsc.cmd", "tsc") if _IS_WINDOWS else ("tsc",)
     for start in start_dirs:
         for directory in (start, *start.parents):
             for name in names:
@@ -89,6 +96,32 @@ def resolve_tsc_command(*start_dirs: Path) -> list[str]:
     if tsc_path:
         return [tsc_path]
     raise OSError("TypeScript compiler not found (install `typescript` in the project)")
+
+
+def build_info_path(tsconfig_path: Path) -> Path:
+    """Where the incremental build info for ``tsconfig_path`` lives: one file per tsconfig."""
+    resolved = tsconfig_path.resolve()
+    digest = hashlib.sha1(str(resolved).encode("utf-8"), usedforsecurity=False)
+    return (
+        get_state_dir()
+        / "tsc"
+        / f"{resolved.stem}-{digest.hexdigest()[:12]}.tsbuildinfo"
+    )
+
+
+def _build_info_flags(tsconfig_path: Path) -> list[str]:
+    """``--incremental --tsBuildInfoFile`` under the state dir; none if it can't be made.
+
+    ``--incremental false`` would not do: composite projects reject it and
+    still write their build info.
+    """
+    target = build_info_path(tsconfig_path)
+    try:
+        target.parent.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        logger.debug("tsc build info dir unavailable: %s", exc)
+        return []
+    return ["--incremental", "--tsBuildInfoFile", str(target)]
 
 
 def run_tsc_check(
@@ -107,6 +140,7 @@ def run_tsc_check(
         "--listFiles",
         "--pretty",
         "false",
+        *_build_info_flags(tsconfig_path),
     ]
     if limits is not None:
         return run_bounded(cmd, cwd=project_root, limits=limits)
@@ -247,6 +281,7 @@ __all__ = [
     "TscDiagnostic",
     "TscRun",
     "UNUSED_CODES",
+    "build_info_path",
     "parse_tsc_output",
     "resolve_tsc_command",
     "run_tsc",

@@ -156,7 +156,7 @@ class TestDenoFallback:
 
         local_tsc = _write(tmp_path, "node_modules/.bin/tsc", "#!/bin/sh\n")
         _write(tmp_path, "packages/app/tsconfig.json", "{}\n")
-        monkeypatch.setattr(tsc_mod.os, "name", "posix")
+        monkeypatch.setattr(tsc_mod, "_IS_WINDOWS", False)
         monkeypatch.setattr(tsc_mod.shutil, "which", lambda _name: "/usr/bin/tsc")
         monkeypatch.setattr(tsc_mod._proc_runtime, "run", _fake_run)
         tsconfig = tmp_path / "packages/app/tsconfig.json"
@@ -174,6 +174,9 @@ class TestDenoFallback:
             "--listFiles",
             "--pretty",
             "false",
+            "--incremental",
+            "--tsBuildInfoFile",
+            str(tsc_mod.build_info_path(tsconfig)),
         ]
         assert recorded["cwd"] == tmp_path
         assert recorded["timeout"] == 120

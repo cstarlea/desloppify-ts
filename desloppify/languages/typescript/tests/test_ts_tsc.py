@@ -5,12 +5,16 @@ from __future__ import annotations
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
+
 import desloppify.languages.typescript.detectors.tsc as tsc_mod
 import desloppify.languages.typescript.detectors.unused as unused_mod
+from desloppify.base.runtime_state import RuntimeContext, runtime_scope
 from desloppify.languages.typescript.detectors.tsc import (
     TscDiagnostic,
     parse_tsc_output,
 )
+from desloppify.languages.typescript.tests.golden import harness
 
 
 def test_parse_joins_message_chains_and_collects_listed_files():
@@ -127,3 +131,71 @@ def test_unused_reuses_the_cached_run(tmp_path, monkeypatch):
 
     assert [e["name"] for e in first] == ["x"] == [e["name"] for e in second]
     assert calls == [Path(tmp_path / "tsconfig.json")]
+
+
+def _project_files(root: Path) -> dict[str, bytes]:
+    return {
+        str(p.relative_to(root)): p.read_bytes()
+        for p in root.rglob("*")
+        if p.is_file() and "node_modules" not in p.parts
+    }
+
+
+def test_build_info_goes_to_the_state_dir(tmp_path, monkeypatch):
+    project, state = tmp_path / "proj", tmp_path / "state"
+    project.mkdir()
+    tsconfig = project / "tsconfig.json"
+    tsconfig.write_text('{"compilerOptions": {"incremental": true}}\n')
+    recorded: list[list[str]] = []
+
+    def fake_run(cmd, **_kwargs):
+        recorded.append(cmd)
+        return SimpleNamespace(stdout="", stderr="", returncode=0)
+
+    monkeypatch.setattr(tsc_mod, "resolve_tsc_command", lambda *_a: ["tsc"])
+    monkeypatch.setattr(tsc_mod._proc_runtime, "run", fake_run)
+    with runtime_scope(RuntimeContext(project_root=project, state_dir=state)):
+        tsc_mod.run_tsc_check(project, tsconfig)
+        other = project / "packages" / "tsconfig.json"
+        assert tsc_mod.build_info_path(other) != tsc_mod.build_info_path(tsconfig)
+
+    (cmd,) = recorded
+    assert cmd[-3:-1] == ["--incremental", "--tsBuildInfoFile"]
+    target = Path(cmd[-1])
+    assert target.parent == state / "tsc" and target.parent.is_dir()
+    assert target.name.startswith("tsconfig-") and target.suffix == ".tsbuildinfo"
+
+
+@pytest.mark.skipif(
+    not harness.node_tools_installed(), reason="pinned tsc not installed"
+)
+@pytest.mark.parametrize(
+    "options",
+    [
+        '{"incremental": true, "noEmit": true}',
+        '{"composite": true, "outDir": "out"}',
+        "{}",
+    ],
+    ids=["incremental", "composite", "plain"],
+)
+def test_real_tsc_writes_nothing_into_the_project(tmp_path, monkeypatch, options):
+    project, state = tmp_path / "proj", tmp_path / "state"
+    project.mkdir()
+    (project / "a.ts").write_text("export const x = 1;\nconst unused = 2;\n")
+    tsconfig = project / "tsconfig.json"
+    tsconfig.write_text(f'{{"compilerOptions": {options}, "include": ["*.ts"]}}\n')
+    tsc_cmd = tsc_mod.resolve_tsc_command(harness.NODE_MODULES.parent)
+    monkeypatch.setattr(tsc_mod, "resolve_tsc_command", lambda *_a: tsc_cmd)
+    before = _project_files(project)
+
+    with runtime_scope(RuntimeContext(project_root=project, state_dir=state)):
+        first = tsc_mod.run_tsc(project, tsconfig)
+        second = tsc_mod.run_tsc(project, tsconfig)
+        build_info = tsc_mod.build_info_path(tsconfig)
+
+    assert _project_files(project) == before
+    assert build_info.is_file()
+    for run in (first, second):
+        assert run.usable
+        assert [d.code for d in run.diagnostics] == ["TS6133"]
+    assert second.files == first.files
