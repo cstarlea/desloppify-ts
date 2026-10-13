@@ -25,7 +25,11 @@ from desloppify.app.commands.helpers.command_lock import (
 )
 from desloppify.base.discovery import file_paths as file_paths_mod
 from desloppify.base.discovery.file_paths import LockOrderError, exclusive_file_lock
-from desloppify.engine._plan.persistence import load_plan, plan_lock, save_plan
+from desloppify.engine._plan.persistence import (
+    load_plan,
+    plan_lock,
+    save_plan,
+)
 from desloppify.engine._state import progression as progression_mod
 from desloppify.engine._state.persistence import (
     hold_state_lock,
@@ -68,7 +72,7 @@ def _command_worker(state_dir: str, worker: int, rounds: int) -> None:
     state_file = Path(state_dir) / "state.json"
     plan_file = Path(state_dir) / "plan.json"
     args = argparse.Namespace(
-        command="plan", plan_action="queue", state=str(state_file)
+        command="plan", plan_action="cluster", state=str(state_file)
     )
     for i in range(rounds):
         with command_lock(args):
@@ -592,6 +596,10 @@ def test_lock_times_out_against_another_process(tmp_path: Path) -> None:
     [
         ({"command": "scan"}, True),
         ({"command": "plan", "plan_action": "cluster"}, True),
+        ({"command": "plan", "plan_action": "resolve"}, True),
+        ({"command": "plan"}, False),
+        ({"command": "plan", "plan_action": "queue"}, False),
+        ({"command": "plan", "plan_action": "show"}, False),
         ({"command": "plan", "plan_action": "triage", "run_stages": False}, True),
         ({"command": "plan", "plan_action": "triage", "run_stages": True}, False),
         ({"command": "review", "import_file": "x.json"}, True),
@@ -602,9 +610,15 @@ def test_lock_times_out_against_another_process(tmp_path: Path) -> None:
         ),
         ({"command": "suppress"}, True),
         ({"command": "exclude"}, True),
-        ({"command": "zone"}, True),
+        ({"command": "zone", "zone_action": "set"}, True),
+        ({"command": "zone", "zone_action": "clear"}, True),
+        ({"command": "zone", "zone_action": "show"}, False),
+        ({"command": "zone"}, False),
         ({"command": "autofix"}, True),
-        ({"command": "config"}, True),
+        ({"command": "config", "config_action": "set"}, True),
+        ({"command": "config", "config_action": "show"}, False),
+        ({"command": "directives", "directives_action": "unset"}, True),
+        ({"command": "directives"}, False),
         ({"command": "status"}, False),
         ({"command": "show"}, False),
         ({"command": "next"}, False),
@@ -613,3 +627,23 @@ def test_lock_times_out_against_another_process(tmp_path: Path) -> None:
 )
 def test_command_needs_lock(namespace: dict, expected: bool) -> None:
     assert command_needs_lock(argparse.Namespace(**namespace)) is expected
+
+
+@pytest.mark.parametrize(
+    ("namespace", "locked"),
+    [
+        ({"command": "plan", "plan_action": "queue"}, False),
+        ({"command": "zone", "zone_action": "show"}, False),
+        ({"command": "plan", "plan_action": "cluster"}, True),
+        ({"command": "zone", "zone_action": "set"}, True),
+        ({"command": "scan"}, True),
+    ],
+)
+def test_lock_files_only_for_commands_that_lock(
+    tmp_path: Path, namespace: dict, locked: bool
+) -> None:
+    state_file = tmp_path / "state" / "state.json"
+    with command_lock(argparse.Namespace(**namespace, state=str(state_file))):
+        pass
+    assert state_file.parent.exists() is locked
+    assert (state_file.parent / "plan.lock").exists() is locked

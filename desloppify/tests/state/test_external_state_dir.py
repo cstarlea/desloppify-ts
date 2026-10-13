@@ -46,12 +46,14 @@ def _run_main(monkeypatch, argv: list[str], cwd: Path) -> list[Path]:
     return seen
 
 
-@pytest.mark.parametrize("argv", [["zone", "show"], ["scan"]])
+@pytest.mark.parametrize("argv", [["zone", "set", "src", "test"], ["scan"]])
 def test_state_elsewhere_takes_locks_next_to_state(tmp_path, monkeypatch, argv):
     monkeypatch.delenv("DESLOPPIFY_ROOT", raising=False)
     repo = _repo(tmp_path)
     elsewhere = tmp_path / "out"
     state = elsewhere / "state.json"
+    elsewhere.mkdir()
+    state.write_text("{}")
     command, *rest = argv
     seen = _run_main(
         monkeypatch,
@@ -61,6 +63,28 @@ def test_state_elsewhere_takes_locks_next_to_state(tmp_path, monkeypatch, argv):
     assert seen == [elsewhere.resolve()]
     assert not (repo / ".desloppify").exists()
     assert (elsewhere / "plan.lock").exists()
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [
+        ["zone", "show", "--state", "{state}"],
+        ["zone", "--state", "{state}", "show"],
+        ["status", "--state", "{state}"],
+        ["plan", "queue", "--state", "{state}"],
+        ["config", "show"],
+    ],
+)
+def test_read_only_commands_create_nothing_without_state(tmp_path, monkeypatch, argv):
+    monkeypatch.delenv("DESLOPPIFY_ROOT", raising=False)
+    repo = _repo(tmp_path)
+    state = tmp_path / "out" / "state.json"
+    argv = [arg.replace("{state}", str(state)) for arg in argv]
+    seen = _run_main(monkeypatch, argv, repo)
+    expected = state.parent if "--state" in argv else repo / ".desloppify"
+    assert seen == [expected.resolve()]
+    assert not (repo / ".desloppify").exists()
+    assert not state.parent.exists()
 
 
 def test_state_inside_project_keeps_project_state_dir(tmp_path, monkeypatch):

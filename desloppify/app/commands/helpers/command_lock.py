@@ -42,6 +42,15 @@ READ_ONLY_COMMANDS = frozenset(
     }
 )
 
+# Subcommands that only display: (command, its action attribute) -> actions.
+# ``None`` is the bare command, which shows too.
+READ_ONLY_ACTIONS = {
+    ("plan", "plan_action"): frozenset({None, "show", "queue"}),
+    ("zone", "zone_action"): frozenset({None, "show"}),
+    ("config", "config_action"): frozenset({None, "show"}),
+    ("directives", "directives_action"): frozenset({None, "show"}),
+}
+
 # Long enough for a scan or a review import to finish before the next
 # command gives up.
 COMMAND_LOCK_TIMEOUT = 600.0
@@ -68,6 +77,9 @@ def command_needs_lock(args: argparse.Namespace) -> bool:
     command = getattr(args, "command", None)
     if not command or command in READ_ONLY_COMMANDS:
         return False
+    for (name, attr), actions in READ_ONLY_ACTIONS.items():
+        if command == name and getattr(args, attr, None) in actions:
+            return False
     return not _spawns_desloppify(args)
 
 
@@ -119,6 +131,7 @@ def command_lock(args: argparse.Namespace) -> Iterator[None]:
 
 __all__ = [
     "COMMAND_LOCK_TIMEOUT",
+    "READ_ONLY_ACTIONS",
     "READ_ONLY_COMMANDS",
     "command_lock",
     "command_needs_lock",

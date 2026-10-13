@@ -138,7 +138,47 @@ def create_parser(*, detector_names: list[str]) -> argparse.ArgumentParser:
     _add_directives_parser(sub)
     _add_setup_parser(sub)
     _add_update_skill_parser(sub)
+    for command_parser in sub.choices.values():
+        _inherit_options(command_parser, _INHERITED_OPTIONS)
     return parser
+
+
+# Options a command defines that its subcommands also accept, so
+# ``desloppify zone show --state X`` works like ``desloppify zone --state X show``.
+_INHERITED_OPTIONS = ("--state", "--path")
+
+
+def _inherit_options(parser: argparse.ArgumentParser, names: tuple[str, ...]) -> None:
+    """Re-declare ``parser``'s options named ``names`` on all its subcommands.
+
+    The copies default to ``SUPPRESS``, so they only set the value when given
+    and never reset one passed before the subcommand.
+    """
+    actions = [
+        action
+        for action in parser._actions
+        if any(name in action.option_strings for name in names)
+    ]
+    if not actions:
+        return
+    for action in parser._actions:
+        if not isinstance(action, argparse._SubParsersAction):
+            continue
+        for child in action.choices.values():
+            for inherited in actions:
+                if any(
+                    opt in child._option_string_actions
+                    for opt in inherited.option_strings
+                ):
+                    continue
+                child.add_argument(
+                    *inherited.option_strings,
+                    dest=inherited.dest,
+                    type=inherited.type,
+                    default=argparse.SUPPRESS,
+                    help=inherited.help,
+                )
+            _inherit_options(child, tuple(a.option_strings[0] for a in actions))
 
 
 __all__ = ["USAGE_EXAMPLES", "create_parser"]

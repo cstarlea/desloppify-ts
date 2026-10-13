@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 from pathlib import Path
 from types import SimpleNamespace
@@ -129,6 +130,37 @@ class TestCreateParser:
     def test_scan_rejects_legacy_deep_flag(self, parser):
         with pytest.raises(SystemExit):
             parser.parse_args(["scan", "--deep"])
+
+    @pytest.mark.parametrize(
+        "argv",
+        [
+            ["zone", "show", "--state", "s.json"],
+            ["zone", "--state", "s.json", "show"],
+            ["plan", "resolve", "id1", "--state", "s.json"],
+            ["plan", "queue", "--state", "s.json"],
+            ["plan", "cluster", "list", "--state", "s.json"],
+            ["plan", "--state", "s.json", "cluster", "list"],
+        ],
+    )
+    def test_state_accepted_before_or_after_the_subcommand(self, parser, argv):
+        assert parser.parse_args(argv).state == "s.json"
+
+    def test_subcommand_state_overrides_and_absent_keeps_parent(self, parser):
+        args = parser.parse_args(["zone", "--state", "a", "show", "--state", "b"])
+        assert args.state == "b"
+        args = parser.parse_args(["zone", "--path", "src", "show"])
+        assert args.path == "src" and args.state is None
+
+    def test_every_subcommand_of_a_state_command_accepts_state(self, parser):
+        def walk(p, inherited):
+            has_state = "--state" in p._option_string_actions
+            assert has_state or not inherited, p.prog
+            for action in p._actions:
+                if isinstance(action, argparse._SubParsersAction):
+                    for child in action.choices.values():
+                        walk(child, has_state)
+
+        walk(parser, False)
 
     def test_scan_with_profile(self, parser):
         args = parser.parse_args(["scan", "--profile", "ci"])
