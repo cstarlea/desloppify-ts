@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any, NotRequired, Required, TypedDict
 
 from desloppify.engine._plan.constants import SYNTHETIC_PREFIXES
@@ -355,6 +356,34 @@ def ensure_plan_defaults(
     epic_triage_meta = plan.get("epic_triage_meta")
     if isinstance(epic_triage_meta, dict):
         epic_triage_meta.pop("triage_force_visible", None)
+    _sync_auto_cluster_counts(plan)
+
+
+_AUTO_DESCRIPTION_COUNT = re.compile(r"^(Remove|Fix|Address) \d+ ")
+
+
+def _sync_auto_cluster_counts(plan: dict[str, Any]) -> None:
+    """Keep the count in an auto cluster's description equal to its size.
+
+    The description ("Remove 12 unused issues") is written when the cluster
+    is built; resolving members mid-cycle shrinks the cluster without
+    regenerating it.
+    """
+    clusters = plan.get("clusters")
+    if not isinstance(clusters, dict):
+        return
+    for cluster in clusters.values():
+        if not isinstance(cluster, dict) or not cluster.get("auto"):
+            continue
+        if cluster.get("user_modified"):
+            continue
+        desc = cluster.get("description")
+        ids = cluster.get("issue_ids")
+        if not isinstance(desc, str) or not isinstance(ids, list) or not ids:
+            continue
+        cluster["description"] = _AUTO_DESCRIPTION_COUNT.sub(
+            rf"\g<1> {len(ids)} ", desc, count=1
+        )
 
 
 def triage_clusters(plan: dict[str, Any]) -> dict[str, Cluster]:

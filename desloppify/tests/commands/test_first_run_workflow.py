@@ -311,6 +311,76 @@ def test_queue_counts_add_up_to_open_issues(monkeypatch):
     assert format_queue_headline(breakdown).endswith("· Backlog: 3")
 
 
+def _queue_lines(out: str) -> list[str]:
+    return [line.strip() for line in out.splitlines() if "Queue: " in line]
+
+
+def test_queue_count_agrees_across_status_next_plan_and_scan(monkeypatch, capsys):
+    """Every surface reports the same queue size."""
+    from desloppify.app.commands.helpers.queue_progress import queue_headline
+    from desloppify.app.commands.scan.reporting.agent_context import (
+        _print_living_plan_notice,
+    )
+    from desloppify.app.commands.status.render import show_agent_plan
+    from desloppify.engine._plan.schema import ensure_plan_defaults
+    from desloppify.engine._work_queue.core import QueueBuildOptions
+    from desloppify.engine.planning.queue_policy import build_execution_queue
+    from desloppify.engine.planning.render import generate_plan_md
+
+    state, plan = _first_run(monkeypatch)
+    # Before any resolve: three items in one collapsed cluster are 3, not 1.
+    assert plan_aware_queue_breakdown(state, plan).queue_total == 3
+
+    # `plan resolve` purges the item, focuses its cluster and saves the plan.
+    _resolve_fixed(state, plan, UNUSED_IDS[:1])
+    plan["active_cluster"] = "auto/unused"
+    ensure_plan_defaults(plan)
+    expected = "Queue: 2 items"
+
+    breakdown = plan_aware_queue_breakdown(state, plan)
+    assert breakdown.queue_total == 2
+
+    # status: the score block and the AGENT PLAN block
+    for text, _style in format_queue_block(breakdown):
+        print(text)
+    show_agent_plan({}, plan=plan, breakdown=breakdown)
+    status_out = capsys.readouterr().out
+    assert "Focused on: auto/unused (2 items remaining)." in status_out
+
+    # next: the header total, whatever the focus and --count show
+    items = build_execution_queue(
+        state, options=QueueBuildOptions(status="open", count=None, plan=plan)
+    )["items"]
+    queue = {"items": list(items)}
+    _apply_queue_view_transforms(
+        items=items,
+        queue=queue,
+        opts=NextOptions(count=1),
+        plan_for_queue=plan,
+        effective_cluster="auto/unused",
+        collapse_plan_clusters=True,
+    )
+    assert queue["total"] == 2
+
+    # plan: queue line, ordered section, cluster description, no repeat
+    plan_line = queue_headline(state, plan)
+    plan_md = generate_plan_md(state, plan)
+    assert "## User-Ordered Queue (2 items)" in plan_md
+    assert "> Remove 2 unused issues" in plan_md
+    assert "## Open Items" not in plan_md
+    for issue_id in UNUSED_IDS[1:]:
+        assert plan_md.count(issue_id) == 1
+
+    # scan: the LLM summary's living-plan line
+    _print_living_plan_notice({"plan": plan, "active_cluster": None}, state)
+    scan_out = capsys.readouterr().out
+
+    lines = [*_queue_lines(status_out), plan_line, *_queue_lines(scan_out)]
+    assert len(lines) == 4
+    for line in lines:
+        assert expected in line, line
+
+
 def test_drained_banner_does_not_claim_completion_with_planned_work(capsys):
     planned = QueueBreakdown(queue_total=2, workflow=2, objective_planned=5)
     print_objective_drained_banner(80.0, 2, planned)

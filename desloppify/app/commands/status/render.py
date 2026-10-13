@@ -285,7 +285,10 @@ def show_subjective_followup(
 
 
 def show_agent_plan(
-    narrative: dict[str, Any], *, plan: dict[str, Any] | None = None
+    narrative: dict[str, Any],
+    *,
+    plan: dict[str, Any] | None = None,
+    breakdown: Any = None,
 ) -> None:
     """Show concise action plan derived from narrative.actions.
 
@@ -295,6 +298,7 @@ def show_agent_plan(
         print_agent_plan(
             [],
             plan=plan,
+            breakdown=breakdown,
             header="  AGENT PLAN (use `desloppify next` to see your next task):",
         )
         return

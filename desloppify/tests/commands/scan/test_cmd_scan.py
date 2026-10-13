@@ -552,6 +552,23 @@ class TestCollectCodebaseMetrics:
         assert result["total_files"] == 1
         assert result["total_loc"] == 2
 
+    def test_counts_root_relative_files_under_a_subdirectory_scan(
+        self, tmp_path, monkeypatch
+    ):
+        """`--path src` lists files as `src/...`; LOC must not read 0."""
+        (tmp_path / "src" / "lib").mkdir(parents=True)
+        (tmp_path / "src" / "lib" / "a.ts").write_text("a\nb\nc\n")
+        monkeypatch.setenv("DESLOPPIFY_ROOT", str(tmp_path))
+        monkeypatch.chdir(tmp_path)
+
+        class FakeLang:
+            def file_finder(self, _path):
+                return ["src/lib/a.ts"]
+
+        result = collect_codebase_metrics(FakeLang(), tmp_path / "src")
+        assert result is not None
+        assert result["total_loc"] == 3
+
 
 # ---------------------------------------------------------------------------
 # show_post_scan_analysis

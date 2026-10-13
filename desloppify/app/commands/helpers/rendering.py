@@ -31,14 +31,16 @@ def print_agent_plan(
     next_command: str | None = None,
     header: str = "  AGENT PLAN:",
     plan: dict | None = None,
+    breakdown: QueueBreakdown | None = None,
 ) -> None:
     """Print a consistent AGENT PLAN block with numbered steps.
 
     When a living *plan* is active, renders plan focus/progress instead
-    of the narrative-derived steps.
+    of the narrative-derived steps. Pass the caller's *breakdown* so the
+    queue line matches the one printed above it.
     """
     if plan and (plan.get("queue_order") or plan.get("clusters")):
-        _print_plan_agent_block(plan, header=header)
+        _print_plan_agent_block(plan, header=header, breakdown=breakdown)
         return
     if not steps:
         return
@@ -49,29 +51,36 @@ def print_agent_plan(
         print(colorize(f"  Next command: `{next_command}`", "dim"))
 
 
-def _print_plan_agent_block(plan: dict, *, header: str = "  AGENT PLAN:") -> None:
+def _print_plan_agent_block(
+    plan: dict,
+    *,
+    header: str = "  AGENT PLAN:",
+    breakdown: QueueBreakdown | None = None,
+) -> None:
     """Render the living plan as the agent plan block."""
     active = plan.get("active_cluster")
-    ordered = len(plan.get("queue_order", []))
-    skipped_ids = set(plan.get("skipped", {}).keys())
-    skipped = len(skipped_ids)
-    queue_order = plan.get("queue_order", [])
-    plan_ordered = sum(1 for fid in queue_order if fid not in skipped_ids)
-
-    # Build a lightweight breakdown for the headline
-    breakdown = QueueBreakdown(
-        queue_total=ordered,
-        plan_ordered=plan_ordered,
-        skipped=skipped,
-    )
+    if breakdown is None:
+        # No state at hand: count the plan's own queue entries.
+        skipped_ids = set(plan.get("skipped", {}).keys())
+        queue_order = plan.get("queue_order", [])
+        breakdown = QueueBreakdown(
+            queue_total=len(queue_order),
+            plan_ordered=sum(1 for fid in queue_order if fid not in skipped_ids),
+            skipped=len(skipped_ids),
+        )
     headline = format_queue_headline(breakdown)
 
     print(colorize(header, "yellow"))
     print(colorize(f"  Living plan active: {headline}", "dim"))
     if active:
-        cluster = plan.get("clusters", {}).get(active, {})
-        queue_set = set(plan.get("queue_order", []))
-        remaining = sum(1 for fid in cluster.get("issue_ids", []) if fid in queue_set)
+        if breakdown.focus_cluster == active:
+            remaining = breakdown.focus_cluster_count
+        else:
+            cluster = plan.get("clusters", {}).get(active, {})
+            queue_set = set(plan.get("queue_order", []))
+            remaining = sum(
+                1 for fid in cluster.get("issue_ids", []) if fid in queue_set
+            )
         print(colorize(f"  Focused on: {active} ({remaining} items remaining).", "dim"))
     print(colorize("  Next command: `desloppify next`", "dim"))
     print(colorize("  View plan: `desloppify plan`", "dim"))

@@ -226,7 +226,7 @@ def render_terminal_status(
 
     print_triage_guardrail_info(plan=plan, state=state)
 
-    print_score_section(state, scores, plan, target_strict_score, queue_ctx)
+    breakdown = print_score_section(state, scores, plan, target_strict_score, queue_ctx)
     print_scan_metrics(state)
     print_open_scope_breakdown(state)
     print_scan_completeness(state)
@@ -249,7 +249,7 @@ def render_terminal_status(
     except PLAN_LOAD_EXCEPTIONS:
         _logger.debug("commit tracking reminder skipped", exc_info=True)
 
-    show_agent_plan(narrative, plan=active_plan)
+    show_agent_plan(narrative, plan=active_plan, breakdown=breakdown)
 
     if narrative.get("headline"):
         print(colorize(f"  -> {narrative['headline']}", "cyan"))

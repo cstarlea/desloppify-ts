@@ -462,7 +462,6 @@ class TestCmdShowBackendIntegration:
             },
         )
         monkeypatch.setattr(show_cmd_mod, "write_query", lambda _payload: None)
-        monkeypatch.setattr(show_cmd_mod, "check_skill_version", lambda: None)
 
         def fake_queue(_state, **kwargs):
             return {"items": []}
@@ -507,7 +506,6 @@ class TestCmdShowBackendIntegration:
             },
         )
         monkeypatch.setattr(show_cmd_mod, "write_query", lambda _payload: None)
-        monkeypatch.setattr(show_cmd_mod, "check_skill_version", lambda: None)
 
         def fake_queue(_state, **kwargs):
             return {"items": []}
@@ -565,7 +563,6 @@ class TestCmdShowBackendIntegration:
             },
         )
         monkeypatch.setattr(show_cmd_mod, "write_query", lambda _payload: None)
-        monkeypatch.setattr(show_cmd_mod, "check_skill_version", lambda: None)
 
         call_count = {"n": 0}
 

@@ -267,7 +267,14 @@ def generate_plan_md(state: PlanState, plan: dict | None = None) -> str:
         )
         execution_items = execution_queue.get("items", [])
         lines.extend(_plan_user_ordered_section(execution_items, plan))
-        lines.extend(_plan_item_sections(issues, state=state, plan=plan))
+        # Queue items the ordered section already listed are not repeated.
+        ordered_ids = set(plan.get("queue_order", [])) - set(plan.get("skipped", {}))
+        unordered = [
+            item for item in execution_items if item.get("id") not in ordered_ids
+        ]
+        if unordered:
+            lines.extend(["---", f"## Other Queue Items ({len(unordered)})", ""])
+            lines.extend(_render_queue_item_sections(unordered, include_header=False))
 
         backlog_queue = build_backlog_queue(
             state,

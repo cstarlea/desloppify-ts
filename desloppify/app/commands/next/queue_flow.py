@@ -345,12 +345,17 @@ def _apply_queue_view_transforms(
     collapse_plan_clusters: bool,
 ) -> list[dict]:
     visible = items
+    # The queue size counts items, as status and plan do; a cluster focus or
+    # collapsed clusters only change what is shown.
+    queue["total"] = len(items)
     if collapse_plan_clusters and effective_cluster and plan_for_queue:
         focused = filter_cluster_focus(visible, plan_for_queue, effective_cluster)
         # A remembered focus whose cluster has nothing queued must not hide the
         # rest of the queue behind a "Queue cleared!".
         if focused or opts.cluster:
             visible = focused
+            queue["focus_cluster"] = effective_cluster
+            queue["focus_total"] = len(focused)
     elif (
         collapse_plan_clusters
         and plan_for_queue
@@ -360,7 +365,6 @@ def _apply_queue_view_transforms(
         visible = collapse_clusters(visible, plan_for_queue)
 
     if opts.count:
-        queue["total"] = len(visible)
         visible = visible[: opts.count]
         queue["items"] = visible
     return visible

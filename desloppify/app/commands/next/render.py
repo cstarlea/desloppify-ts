@@ -339,9 +339,10 @@ def _render_cluster_drill_header(
     cluster_data = clusters.get(cluster_name, {})
     total = len(cluster_data.get("issue_ids", []))
     desc = cluster_data.get("description") or ""
+    shown = f", showing {len(items)}" if len(items) < total else ""
     print(
         colorize(
-            f"\n  ┌─ Cluster: {cluster_name} ({len(items)} of {total} remaining) ─┐",
+            f"\n  ┌─ Cluster: {cluster_name} ({total} remaining{shown}) ─┐",
             "cyan",
         )
     )

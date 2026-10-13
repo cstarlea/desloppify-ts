@@ -84,10 +84,13 @@ def _compute_headline_inner(
 
     # First scan framing
     if phase == "first_scan":
-        dims = len(dimensions.get("lowest_dimensions", [])) if dimensions else 0
+        dims = (dimensions or {}).get("failing_dimension_count", 0)
         open_count = stats.get("open", 0)
         if dims:
-            return f"First scan complete. {open_count} open issues across {dims} dimensions."
+            return (
+                f"First scan complete. {open_count} open issues across"
+                f" {dims} dimension{'s' if dims != 1 else ''}."
+            )
         return f"First scan complete. {open_count} issues detected."
 
     # Regression — acknowledge that drops after fixes are normal

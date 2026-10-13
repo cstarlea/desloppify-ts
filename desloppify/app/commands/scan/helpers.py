@@ -7,6 +7,7 @@ from pathlib import Path
 
 from desloppify import state as state_mod
 from desloppify.base.discovery.file_paths import count_lines
+from desloppify.base.discovery.paths import get_project_root
 from desloppify.base.discovery.source import (
     DEFAULT_EXCLUSIONS,
     read_file_text,
@@ -89,11 +90,13 @@ def collect_codebase_metrics(
         return None
     scan_root = Path(path)
     files = _resolve_scan_files(lang, scan_root, files=files)
+    # Discovered files are relative to the project root, not the scan path.
+    project_root = get_project_root()
     total_loc = 0
     dirs = set()
     for filepath in files:
         try:
-            abs_path = _resolve_scan_file_path(filepath, project_root=scan_root)
+            abs_path = _resolve_scan_file_path(filepath, project_root=project_root)
             content = read_file_text(abs_path)
             if content is not None:
                 total_loc += len(content.splitlines())
@@ -123,7 +126,7 @@ def _resolve_scan_files(
 
 
 def _resolve_scan_file_path(filepath: str, *, project_root: Path) -> str:
-    """Resolve relative scan filepaths against the active scan path."""
+    """Resolve a relative scan filepath against the project root."""
     file_path = Path(filepath)
     if file_path.is_absolute():
         return str(file_path)

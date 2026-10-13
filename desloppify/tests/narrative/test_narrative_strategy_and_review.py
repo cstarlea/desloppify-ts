@@ -62,7 +62,9 @@ class TestComputeHeadline:
                     {"name": "A", "failing": 1, "impact": 1.0, "strict": 90},
                     {"name": "B", "failing": 2, "impact": 2.0, "strict": 80},
                     {"name": "C", "failing": 3, "impact": 3.0, "strict": 70},
-                ]
+                ],
+                # lowest_dimensions is a top-3 list; the count comes from all.
+                "failing_dimension_count": 7,
             },
             debt={"overall_gap": 0},
             milestone=None,
@@ -75,7 +77,7 @@ class TestComputeHeadline:
         assert result is not None
         assert "First scan complete" in result
         assert "15 open issues" in result
-        assert "3 dimensions" in result
+        assert "across 7 dimensions" in result
 
     def test_first_scan_no_dimensions(self):
         result = compute_headline(

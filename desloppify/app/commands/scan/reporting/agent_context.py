@@ -9,6 +9,7 @@ from typing import Any
 
 from desloppify import state as state_mod
 from desloppify.app import skill_docs as skill_docs_mod
+from desloppify.app.commands.helpers.queue_progress import queue_headline
 from desloppify.app.commands.helpers.rendering import unscored_open_note
 from desloppify.base import registry as registry_mod
 from desloppify.base.discovery.paths import get_project_root, get_state_dir
@@ -270,7 +271,7 @@ def print_llm_summary(
     plan_snapshot, has_plan = _load_living_plan_snapshot()
 
     if has_plan:
-        _print_living_plan_notice(plan_snapshot)
+        _print_living_plan_notice(plan_snapshot, state)
 
     headline = state_mod.headline_score(state)
     if headline.provisional and headline.score is not None:
@@ -368,6 +369,7 @@ def _load_living_plan_snapshot() -> tuple[dict[str, object], bool]:
         "clusters": clusters if isinstance(clusters, dict) else {},
         "skipped": skipped if isinstance(skipped, dict) else {},
         "active_cluster": active if isinstance(active, str) and active else None,
+        "plan": loaded_plan,
     }
     has_plan = bool(
         snapshot["queue_order"] or snapshot["clusters"] or snapshot["skipped"]
@@ -375,11 +377,17 @@ def _load_living_plan_snapshot() -> tuple[dict[str, object], bool]:
     return snapshot, has_plan
 
 
-def _print_living_plan_notice(plan_snapshot: dict[str, object]) -> None:
-    ordered = len(plan_snapshot.get("queue_order", []))
-    skipped = len(plan_snapshot.get("skipped", {}))
+def _print_living_plan_notice(
+    plan_snapshot: dict[str, object], state: dict | None = None
+) -> None:
     active = plan_snapshot.get("active_cluster")
-    print(f"LIVING PLAN ACTIVE: {ordered} ordered, {skipped} skipped.")
+    if state is not None:
+        plan = plan_snapshot.get("plan")
+        print(f"LIVING PLAN ACTIVE: {queue_headline(state, plan)}.")
+    else:
+        ordered = len(plan_snapshot.get("queue_order", []))
+        skipped = len(plan_snapshot.get("skipped", {}))
+        print(f"LIVING PLAN ACTIVE: {ordered} ordered, {skipped} skipped.")
     if isinstance(active, str) and active:
         cluster = plan_snapshot.get("clusters", {}).get(active)
         issue_ids = cluster.get("issue_ids", []) if isinstance(cluster, dict) else []

@@ -9,7 +9,6 @@ from desloppify.app.commands.helpers.guardrails import print_triage_guardrail_in
 from desloppify.app.commands.helpers.lang import resolve_lang
 from desloppify.app.commands.helpers.query import write_query
 from desloppify.app.commands.helpers.state import require_issue_inventory
-from desloppify.app.skill_docs import check_skill_version
 from desloppify.base.output.terminal import colorize
 from desloppify.base.tooling import check_config_staleness
 from desloppify.engine.plan_state import load_plan
@@ -31,9 +30,6 @@ def cmd_next(args: argparse.Namespace) -> None:
     if not require_issue_inventory(state):
         return
 
-    skill_warning = check_skill_version()
-    if skill_warning:
-        print(colorize(f"  {skill_warning}", "yellow"))
     config_warning = check_config_staleness(config)
     if config_warning:
         print(colorize(f"  {config_warning}", "yellow"))

@@ -6,10 +6,7 @@ import argparse
 import logging
 
 from desloppify.app.commands.helpers.command_runtime import command_runtime
-from desloppify.app.commands.helpers.queue_progress import (
-    format_queue_headline,
-    plan_aware_queue_breakdown,
-)
+from desloppify.app.commands.helpers.queue_progress import queue_headline
 from desloppify.app.commands.helpers.rendering import print_agent_plan
 from desloppify.app.commands.helpers.state import require_issue_inventory
 from desloppify.app.commands.plan.cluster import cmd_cluster_dispatch
@@ -36,7 +33,6 @@ from desloppify.app.commands.plan.shared.cluster_membership import cluster_issue
 from desloppify.app.commands.plan.triage.command import cmd_plan_triage
 from desloppify.base.config import load_config
 from desloppify.base.discovery.file_paths import safe_write_text
-from desloppify.base.exception_sets import PLAN_LOAD_EXCEPTIONS
 from desloppify.base.output.fallbacks import warn_best_effort
 from desloppify.base.output.terminal import colorize
 from desloppify.base.tooling import check_config_staleness
@@ -114,17 +110,6 @@ def _cmd_plan_generate(args: argparse.Namespace) -> None:
     cmd_plan_output(args)
 
 
-def _plan_queue_line(state: dict, plan: dict) -> str:
-    """Build the queue headline with a resilient fallback."""
-    try:
-        breakdown = plan_aware_queue_breakdown(state, plan)
-        return format_queue_headline(breakdown)
-    except PLAN_LOAD_EXCEPTIONS as exc:
-        logger.debug("Plan show fell back to raw queue counts.", exc_info=exc)
-        ordered = len(plan.get("queue_order", []))
-        return f"Queue: {ordered} items prioritized"
-
-
 def _skip_kind_counts(plan: dict) -> tuple[int, int, int, int]:
     """Return total skipped plus temporary/permanent/false-positive counts."""
     skipped = plan.get("skipped", {})
@@ -176,7 +161,7 @@ def _cmd_plan_show(args: argparse.Namespace) -> None:
     plan = load_plan()
     runtime = command_runtime(args)
 
-    queue_line = _plan_queue_line(runtime.state, plan)
+    queue_line = queue_headline(runtime.state, plan)
     total_skipped, temp_count, perm_count, fp_count = _skip_kind_counts(plan)
     active = plan.get("active_cluster")
     superseded = len(plan.get("superseded", {}))

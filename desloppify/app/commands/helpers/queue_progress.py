@@ -19,7 +19,6 @@ from desloppify.engine._state.schema_scores import subjective_unassessed
 from desloppify.engine._work_queue.context import queue_context
 from desloppify.engine._work_queue.core import QueueBuildOptions
 from desloppify.engine._work_queue.helpers import is_subjective_queue_item
-from desloppify.engine._work_queue.plan_order import collapse_clusters
 from desloppify.engine.plan_state import load_plan
 from desloppify.engine.planning.queue_policy import build_execution_queue
 from desloppify.state_scoring import score_snapshot
@@ -154,7 +153,6 @@ def plan_aware_queue_breakdown(
         ),
     )
 
-    # Collapse clusters for display-level counting
     items = result.get("items", [])
     snapshot = (
         context.snapshot
@@ -165,13 +163,12 @@ def plan_aware_queue_breakdown(
     # assessment, workflow, triage, execute, scan).  Persisted mode is now
     # only "plan"/"execute" and is not useful for display gating.
     lifecycle_phase = snapshot.phase
-    if effective_plan and not effective_plan.get("active_cluster"):
-        items = collapse_clusters(items, effective_plan)
 
+    # Every surface counts the queue in items, never in collapsed clusters:
+    # `next` may show a cluster as one entry, but it still holds N items.
     queue_total = len(items)
 
     # Count subjective and workflow items in the queue.
-    # Collapsed clusters whose members are all subjective count as subjective.
     subjective = sum(1 for item in items if is_subjective_queue_item(item))
     workflow = sum(
         1 for item in items if item.get("kind") in ("workflow_stage", "workflow_action")
@@ -244,6 +241,16 @@ def plan_aware_queue_breakdown(
             if not str(item.get("id", "")).startswith(("workflow::", "triage::"))
         ),
     )
+
+
+def queue_headline(state: dict, plan: dict | None) -> str:
+    """The queue line for surfaces that have no breakdown of their own."""
+    try:
+        return format_queue_headline(plan_aware_queue_breakdown(state, plan))
+    except PLAN_LOAD_EXCEPTIONS as exc:
+        _logger.debug("Queue headline fell back to raw plan counts.", exc_info=exc)
+        ordered = len((plan or {}).get("queue_order", []))
+        return f"Queue: {ordered} item{'s' if ordered != 1 else ''} planned"
 
 
 def _snapshot_item_ids(snapshot: object) -> set[str] | None:
@@ -453,6 +460,7 @@ __all__ = [
     "print_execution_or_reveal",
     "print_objective_drained_banner",
     "print_frozen_score_with_queue_context",
+    "queue_headline",
     "score_display_mode",
     "show_score_with_plan_context",
 ]

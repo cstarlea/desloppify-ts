@@ -26,7 +26,18 @@ def _analyze_dimensions(
         "lowest_dimensions": _lowest_dimensions(dim_scores, potentials),
         "biggest_gap_dimensions": _biggest_gap_dimensions(dim_scores, state)[:3],
         "stagnant_dimensions": _stagnant_dimensions(dim_scores, history),
+        "failing_dimension_count": sum(
+            1 for ds in dim_scores.values() if _has_open_work(ds)
+        ),
     }
+
+
+def _has_open_work(ds: dict) -> bool:
+    """A dimension with failing checks, or an unassessed one awaiting review."""
+    if ds.get("failing", 0) > 0:
+        return True
+    assessment = ds.get("detectors", {}).get("subjective_assessment") or {}
+    return bool(assessment.get("placeholder"))
 
 
 def _lowest_dimensions(dim_scores: dict, potentials: dict) -> list[dict]:

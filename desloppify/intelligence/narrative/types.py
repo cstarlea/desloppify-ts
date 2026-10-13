@@ -67,6 +67,7 @@ class DimensionAnalysis(TypedDict, total=False):
     lowest_dimensions: list[DimensionEntry]
     biggest_gap_dimensions: list[DimensionEntry]
     stagnant_dimensions: list[DimensionEntry]
+    failing_dimension_count: int
 
 
 class FixerLeverage(TypedDict):

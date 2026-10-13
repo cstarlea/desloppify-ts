@@ -111,7 +111,10 @@ def render_detector_impact_estimate(
         )
         if dimension is None or dimension_score is None:
             return
-        issues = dimension_score.get("failing", 0)
+        # The detector's own failing count, not the dimension's (which
+        # sums every detector in it).
+        detector_score = dimension_score.get("detectors", {}).get(detector) or {}
+        issues = int(detector_score.get("failing", 0) or 0)
         if issues <= 1:
             return
         bulk = compute_score_impact_fn(

@@ -8,6 +8,7 @@ from pathlib import Path
 
 from desloppify.base.discovery.file_paths import rel
 from desloppify.base.output.terminal import colorize
+from desloppify.engine._state.filtering import issue_in_scan_scope
 from desloppify.engine.planning.helpers import is_subjective_phase
 from desloppify.engine.policy.zones import (
     ZONE_POLICIES,
@@ -158,8 +159,26 @@ def _generate_issues_from_lang(
         clear_review_phase_prefetch(lang)
     issues = _filter_zone_skipped_issues(issues, lang)
     _stamp_issue_context(issues, lang)
-    _stderr(f"\n  Total: {len(issues)} issues")
+    _stderr(f"\n  {_total_line(issues, path)}")
     return issues, all_potentials
+
+
+def _total_line(issues: list[Issue], path: Path) -> str:
+    """Name the detector total, and split off findings outside the scan path.
+
+    Status and the scan summary count open issues in scope; findings outside
+    ``--path`` (root config files, say) are carried, not scored.
+    """
+    scan_path = rel(str(path))
+    outside = sum(
+        1
+        for issue in issues
+        if not issue_in_scan_scope(issue.get("file", ""), scan_path)
+    )
+    total = f"Total: {len(issues)} issues"
+    if not outside:
+        return total
+    return f"{total} ({len(issues) - outside} in scope, {outside} outside {scan_path}/)"
 
 
 def generate_issues(

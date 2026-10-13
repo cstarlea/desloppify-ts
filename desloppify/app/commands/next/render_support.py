@@ -246,7 +246,11 @@ def render_queue_header(
     plan: dict | None = None,
 ) -> None:
     total = queue.get("total", 0)
-    print(colorize(f"\n  Queue: {total} item{'s' if total != 1 else ''}", "bold"))
+    line = f"Queue: {total} item{'s' if total != 1 else ''}"
+    focus = queue.get("focus_cluster")
+    if focus and queue.get("focus_total", total) != total:
+        line += f" · {queue['focus_total']} in focused cluster {focus}"
+    print(colorize(f"\n  {line}", "bold"))
     if total > 5:
         print(colorize("  (Skip items only when explicitly requested.)", "dim"))
     if explain and snapshot is not None:

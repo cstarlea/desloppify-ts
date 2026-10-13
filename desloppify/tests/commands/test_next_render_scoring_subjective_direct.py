@@ -63,7 +63,15 @@ def test_render_dimension_context_prints_dimension_details(capsys) -> None:
 
 
 def test_render_detector_impact_estimate_supports_single_and_bulk_paths(capsys) -> None:
-    dim_scores = {"Code quality": {"score": 75.0, "checks": 100, "failing": 5}}
+    # The dimension fails 143 checks across detectors; smells owns 5 of them.
+    dim_scores = {
+        "Code quality": {
+            "score": 75.0,
+            "checks": 300,
+            "failing": 143,
+            "detectors": {"smells": {"failing": 5}, "unused": {"failing": 138}},
+        }
+    }
 
     render_scoring_mod.render_detector_impact_estimate(
         "smells",
@@ -91,6 +99,7 @@ def test_render_detector_impact_estimate_supports_single_and_bulk_paths(capsys) 
     )
     bulk_out = capsys.readouterr().out
     assert "fixing all 5 smells issues" in bulk_out
+    assert "143" not in bulk_out
     assert "~+1.3 pts" in bulk_out
 
 

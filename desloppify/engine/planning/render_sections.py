@@ -91,9 +91,11 @@ def plan_user_ordered_section(
         return []
 
     by_id = {item.get("id"): item for item in items}
+    # Count what is listed: stale queue entries have no item to render.
+    listed = sum(1 for issue_id in ordered_ids if issue_id in by_id)
     lines: list[str] = [
         "---",
-        f"## User-Ordered Queue ({len(ordered_ids)} items)",
+        f"## User-Ordered Queue ({listed} item{'s' if listed != 1 else ''})",
         "",
     ]
 
