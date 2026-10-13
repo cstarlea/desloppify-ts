@@ -157,7 +157,9 @@ class TestDetectLogs:
 
     def test_script_zone_is_skipped(self, tmp_path):
         _write(
-            tmp_path, "scripts/build-icons.mjs", "console.log(`[icons] ${size} done`);\n"
+            tmp_path,
+            "scripts/build-icons.mjs",
+            "console.log(`[icons] ${size} done`);\n",
         )
         _write(tmp_path, "src/app.ts", "console.log('[App] start');\n")
         entries, _ = _detect(tmp_path)

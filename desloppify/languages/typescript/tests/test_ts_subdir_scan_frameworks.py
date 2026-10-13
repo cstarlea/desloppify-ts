@@ -55,9 +55,7 @@ def _next_project(root: Path) -> Path:
             "public/sw.js": "self.addEventListener('fetch', () => {});\n",
             "src/app/layout.tsx": _COMPONENT,
             "src/app/page.tsx": _COMPONENT,
-            "src/app/(app)/projects/[id]/settings/export/page.tsx": (
-                _COMPONENT
-            ),
+            "src/app/(app)/projects/[id]/settings/export/page.tsx": (_COMPONENT),
             "src/middleware.ts": _MODULE,
             **{f"src/app/segment{i}/page.tsx": _COMPONENT for i in range(17)},
             **{f"src/components/c{i}.tsx": _MODULE for i in range(22)},

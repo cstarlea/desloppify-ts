@@ -698,7 +698,7 @@ class TestJscpdAdapter:
             "  listMembers: protectedProcedure\n"
             "    .input(z.object({ projectId: z.uuid() }))\n"
             "    .query(async ({ ctx, input }) => {\n"
-            "      await assertAccess(ctx.db, ctx.userId, 'project_admin',"
+            "      await assertAccess(ctx.db, ctx.userId, 'project_admin', "
             "{ projectId: input.projectId })\n"
             "\n"
             "      return paginate(\n",

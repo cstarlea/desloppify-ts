@@ -463,8 +463,8 @@ def test_headline_is_objective_before_the_first_review(monkeypatch):
 
     block = format_queue_block(
         plan_aware_queue_breakdown(state, plan),
-        frozen_score=97.0,
-        live_score=97.0,
+        frozen_score=95.5,
+        live_score=95.5,
         score_name="objective",
     )
     assert (
@@ -485,8 +485,8 @@ def test_score_reads_plainly_right_after_the_first_scan(monkeypatch, capsys):
     state["scan_count"] = 2
     print_frozen_score_with_queue_context(
         breakdown,
-        frozen_strict=97.0,
-        live_score=97.0,
+        frozen_strict=95.5,
+        live_score=95.5,
         score_name="objective",
         first_scan=is_first_scan(state),
     )
