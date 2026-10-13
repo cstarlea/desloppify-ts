@@ -557,7 +557,7 @@ def test_phase_signature_reports_variance(monkeypatch) -> None:
 
     monkeypatch.setattr(
         "desloppify.engine.detectors.signature.detect_signature_variance",
-        lambda _functions, min_occurrences: (
+        lambda _functions, min_occurrences, scope_of=None: (
             [
                 {
                     "name": "run",

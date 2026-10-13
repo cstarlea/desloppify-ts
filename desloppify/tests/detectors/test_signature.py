@@ -307,3 +307,80 @@ def test_variants_contain_correct_detail():
     assert a_variant["line"] == 10
     assert a_variant["params"] == ["data"]
     assert a_variant["param_count"] == 1
+
+
+# ── Name collisions that aren't an inconsistent API ─────────
+
+
+def _exported(name, file, params, exported=True):
+    fn = _fn(name, file, params)
+    fn.exported = exported
+    return fn
+
+
+def test_module_local_functions_are_not_grouped():
+    """Unexported components that happen to share a name are independent."""
+    functions = [
+        _exported("StatRow", "panel.tsx", ["label", "value", "onChange"], False),
+        _exported("StatRow", "preview.tsx", ["label", "color"], False),
+        _exported("StatRow", "board.tsx", ["label", "value"], False),
+    ]
+    assert detect_signature_variance(functions)[0] == []
+    # An extractor that can't tell (exported=None) keeps the old behaviour.
+    unknown = [_fn("StatRow", f, p) for f, p in [("a", ["x"]), ("b", []), ("c", [])]]
+    assert len(detect_signature_variance(unknown)[0]) == 1
+
+
+def test_names_group_per_package():
+    functions = [
+        _exported("createContext", "examples/a/server.ts", ["opts"]),
+        _exported("createContext", "examples/b/server.ts", ["req", "res"]),
+        _exported("createContext", "examples/c/server.ts", ["event", "context"]),
+    ]
+    scope = {
+        "examples/a/server.ts": "examples/a",
+        "examples/b/server.ts": "examples/b",
+        "examples/c/server.ts": "examples/c",
+    }
+    assert detect_signature_variance(functions, scope_of=scope.__getitem__)[0] == []
+    assert len(detect_signature_variance(functions, scope_of=lambda _f: "")[0]) == 1
+
+
+def _strategy(file, params):
+    return [
+        _exported("createWriter", file, params),
+        _exported("writeRow", file, ["state"]),
+        _exported("finish", file, ["state"]),
+    ]
+
+
+def test_modules_implementing_one_interface_are_not_grouped():
+    """Strategy modules each export the same set of names for their own state."""
+    functions = [
+        *_strategy("exporters/csv.ts", []),
+        *_strategy("exporters/json.ts", ["options"]),
+        *_strategy("exporters/xml.ts", ["options"]),
+        _exported("canFlush", "exporters/json.ts", ["state"]),
+        _exported("canFlush", "exporters/xml.ts", ["state"]),
+        _exported("canFlush", "stream/buffer.ts", ["state", "chunkId"]),
+    ]
+    assert detect_signature_variance(functions)[0] == []
+
+
+def test_unrelated_modules_still_report_beside_an_interface_pair():
+    functions = [
+        _exported("formatPrice", "a/price.ts", ["cents"]),
+        _exported("formatPrice", "b/cart.ts", ["amount", "currency"]),
+        _exported("formatPrice", "c/invoice.ts", ["value"]),
+        # Two parallel builders (classic/mini) share an interface: left out.
+        _exported("formatPrice", "classic/schemas.ts", ["params"]),
+        _exported("formatPrice", "mini/schemas.ts", ["params"]),
+        _exported("string", "classic/schemas.ts", ["params"]),
+        _exported("string", "mini/schemas.ts", ["params"]),
+        _exported("number", "classic/schemas.ts", ["params"]),
+        _exported("number", "mini/schemas.ts", ["params"]),
+    ]
+    entries, _ = detect_signature_variance(functions)
+    assert [e["name"] for e in entries] == ["formatPrice"]
+    assert entries[0]["files"] == ["a/price.ts", "b/cart.ts", "c/invoice.ts"]
+    assert entries[0]["signature_count"] == 3

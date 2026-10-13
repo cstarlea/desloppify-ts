@@ -227,6 +227,20 @@ def _package_manifests(scan_root: Path, files: list[str]) -> list[str]:
     return sorted(manifests)
 
 
+def _package_scope_fn(scan_root: Path) -> Callable[[str], str]:
+    """Map a file to the directory of its nearest package.json ("" if none)."""
+    by_dir: dict[Path, str] = {}
+
+    def scope(filepath: str) -> str:
+        directory = _resolve_detector_file_path(scan_root, filepath).parent
+        if directory not in by_dir:
+            manifest = _package_manifests(scan_root, [filepath])
+            by_dir[directory] = str(Path(manifest[0]).parent) if manifest else ""
+        return by_dir[directory]
+
+    return scope
+
+
 def _resolve_detector_file_path(scan_root: Path, filepath: str) -> Path:
     """Resolve a detector file path against the active scan root."""
     file_path = Path(filepath)
@@ -802,7 +816,9 @@ def phase_signature(
     if not functions:
         return issues, potentials
 
-    entries, _total = detect_signature_variance(functions, min_occurrences=3)
+    entries, _total = detect_signature_variance(
+        functions, min_occurrences=3, scope_of=_package_scope_fn(path)
+    )
     for entry in entries:
         issues.append(
             make_issue(

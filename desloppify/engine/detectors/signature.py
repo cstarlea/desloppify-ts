@@ -1,8 +1,17 @@
-"""Signature variance detection — same function name, different signatures across modules."""
+"""Signature variance detection — same function name, different signatures across modules.
+
+It looks for one helper name that a package's modules each export with
+different parameters (``formatPrice(cents)`` here, ``formatPrice(amount,
+currency)`` there), an inconsistent API. A name alone isn't enough:
+module-local functions, separate packages, and modules implementing a
+common interface (strategy modules that each export ``createWriter``,
+``writeRow``, ``finish``) are left out.
+"""
 
 from __future__ import annotations
 
 from collections import defaultdict
+from collections.abc import Callable
 
 from desloppify.engine.detectors.base import FunctionInfo
 
@@ -82,13 +91,36 @@ def _signature_group_keys(name: str) -> list[tuple[str, str]]:
     return keys
 
 
+# Modules exporting this many names besides the grouped one in common are
+# implementations of one interface, whose signatures vary by design.
+_SHARED_INTERFACE_NAMES = 2
+
+
+def _interface_files(
+    files: set[str], names_by_file: dict[str, set[str]], name: str
+) -> set[str]:
+    """Files in a group that share an interface with another file of the group."""
+    ordered = sorted(files)
+    found: set[str] = set()
+    for i, first in enumerate(ordered):
+        for second in ordered[i + 1 :]:
+            shared = (names_by_file[first] & names_by_file[second]) - {name}
+            if len(shared) >= _SHARED_INTERFACE_NAMES:
+                found |= {first, second}
+    return found
+
+
 def detect_signature_variance(
     functions: list[FunctionInfo],
     min_occurrences: int = 3,
+    *,
+    scope_of: Callable[[str], str] | None = None,
 ) -> tuple[list[dict], int]:
     """Find function names appearing 3+ times across files with different signatures.
 
     Returns (entries, total_functions_checked).
+
+    ``scope_of`` maps a file to its package; names are grouped per package.
 
     Each entry represents a function name group where signatures differ:
     {
@@ -99,7 +131,8 @@ def detect_signature_variance(
     }
     """
     # Group by exact function name and select naming-pattern groups.
-    by_group: dict[tuple[str, str], list[FunctionInfo]] = defaultdict(list)
+    by_group: dict[tuple[str, str, str], list[FunctionInfo]] = defaultdict(list)
+    names_by_file: dict[str, set[str]] = defaultdict(set)
     for fn in functions:
         normalized_name = fn.name.lstrip("_")
         is_phase_pattern = normalized_name.startswith("phase_")
@@ -115,15 +148,27 @@ def detect_signature_variance(
             continue  # Skip test functions
         if getattr(fn, "default_export", False) or getattr(fn, "object_member", False):
             continue
-        for key in _signature_group_keys(fn.name):
-            by_group[key].append(fn)
+        if getattr(fn, "exported", None) is False:
+            continue  # Module-local: its name can't clash with another module's
+        file = getattr(fn, "file", "")
+        scope = scope_of(file) if scope_of is not None else ""
+        names_by_file[file].add(fn.name)
+        for group_type, group_name in _signature_group_keys(fn.name):
+            by_group[(group_type, group_name, scope)].append(fn)
 
     entries = []
-    for (group_type, group_name), fns in by_group.items():
+    for (group_type, group_name, _scope), fns in by_group.items():
         # Need at least min_occurrences across different files
         distinct_files = set(getattr(f, "file", "") for f in fns)
         if len(distinct_files) < min_occurrences:
             continue
+        if group_type == "name":
+            interface = _interface_files(distinct_files, names_by_file, group_name)
+            if interface:
+                fns = [f for f in fns if getattr(f, "file", "") not in interface]
+                distinct_files -= interface
+                if len(distinct_files) < min_occurrences:
+                    continue
 
         # Compare parameter and return signatures (ignore self/cls params).
         variants = []

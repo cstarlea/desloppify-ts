@@ -24,6 +24,8 @@ class FunctionInfo:
     default_export: bool = False
     # An object-literal member's signature is set by the shape its object fills.
     object_member: bool = False
+    # Whether the module exports it; None when the extractor can't tell.
+    exported: bool | None = None
 
 
 @dataclass

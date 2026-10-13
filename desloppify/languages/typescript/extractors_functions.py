@@ -180,6 +180,7 @@ def extract_ts_functions(filepath: str) -> list[FunctionInfo]:
                 params=_param_names(parsed, info),
                 default_export=info.default_export,
                 object_member=definition.object_member,
+                exported=info.exported,
             )
         )
     return functions
