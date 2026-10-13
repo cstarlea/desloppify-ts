@@ -22,6 +22,10 @@ _TEST_IDIOMS = (
     "const xs = [...tally.values()].sort();\n"
     "// @ts-expect-error\n"
     "f(1);\n"
+    "console.error('expected');\n"
+    "f(2);\n"
+    "f(3);\n"
+    "f(4);\n"
     "try { f(); } catch (e) { }\n"
 )
 _SKIPPED = {
@@ -32,6 +36,7 @@ _SKIPPED = {
     "double_cast",
     "sort_no_comparator",
     "ts_expect_error_undocumented",
+    "console_error_no_throw",
 }
 
 

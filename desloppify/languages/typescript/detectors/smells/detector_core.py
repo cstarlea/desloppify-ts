@@ -38,11 +38,13 @@ _PRECEDING_SKIP_PATTERNS = re.compile(
     r"componentDidCatch|import\.meta\.env\.DEV|process\.env\.NODE_ENV"
 )
 # What counts as handling the error after console.error: leaving (throw,
-# return, rethrow), telling the user (toast, toast.error), recording it in
-# state (setError) or passing it to a handler or reporter by the usual
-# names (handleError, presentError, reportError, Sentry's captureException).
+# return, rethrow, ``process.exitCode =``, ``process.exit(``), telling the
+# user (toast, toast.error), recording it in state (setError) or passing it
+# to a handler or reporter by the usual names (handleError, presentError,
+# reportError, Sentry's captureException).
 _HANDLED_RE = re.compile(
     r"\b(?:throw|return)\b|\btoast\s*[.(]|rethrow"
+    r"|\bprocess\.exit(?:Code\s*=(?!=)|\s*\()"
     r"|\b\w*(?:[Hh]andle|[Pp]resent|[Rr]eport|[Nn]otify|[Ss]how|[Ss]et|[Ll]og)\w*Error\s*\("
     r"|\bcapture(?:Exception|Error)\s*\("
 )

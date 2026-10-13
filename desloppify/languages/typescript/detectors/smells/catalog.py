@@ -8,6 +8,7 @@ from __future__ import annotations
 # ``skip_in_tests`` drops a check's matches in test-zone files, where it is
 # the normal idiom: fixture URLs and colours, mocks cast through
 # ``unknown``, ``!`` on known results, expected type errors.
+# ``skip_in_scripts`` does the same for script-zone files (CLIs, tools).
 TS_SMELL_CHECKS = [
     {
         "id": "empty_catch",
@@ -79,6 +80,9 @@ TS_SMELL_CHECKS = [
         "label": "console.error without throw/return",
         "pattern": None,
         "severity": "medium",
+        # A CLI reports to stderr by design; a test mocks console.error.
+        "skip_in_tests": True,
+        "skip_in_scripts": True,
     },
     {
         "id": "empty_if_chain",

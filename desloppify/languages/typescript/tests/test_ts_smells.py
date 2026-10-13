@@ -368,6 +368,72 @@ def test_console_error_with_throw_not_flagged(tmp_path):
     assert "console_error_no_throw" not in ids
 
 
+_UNHANDLED = (
+    "function handle() {\n"
+    "  console.error('something went wrong');\n"
+    "  doOtherStuff();\n"
+    "  moreStuff();\n"
+    "  evenMoreStuff();\n"
+    "}\n"
+)
+
+
+def _console_error_files(tmp_path) -> set[str]:
+    entries, _ = detect_smells(tmp_path)
+    return {
+        Path(m["file"]).name
+        for e in entries
+        if e["id"] == "console_error_no_throw"
+        for m in e["matches"]
+    }
+
+
+@pytest.mark.parametrize(
+    "exit_line",
+    ["process.exitCode = 1;", "process.exit(1);", "process.exit (2)"],
+)
+def test_console_error_then_process_exit_not_flagged(tmp_path, exit_line):
+    _write(
+        tmp_path,
+        "migrate.ts",
+        (
+            "async function main() {\n"
+            "  try {\n"
+            "    await run();\n"
+            "  } catch (err) {\n"
+            "    console.error('Migration failed', err);\n"
+            f"    {exit_line}\n"
+            "  }\n"
+            "}\n"
+        ),
+    )
+    assert _console_error_files(tmp_path) == set()
+
+
+def test_console_error_comparing_exit_code_is_still_flagged(tmp_path):
+    _write(
+        tmp_path,
+        "bad.ts",
+        (
+            "function handle() {\n"
+            "  console.error('failed');\n"
+            "  if (process.exitCode === 1) log();\n"
+            "}\n"
+        ),
+    )
+    assert _console_error_files(tmp_path) == {"bad.ts"}
+
+
+def test_console_error_skipped_in_script_and_test_zones(tmp_path):
+    _write(tmp_path, "scripts/seed.ts", _UNHANDLED)
+    _write(tmp_path, "src/seed.test.ts", _UNHANDLED)
+    _write(tmp_path, "src/seed.ts", _UNHANDLED)
+    assert _console_error_files(tmp_path) == {"seed.ts"}
+    entries, _ = detect_smells(tmp_path)
+    (entry,) = [e for e in entries if e["id"] == "console_error_no_throw"]
+    assert [m["file"] for m in entry["matches"]] == ["src/seed.ts"]
+
+
 def test_detect_swallowed_error(tmp_path):
     """Detects catch blocks that only console.log/warn/error (swallowed errors)."""
 

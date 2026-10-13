@@ -71,16 +71,17 @@ _MULTI_LINE_DETECTORS = (
 def detect_smells(path: Path) -> tuple[list[dict], int]:
     """Detect TypeScript/React smell patterns across project sources.
 
-    Checks marked ``skip_in_tests`` in the catalog report nothing in test files."""
+    Checks marked ``skip_in_tests`` / ``skip_in_scripts`` in the catalog
+    report nothing in test / script files."""
     checks = TS_SMELL_CHECKS
     smell_counts: dict[str, list[dict]] = {s["id"]: [] for s in checks}
     files = iter_typescript_sources(path)
     loc: dict[str, int] = {}
-    test_files = {
-        filepath
-        for filepath in files
-        if classify_file(rel(filepath), TS_ZONE_RULES) == Zone.TEST
+    zones = {
+        filepath: classify_file(rel(filepath), TS_ZONE_RULES) for filepath in files
     }
+    test_files = {f for f, zone in zones.items() if zone == Zone.TEST}
+    script_files = {f for f, zone in zones.items() if zone == Zone.SCRIPT}
 
     for filepath in files:
         try:
@@ -126,6 +127,8 @@ def detect_smells(path: Path) -> tuple[list[dict], int]:
         matches = smell_counts[check["id"]]
         if check.get("skip_in_tests"):
             matches = [m for m in matches if m["file"] not in test_files]
+        if check.get("skip_in_scripts"):
+            matches = [m for m in matches if m["file"] not in script_files]
         if matches:
             entry = {
                 "id": check["id"],
