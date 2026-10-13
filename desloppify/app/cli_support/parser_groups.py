@@ -109,6 +109,12 @@ examples:
         help="Output path for scorecard image (default: scorecard.png)",
     )
     p_scan.add_argument(
+        "--allow-tool-download",
+        action="store_true",
+        help="Fetch a pinned jscpd with npx when none is installed "
+        "(also: config allow_tool_download, DESLOPPIFY_ALLOW_TOOL_DOWNLOAD=1)",
+    )
+    p_scan.add_argument(
         "--lang-opt",
         action="append",
         default=None,

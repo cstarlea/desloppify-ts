@@ -138,6 +138,7 @@
     "unused": 7
   },
   "reduced_coverage": [
+    "boilerplate_duplication: jscpd_not_installed",
     "dependencies: dependencies_not_installed",
     "type_error: partial",
     "unused: components"

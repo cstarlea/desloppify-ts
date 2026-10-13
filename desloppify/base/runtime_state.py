@@ -102,6 +102,8 @@ class RuntimeContext:
     # file desloppify writes (plan, config, locks, query, scorecard) goes here.
     state_dir: Path | None = None
     query_file: Path | None = None
+    # Config ``allow_tool_download`` / ``scan --allow-tool-download``.
+    allow_tool_download: bool = False
     file_text_cache: FileTextCache = field(default_factory=FileTextCache)
     cache_enabled: bool = False
     treesitter_parse_cache: object | None = None

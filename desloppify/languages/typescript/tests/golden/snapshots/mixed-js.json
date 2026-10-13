@@ -87,6 +87,7 @@
     "unused": 9
   },
   "reduced_coverage": [
+    "boilerplate_duplication: jscpd_not_installed",
     "dependencies: knip_not_installed",
     "exports: knip_not_installed",
     "type_error: tsc_missing",

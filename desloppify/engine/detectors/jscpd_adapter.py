@@ -4,7 +4,9 @@ Replaces boilerplate_duplication.py with a thin adapter around jscpd
 (https://github.com/kucherenko/jscpd), which uses proper per-language
 tokenisation and supports type-2 clones (renamed identifiers).
 
-Falls back gracefully to None when jscpd/npx is not installed.
+Uses a jscpd installed in the project or on PATH. Downloading the pinned
+version with npx happens only when the user allows it
+(``allow_tool_download``); otherwise the phase is skipped with a hint.
 """
 
 from __future__ import annotations
@@ -25,8 +27,13 @@ from desloppify.base.discovery.source import (
     get_exclusions,
 )
 from desloppify.base.output.fallbacks import warn_best_effort
+from desloppify.base.runtime_state import current_runtime_context
 
 logger = logging.getLogger(__name__)
+
+# Fetched by npx only when the user allows downloads; bump deliberately.
+JSCPD_VERSION = "5.3.3"
+DOWNLOAD_ENV = "DESLOPPIFY_ALLOW_TOOL_DOWNLOAD"
 
 _BASE_IGNORES = (
     "**/node_modules/**",
@@ -46,8 +53,15 @@ def _to_scan_relative(path_resolved: Path, name: str) -> str | None:
     """Return scan-relative path, or None when file is outside scan path."""
     if not name:
         return None
+    candidate = Path(name)
+    if not candidate.is_absolute():
+        # jscpd runs from the scan root and reports names relative to it.
+        candidate = path_resolved / candidate
+    if not candidate.exists() and ":" in candidate.name:
+        # Blocks embedded in another format come back as ``file:format``.
+        candidate = candidate.with_name(candidate.name.rsplit(":", 1)[0])
     try:
-        rel = Path(name).resolve().relative_to(path_resolved)
+        rel = candidate.resolve().relative_to(path_resolved)
     except (ValueError, OSError):
         return None
     return str(rel).replace("\\", "/")
@@ -191,21 +205,46 @@ def _parse_jscpd_report(report: dict, scan_path: Path) -> list[dict]:
     return entries
 
 
-def _resolve_jscpd_command() -> list[str] | None:
-    """Return the best available command prefix for running jscpd.
+def _find_local_jscpd(path: Path) -> Path | None:
+    """``node_modules/.bin/jscpd`` at or above *path* (hoisted installs too)."""
+    names = ("jscpd.cmd", "jscpd") if os.name == "nt" else ("jscpd",)
+    start = path.resolve()
+    for directory in (start, *start.parents):
+        for name in names:
+            candidate = directory / "node_modules" / ".bin" / name
+            if candidate.is_file():
+                return candidate
+    return None
 
-    Prefers a locally/globally installed ``jscpd`` executable over ``npx``.
-    Returns ``None`` when neither ``jscpd`` nor ``npx`` can be found.
+
+def download_allowed() -> bool:
+    """Whether the user allowed fetching the pinned jscpd with npx."""
+    if os.environ.get(DOWNLOAD_ENV, "").strip().lower() in {"1", "true", "yes"}:
+        return True
+    return current_runtime_context().allow_tool_download
+
+
+def _resolve_jscpd_command(path: Path) -> list[str] | str:
+    """Return the command prefix for running jscpd, or a skip reason.
+
+    A project-local jscpd wins over one on PATH. npx runs only the pinned
+    version, and only when the user allowed downloads.
     """
+    local = _find_local_jscpd(path)
+    if local is not None:
+        logger.debug("jscpd: using project install at %s", local)
+        return [str(local)]
     jscpd_path = shutil.which("jscpd")
     if jscpd_path:
         logger.debug("jscpd: using installed executable at %s", jscpd_path)
         return [jscpd_path]
+    if not download_allowed():
+        return "jscpd_not_installed"
     npx_path = shutil.which("npx")
     if npx_path:
-        logger.debug("jscpd: falling back to npx at %s", npx_path)
-        return [npx_path, "--yes", "jscpd"]
-    return None
+        logger.debug("jscpd: downloading jscpd@%s with npx", JSCPD_VERSION)
+        return [npx_path, "--yes", f"jscpd@{JSCPD_VERSION}"]
+    return "npx_not_found"
 
 
 def _terminate_process_tree(proc: subprocess.Popen[str]) -> None:
@@ -222,10 +261,11 @@ def _terminate_process_tree(proc: subprocess.Popen[str]) -> None:
 
 
 def _run_jscpd_command(
-    cmd: list[str], *, timeout: int
+    cmd: list[str], *, timeout: int, cwd: Path | None = None
 ) -> subprocess.CompletedProcess[str]:
     proc = subprocess.Popen(  # nosec B603
         cmd,
+        cwd=str(cwd) if cwd is not None else None,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
@@ -254,21 +294,35 @@ def _run_jscpd_command(
 
 def detect_with_jscpd(path: Path) -> list[dict] | None:
     """Run jscpd on *path* and return duplication entries, or None on failure."""
-    cmd_prefix = _resolve_jscpd_command()
-    if cmd_prefix is None:
-        warn_best_effort(
-            "Boilerplate duplication detection skipped: jscpd/npx not found. "
-            "Install with `npm install -g jscpd`."
-        )
-        logger.debug("jscpd: neither jscpd nor npx found — skipping")
-        return None
+    return detect_with_jscpd_result(path)[0]
 
+
+def detect_with_jscpd_result(path: Path) -> tuple[list[dict] | None, str | None]:
+    """Return (entries, None), or (None, reason) when jscpd isn't available.
+
+    Runtime failures warn and return (None, None).
+    """
+    cmd_prefix = _resolve_jscpd_command(path)
+    if isinstance(cmd_prefix, str):
+        logger.debug("jscpd: skipped (%s)", cmd_prefix)
+        return None, cmd_prefix
+    return _run_jscpd(path, cmd_prefix), None
+
+
+def _run_jscpd(path: Path, cmd_prefix: list[str]) -> list[dict] | None:
+    root = path.resolve()
+    target = "."
+    if root.is_file():
+        root, target = root.parent, root.name
     with tempfile.TemporaryDirectory() as tmpdir:
         try:
             _run_jscpd_command(
                 [
                     *cmd_prefix,
-                    str(path),
+                    # jscpd matches --ignore globs against the paths it walks:
+                    # from the scan root they are relative, so an ignore like
+                    # **/.claude/** can't match a parent of the scan root.
+                    target,
                     "--reporters",
                     "json",
                     "--output",
@@ -282,11 +336,11 @@ def detect_with_jscpd(path: Path) -> list[dict] | None:
                     "--silent",
                 ],
                 timeout=120,
+                cwd=root,
             )
         except FileNotFoundError:
             warn_best_effort(
-                "Boilerplate duplication detection skipped: jscpd/npx not found. "
-                "Install with `npm install -g jscpd`."
+                "Boilerplate duplication detection skipped: jscpd not found."
             )
             logger.debug("jscpd: command not found at runtime — skipping")
             return None
@@ -324,12 +378,16 @@ def detect_with_jscpd(path: Path) -> list[dict] | None:
             logger.debug("jscpd: failed to parse report: %s", exc)
             return None
 
-        return _parse_jscpd_report(report, path)
+        return _parse_jscpd_report(report, root)
 
 
 __all__ = [
+    "DOWNLOAD_ENV",
+    "JSCPD_VERSION",
     "_parse_jscpd_report",
     "_resolve_jscpd_command",
     "_run_jscpd_command",
     "detect_with_jscpd",
+    "detect_with_jscpd_result",
+    "download_allowed",
 ]

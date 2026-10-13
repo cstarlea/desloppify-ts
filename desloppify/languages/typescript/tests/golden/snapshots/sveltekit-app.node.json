@@ -54,6 +54,7 @@
     "unused": 6
   },
   "reduced_coverage": [
+    "boilerplate_duplication: jscpd_not_installed",
     "dependencies: dependencies_not_installed",
     "type_error: tsconfig_extends_missing",
     "unused: tsconfig_error"

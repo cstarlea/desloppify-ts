@@ -16,7 +16,11 @@ from desloppify.base.discovery.file_paths import rel
 from desloppify.base.output.terminal import log
 from desloppify.engine._state.filtering import make_issue
 from desloppify.engine.detectors.dupes import detect_duplicates
-from desloppify.engine.detectors.jscpd_adapter import detect_with_jscpd
+from desloppify.engine.detectors.jscpd_adapter import (
+    DOWNLOAD_ENV,
+    JSCPD_VERSION,
+    detect_with_jscpd_result,
+)
 from desloppify.engine.detectors.security.detector import (
     detect_security_issues as _detect_security_issues_default,
 )
@@ -45,6 +49,7 @@ from .shared_phases_helpers import (
     _find_external_test_files,
     _log_phase_summary,
     _record_detector_coverage,
+    record_reduced_coverage,
 )
 
 logger = logging.getLogger(__name__)
@@ -54,7 +59,7 @@ logger = logging.getLogger(__name__)
 detect_security_issues = _detect_security_issues_default
 
 # Bump when a cached detector's output changes for the same files.
-_DETECTOR_CACHE_VERSION = 2
+_DETECTOR_CACHE_VERSION = 3
 _PREFETCH_ATTR = "_shared_review_prefetch_futures"
 _FUNCTION_CACHE_ATTR = "_shared_review_function_cache"
 _PREFETCH_BOILERPLATE_KEY = "boilerplate"
@@ -395,7 +400,7 @@ def prewarm_review_phase_detectors(
         )
         if cached_entries is None and _PREFETCH_BOILERPLATE_KEY not in futures:
             futures[_PREFETCH_BOILERPLATE_KEY] = _submit_with_context(
-                detect_with_jscpd,
+                detect_with_jscpd_result,
                 path,
             )
 
@@ -472,6 +477,23 @@ def phase_dupes(
     return issues, {"dupes": total_functions}
 
 
+def _jscpd_missing_coverage(reason: str) -> DetectorCoverageStatus:
+    return DetectorCoverageStatus(
+        detector="boilerplate_duplication",
+        status="reduced",
+        confidence=0.0,
+        summary=f"Boilerplate duplication skipped: jscpd is not installed ({reason})",
+        impact="Repeated code blocks are not reported for this scan.",
+        remediation=(
+            f"Install jscpd in the project (npm i -D jscpd@{JSCPD_VERSION}), or let "
+            "the scan fetch it with --allow-tool-download (config "
+            f"allow_tool_download, {DOWNLOAD_ENV}=1)."
+        ),
+        tool="jscpd",
+        reason=reason,
+    )
+
+
 def phase_boilerplate_duplication(
     path: Path,
     lang: LangRuntimeContract,
@@ -491,9 +513,13 @@ def phase_boilerplate_duplication(
     )
     if entries is None:
         prefetched = _consume_prefetch_result(lang, _PREFETCH_BOILERPLATE_KEY)
-        entries = prefetched if isinstance(prefetched, list) else None
-        if entries is None:
-            entries = detect_with_jscpd(path)
+        entries, skip_reason = (
+            prefetched
+            if isinstance(prefetched, tuple)
+            else detect_with_jscpd_result(path)
+        )
+        if skip_reason is not None:
+            record_reduced_coverage(lang, _jscpd_missing_coverage(skip_reason))
         if isinstance(cache, dict) and entries is not None:
             _store_cached_boilerplate_entries(
                 cache,

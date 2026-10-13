@@ -51,11 +51,29 @@ def test_phase_dupes_filters_non_production_functions(monkeypatch) -> None:
 
 
 def test_phase_boilerplate_duplication_handles_none_and_entries(monkeypatch) -> None:
-    lang = SimpleNamespace(zone_map=None)
-    monkeypatch.setattr(review_mod, "detect_with_jscpd", lambda _path: None)
+    lang = SimpleNamespace(zone_map=None, detector_coverage={}, coverage_warnings=[])
+    monkeypatch.setattr(
+        review_mod, "detect_with_jscpd_result", lambda _path: (None, None)
+    )
     issues, potentials = review_mod.phase_boilerplate_duplication(Path("."), lang)
     assert issues == []
     assert potentials == {}
+    assert lang.coverage_warnings == []
+
+    monkeypatch.setattr(
+        review_mod,
+        "detect_with_jscpd_result",
+        lambda _path: (None, "jscpd_not_installed"),
+    )
+    issues, _ = review_mod.phase_boilerplate_duplication(Path("."), lang)
+    assert issues == []
+    coverage = lang.detector_coverage["boilerplate_duplication"]
+    assert coverage["status"] == "reduced"
+    assert coverage["reason"] == "jscpd_not_installed"
+    assert "--allow-tool-download" in coverage["remediation"]
+    assert [w["detector"] for w in lang.coverage_warnings] == [
+        "boilerplate_duplication"
+    ]
 
     entries = [
         {
@@ -69,7 +87,9 @@ def test_phase_boilerplate_duplication_handles_none_and_entries(monkeypatch) -> 
             ],
         }
     ]
-    monkeypatch.setattr(review_mod, "detect_with_jscpd", lambda _path: entries)
+    monkeypatch.setattr(
+        review_mod, "detect_with_jscpd_result", lambda _path: (entries, None)
+    )
     monkeypatch.setattr(
         review_mod, "_filter_boilerplate_entries_by_zone", lambda items, _zone: items
     )
@@ -109,9 +129,9 @@ def test_phase_boilerplate_duplication_reuses_cached_entries(
 
     def _fake_detect(_path):
         calls["count"] += 1
-        return entries
+        return entries, None
 
-    monkeypatch.setattr(review_mod, "detect_with_jscpd", _fake_detect)
+    monkeypatch.setattr(review_mod, "detect_with_jscpd_result", _fake_detect)
     monkeypatch.setattr(
         review_mod, "_filter_boilerplate_entries_by_zone", lambda items, _zone: items
     )
@@ -164,8 +184,11 @@ def test_phase_boilerplate_duplication_uses_prefetched_result(
     monkeypatch.setattr(review_mod, "_PREFETCH_EXECUTOR", _ImmediateExecutor())
     monkeypatch.setattr(
         review_mod,
-        "detect_with_jscpd",
-        lambda _path: (calls.__setitem__("count", calls["count"] + 1), entries)[1],
+        "detect_with_jscpd_result",
+        lambda _path: (
+            calls.__setitem__("count", calls["count"] + 1),
+            (entries, None),
+        )[1],
     )
     monkeypatch.setattr(
         review_mod, "_filter_boilerplate_entries_by_zone", lambda items, _zone: items

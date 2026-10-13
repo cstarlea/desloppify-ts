@@ -39,6 +39,11 @@ CONFIG_SCHEMA: dict[str, ConfigKey] = {
         bool, True, "Generate scorecard image after each scan"
     ),
     "badge_path": ConfigKey(str, "scorecard.png", "Output path for scorecard image"),
+    "allow_tool_download": ConfigKey(
+        bool,
+        False,
+        "Let scans fetch a pinned jscpd with npx when the project has none installed",
+    ),
     "exclude": ConfigKey(list, [], "Path patterns to exclude from scanning"),
     "ignore": ConfigKey(list, [], "Issue patterns to suppress"),
     "disabled": ConfigKey(

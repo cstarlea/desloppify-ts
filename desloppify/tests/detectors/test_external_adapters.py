@@ -9,6 +9,7 @@ Each adapter must:
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -138,19 +139,155 @@ class TestKnipAdapter:
 
 
 from desloppify.engine.detectors.jscpd_adapter import (  # noqa: E402
+    JSCPD_VERSION,
     _parse_jscpd_report,
+    _resolve_jscpd_command,
     _run_jscpd_command,
     detect_with_jscpd,
+    detect_with_jscpd_result,
 )
+
+
+def _fake_bin(directory: Path, name: str) -> Path:
+    """An executable ``name`` (``name.cmd`` on Windows, as npm installs it)."""
+    directory.mkdir(parents=True, exist_ok=True)
+    binary = directory / (f"{name}.cmd" if os.name == "nt" else name)
+    binary.write_text("@echo off\n" if os.name == "nt" else "#!/bin/sh\n")
+    binary.chmod(0o755)
+    return binary
+
+
+def _same_command(actual, expected: list[str]) -> bool:
+    """Compare argv lists; ``shutil.which`` may change a Windows extension's case."""
+    return isinstance(actual, list) and [os.path.normcase(a) for a in actual] == [
+        os.path.normcase(e) for e in expected
+    ]
+
+
+class TestResolveJscpdCommand:
+    @pytest.fixture(autouse=True)
+    def _isolated(self, monkeypatch):
+        monkeypatch.delenv("DESLOPPIFY_ALLOW_TOOL_DOWNLOAD", raising=False)
+        if os.name == "nt":
+            monkeypatch.setenv("PATHEXT", ".COM;.EXE;.BAT;.CMD")
+        from desloppify.base.runtime_state import current_runtime_context
+
+        monkeypatch.setattr(current_runtime_context(), "allow_tool_download", False)
+
+    def test_prefers_project_install(self, tmp_path, monkeypatch):
+        local = _fake_bin(tmp_path / "node_modules" / ".bin", "jscpd")
+        (tmp_path / "packages" / "app").mkdir(parents=True)
+        _fake_bin(tmp_path / "global", "jscpd")
+        monkeypatch.setenv("PATH", str(tmp_path / "global"))
+        assert _same_command(
+            _resolve_jscpd_command(tmp_path / "packages" / "app"), [str(local)]
+        )
+
+    def test_uses_path_install(self, tmp_path, monkeypatch):
+        on_path = _fake_bin(tmp_path / "global", "jscpd")
+        monkeypatch.setenv("PATH", str(tmp_path / "global"))
+        assert _same_command(_resolve_jscpd_command(tmp_path), [str(on_path)])
+
+    def test_never_downloads_without_opt_in(self, tmp_path, monkeypatch):
+        _fake_bin(tmp_path / "global", "npx")
+        monkeypatch.setenv("PATH", str(tmp_path / "global"))
+        assert _resolve_jscpd_command(tmp_path) == "jscpd_not_installed"
+
+    def test_env_opt_in_downloads_pinned_version(self, tmp_path, monkeypatch):
+        npx = _fake_bin(tmp_path / "global", "npx")
+        monkeypatch.setenv("PATH", str(tmp_path / "global"))
+        monkeypatch.setenv("DESLOPPIFY_ALLOW_TOOL_DOWNLOAD", "1")
+        assert _same_command(
+            _resolve_jscpd_command(tmp_path),
+            [str(npx), "--yes", f"jscpd@{JSCPD_VERSION}"],
+        )
+
+    def test_config_opt_in_downloads(self, tmp_path, monkeypatch):
+        from desloppify.base.runtime_state import current_runtime_context
+
+        _fake_bin(tmp_path / "global", "npx")
+        monkeypatch.setenv("PATH", str(tmp_path / "global"))
+        monkeypatch.setattr(current_runtime_context(), "allow_tool_download", True)
+        command = _resolve_jscpd_command(tmp_path)
+        assert isinstance(command, list)
+        assert command[-1] == f"jscpd@{JSCPD_VERSION}"
+
+    def test_opt_in_without_npx(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("PATH", str(tmp_path / "empty"))
+        monkeypatch.setenv("DESLOPPIFY_ALLOW_TOOL_DOWNLOAD", "yes")
+        assert _resolve_jscpd_command(tmp_path) == "npx_not_found"
+
+    def test_version_is_exact(self):
+        assert all(part.isdigit() for part in JSCPD_VERSION.split("."))
+
+
+class TestJscpdRunsFromScanRoot:
+    def test_runs_with_relative_target_under_dot_claude(self, tmp_path):
+        root = tmp_path / ".claude" / "worktrees" / "copy"
+        root.mkdir(parents=True)
+        seen = {}
+
+        def fake_run(cmd, *, timeout, cwd=None):
+            seen["cmd"], seen["cwd"] = cmd, cwd
+            out = Path(cmd[cmd.index("--output") + 1])
+            out.joinpath("jscpd-report.json").write_text(
+                json.dumps(
+                    {
+                        "duplicates": [
+                            {
+                                "fragment": "x",
+                                "lines": 5,
+                                "firstFile": {"name": "src/a.ts", "start": 1},
+                                "secondFile": {"name": "src/b.ts", "start": 3},
+                            }
+                        ]
+                    }
+                )
+            )
+
+        with (
+            patch(
+                "desloppify.engine.detectors.jscpd_adapter._resolve_jscpd_command",
+                return_value=["jscpd"],
+            ),
+            patch(
+                "desloppify.engine.detectors.jscpd_adapter._run_jscpd_command",
+                side_effect=fake_run,
+            ),
+        ):
+            entries = detect_with_jscpd(root)
+        assert seen["cwd"] == root.resolve()
+        assert seen["cmd"][1] == "."
+        assert "**/.claude/**" in seen["cmd"][seen["cmd"].index("--ignore") + 1]
+        assert entries is not None and len(entries) == 1
+        assert [loc["file"] for loc in entries[0]["locations"]] == [
+            "src/a.ts",
+            "src/b.ts",
+        ]
+
+    def test_relative_report_names_resolve_against_scan_root(self, tmp_path):
+        report = {
+            "duplicates": [
+                {
+                    "fragment": "y",
+                    "lines": 4,
+                    "firstFile": {"name": "a.ts", "start": 1},
+                    "secondFile": {"name": str(tmp_path / "b.ts"), "start": 2},
+                }
+            ]
+        }
+        entries = _parse_jscpd_report(report, tmp_path)
+        assert [loc["file"] for loc in entries[0]["locations"]] == ["a.ts", "b.ts"]
 
 
 class TestJscpdAdapter:
     def test_returns_none_when_jscpd_not_installed(self, tmp_path):
         with patch(
             "desloppify.engine.detectors.jscpd_adapter._resolve_jscpd_command",
-            return_value=None,
+            return_value="jscpd_not_installed",
         ):
             assert detect_with_jscpd(tmp_path) is None
+            assert detect_with_jscpd_result(tmp_path) == (None, "jscpd_not_installed")
 
     def test_returns_none_on_timeout(self, tmp_path):
         with (

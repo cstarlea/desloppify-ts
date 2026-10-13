@@ -25,7 +25,7 @@ from desloppify.base.exception_sets import CommandError
 from desloppify.base.output.cli_logging import configure_cli_logging
 from desloppify.base.output.fallbacks import log_best_effort_failure
 from desloppify.base.output.terminal import colorize
-from desloppify.base.runtime_state import runtime_scope
+from desloppify.base.runtime_state import current_runtime_context, runtime_scope
 from desloppify.state_io import load_state
 
 logger = logging.getLogger(__name__)
@@ -213,6 +213,10 @@ def _load_shared_runtime(args: argparse.Namespace) -> None:
     _apply_persisted_exclusions(args, config)
 
     args.runtime = CommandRuntime(config=config, state=state, state_path=state_file)
+    current_runtime_context().allow_tool_download = bool(
+        getattr(args, "allow_tool_download", False)
+        or config.get("allow_tool_download", False)
+    )
 
 
 def _looks_like_desloppify_checkout(root: Path) -> bool:
