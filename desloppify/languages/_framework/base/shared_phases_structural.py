@@ -102,7 +102,7 @@ def run_structural_phase(
         if god_entries:
             log_fn(f"         god classes: {len(god_entries)}")
 
-    results = merge_structural_signals(structural, log_fn)
+    results = merge_structural_signals(structural, log_fn, zone_map=lang.zone_map)
     flat_entries, analyzed_dir_count = detect_flat_dirs(
         path,
         file_finder=lang.file_finder,

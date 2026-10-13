@@ -525,6 +525,21 @@ def should_skip_issue(zone_map, filepath: str, detector: str) -> bool:
     return should_skip_detector_in_zone(zone_map.get(filepath), detector)
 
 
+def drop_zone_skipped_issues(zone_map, issues: list) -> list:
+    """Issues whose file's zone does not skip their detector. No-op without a zone map."""
+    if zone_map is None:
+        return issues
+    return [
+        issue
+        for issue in issues
+        if not (
+            isinstance(issue.get("file"), str)
+            and isinstance(issue.get("detector"), str)
+            and should_skip_issue(zone_map, issue["file"], issue["detector"])
+        )
+    ]
+
+
 def filter_entries(
     zone_map, entries: list[dict], detector: str, file_key: str = "file"
 ) -> list[dict]:

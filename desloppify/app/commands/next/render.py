@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from desloppify.app.commands.helpers.rendering import rating_label
 from desloppify.base.discovery.paths import read_code_snippet
 from desloppify.base.output.terminal import colorize, log
 from desloppify.base.output.user_message import print_user_message
@@ -303,7 +304,7 @@ def _render_item(
 
     # Standard issue header
     confidence = item.get("confidence", "medium")
-    print(colorize(f"  ({confidence} confidence)", "bold"))
+    print(colorize(f"  ({rating_label(item)})", "bold"))
     print(colorize("  " + "─" * 60, "dim"))
     print(f"  {colorize(item.get('summary', ''), 'yellow')}")
     _render_item_type(item)

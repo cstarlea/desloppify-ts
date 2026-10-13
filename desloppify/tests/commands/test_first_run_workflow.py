@@ -18,7 +18,10 @@ from desloppify.app.commands.helpers.queue_progress import (
     QueueBreakdown,
     format_queue_block,
     headline_scores,
+    is_first_scan,
     plan_aware_queue_breakdown,
+    print_execution_or_reveal,
+    print_frozen_score_with_queue_context,
     print_objective_drained_banner,
 )
 from desloppify.app.commands.helpers.queue_progress_render import (
@@ -468,6 +471,26 @@ def test_headline_is_objective_before_the_first_review(monkeypatch):
         "  Score (frozen at plan start): objective 95.5/100 (subjective review pending)",
         "cyan",
     ) in block
+
+
+def test_score_reads_plainly_right_after_the_first_scan(monkeypatch, capsys):
+    state, plan = _first_run(monkeypatch)
+    breakdown = plan_aware_queue_breakdown(state, plan)
+
+    print_execution_or_reveal(state, None, plan)
+    out = capsys.readouterr().out
+    assert "  Score: objective 95.5/100 (subjective review pending)" in out
+    assert "frozen" not in out
+
+    state["scan_count"] = 2
+    print_frozen_score_with_queue_context(
+        breakdown,
+        frozen_strict=97.0,
+        live_score=97.0,
+        score_name="objective",
+        first_scan=is_first_scan(state),
+    )
+    assert "Score (frozen at plan start)" in capsys.readouterr().out
 
 
 def test_headline_is_strict_once_a_dimension_is_assessed(monkeypatch):

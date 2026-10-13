@@ -258,7 +258,7 @@ def test_phase_structural_and_subdetectors_cover_threshold_and_passthrough_paths
     monkeypatch.setattr(
         phases_structural_mod,
         "merge_structural_signals",
-        lambda structural, _log: [
+        lambda structural, _log, **_kw: [
             {"detector": "structural", "files": sorted(structural.keys())}
         ],
     )

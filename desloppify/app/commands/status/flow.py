@@ -12,6 +12,7 @@ from desloppify.app.commands.helpers.queue_progress import (
     format_queue_block,
     get_plan_start_strict,
     headline_scores,
+    is_first_scan,
     plan_aware_queue_breakdown,
     print_frozen_score_with_queue_context,
     print_objective_drained_banner,
@@ -163,6 +164,7 @@ def print_score_section(
             frozen_strict=start_score,
             live_score=live_score,
             score_name=score_name,
+            first_scan=is_first_scan(state),
         )
     else:
         for line, style in score_summary_lines(

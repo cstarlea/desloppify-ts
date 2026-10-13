@@ -25,6 +25,14 @@ def unscored_open_note(stats: dict) -> str:
     return f" ({', '.join(parts)}, not scored)" if parts else ""
 
 
+def rating_label(issue: dict) -> str:
+    """``severity: high, confidence: medium``, or just the confidence."""
+    detail = issue.get("detail")
+    severity = detail.get("severity") if isinstance(detail, dict) else None
+    confidence = f"confidence: {issue.get('confidence') or 'medium'}"
+    return f"severity: {severity}, {confidence}" if severity else confidence
+
+
 def print_agent_plan(
     steps: list[str],
     *,
@@ -141,5 +149,6 @@ __all__ = [
     "print_agent_plan",
     "print_ranked_actions",
     "print_replacement_groups",
+    "rating_label",
     "unscored_open_note",
 ]

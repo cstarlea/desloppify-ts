@@ -22,6 +22,7 @@ from desloppify.engine.detectors import single_use as single_use_detector_mod
 from desloppify.engine.detectors.coupling import Layer
 from desloppify.engine.policy.zones import (
     adjust_potential,
+    drop_zone_skipped_issues,
     filter_entries,
     should_skip_issue,
 )
@@ -472,6 +473,7 @@ def phase_coupling(
     naming_issues, total_dirs = detect_naming_inconsistencies(path, lang, packages)
     results.extend(naming_issues)
 
+    results = drop_zone_skipped_issues(zone_map, results)
     log(f"         → {len(results)} coupling/structural issues total")
     potentials = {
         "single_use": adjust_potential(zone_map, single_candidates),

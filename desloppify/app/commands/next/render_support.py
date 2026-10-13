@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from desloppify.engine._work_queue.snapshot import QueueSnapshot
 
 from desloppify.app.commands.helpers.queue_progress import format_plan_delta
+from desloppify.app.commands.helpers.rendering import rating_label
 from desloppify.base.output.terminal import colorize
 from desloppify.engine._state.issue_semantics import is_review_finding
 from desloppify.engine._work_queue.helpers import is_auto_fix_item
@@ -83,10 +84,9 @@ def render_grouped(items: list[dict], group: str) -> None:
     for key, grouped_items in grouped.items():
         print(colorize(f"\n  {key} ({len(grouped_items)})", "cyan"))
         for item in grouped_items:
-            confidence = item.get("confidence", "medium")
             tag = effort_tag(item)
             tag_str = f" {tag}" if tag else ""
-            print(f"    [{confidence}]{tag_str} {item.get('summary', '')}")
+            print(f"    [{rating_label(item)}]{tag_str} {item.get('summary', '')}")
 
 
 def _cluster_type_label(cluster_name: str, action_type: str) -> str:
@@ -298,7 +298,6 @@ def show_empty_queue(
 
 def render_compact_item(item: dict, idx: int, total: int) -> None:
     """One-line summary for cluster drill-in items after the first."""
-    confidence = item.get("confidence", "medium")
     tag = effort_tag(item)
     tag_str = f" {tag}" if tag else ""
     plan_cluster = item.get("plan_cluster")
@@ -306,7 +305,9 @@ def render_compact_item(item: dict, idx: int, total: int) -> None:
         tag_str += " [plan]"
     fid = item.get("id", "")
     short = fid.rsplit("::", 1)[-1][:8] if "::" in fid else fid
-    print(f"  [{idx + 1}/{total}] [{confidence}]{tag_str} {item.get('summary', '')}")
+    print(
+        f"  [{idx + 1}/{total}] [{rating_label(item)}]{tag_str} {item.get('summary', '')}"
+    )
     print(colorize(f"         {item.get('file', '')}  [{short}]", "dim"))
 
 

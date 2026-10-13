@@ -7,6 +7,7 @@ from desloppify.app.commands.helpers.queue_progress import (
     ScoreDisplayMode,
     format_queue_block,
     headline_scores,
+    is_first_scan,
     print_frozen_score_with_queue_context,
     score_display_mode,
 )
@@ -111,6 +112,7 @@ def _render_frozen_queue_status(
     breakdown: QueueBreakdown | None,
     score_name: str = "strict",
     plan_start_score: float | None = None,
+    first_scan: bool = False,
 ) -> bool:
     """Render frozen-score status. Returns True if score was rendered as frozen."""
     mode = score_display_mode(breakdown, plan_start_strict)
@@ -123,6 +125,7 @@ def _render_frozen_queue_status(
         else plan_start_strict,
         live_score=strict_score,
         score_name=score_name,
+        first_scan=first_scan,
     )
     return True
 
@@ -313,6 +316,7 @@ def render_followup_nudges(
         breakdown=breakdown,
         score_name=score_name,
         plan_start_score=plan_start_score if provisional else None,
+        first_scan=is_first_scan(state),
     )
     if not rendered_frozen:
         _render_north_star(

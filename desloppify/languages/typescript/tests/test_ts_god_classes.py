@@ -122,6 +122,7 @@ class _Lang:
     complexity_map: dict = {}
     large_threshold = 10_000
     complexity_threshold = 10_000
+    zone_map = None
 
     def __init__(self, files):
         self._files = files

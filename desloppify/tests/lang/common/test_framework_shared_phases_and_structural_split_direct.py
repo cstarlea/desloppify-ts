@@ -632,7 +632,9 @@ def test_run_structural_phase_merges_large_complexity_and_flat_dirs(
     monkeypatch.setattr(
         structural_mod,
         "merge_structural_signals",
-        lambda _signals, _log_fn: [{"detector": "structural", "file": "src/large.py"}],
+        lambda _signals, _log_fn, **_kw: [
+            {"detector": "structural", "file": "src/large.py"}
+        ],
     )
     monkeypatch.setattr(
         structural_mod,
@@ -662,6 +664,29 @@ def test_run_structural_phase_merges_large_complexity_and_flat_dirs(
     assert any(issue["detector"] == "flat_dirs" for issue in issues)
     assert lang.complexity_map["src/complex.py"] == 21
     assert potentials == {"structural": 3, "flat_dirs": 7}
+
+
+def test_merge_structural_signals_logs_only_what_zone_policy_keeps() -> None:
+    from desloppify.engine.policy.zones import COMMON_ZONE_RULES, FileZoneMap
+    from desloppify.languages._framework.base.structural import (
+        add_structural_signal,
+        merge_structural_signals,
+    )
+
+    files = ["src/big.ts", "tests/big.test.ts", "tests/huge.test.ts"]
+    structural: dict = {}
+    for file in files:
+        add_structural_signal(structural, file, "large (900 LOC)", {"loc": 900})
+
+    logs: list[str] = []
+    issues = merge_structural_signals(
+        structural, logs.append, zone_map=FileZoneMap(files, COMMON_ZONE_RULES)
+    )
+
+    assert [issue["file"] for issue in issues] == ["src/big.ts"]
+    assert logs[-1].strip() == (
+        "-> 1 structural issues (2 more in zones that skip structural)"
+    )
 
 
 def test_run_coupling_phase_wires_single_cycles_orphaned_and_post_process(

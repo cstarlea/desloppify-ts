@@ -199,7 +199,7 @@ def test_render_single_issue_item_basic(monkeypatch, capsys) -> None:
     )
     out = capsys.readouterr().out
     assert "Next item" in out
-    assert "(high confidence)" in out
+    assert "(confidence: high)" in out
     assert "Function `parse` is 80 lines long" in out
     assert "File: src/parser.py" in out
     assert "Lines: 10, 45" in out
@@ -637,7 +637,12 @@ def test_render_grouped_output(monkeypatch, capsys) -> None:
 
     items = [
         _issue_item(id="smells::a", summary="Issue A", confidence="high"),
-        _issue_item(id="smells::b", summary="Issue B", confidence="low"),
+        _issue_item(
+            id="smells::b",
+            summary="Issue B",
+            confidence="low",
+            detail={"severity": "high"},
+        ),
     ]
     render_mod.render_terminal_items(
         items,
@@ -648,8 +653,34 @@ def test_render_grouped_output(monkeypatch, capsys) -> None:
     )
     out = capsys.readouterr().out
     assert "smells (2)" in out
-    assert "Issue A" in out
-    assert "Issue B" in out
+    assert "[confidence: high] Issue A" in out
+    assert "[severity: high, confidence: low] Issue B" in out
+
+
+def test_compact_item_labels_severity_and_confidence(capsys) -> None:
+    support_mod.render_compact_item(
+        _issue_item(summary="Plain", confidence="medium"), 1, 3
+    )
+    support_mod.render_compact_item(
+        _issue_item(summary="Rated", confidence="low", detail={"severity": "critical"}),
+        2,
+        3,
+    )
+    out = capsys.readouterr().out
+    assert "[2/3] [confidence: medium] Plain" in out
+    assert "[3/3] [severity: critical, confidence: low] Rated" in out
+
+
+def test_issue_card_shows_severity_when_present(monkeypatch, capsys) -> None:
+    monkeypatch.setattr(render_mod, "colorize", lambda t, _s: t)
+    render_mod.render_terminal_items(
+        [_issue_item(confidence="medium", detail={"severity": "high"})],
+        {},
+        {},
+        group="item",
+        explain=False,
+    )
+    assert "(severity: high, confidence: medium)" in capsys.readouterr().out
 
 
 # ---------------------------------------------------------------------------
@@ -694,7 +725,7 @@ def test_cluster_drill_in_first_full_rest_compact(monkeypatch, capsys) -> None:
     # Focus header
     assert "Cluster: import-cleanup" in out
     # First item is full — has confidence and file
-    assert "(high confidence)" in out
+    assert "(confidence: high)" in out
     assert "File: src/a.py" in out
     # Compact items show index labels
     assert "[2/3]" in out

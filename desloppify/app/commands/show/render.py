@@ -10,6 +10,7 @@ from desloppify.app.commands.helpers.rendering import (
 )
 from desloppify.app.commands.helpers.rendering import (
     print_ranked_actions,
+    rating_label,
 )
 from desloppify.app.commands.helpers.subjective import print_subjective_followup
 from desloppify.app.commands.scan.reporting import (
@@ -47,14 +48,6 @@ def group_matches_by_file(matches: list[dict]) -> list[tuple[str, list]]:
     return sorted(by_file.items(), key=lambda item: -len(item[1]))
 
 
-def _rating_label(issue: dict) -> str:
-    """``severity: high, confidence: medium``, or just the confidence."""
-    detail = issue.get("detail")
-    severity = detail.get("severity") if isinstance(detail, dict) else None
-    confidence = f"confidence: {issue['confidence']}"
-    return f"severity: {severity}, {confidence}" if severity else confidence
-
-
 def _print_single_issue(issue: dict, *, show_code: bool) -> None:
     """Render a single issue to terminal."""
     normalized_status = canonical_issue_status(issue.get("status"))
@@ -70,7 +63,7 @@ def _print_single_issue(issue: dict, *, show_code: bool) -> None:
     zone = issue.get("zone", "production")
     zone_tag = colorize(f" [{zone}]", "dim") if zone != "production" else ""
     print(
-        f"    {status_icon} T{issue['tier']} [{_rating_label(issue)}] {issue['summary']}{zone_tag}"
+        f"    {status_icon} T{issue['tier']} [{rating_label(issue)}] {issue['summary']}{zone_tag}"
     )
 
     detail_parts = format_detail(issue.get("detail", {}))

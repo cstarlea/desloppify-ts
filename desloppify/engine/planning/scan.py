@@ -13,7 +13,7 @@ from desloppify.engine.planning.helpers import is_subjective_phase
 from desloppify.engine.policy.zones import (
     ZONE_POLICIES,
     FileZoneMap,
-    should_skip_issue,
+    drop_zone_skipped_issues,
 )
 from desloppify.languages.framework import (
     DetectorPhase,
@@ -118,21 +118,7 @@ def _filter_zone_skipped_issues(issues: list[Issue], lang: LangRun) -> list[Issu
     normalized-issue gate prevents a phase omission from admitting generated,
     vendor, or otherwise policy-skipped findings into persistent state.
     """
-    if lang.zone_map is None:
-        return issues
-
-    filtered: list[Issue] = []
-    for issue in issues:
-        filepath = issue.get("file")
-        detector = issue.get("detector")
-        if (
-            isinstance(filepath, str)
-            and isinstance(detector, str)
-            and should_skip_issue(lang.zone_map, filepath, detector)
-        ):
-            continue
-        filtered.append(issue)
-    return filtered
+    return drop_zone_skipped_issues(lang.zone_map, issues)
 
 
 def _generate_issues_from_lang(

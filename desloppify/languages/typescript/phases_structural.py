@@ -100,7 +100,7 @@ def _detect_structural_signals(
             {"concerns": entry["concerns"]},
         )
 
-    results = merge_structural_signals(structural, log)
+    results = merge_structural_signals(structural, log, zone_map=lang.zone_map)
     return results, file_count
 
 

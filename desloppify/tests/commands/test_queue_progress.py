@@ -13,6 +13,7 @@ from desloppify.app.commands.helpers.queue_progress import (
     format_queue_block,
     format_queue_headline,
     get_plan_start_strict,
+    is_first_scan,
     plan_aware_queue_breakdown,
     print_execution_or_reveal,
     print_frozen_score_with_queue_context,
@@ -485,6 +486,32 @@ def test_frozen_score_with_breakdown(capsys):
     assert "80.0" in output
     assert "Queue:" in output
     assert "100 items" in output
+
+
+def test_first_scan_shows_plain_score_wording(capsys):
+    b = QueueBreakdown(queue_total=12)
+    print_frozen_score_with_queue_context(
+        b, frozen_strict=98.5, live_score=98.5, first_scan=True
+    )
+    output = capsys.readouterr().out
+    assert "  Score: strict 98.5/100" in output
+    assert "frozen" not in output
+    assert "then rescan to update the score" in output
+
+
+def test_first_scan_still_shows_a_live_delta():
+    block = format_queue_block(
+        QueueBreakdown(queue_total=12),
+        frozen_score=90.0,
+        live_score=91.0,
+        first_scan=True,
+    )
+    assert ("  Score: strict 91.0/100 (plan start: 90.0, +1.0)", "cyan") in block
+
+
+def test_is_first_scan_until_rescanned():
+    assert is_first_scan({"scan_count": 1})
+    assert not is_first_scan({"scan_count": 2})
 
 
 # ── print_execution_or_reveal ────────────────────────────────

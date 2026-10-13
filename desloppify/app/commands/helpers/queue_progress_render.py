@@ -45,8 +45,13 @@ def format_queue_block(
     frozen_score: float | None = None,
     live_score: float | None = None,
     score_name: str = "strict",
+    first_scan: bool = False,
 ) -> list[tuple[str, str]]:
-    """Full queue block: focus banner + queue line + contextual hints."""
+    """Full queue block: focus banner + queue line + contextual hints.
+
+    ``first_scan``: nothing has been fixed since the only scan, so the score
+    is shown plainly rather than as frozen at plan start.
+    """
     lines: list[tuple[str, str]] = []
     pending = " (subjective review pending)" if score_name == "objective" else ""
 
@@ -73,10 +78,10 @@ def format_queue_block(
                 )
             )
         else:
+            label = "Score:" if first_scan else "Score (frozen at plan start):"
             lines.append(
                 (
-                    f"  Score (frozen at plan start): {score_name} "
-                    f"{frozen_score:.1f}/100{pending}",
+                    f"  {label} {score_name} {frozen_score:.1f}/100{pending}",
                     "cyan",
                 )
             )

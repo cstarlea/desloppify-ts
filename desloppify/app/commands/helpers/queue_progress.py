@@ -321,12 +321,18 @@ def headline_scores(
     )
 
 
+def is_first_scan(state: dict) -> bool:
+    """True until the project has been rescanned."""
+    return int(state.get("scan_count") or 0) <= 1
+
+
 def print_frozen_score_with_queue_context(
     breakdown: QueueBreakdown,
     *,
     frozen_strict: float,
     live_score: float | None = None,
     score_name: str = "strict",
+    first_scan: bool = False,
 ) -> None:
     """Show frozen plan-start score + queue progress.
 
@@ -338,17 +344,18 @@ def print_frozen_score_with_queue_context(
         frozen_score=frozen_strict,
         live_score=live_score,
         score_name=score_name,
+        first_scan=first_scan,
     )
     print()
     for text, style in block:
         print(colorize(text, style))
-    print(
-        colorize(
-            "  The plan-start score stays frozen until the queue is clear."
-            " Rescan any time to verify fixes: `desloppify scan`.",
-            "dim",
-        )
+    note = (
+        "  Work through the queue, then rescan to update the score: `desloppify scan`."
+        if first_scan
+        else "  The plan-start score stays frozen until the queue is clear."
+        " Rescan any time to verify fixes: `desloppify scan`."
     )
+    print(colorize(note, "dim"))
 
 
 def print_objective_drained_banner(
@@ -418,6 +425,7 @@ def print_execution_or_reveal(
             frozen_strict=start_score if start_score is not None else frozen_strict,
             live_score=live_score,
             score_name=score_name,
+            first_scan=is_first_scan(state),
         )
         return
 
@@ -459,6 +467,7 @@ __all__ = [
     "plan_aware_queue_breakdown",
     "print_execution_or_reveal",
     "print_objective_drained_banner",
+    "is_first_scan",
     "print_frozen_score_with_queue_context",
     "queue_headline",
     "score_display_mode",

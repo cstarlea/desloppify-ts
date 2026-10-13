@@ -7,6 +7,7 @@ from pathlib import Path
 from desloppify.base.discovery.file_paths import count_lines, resolve_path
 from desloppify.base.discovery.paths import get_project_root
 from desloppify.engine._state.filtering import make_issue
+from desloppify.engine.policy.zones import drop_zone_skipped_issues
 from desloppify.state_io import Issue
 
 
@@ -26,6 +27,7 @@ def merge_structural_signals(
     stderr_fn,
     *,
     complexity_only_min: int = 50,
+    zone_map=None,
 ) -> list[Issue]:
     """Convert per-file structural signals into tiered issues.
 
@@ -33,6 +35,8 @@ def merge_structural_signals(
     1-2 signals -> T3/medium.
     Complexity-only files (no large/god signals) need score >= complexity_only_min
     to be flagged — lower complexity in small files is normal, not decomposition-worthy.
+    Files whose zone skips ``structural`` are dropped here, so the count logged
+    matches what the scan stores.
     """
     results = []
     suppressed = 0
@@ -77,8 +81,13 @@ def merge_structural_signals(
             "         "
             f"{suppressed} complexity-only files below threshold (< {complexity_only_min})"
         )
-    stderr_fn(f"         -> {len(results)} structural issues")
-    return results
+    kept = drop_zone_skipped_issues(zone_map, results)
+    zone_skipped = len(results) - len(kept)
+    skipped_note = (
+        f" ({zone_skipped} more in zones that skip structural)" if zone_skipped else ""
+    )
+    stderr_fn(f"         -> {len(kept)} structural issues{skipped_note}")
+    return kept
 
 
 __all__ = ["add_structural_signal", "merge_structural_signals"]
