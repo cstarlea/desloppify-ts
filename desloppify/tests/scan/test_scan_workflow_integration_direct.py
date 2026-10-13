@@ -5,6 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
+
 from desloppify import state as state_mod
 from desloppify.app.commands.helpers.command_runtime import CommandRuntime
 from desloppify.app.commands.scan.workflow import (
@@ -28,6 +30,7 @@ from desloppify.languages.typescript import TypeScriptConfig
 
 
 def test_prepare_scan_runtime_uses_real_runtime_and_resets_subjective(tmp_path):
+    (tmp_path / "index.ts").write_text("export const x = 1;\n", encoding="utf-8")
     state = {
         "subjective_assessments": {
             "naming_quality": {
@@ -89,6 +92,43 @@ def test_prepare_scan_runtime_rejects_file_scan_path(tmp_path):
         assert str(scan_target) in str(exc)
     else:  # pragma: no cover - assertion branch
         raise AssertionError("expected file scan path to be rejected")
+
+
+def _scan_args(path, state_path):
+    runtime = CommandRuntime(config={}, state={}, state_path=state_path)
+    return SimpleNamespace(
+        path=str(path),
+        runtime=runtime,
+        lang=None,
+        reset_subjective=False,
+        skip_slow=False,
+        profile=None,
+    )
+
+
+def test_prepare_scan_runtime_rejects_a_scan_with_no_source_files(tmp_path):
+    (tmp_path / "README.md").write_text("# nothing to scan\n", encoding="utf-8")
+    args = _scan_args(tmp_path, tmp_path / "state.json")
+
+    with runtime_scope(RuntimeContext(project_root=tmp_path)):
+        with pytest.raises(ScanStateContractError) as exc:
+            prepare_scan_runtime(args)
+
+    assert f"no TypeScript/JavaScript files found under {tmp_path}" in str(exc.value)
+    assert not (tmp_path / "state.json").exists()
+
+
+def test_prepare_scan_runtime_rejects_a_missing_project_root(tmp_path, monkeypatch):
+    (tmp_path / "index.ts").write_text("export const x = 1;\n", encoding="utf-8")
+    missing = tmp_path / "nope"
+    monkeypatch.setenv("DESLOPPIFY_ROOT", str(missing))
+    args = _scan_args(tmp_path, tmp_path / "state.json")
+
+    with pytest.raises(ScanStateContractError) as exc:
+        prepare_scan_runtime(args)
+
+    assert "project root (DESLOPPIFY_ROOT) does not exist" in str(exc.value)
+    assert str(missing) in str(exc.value)
 
 
 def test_merge_scan_results_persists_state_and_reconciles_plan(tmp_path):

@@ -9,6 +9,7 @@ from desloppify.app.commands.helpers.command_runtime import command_runtime
 from desloppify.app.commands.helpers.state import require_issue_inventory
 from desloppify.engine._scoring.results.core import compute_health_breakdown
 from desloppify.engine._state.filtering import open_scope_breakdown
+from desloppify.engine._state.schema import scan_found_no_files
 from desloppify.engine.planning.scorecard_projection import (
     scorecard_dimensions_payload,
 )
@@ -92,6 +93,7 @@ def _status_json_payload(
         "suppression": suppression,
         "disabled_detectors": state.get("disabled_detectors", []),
         "scan_count": state.get("scan_count", 0),
+        "no_source_files": scan_found_no_files(state),
         "last_scan": state.get("last_scan"),
         "scan_metadata": state.get("scan_metadata", {}),
     }

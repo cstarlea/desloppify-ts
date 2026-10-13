@@ -71,6 +71,7 @@ __all__ = [
     "ensure_state_defaults",
     "scan_source",
     "scan_metadata",
+    "scan_found_no_files",
     "scan_inventory_available",
     "scan_metrics_available",
     "scan_reconstructed_issue_count",
@@ -438,6 +439,19 @@ def scan_inventory_available(state: StateModel | dict[str, Any]) -> bool:
 def scan_metrics_available(state: StateModel | dict[str, Any]) -> bool:
     """Whether scan-derived metrics/timestamps are present."""
     return scan_source(state) == "scan"
+
+
+def scan_found_no_files(state: StateModel | dict[str, Any]) -> bool:
+    """Whether the last scan ran but found no source files, so its score means nothing."""
+    if scan_source(state) != "scan":
+        return False
+    metrics = state.get("codebase_metrics")
+    if not isinstance(metrics, dict) or not metrics:
+        return False
+    return all(
+        isinstance(entry, dict) and entry.get("total_files", 0) == 0
+        for entry in metrics.values()
+    )
 
 
 def scan_reconstructed_issue_count(state: StateModel | dict[str, Any]) -> int:

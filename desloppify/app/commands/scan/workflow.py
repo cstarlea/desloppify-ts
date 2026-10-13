@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -284,6 +285,12 @@ def prepare_scan_runtime(args: argparse.Namespace) -> ScanRuntime:
         raise ScanStateContractError(
             f"scan --path must point to an existing directory: {path}"
         )
+    project_root = get_project_root()
+    if not project_root.is_dir():
+        source = " (DESLOPPIFY_ROOT)" if os.environ.get("DESLOPPIFY_ROOT") else ""
+        raise ScanStateContractError(
+            f"the project root{source} does not exist: {project_root}"
+        )
     runtime = command_runtime(args)
     state_file = runtime.state_path
     state = runtime.state if isinstance(runtime.state, dict) else {}
@@ -302,6 +309,7 @@ def prepare_scan_runtime(args: argparse.Namespace) -> ScanRuntime:
     include_slow_effective = effective_include_slow(include_slow, profile)
 
     lang = _configure_lang_runtime(args, config, state, lang_config)
+    _require_source_files(lang, path, project_root)
     coverage_warnings = _seed_runtime_coverage_warnings(lang)
     zone_overrides_raw = config.get("zone_overrides")
     zone_overrides = (
@@ -322,6 +330,16 @@ def prepare_scan_runtime(args: argparse.Namespace) -> ScanRuntime:
         reset_subjective_count=reset_subjective_count,
         coverage_warnings=coverage_warnings,
         force_rescan=bool(getattr(args, "force_rescan", False)),
+    )
+
+
+def _require_source_files(lang: LangRun | None, path: Path, project_root: Path) -> None:
+    """Refuse to score a scan that would cover no source files."""
+    file_finder = getattr(lang, "file_finder", None)
+    if not file_finder or file_finder(path):
+        return
+    raise ScanStateContractError(
+        f"no TypeScript/JavaScript files found under {path} (project root {project_root})"
     )
 
 
