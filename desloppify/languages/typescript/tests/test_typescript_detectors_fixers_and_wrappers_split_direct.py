@@ -395,7 +395,7 @@ def test_ts_command_registry_canonical_surface_and_wrapper_passthrough(
     registry = cli_mod.get_detect_commands()
     assert registry["logs"] is cli_mod.cmd_logs
     assert registry["unused"] is cli_mod.cmd_unused
-    assert registry["exports"] is cli_mod.cmd_exports
+    assert registry["exports"] is cli_mod._cmd_exports
     assert registry["deprecated"] is cli_mod.cmd_deprecated
     assert registry["props"] is cli_mod.cmd_props
     assert registry["concerns"] is cli_mod.cmd_concerns

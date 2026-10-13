@@ -1,6 +1,20 @@
 {
   "issues": [
     {
+      "id": "exports::src/format.js::truncate",
+      "tier": 2,
+      "confidence": "low",
+      "zone": "production",
+      "summary": "Dead export: truncate"
+    },
+    {
+      "id": "exports::src/math/sum.ts::sumOfSquares",
+      "tier": 2,
+      "confidence": "low",
+      "zone": "production",
+      "summary": "Dead export: sumOfSquares"
+    },
+    {
       "id": "facade::src/math/index.js",
       "tier": 2,
       "confidence": "medium",
@@ -69,7 +83,7 @@
     "cycles": 9,
     "deprecated": 0,
     "dupes": 9,
-    "exports": 0,
+    "exports": 12,
     "facade": 9,
     "flat_dirs": 4,
     "logs": 9,

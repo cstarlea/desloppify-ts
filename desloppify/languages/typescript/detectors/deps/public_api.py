@@ -31,6 +31,7 @@ from desloppify.languages.typescript.detectors.deps.resolver import project_reso
 logger = logging.getLogger(__name__)
 
 _ALL = "*all*"  # every name, ``default`` included (an entry, a namespace)
+ALL_NAMES = _ALL
 _STAR = "*star*"  # every name but ``default`` (``export * from``)
 Resolve = Callable[[str, str], "str | None"]
 
@@ -51,9 +52,21 @@ def public_exports(
     entry_files: Iterable[str], resolve: Resolve
 ) -> set[tuple[str, str]]:
     """Every (absolute file, exported name) the entry files expose."""
+    return exposed_names(((path, ALL_NAMES) for path in entry_files), resolve)
+
+
+def exposed_names(
+    seeds: Iterable[tuple[str, str]], resolve: Resolve
+) -> set[tuple[str, str]]:
+    """Every (absolute file, exported name) reached from *seeds*, following
+    re-exports to the defining files.
+
+    A seed is (absolute file, name), or (file, ``ALL_NAMES``) for every name
+    the file exports.
+    """
     found: set[tuple[str, str]] = set()
     seen: set[tuple[str, str]] = set()
-    stack: list[tuple[str, str]] = [(path, _ALL) for path in entry_files]
+    stack: list[tuple[str, str]] = list(seeds)
     while stack:
         path, wanted = stack.pop()
         if (path, wanted) in seen:
@@ -112,4 +125,10 @@ def public_export_names(
     return {(rel(path), name) for path, name in public_exports(entries, resolve)}
 
 
-__all__ = ["public_export_names", "public_exports", "published_entry_files"]
+__all__ = [
+    "ALL_NAMES",
+    "exposed_names",
+    "public_export_names",
+    "public_exports",
+    "published_entry_files",
+]

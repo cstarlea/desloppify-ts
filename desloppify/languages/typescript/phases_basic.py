@@ -222,7 +222,9 @@ def phase_exports(
     path: Path, lang: LangRuntimeContract
 ) -> tuple[list[Issue], dict[str, int]]:
     export_entries, total_exports, coverage = (
-        exports_detector_mod.detect_dead_exports_result(path, cache=lang.runtime_cache)
+        exports_detector_mod.detect_dead_exports_result(
+            path, cache=lang.runtime_cache, zone_map=lang.zone_map
+        )
     )
     record_reduced_coverage(lang, coverage)
     results = []
@@ -232,13 +234,21 @@ def phase_exports(
         if kind == "duplicate":
             detail["names"] = entry["names"]
         summary = _EXPORT_SUMMARIES.get(kind, _EXPORT_SUMMARIES["export"])
+        fallback = entry.get("source") == "fallback"
+        if fallback:
+            # No Knip: found by the import check, which can't see every use.
+            detail["source"] = "fallback"
         results.append(
             make_issue(
                 "exports",
                 entry["file"],
                 entry["name"],
                 tier=3 if kind == "duplicate" else 2,
-                confidence="medium" if kind == "duplicate" else "high",
+                confidence="low"
+                if fallback
+                else "medium"
+                if kind == "duplicate"
+                else "high",
                 summary=summary.format(
                     name=entry["name"], names=", ".join(entry.get("names", ()))
                 ),

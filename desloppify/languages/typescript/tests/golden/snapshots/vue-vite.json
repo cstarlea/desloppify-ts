@@ -1,6 +1,13 @@
 {
   "issues": [
     {
+      "id": "exports::src/types.ts::Filter",
+      "tier": 2,
+      "confidence": "low",
+      "zone": "production",
+      "summary": "Dead export: Filter"
+    },
+    {
       "id": "logs::src/views/Home.vue::Home",
       "tier": 1,
       "confidence": "high",
@@ -111,7 +118,7 @@
     "cycles": 15,
     "deprecated": 0,
     "dupes": 8,
-    "exports": 0,
+    "exports": 9,
     "facade": 15,
     "flat_dirs": 7,
     "logs": 15,

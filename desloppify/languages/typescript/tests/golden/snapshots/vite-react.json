@@ -15,6 +15,20 @@
       "summary": "Deprecated: formatTitle (2 importers)"
     },
     {
+      "id": "exports::src/lib/analytics.ts::flush",
+      "tier": 2,
+      "confidence": "low",
+      "zone": "production",
+      "summary": "Dead export: flush"
+    },
+    {
+      "id": "exports::src/lib/notifications.ts::subscribe",
+      "tier": 2,
+      "confidence": "low",
+      "zone": "production",
+      "summary": "Dead export: subscribe"
+    },
+    {
       "id": "logs::src/hooks/useTodos.ts::TODOS",
       "tier": 1,
       "confidence": "high",
@@ -202,7 +216,7 @@
     "cycles": 18,
     "deprecated": 1,
     "dupes": 17,
-    "exports": 0,
+    "exports": 24,
     "facade": 18,
     "flat_dirs": 7,
     "logs": 18,

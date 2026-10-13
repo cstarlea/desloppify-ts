@@ -17,6 +17,9 @@ from desloppify.languages._framework.base.types import DetectorCoverageStatus
 from desloppify.languages.typescript.detectors.deps.public_api import (
     public_export_names,
 )
+from desloppify.languages.typescript.detectors.exports_fallback import (
+    detect_dead_exports_fallback,
+)
 from desloppify.languages.typescript.detectors.knip_adapter import (
     detect_with_knip_result,
 )
@@ -71,42 +74,63 @@ def drop_public_api(path: Path, entries: list[dict]) -> list[dict]:
 
 
 def detect_dead_exports_result(
-    path: Path, *, cache: dict[str, Any] | None = None
+    path: Path, *, cache: dict[str, Any] | None = None, zone_map=None
 ) -> tuple[list[dict], int, DetectorCoverageStatus | None]:
     """Return (dead_export_entries, total_exports, coverage) using Knip.
 
     ``cache`` (the scan's runtime cache) shares the Knip run with the other
-    Knip readers.
+    Knip readers. When Knip can't run, a conservative import-graph check
+    (``exports_fallback``) reports what it can; its entries carry
+    ``"source": "fallback"`` and the coverage stays reduced.
     """
     entries, reason = detect_with_knip_result(path, cache=cache)
     if entries is None:
+        fallback = detect_dead_exports_fallback(path, zone_map)
+        remediation = _KNIP_REMEDIATION.get(
+            reason or "",
+            "Check that `npx knip` runs in this project and rerun scan.",
+        )
+        if fallback is None:
+            summary = f"Dead-export detection skipped: Knip did not run ({reason})"
+            impact = "Unused exports are not reported for this scan."
+        else:
+            summary = (
+                f"Knip did not run ({reason}); dead exports come from a "
+                "conservative import check"
+            )
+            impact = (
+                "Only exports no file imports are reported; unused enum members "
+                "and duplicate exports are not, and some dead exports are missed."
+            )
         coverage = DetectorCoverageStatus(
             detector="exports",
             status="reduced",
-            confidence=0.0,
-            summary=f"Dead-export detection skipped: Knip did not run ({reason})",
-            impact="Unused exports are not reported for this scan.",
-            remediation=_KNIP_REMEDIATION.get(
-                reason or "",
-                "Check that `npx knip` runs in this project and rerun scan.",
-            ),
+            confidence=0.0 if fallback is None else 0.5,
+            summary=summary,
+            impact=impact,
+            remediation=remediation,
             tool="knip",
             reason=reason or "knip_failed",
         )
-        return [], 0, coverage
+        if not fallback:
+            return [], 0, coverage
+        for entry in fallback:
+            entry["source"] = "fallback"
+        fallback = drop_public_api(path, fallback)
+        return fallback, max(len(fallback), _count_exports(path)), coverage
     entries = drop_public_api(path, entries)
     return entries, max(len(entries), _count_exports(path)), None
 
 
-def detect_dead_exports(path: Path) -> tuple[list[dict], int]:
+def detect_dead_exports(path: Path, zone_map=None) -> tuple[list[dict], int]:
     """Return (dead_export_entries, total_exports) using Knip."""
-    entries, total, _coverage = detect_dead_exports_result(path)
+    entries, total, _coverage = detect_dead_exports_result(path, zone_map=zone_map)
     return entries, total
 
 
-def cmd_exports(args: argparse.Namespace) -> None:
+def cmd_exports(args: argparse.Namespace, zone_map=None) -> None:
     print(colorize("Scanning exports via Knip...", "dim"), file=sys.stderr)
-    entries, _ = detect_dead_exports(Path(args.path))
+    entries, _ = detect_dead_exports(Path(args.path), zone_map)
     if args.json:
         print(json.dumps({"count": len(entries), "entries": entries}, indent=2))
         return

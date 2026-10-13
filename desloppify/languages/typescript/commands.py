@@ -175,6 +175,11 @@ def _zoned_lang(path: Path, args: argparse.Namespace):
     return lang
 
 
+def _cmd_exports(args: argparse.Namespace) -> None:
+    """Dead exports with scan's zones (the no-Knip fallback checks production only)."""
+    cmd_exports(args, _zoned_lang(Path(args.path), args).zone_map)
+
+
 def cmd_naming(args: argparse.Namespace) -> None:
     """Naming inconsistencies exactly as ``scan`` reports them (zones, framework names)."""
     path = Path(args.path)
@@ -372,7 +377,7 @@ def get_detect_commands() -> dict[str, Callable[..., None]]:
             "lint": cmd_lint,
             "logs": cmd_logs,
             "unused": cmd_unused,
-            "exports": cmd_exports,
+            "exports": _cmd_exports,
             "deprecated": cmd_deprecated,
             "gods": cmd_gods,
             "single_use": cmd_single_use,

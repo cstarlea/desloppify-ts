@@ -15,6 +15,13 @@
       "summary": "Deprecated: makeUrl (0 importers) → exported; may still be public API"
     },
     {
+      "id": "exports::src/url.ts::makeUrl",
+      "tier": 2,
+      "confidence": "low",
+      "zone": "production",
+      "summary": "Dead export: makeUrl"
+    },
+    {
       "id": "orphaned::src/old-client.ts",
       "tier": 3,
       "confidence": "medium",
@@ -111,7 +118,7 @@
     "cycles": 10,
     "deprecated": 2,
     "dupes": 8,
-    "exports": 0,
+    "exports": 19,
     "facade": 10,
     "flat_dirs": 1,
     "logs": 10,
