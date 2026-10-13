@@ -13,6 +13,7 @@ from desloppify.base.config import (
     load_config as _load_config,
 )
 from desloppify.base.discovery.paths import get_project_root
+from desloppify.engine._scoring.policy.core import SECURITY_EXCLUDED_ZONES
 from desloppify.engine._state.filtering import path_scoped_issues
 from desloppify.engine._state.issue_semantics import (
     is_assessment_request,
@@ -96,6 +97,29 @@ def compute_strict_target(
         "state": state,
         "warning": warning,
     }
+
+
+def _is_priority_security(issue: dict) -> bool:
+    """A security issue worth reviewing before other cleanup: medium severity
+    or worse, in a zone the Security dimension scores."""
+    detail = issue.get("detail")
+    severity = detail.get("severity") if isinstance(detail, dict) else None
+    return (
+        _RISK_SEVERITY_ORDER.get(str(severity), 9) <= _RISK_SEVERITY_ORDER["medium"]
+        and issue.get("zone") not in SECURITY_EXCLUDED_ZONES
+    )
+
+
+def count_priority_security(issues: dict) -> int:
+    """Open security issues the headline asks to review before other cleanup."""
+    return sum(
+        1
+        for issue in issues.values()
+        if issue.get("status") == "open"
+        and not issue.get("suppressed")
+        and issue.get("detector") == "security"
+        and _is_priority_security(issue)
+    )
 
 
 def count_open_by_detector(issues: dict) -> dict[str, int]:
@@ -296,6 +320,7 @@ __all__ = [
     "compute_verification_step",
     "compute_why_now",
     "count_open_by_detector",
+    "count_priority_security",
     "history_for_lang",
     "resolve_target_strict_score",
     "score_snapshot",

@@ -11,6 +11,7 @@ from desloppify.engine._scoring.policy.core import (
 from desloppify.engine._scoring.results.core import compute_dimension_scores
 from desloppify.engine.policy.zones import ZONE_POLICIES, Zone
 from desloppify.intelligence.narrative.headline import compute_headline
+from desloppify.intelligence.narrative.signals import count_priority_security
 
 # ═══════════════════════════════════════════════════════════
 # Integration Tests
@@ -244,3 +245,54 @@ class TestSecurityInNarrative:
         assert result is not None
         assert "1 security issue " in result
         assert "issues" not in result.split("security issue")[0]
+
+    def _headline(self, counts):
+        return compute_headline(
+            "middle_grind",
+            {"lowest_dimensions": []},
+            {},
+            None,
+            None,
+            85.0,
+            85.0,
+            {"open": 3},
+            [],
+            open_by_detector=counts,
+        )
+
+    def test_low_or_unscored_security_issues_skip_the_banner(self):
+        result = self._headline({"security": 3, "security_priority": 0})
+        assert result is not None
+        assert "⚠" not in result
+
+    def test_banner_counts_priority_issues_only(self):
+        result = self._headline({"security": 3, "security_priority": 1})
+        assert result is not None
+        assert "⚠ 1 security issue " in result
+
+
+def _security_issue(severity, zone, status="open"):
+    return {
+        "detector": "security",
+        "status": status,
+        "zone": zone,
+        "confidence": "low",
+        "detail": {"severity": severity},
+    }
+
+
+def test_priority_security_needs_medium_severity_in_a_scored_zone():
+    issues = {
+        # JSON.parse in CLI scripts, low/low.
+        "a": _security_issue("low", "script"),
+        "b": _security_issue("low", "production"),
+        "c": _security_issue("medium", "test"),
+        "d": _security_issue("high", "config"),
+        "e": _security_issue("critical", "production", status="fixed"),
+        "f": {"detector": "smells", "status": "open", "detail": {"severity": "high"}},
+    }
+    assert count_priority_security(issues) == 0
+    issues["g"] = _security_issue("medium", "production")
+    issues["h"] = _security_issue("high", "script")
+    issues["i"] = _security_issue("critical", None)
+    assert count_priority_security(issues) == 3

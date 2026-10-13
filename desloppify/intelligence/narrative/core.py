@@ -39,6 +39,9 @@ from desloppify.intelligence.narrative.signals import (
     count_open_by_detector as _count_open_by_detector,
 )
 from desloppify.intelligence.narrative.signals import (
+    count_priority_security as _count_priority_security,
+)
+from desloppify.intelligence.narrative.signals import (
     history_for_lang as _history_for_lang,
 )
 from desloppify.intelligence.narrative.signals import (
@@ -119,7 +122,10 @@ def compute_narrative(
         overall_score,
         stats,
         history,
-        open_by_detector=by_detector,
+        open_by_detector={
+            **by_detector,
+            "security_priority": _count_priority_security(issues),
+        },
         scan_source=scan_source(state) or None,
     )
     reminders, updated_reminder_history = compute_reminders(

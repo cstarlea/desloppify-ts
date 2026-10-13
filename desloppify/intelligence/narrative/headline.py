@@ -20,8 +20,10 @@ def compute_headline(
     scan_source: str | None = None,
 ) -> str | None:
     """Compute one computed sentence for terminal display."""
-    # Security callout prefix — prepended to any headline when security issues exist
-    security_count = (open_by_detector or {}).get("security", 0)
+    # Security callout prefix — prepended to any headline when security issues
+    # of medium severity or worse are open in a scored zone.
+    counts = open_by_detector or {}
+    security_count = counts.get("security_priority", counts.get("security", 0))
     security_prefix = ""
     if security_count > 0:
         s = "s" if security_count != 1 else ""
