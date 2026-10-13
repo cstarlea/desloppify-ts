@@ -52,10 +52,11 @@ _BUILD_MIRROR_PREFIX = "build/lib/"
 
 
 def _report_name_path(scan_root: Path, name: str) -> Path | None:
-    """Absolute, resolved path for a jscpd report ``name``.
+    """Absolute, resolved path for a jscpd report ``name``, or None if no
+    such file exists.
 
-    jscpd runs from the scan root, so relative names are relative to it (not
-    to the process cwd or the project root). Windows reports use ``\\``.
+    jscpd runs with ``--absolute``; a relative name is taken as relative to
+    the scan root. Windows reports use ``\\``.
     """
     if not name:
         return None
@@ -66,15 +67,17 @@ def _report_name_path(scan_root: Path, name: str) -> Path | None:
         # Blocks embedded in another format come back as ``file:format``.
         candidate = candidate.with_name(candidate.name.rsplit(":", 1)[0])
     try:
-        return candidate.resolve()
+        resolved = candidate.resolve()
     except OSError:
         return None
+    return resolved if resolved.is_file() else None
 
 
 def _map_report_name(
     scan_root: Path, project_root: Path, name: str
 ) -> tuple[str, str] | None:
-    """(scan-relative, project-relative) paths, or None outside the scan root.
+    """(scan-relative, project-relative) paths, or None for a name that is
+    not a file under the scan root.
 
     Issues and the zone map key files by their project-relative path; the
     scan-relative one is for the artifact checks.
@@ -104,6 +107,14 @@ def _is_build_mirror_pair(first_rel: str, second_rel: str) -> bool:
     return False
 
 
+_GLOB_SPECIAL_RE = re.compile(r"([*?\[\]{}])")
+
+
+def _glob_literal(path: Path) -> str:
+    """*path* as a glob that matches only itself."""
+    return _GLOB_SPECIAL_RE.sub(r"[\1]", path.as_posix())
+
+
 def _as_jscpd_globs(pattern: str) -> list[str]:
     raw = pattern.strip().replace("\\", "/").strip("/")
     if not raw:
@@ -115,8 +126,13 @@ def _as_jscpd_globs(pattern: str) -> list[str]:
     return globs
 
 
-def _jscpd_ignore_arg(scan_path: Path) -> str:
-    """Build jscpd ignore globs from defaults + runtime excludes."""
+def _jscpd_ignore_arg(scan_path: Path, anchor: Path) -> str:
+    """Build jscpd ignore globs from defaults + runtime excludes.
+
+    jscpd matches the globs against the absolute paths it walks, so each is
+    anchored at *anchor*: a bare ``**/.claude/**`` would also match a parent
+    of the scan root, such as a worktree under ``.claude/``.
+    """
     patterns = set(_BASE_IGNORES)
     # Use collect_exclude_dirs for the directory-name portion, then convert
     # the remaining runtime globs (patterns with '*') to jscpd format.
@@ -126,7 +142,8 @@ def _jscpd_ignore_arg(scan_path: Path) -> str:
     for pattern in get_exclusions():
         if "*" in pattern:
             patterns.update(_as_jscpd_globs(pattern))
-    return ",".join(sorted(patterns))
+    prefix = _glob_literal(anchor)
+    return ",".join(f"{prefix}/{pattern}" for pattern in sorted(patterns))
 
 
 _BLOCK_COMMENT_RE = re.compile(r"/\*.*?\*/", re.DOTALL)
@@ -443,19 +460,18 @@ def detect_with_jscpd_result(path: Path) -> tuple[list[dict] | None, str | None]
 
 
 def _run_jscpd(path: Path, cmd_prefix: list[str]) -> list[dict] | None:
-    root = path.resolve()
-    target = "."
-    if root.is_file():
-        root, target = root.parent, root.name
+    target = path.resolve()
+    root = target.parent if target.is_file() else target
     with tempfile.TemporaryDirectory() as tmpdir:
         try:
             _run_jscpd_command(
                 [
                     *cmd_prefix,
-                    # jscpd matches --ignore globs against the paths it walks:
-                    # from the scan root they are relative, so an ignore like
-                    # **/.claude/** can't match a parent of the scan root.
-                    target,
+                    # npx runs jscpd from the enclosing npm workspace package,
+                    # not from cwd, so relative paths would be relative to
+                    # that: pass and report absolute ones.
+                    str(target),
+                    "--absolute",
                     "--reporters",
                     "json",
                     "--output",
@@ -465,7 +481,7 @@ def _run_jscpd(path: Path, cmd_prefix: list[str]) -> list[dict] | None:
                     "--min-tokens",
                     "50",
                     "--ignore",
-                    _jscpd_ignore_arg(path),
+                    _jscpd_ignore_arg(path, root),
                     "--silent",
                 ],
                 timeout=120,

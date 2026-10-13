@@ -140,6 +140,7 @@ class TestKnipAdapter:
 
 from desloppify.engine.detectors.jscpd_adapter import (  # noqa: E402
     JSCPD_VERSION,
+    _jscpd_ignore_arg,
     _logic_token_count,
     _parse_jscpd_report,
     _resolve_jscpd_command,
@@ -231,9 +232,9 @@ class TestJscpdRunsFromScanRoot:
     def _project_root(self, tmp_path, monkeypatch):
         monkeypatch.setenv("DESLOPPIFY_ROOT", str(tmp_path))
 
-    def test_runs_with_relative_target_under_dot_claude(self, tmp_path, monkeypatch):
+    def test_runs_with_absolute_target_under_dot_claude(self, tmp_path, monkeypatch):
         root = tmp_path / ".claude" / "worktrees" / "copy"
-        root.mkdir(parents=True)
+        _write_sources(root, "src/a.ts", "src/b.ts")
         monkeypatch.setenv("DESLOPPIFY_ROOT", str(root))
         seen = {}
 
@@ -247,8 +248,14 @@ class TestJscpdRunsFromScanRoot:
                             {
                                 "fragment": _REAL_FRAGMENT,
                                 "lines": 5,
-                                "firstFile": {"name": "src/a.ts", "start": 1},
-                                "secondFile": {"name": "src/b.ts", "start": 3},
+                                "firstFile": {
+                                    "name": str(root / "src/a.ts"),
+                                    "start": 1,
+                                },
+                                "secondFile": {
+                                    "name": str(root / "src/b.ts"),
+                                    "start": 3,
+                                },
                             }
                         ]
                     }
@@ -267,15 +274,26 @@ class TestJscpdRunsFromScanRoot:
         ):
             entries = detect_with_jscpd(root)
         assert seen["cwd"] == root.resolve()
-        assert seen["cmd"][1] == "."
-        assert "**/.claude/**" in seen["cmd"][seen["cmd"].index("--ignore") + 1]
+        assert seen["cmd"][1] == str(root.resolve())
+        assert "--absolute" in seen["cmd"]
+        ignores = seen["cmd"][seen["cmd"].index("--ignore") + 1].split(",")
+        # Anchored at the scan root, so the .claude/ above it doesn't match.
+        assert f"{root.resolve().as_posix()}/**/.claude/**" in ignores
+        assert all(glob.startswith(root.resolve().as_posix()) for glob in ignores)
         assert entries is not None and len(entries) == 1
         assert [loc["file"] for loc in entries[0]["locations"]] == [
             "src/a.ts",
             "src/b.ts",
         ]
 
+    def test_ignore_anchor_escapes_glob_characters(self, tmp_path):
+        root = tmp_path / "app" / "[slug]"
+        root.mkdir(parents=True)
+        ignores = _jscpd_ignore_arg(root, root).split(",")
+        assert f"{(tmp_path / 'app').as_posix()}/[[]slug[]]/**/.git/**" in ignores
+
     def test_relative_report_names_resolve_against_scan_root(self, tmp_path):
+        _write_sources(tmp_path, "a.ts", "b.ts")
         report = {
             "duplicates": [
                 {
@@ -340,8 +358,8 @@ def _write_sources(root: Path, *rel_paths: str) -> None:
 
 
 class TestJscpdReportPathMapping:
-    """jscpd runs from the scan root and names files relative to it; issues
-    need project-relative paths whatever ``--path`` is."""
+    """jscpd reports absolute names (relative ones are taken against the scan
+    root); issues need project-relative paths whatever ``--path`` is."""
 
     @pytest.fixture
     def project(self, tmp_path, monkeypatch):
@@ -413,6 +431,27 @@ class TestJscpdReportPathMapping:
         assert len(_parse_jscpd_report(report, project / "src")) == 1
         assert "WARNING" not in capsys.readouterr().err
 
+    def test_npm_workspace_relative_names_are_rejected(self, project, capsys):
+        """npx runs jscpd from the npm workspace package, so a relative
+        target came back relative to it: ``src/v4/...`` for a scan of
+        ``packages/zod/src``. Such names must not map to made-up files."""
+        scan = project / "packages" / "zod" / "src"
+        _write_sources(scan, "v4/classic/schemas.ts", "v4/mini/schemas.ts")
+        report = _jscpd_report("src/v4/classic/schemas.ts", "src/v4/mini/schemas.ts")
+        assert _parse_jscpd_report(report, scan) == []
+        assert "none mapped to files under" in capsys.readouterr().err
+
+    def test_npm_workspace_absolute_names(self, project):
+        scan = project / "packages" / "zod" / "src"
+        _write_sources(scan, "v4/classic/schemas.ts", "v4/mini/schemas.ts")
+        report = _jscpd_report(
+            str(scan / "v4/classic/schemas.ts"), str(scan / "v4/mini/schemas.ts")
+        )
+        assert self._files(_parse_jscpd_report(report, scan)) == [
+            "packages/zod/src/v4/classic/schemas.ts",
+            "packages/zod/src/v4/mini/schemas.ts",
+        ]
+
     def test_detect_maps_src_scan_end_to_end(self, project):
         _write_sources(project, "src/app/a.ts", "src/app/b.ts")
         seen = {}
@@ -420,7 +459,8 @@ class TestJscpdReportPathMapping:
         def fake_run(cmd, *, timeout, cwd=None):
             seen["cwd"] = cwd
             out = Path(cmd[cmd.index("--output") + 1])
-            report = _jscpd_report("app/a.ts", "app/b.ts")
+            src = project.resolve() / "src"
+            report = _jscpd_report(str(src / "app/a.ts"), str(src / "app/b.ts"))
             out.joinpath("jscpd-report.json").write_text(json.dumps(report))
 
         with (
@@ -478,6 +518,10 @@ class TestBoilerplateZoneFilterWarning:
 
 
 class TestJscpdAdapter:
+    @pytest.fixture(autouse=True)
+    def _sources(self, tmp_path):
+        _write_sources(tmp_path, "a.py", "b.py", "c.py", "a.ts", "b.ts")
+
     def test_returns_none_when_jscpd_not_installed(self, tmp_path):
         with patch(
             "desloppify.engine.detectors.jscpd_adapter._resolve_jscpd_command",
