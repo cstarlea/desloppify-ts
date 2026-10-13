@@ -4,7 +4,7 @@
 
 desloppify-ts gives your AI coding agent the tools to identify, understand, and systematically improve the quality of a TypeScript or JavaScript codebase. It combines mechanical detection (dead code, duplication, complexity, unused exports, import cycles) with subjective LLM review (naming, abstractions, module boundaries), then works through a prioritized fix loop. State persists across scans so it chips away over multiple sessions, and the scoring is designed to resist gaming.
 
-It scans `.ts`/`.tsx`/`.mts`/`.cts` and `.js`/`.jsx`/`.mjs`/`.cjs` files together, whether the project is plain JavaScript, mid-migration (`allowJs`) or TypeScript with a few JS files. When Node is available it runs the project's own `tsc` and `knip` for unused-code detection. Without Knip, a conservative import check still reports exports no file imports, at low confidence. Boilerplate duplication uses `jscpd` from the project or `PATH`; a scan never downloads it unless you allow that (`scan --allow-tool-download`, or `desloppify config set allow_tool_download true`), and then it fetches a pinned version with `npx`.
+It scans `.ts`/`.tsx`/`.mts`/`.cts` and `.js`/`.jsx`/`.mjs`/`.cjs` files together, whether the project is plain JavaScript, mid-migration (`allowJs`) or TypeScript with a few JS files. Files your `.gitignore` excludes are skipped. When Node is available it runs the project's own `tsc` and `knip` for unused-code detection. Without Knip, a conservative import check still reports exports no file imports, at low confidence. Boilerplate duplication uses `jscpd` from the project or `PATH`. A scan never downloads it unless you allow that with `scan --allow-tool-download`, `desloppify config set allow_tool_download true` or `DESLOPPIFY_ALLOW_TOOL_DOWNLOAD=1`; it then fetches a pinned version with `npx`.
 
 desloppify-ts is a TypeScript-only fork of [desloppify](https://github.com/peteromallet/desloppify) by Peter O'Malley, which is no longer maintained. The other languages were removed to keep the tool focused; the last multi-language version is tagged `pre-ts-only`. See [NOTICE](https://github.com/cstarlea/desloppify/blob/main/NOTICE) for credits.
 
@@ -59,6 +59,11 @@ only way to improve it is to actually make the code better.
 THE LOOP: run `next`. It is the execution queue from the living plan, not the whole backlog.
 It tells you what to fix now, which file, and the resolve command to run when done.
 Fix it, resolve it, run `next` again. Over and over. This is your main job.
+Rescan after a batch of fixes to verify them and update the score.
+
+On the first run, `next` serves the mechanical issues first. The subjective review
+(`desloppify review --prepare`) is optional and never blocks a scan; `next` suggests it
+once the queue is clear.
 
 Use `desloppify backlog` only when you need to inspect broader open work that is not currently
 driving execution.
@@ -87,6 +92,12 @@ desloppify config set presets feature-sliced     # or bulletproof-react
 ```
 
 A dependency on the Feature-Sliced Design linter (`steiger`) turns its preset on without config. Your own layers and competing-pattern families go under `languages.typescript` (`layers`, `pattern_families`). [docs/configuration.md](docs/configuration.md) has the details.
+
+## State and outputs
+
+Everything desloppify writes goes in `.desloppify/` by default. Point `--state` at a file elsewhere (it works after any subcommand, as in `desloppify zone show --state ../dsl/state.json`). Then the plan, locks, `query.json`, config saves, the scorecard and the tsc build info all go next to that file, and nothing is written into the project. The scorecard never overwrites a file git tracks. If `scorecard.png` is committed, the new card goes to the state directory unless you ask for it with `--badge-path`.
+
+`scan` exits with status 2, saving nothing, when the project root doesn't exist or holds no TypeScript or JavaScript files.
 
 ## CI
 

@@ -177,6 +177,12 @@ Knip's unresolved imports aren't reported. In TypeScript files tsc reports them 
 
 When Knip doesn't run (not installed, a crash, no JSON report), `exports` and `dependencies` record reduced coverage. `dependencies` reports no potential, so its open issues aren't auto-resolved, and orphans keep their own confidence.
 
+Without Knip, `exports` falls back to a conservative import check (`exports_fallback.py`, which needs tree-sitter). It follows the import graph, re-exports included, and reports an exported binding only when no file imports that name from its module. Several things count as using every export of a module: a namespace import, `require()`, `import.meta.glob`, or a dynamic `import()` that doesn't destructure. Some files are never reported: entry files, files outside the production zone, modules an unresolved import could name, modules nothing imports (`orphaned` covers those), and `.d.ts` files. Default exports are never reported either. Findings have low confidence and `detail.source = "fallback"`. Unused enum members and duplicate exports aren't checked, and coverage stays reduced with the "Install Knip" fix.
+
+### jscpd
+
+`boilerplate_duplication` (Duplication) runs jscpd from the scan root. It uses the project's own install first, then one on `PATH`. A scan downloads jscpd only when you allow it, with `scan --allow-tool-download`, the `allow_tool_download` config key or `DESLOPPIFY_ALLOW_TOOL_DOWNLOAD=1`. It then runs the pinned version (`JSCPD_VERSION` in `detectors/jscpd_adapter.py`) with `npx`. Otherwise the detector is skipped and records reduced coverage.
+
 ### Backend security
 
 Four `security` rules read the syntax tree (`detectors/security/backend.py`) and score under Security like the rest of the detector. Their IDs name the function, not the line, so they survive edits elsewhere in the file. Without tree-sitter they don't run.

@@ -1,6 +1,6 @@
 # desloppify fork roadmap
 
-_Last updated 2026-10-08. Originally built from a multi-agent review of upstream v1.0 (`3a7735d5`) on 2026-10-05; the appendix keeps that review's findings with their current status._
+_Last updated 2026-10-12. Originally built from a multi-agent review of upstream v1.0 (`3a7735d5`) on 2026-10-05; the appendix keeps that review's findings with their current status._
 
 The fork (`cstarlea/desloppify`) is a **TypeScript/JavaScript-only** code-health scanner. Upstream (`peteromallet/desloppify`) is unmaintained and is treated as read-only: something we may cherry-pick from, nothing more. The last multi-language commit is tagged `pre-ts-only`.
 
@@ -95,6 +95,43 @@ The fork (`cstarlea/desloppify`) is a **TypeScript/JavaScript-only** code-health
 | #65 | Deprecated detector on the syntax tree (2.10) |
 | #66 | `cycles` scores under Code quality instead of Security (2.23) |
 | #68 | Deprecated importers followed through object-literal namespace aliases (2.10) |
+
+### Field-test fixes
+
+Two field tests on a real Next.js app ran the whole first-run loop: scan, next, fix, resolve, rescan, with and without Knip, jscpd and a review. These PRs fix what the tests found.
+
+| PR | What |
+|---|---|
+| #120 | test_coverage maps qualified test names (`x.integration.test.ts`) to their source |
+| #121 | `magic_number` skips named constants and unit factors |
+| #122 | Security: secret-name and HTML sink checks look at their context |
+| #123 | `sort_no_comparator` skips sorts that plainly sort strings, and test files |
+| #124 | Discovery honours `.gitignore`; a root `tools/` is in the script zone, any `*.config.*` in the config zone |
+| #125 | `naming` stops flagging single-word stems, test files and framework names |
+| #126 | The test zone skips signature, large-file and test-idiom smells; open issues in unscored zones are labelled |
+| #127 | `flat_dirs` leaves test files out of the counts and skips file-based router segments |
+| #128 | `orphaned`: static asset dirs, `<script src>` and service workers are entries |
+| #129 | `switch_no_default` skips switches the compiler already proves exhaustive |
+| #130 | First run without a review: objective work comes first and review placeholders wait in the backlog; an out-of-order `plan resolve` prints a notice instead of refusing; scores lead with objective |
+| #131 | The Next.js env leak check skips reads behind a `typeof window` server guard |
+| #132 | Every write follows `--state` (plan, query, config saves, locks, scorecard, treemap); the scorecard never overwrites a tracked file |
+| #133 | `boilerplate_duplication` drops clusters that are only imports |
+| #134 | Scan prints the detected frameworks; `detect` help lists only TypeScript detectors; `show` labels severity and confidence separately and gains `--all` |
+| #135 | jscpd: a pinned version, a project install preferred, downloaded only with `--allow-tool-download` / `allow_tool_download` / `DESLOPPIFY_ALLOW_TOOL_DOWNLOAD`; runs from the scan root |
+| #136 | A conservative dead-export fallback on the import graph when Knip isn't installed (low confidence) |
+| #137 | Boilerplate maps jscpd paths to project-relative files for any `--path` |
+| #138 | `logs` flags only debug-level calls; the debug-logs autofix refuses dev printouts |
+| #139 | Framework conventions are detected in the package that holds the scan path |
+| #140 | tsc build info lives in the state dir, never in the project |
+| #141 | Detector findings no longer gate a rescan; queued items follow line shifts |
+| #142 | test_coverage: served static assets, data-only modules, and modules that an integration-tested index composes |
+| #143 | `console.error` followed by `process.exitCode`/`process.exit` counts as handled; script and test zones are skipped |
+| #144 | Scan exits 2, saving nothing, when the project root is missing or holds no source files |
+| #145 | Counts agree across scan, status, next and plan |
+| #146 | Read-only commands create no lock files; `--state` and `--path` are accepted after any subcommand |
+| #147 | `signature` groups exported names per package and skips modules that share an interface |
+| #148 | The narrative's security banner appears only for medium or higher severity in scored zones |
+| #149 | Boilerplate reports a clone only when it repeats logic, not framework wiring |
 
 ---
 

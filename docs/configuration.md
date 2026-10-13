@@ -8,6 +8,13 @@ Nothing in the defaults assumes a directory layout, a naming scheme or a data li
 - **Presets** are named, documented project layouts. They are off unless the `presets` key lists them, or the package depends on a linter that enforces that layout.
 - **Settings** under `languages.typescript` describe what is yours alone: your layers, your competing hooks.
 
+## Files, tools and outputs
+
+- **Which files.** The scan walks the project root and skips anything your `.gitignore` excludes (through `git ls-files`), plus `exclude` patterns and the built-in exclusions. Outside a git work tree it walks everything. A scan whose root is missing, or holds no TypeScript or JavaScript files, exits with status 2 and saves nothing.
+- **Tool downloads.** `allow_tool_download` (default `false`) lets a scan fetch a pinned jscpd with `npx` when neither the project nor `PATH` has one. `scan --allow-tool-download` and `DESLOPPIFY_ALLOW_TOOL_DOWNLOAD=1` allow it for one run. tsc and Knip are never downloaded.
+- **Where writes go.** State, plan, locks, `query.json` and the tsc build info live in `.desloppify/`. With `--state` pointing outside it, they move next to that file, along with config saves, the scorecard and `treemap.html`. A committed `.desloppify/config.json` is still read, but it's never rewritten. `--state` is accepted before or after any subcommand.
+- **Scorecard.** `badge_path` (default `scorecard.png`) is written in the project only when git doesn't track that file and the state directory is the project's own. Otherwise the card goes to the state directory. To write it into the repo anyway, set `--badge-path`, `DESLOPPIFY_BADGE_PATH` or a non-default `badge_path`.
+
 ## Presets
 
 ```bash

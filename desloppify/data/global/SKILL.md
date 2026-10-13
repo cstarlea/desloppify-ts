@@ -73,7 +73,7 @@ desloppify plan skip <pat>              # defer — hide from next
 
 ### Phase 3: Execute — grind the queue to completion
 
-Trust the plan and execute. Don't rescan mid-queue — finish the queue first.
+Trust the plan and execute. Rescan after a batch of fixes to verify them: a plain `desloppify scan` runs while the queue holds only detector findings, and the plan-start score stays frozen until the queue is clear.
 
 **Branch first.** Create a dedicated branch — never commit health work directly to main:
 ```bash
