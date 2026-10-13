@@ -143,13 +143,111 @@ _IMPORT_ONLY_PARTS = (
 )
 
 
-def _is_import_only(fragment: str) -> bool:
-    """Whether a fragment holds nothing but imports, ``export ... from``,
-    directives, comments and blank lines: every module repeats those."""
+def _code_text(fragment: str) -> str:
+    """The fragment without comments, imports, ``export ... from`` and
+    directives: every module repeats those."""
     text = _LINE_COMMENT_RE.sub("", _BLOCK_COMMENT_RE.sub("", fragment))
     for pattern in _IMPORT_ONLY_PARTS:
         text = pattern.sub("", text)
-    return not text.strip()
+    return text
+
+
+# A window is reported only when it repeats logic, not wiring: at least
+# MIN_LOGIC_TOKENS logic tokens or MIN_STATEMENTS statements once comments and
+# imports are gone. Logic tokens are literals (true/false/null too),
+# control-flow keywords, and operators other than assignment, arrow, spread and
+# optional chaining (``<``/``>`` only with spaces around them, so generics and
+# JSX tags don't count). Identifiers and punctuation count for nothing.
+# Statements are lines that open a declaration, control flow, a call or an
+# assignment, not chain links (``.query(``) or call arguments. A framework call
+# chain such as
+# ``procedure.input(z.object({ id: z.uuid() })).query(async ({ ctx, input }) =>``
+# plus a guard call, or a ``const { slug } = use(params)`` prelude, scores
+# close to zero on both however many lines it spans.
+MIN_LOGIC_TOKENS = 5
+MIN_STATEMENTS = 4
+_LOGIC_KEYWORDS = frozenset(
+    {
+        "if",
+        "else",
+        "for",
+        "while",
+        "do",
+        "switch",
+        "case",
+        "return",
+        "throw",
+        "try",
+        "catch",
+        "finally",
+        "break",
+        "continue",
+        "new",
+        "typeof",
+        "instanceof",
+        "delete",
+        "yield",
+        "true",
+        "false",
+        "null",
+        "undefined",
+    }
+)
+_NON_LOGIC_OPERATORS = frozenset({"=>", "?.", "..."})
+_TOKEN_RE = re.compile(
+    r"""
+    (?P<literal>'(?:\\.|[^'\\\n])*'|"(?:\\.|[^"\\\n])*"|`(?:\\.|[^`\\])*`|\b\d[\w.]*)
+    | (?P<word>[A-Za-z_$][\w$]*)
+    | (?P<operator>===|!==|==|!=|<=|>=|&&|\|\||\?\?|=>|\?\.|\.\.\.
+        |(?<=[ \t])[<>](?=[ \t])|[-+*/%!?])
+    """,
+    re.VERBOSE,
+)
+
+
+def _logic_token_count(fragment: str) -> int:
+    count = 0
+    for match in _TOKEN_RE.finditer(_code_text(fragment)):
+        kind, token = match.lastgroup, match.group()
+        if (
+            kind == "literal"
+            or (kind == "word" and token in _LOGIC_KEYWORDS)
+            or (kind == "operator" and token not in _NON_LOGIC_OPERATORS)
+        ):
+            count += 1
+    return count
+
+
+_DECLARATION_START_RE = re.compile(
+    r"(?:const|let|var|return|if|for|while|do|switch|throw|try|await|yield)\b"
+)
+_EXPRESSION_START_RE = re.compile(
+    r"[\w$]+(?:\??\.[\w$]+|\[[^\]\n]*\])*(?:\s*\(|\s+[-+*/%&|?]?=\s|\+\+|--)"
+)
+_CONTINUED_LINE_END = tuple(",([.=+-*/&|?:<>!")
+
+
+def _statement_count(fragment: str) -> int:
+    count = 0
+    previous = ""
+    for raw in _code_text(fragment).splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        if _DECLARATION_START_RE.match(line) or (
+            _EXPRESSION_START_RE.match(line)
+            and not previous.endswith(_CONTINUED_LINE_END)
+        ):
+            count += 1
+        previous = line
+    return count
+
+
+def _repeats_logic(fragment: str) -> bool:
+    return (
+        _logic_token_count(fragment) >= MIN_LOGIC_TOKENS
+        or _statement_count(fragment) >= MIN_STATEMENTS
+    )
 
 
 def _parse_jscpd_report(
@@ -175,7 +273,7 @@ def _parse_jscpd_report(
 
     for dup in duplicates:
         fragment = dup.get("fragment", "")
-        if _is_import_only(fragment):
+        if not _repeats_logic(fragment):
             continue
         fragment_key = hashlib.sha256(
             fragment.strip()[:200].encode("utf-8", errors="replace")

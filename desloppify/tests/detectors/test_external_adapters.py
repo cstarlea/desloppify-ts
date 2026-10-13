@@ -140,9 +140,11 @@ class TestKnipAdapter:
 
 from desloppify.engine.detectors.jscpd_adapter import (  # noqa: E402
     JSCPD_VERSION,
+    _logic_token_count,
     _parse_jscpd_report,
     _resolve_jscpd_command,
     _run_jscpd_command,
+    _statement_count,
     detect_with_jscpd,
     detect_with_jscpd_result,
 )
@@ -243,7 +245,7 @@ class TestJscpdRunsFromScanRoot:
                     {
                         "duplicates": [
                             {
-                                "fragment": "x",
+                                "fragment": _REAL_FRAGMENT,
                                 "lines": 5,
                                 "firstFile": {"name": "src/a.ts", "start": 1},
                                 "secondFile": {"name": "src/b.ts", "start": 3},
@@ -277,7 +279,7 @@ class TestJscpdRunsFromScanRoot:
         report = {
             "duplicates": [
                 {
-                    "fragment": "y",
+                    "fragment": _REAL_FRAGMENT,
                     "lines": 4,
                     "firstFile": {"name": "a.ts", "start": 1},
                     "secondFile": {"name": str(tmp_path / "b.ts"), "start": 2},
@@ -559,7 +561,7 @@ class TestJscpdAdapter:
         f1 = str(tmp_path / "a.py")
         f2 = str(tmp_path / "b.py")
         f3 = str(tmp_path / "c.py")
-        fragment = "def foo():\n    pass\n    return None\n    # end"
+        fragment = _REAL_FRAGMENT
         report = {
             "duplicates": [
                 {
@@ -583,7 +585,7 @@ class TestJscpdAdapter:
     def test_distinct_files_counted_correctly(self, tmp_path):
         f1 = str(tmp_path / "a.py")
         f2 = str(tmp_path / "b.py")
-        fragment = "x = 1\ny = 2\nz = 3\nw = 4"
+        fragment = _REAL_FRAGMENT
         report = {
             "duplicates": [
                 {
@@ -635,19 +637,110 @@ class TestJscpdAdapter:
         "fragment",
         [
             "import { z } from 'zod'\nimport { db } from './db'\n\n"
-            "const schema = z.object({ id: z.string() })\n",
-            "export const A = 1\nimport B from 'c'\nimport D from 'e'\n",
-            "import { a } from 'a'\nexport function f() {\n",
+            "const limit = input.limit ?? 20\n"
+            "if (limit > 100) throw new Error('too many')\n",
+            "export const A = 1\nimport B from 'c'\nimport D from 'e'\n"
+            "export const MODE = A > 0 ? 'on' : 'off'\n",
         ],
     )
     def test_keeps_fragments_with_code_beside_imports(self, tmp_path, fragment):
         result = _parse_jscpd_report(self._pair_report(tmp_path, fragment), tmp_path)
         assert len(result) == 1
 
+    @pytest.mark.parametrize(
+        "fragment",
+        [
+            # tRPC procedure preamble
+            "  listMembers: protectedProcedure\n"
+            "    .input(z.object({ projectId: z.uuid() }))\n"
+            "    .query(async ({ ctx, input }) => {\n"
+            "      await assertAccess(ctx.db, ctx.userId, 'project_admin',"
+            "{ projectId: input.projectId })\n"
+            "\n"
+            "      return paginate(\n",
+            # The same with a comment block and a multi-line guard call
+            "    }),\n\n"
+            "  // Join a workspace with an invite code. The code must not have\n"
+            "  // expired, and each code works once.\n"
+            "  joinWorkspace: protectedProcedure\n"
+            "    .input(z.object({ code: z.string().min(1).max(64) }))\n"
+            "    .mutation(async ({ ctx, input }) => {\n"
+            "      const workspace = await loadWorkspaceFor(\n"
+            "        ctx.db,\n"
+            "        ctx.userId,\n"
+            "        'workspace_owner',\n"
+            "        input.workspaceId,\n"
+            "      )\n",
+            # Next.js page prelude
+            "export function ReportsPage({\n"
+            "  params,\n"
+            "}: {\n"
+            "  params: Promise<{ slug: string }>\n"
+            "}) {\n"
+            "  const { slug: paramSlug } = use(params)\n"
+            "  const { projectId, project, owner } = useProjectContext({\n"
+            "    projectSlug: paramSlug,\n"
+            "    activeTab: 'reports',\n",
+            "export default async function Page({ params }: Props) {\n"
+            "  const { id } = await params;\n"
+            "  const item = await getItem(id);\n",
+            # Query-builder chain
+            "    .from(projectMembers)\n"
+            "    .innerJoin(users, eq(users.id, projectMembers.userId))\n"
+            "    .leftJoin(memberSettings, settingsJoin(project.ownerId))\n"
+            "    .where(\n"
+            "      and(\n"
+            "        eq(projectMembers.projectId, input.projectId),\n"
+            "        eq(projectMembers.status, 'pending'),\n",
+        ],
+    )
+    def test_drops_framework_scaffolding(self, tmp_path, fragment):
+        assert (
+            _parse_jscpd_report(self._pair_report(tmp_path, fragment), tmp_path) == []
+        )
+
+    @pytest.mark.parametrize(
+        "fragment",
+        [
+            # A duplicated auth guard: few lines, plenty of logic
+            "  const authHeader = req.headers.get('authorization')\n"
+            "  const token =\n"
+            "    authHeader !== null && authHeader.startsWith('Bearer ')\n"
+            "      ? authHeader.slice(7)\n"
+            "      : ''\n"
+            "  if (!isValid) {\n"
+            "    return NextResponse.json({ error: 'Unauthorized' }, "
+            "{ status: 401 })\n"
+            "  }\n",
+            # Imperative code with few literals: counted by its statements
+            "  const queryCache = queryClient.getQueryCache();\n"
+            "  const query = queryCache.build(queryClient, { queryKey });\n"
+            "  const aggregate: unknown[] = [];\n"
+            "  for await (const value of asyncIterable) {\n"
+            "    aggregate.push(value);\n"
+            "    query.setState({ data: [...aggregate] });\n"
+            "  }\n",
+        ],
+    )
+    def test_keeps_duplicated_logic(self, tmp_path, fragment):
+        result = _parse_jscpd_report(self._pair_report(tmp_path, fragment), tmp_path)
+        assert len(result) == 1
+
+    def test_logic_tokens_ignore_identifiers_punctuation_and_comments(self):
+        assert _logic_token_count("foo.bar({ a, b: [c] }).baz(async () => x)") == 0
+        assert _logic_token_count("// if (a === 'b') return 1\n/* 'x' */") == 0
+        assert _logic_token_count("Array<string> <div>") == 0
+        # if, ===, 'b', return, 1, a < b's <
+        assert _logic_token_count("if (a === 'b') return 1; a < b") == 6
+
+    def test_statements_skip_chain_and_argument_lines(self):
+        assert _statement_count("const a = f(\n  g(x),\n  h(y),\n)\n.then(z)") == 1
+        assert _statement_count("a.b = 1\nc()\nreturn d\nx += 2") == 4
+
     def test_skips_files_outside_scan_path(self, tmp_path):
         f_in = str(tmp_path / "a.py")
         f_out = "/other/path/b.py"
-        fragment = "x = 1\ny = 2\nz = 3\nw = 4"
+        fragment = _REAL_FRAGMENT
         report = {
             "duplicates": [
                 {
@@ -664,7 +757,7 @@ class TestJscpdAdapter:
     def test_sample_extracted_from_fragment(self, tmp_path):
         f1 = str(tmp_path / "a.py")
         f2 = str(tmp_path / "b.py")
-        fragment = "line1\nline2\nline3\nline4\nline5\nline6"
+        fragment = _REAL_FRAGMENT
         report = {
             "duplicates": [
                 {
@@ -676,11 +769,11 @@ class TestJscpdAdapter:
             ]
         }
         result = _parse_jscpd_report(report, tmp_path)
-        assert result[0]["sample"] == ["line1", "line2", "line3", "line4"]
+        assert result[0]["sample"] == _REAL_FRAGMENT.splitlines()[:4]
 
     def test_skips_same_file_pairs(self, tmp_path):
         f1 = str(tmp_path / "a.py")
-        fragment = "x = 1\ny = 2\nz = 3\nw = 4"
+        fragment = _REAL_FRAGMENT
         report = {
             "duplicates": [
                 {
@@ -697,7 +790,7 @@ class TestJscpdAdapter:
     def test_skips_build_lib_source_mirror_pairs(self, tmp_path):
         f_build = str(tmp_path / "build" / "lib" / "pkg" / "module.py")
         f_src = str(tmp_path / "pkg" / "module.py")
-        fragment = "x = 1\ny = 2\nz = 3\nw = 4"
+        fragment = _REAL_FRAGMENT
         report = {
             "duplicates": [
                 {
@@ -714,7 +807,7 @@ class TestJscpdAdapter:
     def test_skips_artifact_paths(self, tmp_path):
         f_artifact = str(tmp_path / ".desloppify" / "cache.py")
         f_src = str(tmp_path / "pkg" / "module.py")
-        fragment = "x = 1\ny = 2\nz = 3\nw = 4"
+        fragment = _REAL_FRAGMENT
         report = {
             "duplicates": [
                 {
