@@ -248,15 +248,35 @@ def test_scan_gate_ignores_placeholders_left_by_an_older_plan(monkeypatch):
     _run_preflight(state, plan)
 
 
-def test_scan_still_gated_while_objective_work_remains(monkeypatch):
-    import pytest
-
-    from desloppify.base.exception_sets import CommandError
-
+def test_scan_runs_after_one_fix_while_objective_work_remains(monkeypatch):
+    """ "Rescan after each fix" must work: detector findings never gate a scan."""
     state, plan = _first_run(monkeypatch)
+    _resolve_fixed(state, plan, UNUSED_IDS[:1])
 
-    with pytest.raises(CommandError, match="remaining in your queue"):
-        _run_preflight(state, plan)
+    assert build_queue_snapshot(state, plan=plan).phase == "execute"
+    _run_preflight(state, plan)  # must not raise CommandError
+
+
+def test_mid_cycle_rescan_keeps_line_shifted_items_queued(monkeypatch):
+    """Fixing line 1 moves the finding on line 2; it must keep its queue slot."""
+    state, plan = _first_run(monkeypatch)
+    _resolve_fixed(state, plan, UNUSED_IDS[:1])
+    moved_from = UNUSED_IDS[1]  # unused::src/a.ts::x2:2
+    moved_to = "unused::src/a.ts::x2:1"
+    state["work_items"][moved_from]["status"] = "auto_resolved"
+    state["work_items"][moved_to] = _unused_issue(moved_to)
+    state["scan_count"] = 2
+    order_before = list(plan["queue_order"])
+
+    plan = _scan_boundary(state, plan, monkeypatch)
+
+    expected = [moved_to if fid == moved_from else fid for fid in order_before]
+    assert plan["queue_order"] == expected
+    assert moved_from not in plan.get("superseded", {})
+    for cluster in plan.get("clusters", {}).values():
+        assert moved_from not in cluster.get("issue_ids", [])
+    snapshot = build_queue_snapshot(state, plan=plan)
+    assert moved_to in {item["id"] for item in snapshot.execution_items}
 
 
 def test_rescan_starts_a_new_objective_cycle(monkeypatch):

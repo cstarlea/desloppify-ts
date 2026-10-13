@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 
@@ -23,6 +24,7 @@ from desloppify.engine._plan.schema import (
     ensure_plan_defaults,
 )
 from desloppify.engine._plan.skip_policy import skip_kind_state_status
+from desloppify.engine._state.issue_semantics import is_objective_finding
 from desloppify.engine._state.schema import StateModel, ensure_state_defaults, utc_now
 
 SUPERSEDED_TTL_DAYS = 90
@@ -33,6 +35,7 @@ class ReconcileResult:
     """Summary of changes made during reconciliation."""
 
     superseded: list[str] = field(default_factory=list)
+    remapped: dict[str, str] = field(default_factory=dict)
     pruned: list[str] = field(default_factory=list)
     resurfaced: list[str] = field(default_factory=list)
     clusters_completed: list[str] = field(default_factory=list)
@@ -283,6 +286,95 @@ def _action_referenced_plan_issue_ids(plan: PlanModel) -> set[str]:
     }
 
 
+_LINE_SUFFIX = re.compile(r"(::?)(\d+)$")
+
+
+def _line_agnostic_key(issue_id: str) -> tuple[str, int] | None:
+    match = _LINE_SUFFIX.search(issue_id)
+    if match is None:
+        return None
+    return issue_id[: match.start()] + match.group(1), int(match.group(2))
+
+
+def _remap_line_shifted_references(
+    plan: PlanModel,
+    state: StateModel,
+    *,
+    now: str,
+    result: ReconcileResult,
+) -> None:
+    """Carry plan references over when an edit only moved a finding.
+
+    Detector IDs end in a line number, so fixing one issue shifts the IDs of
+    findings below it in the same file: the scan auto-resolves the old ID and
+    opens a new one. When the old and new IDs differ only in that line, and
+    the counts per key match, the new ID takes the old one's queue position
+    and cluster membership instead of dropping into the backlog.
+    """
+    issues = state.get("work_items") or state.get("issues", {})
+    referenced = _action_referenced_plan_issue_ids(plan)
+    planned = referenced | set(plan.get("skipped", {}))
+
+    gone: dict[str, list[tuple[int, str]]] = {}
+    for fid in referenced:
+        issue = issues.get(fid)
+        if issue is None or issue.get("status") != "auto_resolved":
+            continue
+        if not is_objective_finding(issue):
+            continue
+        key = _line_agnostic_key(fid)
+        if key is not None:
+            gone.setdefault(key[0], []).append((key[1], fid))
+    if not gone:
+        return
+
+    fresh: dict[str, list[tuple[int, str]]] = {}
+    for fid, issue in issues.items():
+        if fid in planned or issue.get("status") != "open":
+            continue
+        key = _line_agnostic_key(fid)
+        if key is not None and key[0] in gone and is_objective_finding(issue):
+            fresh.setdefault(key[0], []).append((key[1], fid))
+
+    mapping: dict[str, str] = {}
+    for key, old in gone.items():
+        new = fresh.get(key, [])
+        if len(new) != len(old):
+            continue
+        for (_, old_id), (_, new_id) in zip(sorted(old), sorted(new), strict=True):
+            mapping[old_id] = new_id
+    if not mapping:
+        return
+
+    def _swap(ids: list[str]) -> list[str]:
+        return [mapping.get(fid, fid) for fid in ids]
+
+    plan["queue_order"] = _swap(plan.get("queue_order", []))
+    if plan.get("promoted_ids"):
+        plan["promoted_ids"] = _swap(plan["promoted_ids"])
+    for cluster in plan.get("clusters", {}).values():
+        cluster["issue_ids"] = _swap(cluster.get("issue_ids", []))
+        for step in cluster.get("action_steps", []):
+            if isinstance(step, dict) and step.get("issue_refs"):
+                step["issue_refs"] = _swap(step["issue_refs"])
+    overrides = plan.get("overrides", {})
+    for old_id, new_id in mapping.items():
+        if old_id in overrides and new_id not in overrides:
+            override = dict(overrides.pop(old_id))
+            override["issue_id"] = new_id
+            override["updated_at"] = now
+            overrides[new_id] = override
+    result.remapped.update(mapping)
+    result.changes += len(mapping)
+    append_log_entry(
+        plan,
+        "remap",
+        issue_ids=sorted(mapping.values()),
+        actor="system",
+        detail={"reason": "line shift", "remapped": dict(sorted(mapping.items()))},
+    )
+
+
 def _supersede_nonactionable_action_references(
     plan: PlanModel,
     state: StateModel,
@@ -463,6 +555,7 @@ def reconcile_plan_after_scan(
     # This migrates existing data: temporary skips → deferred, triaged_out skips → triaged_out.
     _sync_skipped_issue_statuses(plan, state)
 
+    _remap_line_shifted_references(plan, state, now=now, result=result)
     _supersede_dead_references(
         plan,
         state,

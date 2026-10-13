@@ -59,6 +59,10 @@ Temporary skips therefore **block the scan step** until one of these happens:
 - `plan skip --permanent --deferred-only "*"` makes them wontfix (the item's suggested command; without `--deferred-only`, `"*"` would also wontfix every open issue);
 - they resolve on their own. A deferred issue whose finding a scan confirms gone becomes `auto_resolved`, and reconcile supersedes its skip entry.
 
+### The scan gate
+
+`scan_queue_preflight()` (`app/commands/scan/preflight.py`) decides whether a plain `scan` may run while a cycle is active. It allows the scan when the queue is clear, when only synthetic items remain, or when every execution item is a detector finding (`is_scan_verifiable_item()`): a rescan verifies those itself, so "rescan after each fix" works without flags. It refuses while review findings, concerns, subjective dimensions or workflow and triage stages are up next, since a scan settles none of them; `--force-rescan --attest` overrides it. A mid-cycle scan keeps `plan_start_scores` frozen and skips `reconcile_plan()`.
+
 ### After a scan
 
 `reconcile_plan_post_scan()` runs these steps:
@@ -66,6 +70,7 @@ Temporary skips therefore **block the scan step** until one of these happens:
 1. `reconcile_plan_after_scan()` (`engine/_plan/scan_issue_reconcile.py`), if the plan has any queue, skip, cluster or override content. It runs these sub-steps:
    - **Restore returned issues.** Superseded entries whose issue is actionable again are forgotten, so a fresh skip or queue entry survives.
    - **Sync skip status.** Skipped issues still `open` in state get the skip's status: `deferred`, `triaged_out` and so on.
+   - **Follow line shifts.** Detector IDs end in a line number, so fixing one issue moves the IDs of findings below it. When a planned objective issue was auto-resolved and an unplanned open issue has the same ID apart from the line (same count per key), the new ID takes over its queue slot, cluster membership and override.
    - **Supersede.** These entries move to `plan.superseded`:
      - plan references to issues no longer in state;
      - queue, promoted and cluster references to issues that aren't `open`, `deferred` or `triaged_out`;

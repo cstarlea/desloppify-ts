@@ -337,7 +337,8 @@ def print_frozen_score_with_queue_context(
         print(colorize(text, style))
     print(
         colorize(
-            "  Score will not update until the queue is clear and you run `desloppify scan`.",
+            "  The plan-start score stays frozen until the queue is clear."
+            " Rescan any time to verify fixes: `desloppify scan`.",
             "dim",
         )
     )

@@ -107,8 +107,92 @@ def test_queue_drained_with_non_scan_lifecycle_allows_scan():
 # ── Queue remaining = gate ──────────────────────────────────
 
 
-def test_queue_remaining_blocks_scan():
-    """When queue has remaining items, scan is blocked with CommandError."""
+def _gate_with_execution_items(items, plan=None):
+    """Run the preflight with a non-empty queue whose snapshot holds *items*."""
+    from desloppify.app.commands.helpers.queue_progress import QueueBreakdown
+
+    args = SimpleNamespace(profile=None, force_rescan=False, state=None)
+    plan = plan or {
+        "plan_start_scores": {"strict": 80.0},
+        "queue_order": [item["id"] for item in items],
+    }
+    ctx = SimpleNamespace(snapshot=SimpleNamespace(execution_items=tuple(items)))
+    with (
+        patch(
+            "desloppify.app.commands.scan.preflight.resolve_plan_load_status",
+            return_value=_plan_status(plan),
+        ),
+        patch(
+            "desloppify.app.commands.scan.preflight.state_path",
+            return_value="/tmp/test-state.json",
+        ),
+        patch("desloppify.app.commands.scan.preflight.state_mod") as mock_state_mod,
+        patch(
+            "desloppify.app.commands.scan.preflight.plan_aware_queue_breakdown",
+            return_value=QueueBreakdown(queue_total=len(items), workflow=0),
+        ),
+        patch(
+            "desloppify.engine._work_queue.context.queue_context",
+            return_value=ctx,
+        ),
+        patch("desloppify.app.commands.scan.preflight._log_preflight"),
+    ):
+        mock_state_mod.load_state.return_value = {"issues": {}}
+        scan_queue_preflight(args)
+
+
+def _issue(issue_id, detector, kind):
+    return {
+        "id": issue_id,
+        "kind": "issue",
+        "detector": detector,
+        "work_item_kind": kind,
+    }
+
+
+def test_queue_of_detector_findings_allows_scan():
+    """A rescan verifies detector findings, so they never block it."""
+    _gate_with_execution_items(
+        [
+            _issue("unused::src/a.ts::x:1", "unused", "mechanical_defect"),
+            _issue("smells::src/a.ts::magic_number::4", "smells", "mechanical_defect"),
+        ]
+    )
+
+
+def test_cluster_of_detector_findings_allows_scan():
+    member = _issue("unused::src/a.ts::x:1", "unused", "mechanical_defect")
+    _gate_with_execution_items(
+        [{"id": "auto/unused", "kind": "cluster", "members": [member]}]
+    )
+
+
+def test_review_findings_in_queue_block_scan():
+    """A scan doesn't settle review findings, so they keep the gate."""
+    items = [
+        _issue("unused::src/a.ts::x:1", "unused", "mechanical_defect"),
+        _issue("review::src/a.ts::naming", "review", "review_defect"),
+    ]
+    with pytest.raises(CommandError) as exc_info:
+        _gate_with_execution_items(items)
+    message = str(exc_info.value)
+    assert "1 item in your queue needs attention first (review findings)" in message
+    assert "regenerates issue IDs" not in message
+    assert "--force-rescan" in message
+
+
+def test_triage_stage_in_queue_blocks_scan():
+    items = [{"id": "triage::observe", "kind": "workflow_stage"}]
+    plan = {
+        "plan_start_scores": {"strict": 80.0},
+        "queue_order": ["review::src/a.ts::naming"],
+    }
+    with pytest.raises(CommandError, match=r"attention first \(triage\)"):
+        _gate_with_execution_items(items, plan=plan)
+
+
+def test_queue_remaining_blocks_scan_when_snapshot_fails():
+    """Without a snapshot the gate can't tell what is queued, so it holds."""
     from desloppify.app.commands.helpers.queue_progress import QueueBreakdown
 
     args = SimpleNamespace(profile=None, force_rescan=False, state=None, lang="python")
@@ -130,11 +214,15 @@ def test_queue_remaining_blocks_scan():
             "desloppify.app.commands.scan.preflight.plan_aware_queue_breakdown",
             return_value=QueueBreakdown(queue_total=5, workflow=0),
         ),
+        patch(
+            "desloppify.engine._work_queue.context.queue_context",
+            side_effect=RuntimeError("boom"),
+        ),
         pytest.raises(CommandError) as exc_info,
     ):
         mock_state_mod.load_state.return_value = {"issues": {}}
         scan_queue_preflight(args)
-    assert "remaining in your queue" in str(exc_info.value)
+    assert "5 items remaining in your queue" in str(exc_info.value)
 
 
 def test_queue_with_only_subjective_items_allows_scan():

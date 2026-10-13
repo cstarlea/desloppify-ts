@@ -475,7 +475,7 @@ def test_frozen_score_prints_score_and_queue(capsys):
     output = capsys.readouterr().out
     assert "74.4" in output
     assert "10" in output
-    assert "will not update" in output
+    assert "stays frozen until the queue is clear" in output
 
 
 def test_frozen_score_with_breakdown(capsys):

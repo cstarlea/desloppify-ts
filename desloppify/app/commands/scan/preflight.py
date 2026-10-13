@@ -1,4 +1,4 @@
-"""Scan preflight guard: warn and gate scan when queue has unfinished items."""
+"""Scan preflight guard: gate scan while review, triage or workflow items are queued."""
 
 from __future__ import annotations
 
@@ -15,9 +15,14 @@ from desloppify.app.commands.helpers.state import state_path
 from desloppify.app.commands.resolve.plan_load import warn_plan_load_degraded_once
 from desloppify.base.exception_sets import CommandError
 from desloppify.base.output.terminal import colorize
-from desloppify.engine._plan.constants import WORKFLOW_RUN_SCAN_ID
+from desloppify.engine._plan.constants import WORKFLOW_RUN_SCAN_ID, is_triage_id
 from desloppify.engine._plan.refresh_lifecycle import current_lifecycle_phase
 from desloppify.engine._plan.sync.pipeline import live_planned_queue_empty
+from desloppify.engine._state.issue_semantics import (
+    is_assessment_request,
+    is_objective_finding,
+    is_review_work_item,
+)
 from desloppify.engine._state.progression import (
     append_progression_event,
     build_scan_preflight_event,
@@ -65,7 +70,7 @@ def _log_preflight(
 
 
 def scan_queue_preflight(args: object) -> None:
-    """Warn and gate scan when queue has unfinished items."""
+    """Gate scan while queued work needs attention that a scan can't give."""
     # CI profile always passes
     if getattr(args, "profile", None) == "ci":
         return
@@ -110,10 +115,11 @@ def scan_queue_preflight(args: object) -> None:
     if not plan.get("plan_start_scores"):
         return  # No active cycle
 
-    # Count plan-aware remaining items.  Block scan when ANY queue items
-    # remain (objective OR subjective).  Mid-cycle scans regenerate issue
-    # IDs which wipes triage state and re-clusters the queue, undoing
-    # prioritisation work.
+    # A rescan only refreshes detector findings: the plan-start score stays
+    # frozen, a mid-cycle reconcile skips cluster regeneration, and a queued
+    # finding whose line an edit moved keeps its place.  So scan freely while
+    # the queue holds only detector findings the scan itself verifies; gate
+    # it while review, triage or workflow items are pending.
     try:
         state = state_mod.load_state(state_path(args))
         breakdown = plan_aware_queue_breakdown(state, plan)
@@ -140,28 +146,59 @@ def scan_queue_preflight(args: object) -> None:
     if live_planned_queue_empty(plan):
         _log_preflight(plan, "allowed", "live planned queue empty", 0)
         return
-    # Even if live_planned_queue_empty is False (non-synthetic items in
-    # queue_order), those items may be stale (not in current state).
-    # If the snapshot agrees the queue is empty, allow the scan.
     from desloppify.engine._work_queue.context import queue_context
 
+    blocking: list[dict] | None = None
     try:
-        ctx = queue_context(state, plan=plan)
-        if len(ctx.snapshot.execution_items) == 0:
+        execution_items = list(queue_context(state, plan=plan).snapshot.execution_items)
+    except Exception:
+        _logger.debug("scan preflight snapshot failed", exc_info=True)
+    else:
+        if not execution_items:
             _log_preflight(plan, "allowed", "snapshot execution queue empty", 0)
             return
-    except Exception:
-        pass  # Fall through to the normal gate
+        blocking = [
+            item for item in execution_items if not is_scan_verifiable_item(item)
+        ]
+        if not blocking:
+            count = len(execution_items)
+            _log_preflight(
+                plan, "allowed", "only scan-verifiable items remaining", count
+            )
+            return
 
-    remaining = breakdown.queue_total
+    remaining = len(blocking) if blocking is not None else breakdown.queue_total
     _log_preflight(plan, "blocked", f"{remaining} item(s) remaining", remaining)
-    # GATE — block both FROZEN (objective work) and PHASE_TRANSITION
-    # (subjective/workflow items remain)
-    raise CommandError(
-        f"{remaining} item{'s' if remaining != 1 else ''}"
-        " remaining in your queue.\n"
-        "  Scanning mid-cycle regenerates issue IDs and breaks triage state.\n"
-        "  Work through items with `desloppify next`, then scan when clear.\n\n"
+    raise CommandError(_gate_message(remaining, blocking))
+
+
+def is_scan_verifiable_item(item: dict) -> bool:
+    """True for queue work a rescan settles on its own: detector findings.
+
+    Review findings, concerns, subjective dimensions and workflow or triage
+    stages are not re-checked by a scan, so they keep the queue gate.
+    """
+    if item.get("id") == WORKFLOW_RUN_SCAN_ID:
+        return True
+    if item.get("kind") == "cluster":
+        members = item.get("members") or []
+        return bool(members) and all(is_scan_verifiable_item(m) for m in members)
+    return item.get("kind") == "issue" and is_objective_finding(item)
+
+
+def _gate_message(remaining: int, blocking: list[dict] | None) -> str:
+    noun = f"{remaining} item{'s' if remaining != 1 else ''}"
+    if blocking:
+        kinds = sorted({_blocking_label(item) for item in blocking})
+        verb = "needs" if remaining == 1 else "need"
+        head = f"{noun} in your queue {verb} attention first ({', '.join(kinds)})."
+    else:
+        head = f"{noun} remaining in your queue."
+    return (
+        f"{head}\n"
+        "  A scan doesn't settle review, triage or workflow items, and rescanning\n"
+        "  mid-way can leave their plan state stale. Work through them with\n"
+        "  `desloppify next`, then scan. Detector findings alone never block a scan.\n\n"
         "  To force a rescan (resets your plan-start score):\n"
         '    desloppify scan --force-rescan --attest "I understand this is not '
         "the intended workflow and I am intentionally skipping queue "
@@ -169,4 +206,16 @@ def scan_queue_preflight(args: object) -> None:
     )
 
 
-__all__ = ["scan_queue_preflight"]
+def _blocking_label(item: dict) -> str:
+    kind = item.get("kind")
+    if kind in ("workflow_stage", "workflow_action"):
+        item_id = str(item.get("id", ""))
+        return "triage" if is_triage_id(item_id) else "workflow"
+    if kind == "subjective_dimension" or is_assessment_request(item):
+        return "subjective review"
+    if is_review_work_item(item):
+        return "review findings"
+    return str(kind or "other")
+
+
+__all__ = ["is_scan_verifiable_item", "scan_queue_preflight"]

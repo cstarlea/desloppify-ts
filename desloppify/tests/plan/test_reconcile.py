@@ -358,3 +358,56 @@ def test_reconcile_leaves_active_cluster_when_items_still_open():
 
     assert "my-cluster" not in result.clusters_completed
     assert plan["clusters"]["my-cluster"]["execution_status"] == "active"
+
+
+# ---------------------------------------------------------------------------
+# Line-shifted findings keep their plan place
+# ---------------------------------------------------------------------------
+
+
+def _line_state(**statuses: str) -> dict:
+    state = _state_with_issues(*statuses)
+    for fid, status in statuses.items():
+        state["issues"][fid]["status"] = status
+        state["issues"][fid]["detector"] = fid.split("::", 1)[0]
+    return state
+
+
+def test_line_shift_carries_queue_slot_and_cluster():
+    old, new = "unused::src/a.ts::x:5", "unused::src/a.ts::x:4"
+    plan = _plan_with_queue("unused::src/a.ts::y:1", old)
+    ensure_plan_defaults(plan)
+    create_cluster(plan, "manual")
+    add_to_cluster(plan, "manual", [old])
+    state = _line_state(
+        **{"unused::src/a.ts::y:1": "open", old: "auto_resolved", new: "open"}
+    )
+
+    result = reconcile_plan_after_scan(plan, state)
+
+    assert result.remapped == {old: new}
+    assert plan["queue_order"] == ["unused::src/a.ts::y:1", new]
+    assert plan["clusters"]["manual"]["issue_ids"] == [new]
+    assert plan["overrides"][new]["cluster"] == "manual"
+    assert old not in plan["superseded"]
+
+
+def test_line_shift_skips_ambiguous_and_review_matches():
+    old = "unused::src/a.ts::x:5"
+    review_old = "review::src/a.ts::naming:3"
+    plan = _plan_with_queue(old, review_old)
+    state = _line_state(
+        **{
+            old: "auto_resolved",
+            "unused::src/a.ts::x:4": "open",
+            "unused::src/a.ts::x:9": "open",
+            review_old: "auto_resolved",
+            "review::src/a.ts::naming:2": "open",
+        }
+    )
+
+    result = reconcile_plan_after_scan(plan, state)
+
+    assert result.remapped == {}
+    assert plan["queue_order"] == []
+    assert {old, review_old} <= set(plan["superseded"])

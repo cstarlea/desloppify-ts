@@ -96,6 +96,16 @@ def _apply_plan_reconciliation(
     if not _plan_has_user_content(plan):
         return False
     recon = reconcile_plan_after_scan(plan, state)
+    if recon.remapped:
+        count = len(recon.remapped)
+        print(
+            colorize(
+                f"  Plan: {count} planned item{'s' if count != 1 else ''} kept"
+                f" {'their' if count != 1 else 'its'} place after an edit moved"
+                " the finding to another line.",
+                "dim",
+            )
+        )
     if recon.resurfaced:
         print(
             colorize(
