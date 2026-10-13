@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from desloppify.base.discovery.paths import get_project_root
+from desloppify.engine.detectors.orphaned import nearest_package_root
 from desloppify.languages._framework.base.types import LangRuntimeContract
 
 from .registry import ensure_builtin_specs_loaded, list_framework_specs
@@ -25,29 +26,9 @@ def _framework_runtime_cache(lang: LangRuntimeContract | None) -> dict[str, Any]
 
 
 def _find_nearest_package_json(scan_path: Path, project_root: Path) -> Path | None:
-    resolved = scan_path if scan_path.is_absolute() else (project_root / scan_path)
-    resolved = resolved.resolve()
-    if resolved.is_file():
-        resolved = resolved.parent
-
-    # If scan_path is inside runtime project root, cap traversal there.
-    # Otherwise (e.g. --path /tmp/other-repo), traverse from scan_path upward.
-    limit_to_project_root = False
-    try:
-        resolved.relative_to(project_root)
-        limit_to_project_root = True
-    except ValueError:
-        limit_to_project_root = False
-
-    cur = resolved
-    while True:
-        candidate = cur / "package.json"
-        if candidate.is_file():
-            return candidate
-        if (limit_to_project_root and cur == project_root) or cur.parent == cur:
-            break
-        cur = cur.parent
-
+    package_root = nearest_package_root(scan_path, project_root=project_root)
+    if package_root is not None:
+        return package_root / "package.json"
     # Fallback only when no package.json exists in the scanned tree.
     candidate = project_root / "package.json"
     return candidate if candidate.is_file() else None

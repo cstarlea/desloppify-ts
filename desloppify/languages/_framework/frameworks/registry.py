@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from desloppify.engine.detectors.orphaned import framework_package_roots
+
 from .types import EntryConventions, FrameworkSpec
 
 FRAMEWORK_SPECS: dict[str, FrameworkSpec] = {}
@@ -95,15 +97,13 @@ def framework_route_roots(
 ) -> frozenset[str]:
     """Absolute file-based router roots (``app/``, ``src/routes/``) in the scan.
 
-    Each package (and the scan root) is checked against the built-in
-    framework conventions it uses; only directories that exist are returned.
+    Each package (and the one the scan root belongs to) is checked against
+    the built-in framework conventions it uses; only directories that exist
+    are returned.
     """
     roots: set[str] = set()
     conventions = [c for c in framework_entry_conventions() if c.route_roots]
-    for package_root in {
-        scan_root.resolve(),
-        *(p.resolve() for p in package_roots or ()),
-    }:
+    for package_root in framework_package_roots(scan_root, package_roots):
         for convention in conventions:
             if not convention.applies_to(package_root):
                 continue

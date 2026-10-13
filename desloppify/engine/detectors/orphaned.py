@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from desloppify.base.discovery.file_paths import count_lines, rel, resolve_path
+from desloppify.base.discovery.paths import get_project_root
 
 _DUNDER_ALL_RE = re.compile(r"^__all__\s*[:=]", re.MULTILINE)
 
@@ -138,6 +139,51 @@ def package_dependency_names(package_root: Path) -> set[str]:
     return names
 
 
+def nearest_package_root(
+    scan_path: Path, *, project_root: Path | None = None
+) -> Path | None:
+    """The nearest directory at or above *scan_path* that has a package.json.
+
+    A relative *scan_path* is relative to the project root. The walk stops
+    at the project root when the scan is inside it; a scan outside the
+    project (``--path /other/repo``) walks up to the filesystem root.
+    """
+    root = get_project_root(project_root=project_root)
+    start = scan_path if scan_path.is_absolute() else root / scan_path
+    start = start.resolve()
+    if start.is_file():
+        start = start.parent
+    inside = start.is_relative_to(root)
+    for directory in (start, *start.parents):
+        if (directory / "package.json").is_file():
+            return directory
+        if inside and directory == root:
+            break
+    return None
+
+
+def framework_package_roots(
+    scan_path: Path,
+    package_roots: list[Path] | None = None,
+    *,
+    project_root: Path | None = None,
+) -> list[Path]:
+    """Directories framework conventions are detected in, deepest first.
+
+    The workspace packages passed in, plus the package the scan belongs to:
+    scanning ``src/`` matches files against the package that holds it, where
+    ``package.json`` and ``next.config.*`` live. The scan path stands in only
+    when no package encloses it.
+    """
+    root = get_project_root(project_root=project_root)
+    scan = (scan_path if scan_path.is_absolute() else root / scan_path).resolve()
+    if scan.is_file():
+        scan = scan.parent
+    own = nearest_package_root(scan, project_root=root)
+    roots = {own or scan, *(Path(r).resolve() for r in package_roots or ())}
+    return sorted(roots, key=lambda p: len(p.parts), reverse=True)
+
+
 @dataclass
 class OrphanedDetectionOptions:
     """Optional behavior flags for orphaned-file detection."""
@@ -165,8 +211,7 @@ class FrameworkConventions:
         package_roots: list[Path] | None,
         conventions: tuple[EntryConventions, ...],
     ) -> None:
-        roots = {scan_path.resolve(), *(Path(r).resolve() for r in package_roots or ())}
-        self._roots = sorted(roots, key=lambda p: len(p.parts), reverse=True)
+        self._roots = framework_package_roots(scan_path, package_roots)
         self._conventions = conventions
         self._detected: dict[
             Path, tuple[tuple[EntryConventions, ...], frozenset[str]]

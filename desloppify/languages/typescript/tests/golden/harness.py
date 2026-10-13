@@ -71,11 +71,17 @@ def copy_project(name: str, dest_root: Path, *, node_tools: bool = False) -> Pat
 
 
 def scan_project(
-    project: Path, *, node_tools: bool = False, cwd: Path | None = None
+    project: Path,
+    *,
+    node_tools: bool = False,
+    cwd: Path | None = None,
+    subdir: str | None = None,
 ) -> dict[str, Any]:
     """Scan ``project`` and return a normalized, order-independent snapshot.
 
     ``cwd`` defaults to the project itself, as when the CLI runs inside it.
+    ``subdir`` scans that directory of the project (``--path src``), with
+    the project still the project root.
     """
     saved_path = os.environ.get("PATH", "")
     saved_cwd = os.getcwd()
@@ -96,7 +102,10 @@ def scan_project(
             try:
                 lang = make_lang_run(get_lang("typescript"))
                 issues, potentials = _generate_issues_from_lang(
-                    project, lang, include_slow=True, profile="objective"
+                    project / subdir if subdir else project,
+                    lang,
+                    include_slow=True,
+                    profile="objective",
                 )
                 record_grammar_load_failures(lang)
             finally:
