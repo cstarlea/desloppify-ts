@@ -1,12 +1,18 @@
 """Debug-log fixer that removes tagged ``console`` calls by syntax-tree range.
 
-Each detected log is matched to the ``console.log/warn/info/debug`` call with a
-tagged first argument (``'[Tag] ...'``, ``'🔍 [Tag]'``, `` `${DEBUG_TAG} ...` ``)
-that starts on its line. The call is removed only when it is a statement of
+Each detected log is matched to the ``console`` call with a tagged first
+argument (``'[Tag] ...'``, ``'🔍 [Tag]'``, `` `${DEBUG_TAG} ...` ``) that
+starts on its line. The call is removed only when it is a statement of
 its own in a block, with a trailing ``//`` comment, and its arguments can't
 run code.
 
 Skipped:
+- ``console.warn/error/info``, which are intentional output, not debug logs;
+- calls behind a dev or env check (``if (isDev)``, ``process.env.NODE_ENV``,
+  ``import.meta.env.DEV``, or after ``if (isProduction) return``);
+- removals that would leave an ``if``/``else`` block empty;
+- logs next to an untagged ``console`` call: they are part of a larger
+  printout, and removing only the tagged lines would leave the rest behind;
 - calls inside a larger expression, or as the unbraced body of ``if``/``else``
   or a loop (removing them would change control flow or leave ``if (x)``
   dangling), or as an arrow function's expression body;
@@ -19,9 +25,9 @@ Skipped:
   statement.
 
 Up to three ``//`` comment lines directly above a removed log go with it when
-they mention debug, temp, log or trace. Nothing else changes: blocks left
-empty, other comments and tag constants that become unused stay. The unused-vars fixer removes those
-constants once a scan reports them.
+they mention debug, temp, log or trace. Nothing else changes: other blocks
+left empty, other comments and tag constants that become unused stay. The
+unused-vars fixer removes those constants once a scan reports them.
 
 Needs tree-sitter: without it the fixer changes nothing.
 """
@@ -34,7 +40,12 @@ from collections import defaultdict
 
 from desloppify.base.output.terminal import colorize
 from desloppify.languages._framework.base.types import FixResult
-from desloppify.languages.typescript.detectors.logs import tagged_console_calls
+from desloppify.languages.typescript.detectors.logs import (
+    CONSOLE_CALLEES,
+    DEBUG_LOG_CALLEES,
+    in_env_guard,
+    tagged_console_calls,
+)
 from desloppify.languages.typescript.syntax.nodes import (
     FUNCTIONS,
     STATEMENT_PARENTS,
@@ -112,7 +123,8 @@ def remove_debug_logs(
 ) -> tuple[bytes, list[dict], list[str]]:
     """Return the edited source, the fixed entries and a skip reason per skipped entry."""
     calls_by_line: dict[int, list] = defaultdict(list)
-    for call in tagged_console_calls(parsed):
+    tagged = tagged_console_calls(parsed, CONSOLE_CALLEES)
+    for call in tagged:
         calls_by_line[parsed.line(call)].append(call)
 
     planned: dict[tuple, object] = {}  # statement key -> statement
@@ -137,16 +149,75 @@ def remove_debug_logs(
             continue
         entry_statements.append((entry, keys))
 
+    emptied = _emptied_guards(planned)
+    partial = _partial_printouts(parsed, planned, {node_key(c) for c in tagged})
     kept = set(asi_hazards(parsed.source, planned))
     fixed: list[dict] = []
     edits: list[tuple[int, int]] = []
     for entry, keys in entry_statements:
+        if emptied.intersection(keys):
+            skipped.append("empties_guard")
+            continue
+        if partial.intersection(keys):
+            skipped.append("partial_printout")
+            continue
         if kept.intersection(keys):
             skipped.append("asi_hazard")
             continue
         fixed.append(entry)
         edits.extend(_log_range(parsed.source, planned[key]) for key in keys)
     return apply_edits(parsed.source, edits), fixed, skipped
+
+
+def _emptied_guards(planned: dict) -> set[tuple]:
+    """Planned statements that are all an ``if``/``else`` block holds."""
+    by_block: dict[tuple, list] = defaultdict(list)
+    for statement in planned.values():
+        by_block[node_key(statement.parent)].append(statement)
+    emptied: set[tuple] = set()
+    for statements in by_block.values():
+        block = statements[0].parent
+        if block.type != "statement_block" or block.parent is None:
+            continue
+        if block.parent.type not in ("if_statement", "else_clause"):
+            continue
+        if len(statements) == len(
+            [c for c in block.named_children if c.type != "comment"]
+        ):
+            emptied.update(node_key(statement) for statement in statements)
+    return emptied
+
+
+def _partial_printouts(
+    parsed: ParsedSource, planned: dict, tagged: set[tuple]
+) -> set[tuple]:
+    """Planned statements next to an untagged ``console`` call statement."""
+    partial: set[tuple] = set()
+    for key, statement in planned.items():
+        for neighbour in (statement.prev_named_sibling, statement.next_named_sibling):
+            while neighbour is not None and neighbour.type == "comment":
+                neighbour = (
+                    neighbour.prev_named_sibling
+                    if neighbour.start_byte < statement.start_byte
+                    else neighbour.next_named_sibling
+                )
+            call = _console_call(parsed, neighbour)
+            if call is not None and node_key(call) not in tagged:
+                partial.add(key)
+    return partial
+
+
+def _console_call(parsed: ParsedSource, statement):
+    """The ``console.*(...)`` call a statement consists of, if it is one."""
+    if statement is None or statement.type != "expression_statement":
+        return None
+    call = statement.named_children[0] if statement.named_children else None
+    if call is None or call.type != "call_expression":
+        return None
+    function = call.child_by_field_name("function")
+    if function is None or not parsed.text(function).startswith("console."):
+        return None
+    return call
 
 
 def _log_range(source: bytes, statement) -> tuple[int, int]:
@@ -175,6 +246,11 @@ def _log_range(source: bytes, statement) -> tuple[int, int]:
 
 def _removable_statement(parsed: ParsedSource, call):
     """The statement to delete for ``call``, or None and why not."""
+    function = call.child_by_field_name("function")
+    if function is None or parsed.text(function) not in DEBUG_LOG_CALLEES:
+        return None, "not_debug_level"
+    if in_env_guard(parsed, call):
+        return None, "env_guard"
     statement = call.parent
     if statement is None or statement.type != "expression_statement":
         return None, "not_standalone"

@@ -45,7 +45,7 @@ def test_phases_basic_cover_logs_unused_exports_and_deprecated(monkeypatch) -> N
     monkeypatch.setattr(
         phases_basic_mod.logs_detector_mod,
         "detect_logs",
-        lambda _path: SimpleNamespace(
+        lambda _path, _zone_map=None: SimpleNamespace(
             entries=[
                 {"file": "src/a.ts", "tag": "DEBUG", "line": 1},
                 {"file": "src/a.ts", "tag": "DEBUG", "line": 2},

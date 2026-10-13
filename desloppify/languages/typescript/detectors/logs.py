@@ -1,9 +1,17 @@
-"""Tagged console.log('[Tag]') detection.
+"""Tagged debug-log detection: ``console.log/debug/trace('[Tag] ...')``.
 
 Catches:
 - Direct tags: console.log('[Tag] ...')
 - Emoji-prefixed tags: console.log('🔍 [Tag] ...')
 - Template-literal tags: console.log(`${TAG_VAR} ...`) where TAG_VAR = '[Tag]'
+
+Not reported, because the output is intentional:
+- ``console.warn/error/info``;
+- ANSI colour codes (``'\\x1b[36m'``), which look like a tag but aren't one;
+- calls behind a dev or env check (``if (isDev)``,
+  ``if (process.env.NODE_ENV !== 'production')``, ``import.meta.env.DEV && ...``,
+  or after ``if (isProduction) return``);
+- files in the script zone, which are CLIs that print on purpose.
 
 Calls come from the syntax tree, so a log in a comment or string isn't one;
 each is reported on the line where the call starts, where the debug-logs
@@ -25,7 +33,10 @@ from desloppify.base.discovery.source import (
     read_file_text,
 )
 from desloppify.base.output.terminal import colorize, print_table
+from desloppify.engine.policy.zones import FileZoneMap, should_skip_issue
+from desloppify.languages.typescript._zones import TS_ZONE_RULES
 from desloppify.languages.typescript.detectors.contracts import DetectorResult
+from desloppify.languages.typescript.syntax.nodes import same
 from desloppify.languages.typescript.syntax.queries import calls
 from desloppify.languages.typescript.syntax.scanner import SourceText
 from desloppify.languages.typescript.syntax.tree import ParsedSource, parsed_file
@@ -34,38 +45,133 @@ logger = logging.getLogger(__name__)
 
 
 TAG_EXTRACT_RE = re.compile(r"\[([^\]]+)\]")
+# ANSI escapes as written in source: '\x1b[36m', '\u001b[0m', '\033[1;31m'.
+_ANSI_RE = re.compile(
+    r"(?:\\x1b|\\u001b|\\u\{1b\}|\\033|\\e|\x1b)\[[0-9;]*[A-Za-z]", re.IGNORECASE
+)
 
-_LOG_CALLEES = frozenset(
-    f"console.{method}" for method in ("log", "warn", "info", "debug")
+DEBUG_LOG_CALLEES = frozenset(
+    f"console.{method}" for method in ("log", "debug", "trace")
 )
-_TAGGED_FIRST_ARG_RE = re.compile(
-    r"""^['"`].{0,4}\[|^`\$\{\w*(?:TAG|DEBUG|LOG)\w*\}""", re.IGNORECASE
-)
+# Every console call that can carry a tag. warn/error/info are intentional
+# output; the fixer looks them up only to say why it leaves one alone.
+CONSOLE_CALLEES = DEBUG_LOG_CALLEES | {
+    f"console.{method}" for method in ("warn", "error", "info")
+}
+_TAGGED_FIRST_ARG_RE = re.compile(r"""^['"`].{0,4}\[""")
+_TAG_VAR_RE = re.compile(r"^`\$\{(\w*(?:TAG|DEBUG|LOG)\w*)\}", re.IGNORECASE)
 
 # Without tree-sitter: calls that start in code with the tagged argument on the same line.
-# Pattern 1: Direct and emoji-prefixed tags
-_PAT1 = re.compile(r"console\.(log|warn|info|debug)\s*\(\s*['\"`].{0,4}\[")
-# Pattern 2: Template-literal tag via variable containing TAG/DEBUG/LOG
-_PAT2 = re.compile(
-    r"console\.(log|warn|info|debug)\s*\(\s*`\$\{\w*(TAG|DEBUG|LOG)\w*\}", re.IGNORECASE
+_REGEX_CALL_RE = re.compile(r"console\.(?:log|debug|trace)\s*\(\s*")
+
+# A condition that checks the environment or a dev/debug flag.
+_ENV_CHECK_RE = re.compile(
+    r"\bprocess\.env\b|\bimport\.meta\.env\b|\b__DEV__\b"
+    r"|\b(?:is_?)?(?:dev|development|prod|production|debug)(?:_?(?:mode|env))?\b",
+    re.IGNORECASE,
 )
+_EXITS = frozenset({"return_statement", "throw_statement"})
 
 
-def tagged_console_calls(parsed: ParsedSource) -> list:
-    """``console.log/warn/info/debug`` calls whose first argument is tagged:
+def log_tag(source: str, first_arg: str) -> str | None:
+    """The tag of a log's first argument, or None when it carries none.
+
+    ``'[Tag] ...'`` and ``'🔍 [Tag]'`` give ``Tag``; `` `${DEBUG_TAG} ...` ``
+    gives the bracketed value ``source`` assigns to ``DEBUG_TAG``, else the
+    variable's name. ANSI colour codes are not tags.
+    """
+    text = _ANSI_RE.sub("", first_arg)
+    if _TAGGED_FIRST_ARG_RE.match(text):
+        tag = TAG_EXTRACT_RE.search(text)
+        return tag.group(1) if tag else None
+    var = _TAG_VAR_RE.match(text)
+    if var is None:
+        return None
+    name = var.group(1)
+    value = re.search(
+        rf"\b{re.escape(name)}\s*=\s*['\"`][^'\"`\n]{{0,4}}\[([^\]\n]+)\]", source
+    )
+    return value.group(1) if value else name
+
+
+def tagged_console_calls(
+    parsed: ParsedSource, callees: frozenset[str] = DEBUG_LOG_CALLEES
+) -> list:
+    """Calls to ``callees`` whose first argument is tagged:
     ``'[Tag] ...'``, ``'🔍 [Tag]'`` or `` `${DEBUG_TAG} ...` ``."""
+    source = parsed.source.decode("utf-8", "replace")
     return [
         call.node
-        for call in calls(parsed, _LOG_CALLEES)
-        if call.arguments and _TAGGED_FIRST_ARG_RE.match(parsed.text(call.arguments[0]))
+        for call in calls(parsed, callees)
+        if call.arguments and log_tag(source, parsed.text(call.arguments[0]))
     ]
 
 
-def detect_logs(path: Path) -> DetectorResult[dict]:
-    """Detect tagged logs with explicit population semantics."""
+def in_env_guard(parsed: ParsedSource, node) -> bool:
+    """Whether ``node`` only runs behind a dev or env check.
+
+    That is a branch of an ``if`` or ternary, or the right side of ``&&``/``||``,
+    whose condition checks the environment, or a statement that follows an
+    ``if (<env check>) return/throw`` in an enclosing block.
+    """
+    child, parent = node, node.parent
+    while parent is not None:
+        condition = None
+        if parent.type in ("if_statement", "ternary_expression"):
+            condition = parent.child_by_field_name("condition")
+        elif parent.type == "binary_expression":
+            operator = parent.child_by_field_name("operator")
+            if operator is not None and parsed.text(operator) in ("&&", "||"):
+                condition = parent.child_by_field_name("left")
+        if (
+            condition is not None
+            and not same(condition, child)
+            and _ENV_CHECK_RE.search(parsed.text(condition))
+        ):
+            return True
+        if parent.type in ("statement_block", "program"):
+            sibling = child.prev_named_sibling
+            while sibling is not None:
+                if _is_env_exit(parsed, sibling):
+                    return True
+                sibling = sibling.prev_named_sibling
+        child, parent = parent, parent.parent
+    return False
+
+
+def _is_env_exit(parsed: ParsedSource, statement) -> bool:
+    """``if (<env check>) return/throw ...`` with no ``else``."""
+    if statement.type != "if_statement" or statement.child_by_field_name("alternative"):
+        return False
+    condition = statement.child_by_field_name("condition")
+    body = statement.child_by_field_name("consequence")
+    if condition is None or body is None:
+        return False
+    if body.type == "statement_block":
+        body_statements = [c for c in body.named_children if c.type != "comment"]
+        body = body_statements[-1] if body_statements else None
+    return (
+        body is not None
+        and body.type in _EXITS
+        and bool(_ENV_CHECK_RE.search(parsed.text(condition)))
+    )
+
+
+def detect_logs(
+    path: Path, zone_map: FileZoneMap | None = None
+) -> DetectorResult[dict]:
+    """Detect tagged debug logs with explicit population semantics.
+
+    Files whose zone skips ``logs`` (scripts, generated, vendor) are left out;
+    without ``zone_map`` the TypeScript zone rules classify them.
+    """
     ts_files = [*find_ts_and_js_files(path), *find_component_files(path)]
+    if zone_map is None:
+        zone_map = FileZoneMap(ts_files, TS_ZONE_RULES, rel_fn=rel)
     entries = []
     for filepath in ts_files:
+        if should_skip_issue(zone_map, filepath, "logs"):
+            continue
         parsed = parsed_file(filepath)
         if parsed is not None:
             entries.extend(_tree_logs(filepath, parsed))
@@ -79,19 +185,19 @@ def detect_logs(path: Path) -> DetectorResult[dict]:
 
 
 def _tree_logs(filepath: str, parsed: ParsedSource) -> list[dict]:
+    source = parsed.source.decode("utf-8", "replace")
     found: dict[int, dict] = {}
-    for call in tagged_console_calls(parsed):
-        line_no = parsed.line(call)
-        if line_no in found:
+    for call in calls(parsed, DEBUG_LOG_CALLEES):
+        if not call.arguments or call.line in found:
             continue
-        args = call.child_by_field_name("arguments")
-        first = next(a for a in args.named_children if a.type != "comment")
-        tag = TAG_EXTRACT_RE.search(parsed.text(first))
-        found[line_no] = {
+        tag = log_tag(source, parsed.text(call.arguments[0]))
+        if tag is None or in_env_guard(parsed, call.node):
+            continue
+        found[call.line] = {
             "file": filepath,
-            "line": line_no,
-            "tag": tag.group(1) if tag else "unknown",
-            "content": parsed.line_text(call).strip(),
+            "line": call.line,
+            "tag": tag,
+            "content": parsed.line_text(call.node).strip(),
         }
     return [found[line_no] for line_no in sorted(found)]
 
@@ -100,15 +206,17 @@ def _regex_logs(filepath: str, content: str) -> list[dict]:
     source = SourceText(content)
     entries = []
     for index, line in enumerate(source.lines):
-        match = source.search(_PAT1, index) or source.search(_PAT2, index)
+        match = source.search(_REGEX_CALL_RE, index)
         if match is None:
             continue
-        tag = TAG_EXTRACT_RE.search(line, match.start())
+        tag = log_tag(content, line[match.end() :])
+        if tag is None:
+            continue
         entries.append(
             {
                 "file": filepath,
                 "line": index + 1,
-                "tag": tag.group(1) if tag else "unknown",
+                "tag": tag,
                 "content": line.strip(),
             }
         )

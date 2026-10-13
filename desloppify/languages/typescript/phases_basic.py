@@ -29,7 +29,7 @@ from desloppify.state_io import Issue
 def phase_logs(
     path: Path, lang: LangRuntimeContract
 ) -> tuple[list[Issue], dict[str, int]]:
-    log_result = logs_detector_mod.detect_logs(path)
+    log_result = logs_detector_mod.detect_logs(path, lang.zone_map)
     log_entries = log_result.entries
     total_files = log_result.population_size
     log_groups: dict[tuple, list] = defaultdict(list)

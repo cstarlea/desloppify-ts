@@ -60,6 +60,7 @@ CONFIG_SKIP_DETECTORS = {
 }
 
 SCRIPT_SKIP_DETECTORS = {
+    "logs",
     "coupling",
     "single_use",
     "orphaned",

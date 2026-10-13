@@ -753,9 +753,10 @@ class TestZonePolicies:
         assert vendor.exclude_from_score is True
 
     def test_script_zone_skips(self):
-        """SCRIPT zone skips coupling, single_use, orphaned, facade, test_coverage."""
+        """SCRIPT zone skips logs, coupling, single_use, orphaned, facade, test_coverage."""
         policy = ZONE_POLICIES[Zone.SCRIPT]
         assert policy.skip_detectors == {
+            "logs",
             "coupling",
             "single_use",
             "orphaned",

@@ -691,8 +691,9 @@ class TestFixDebugLogs:
         ts_file.write_text(
             textwrap.dedent("""\
             function process(data) {
-              if (data.debug) {
+              if (data.ready) {
                 console.log('[DEBUG] processing data', data);
+                step(data);
               }
               else {
                 processData(data);
@@ -713,7 +714,7 @@ class TestFixDebugLogs:
 
         content = ts_file.read_text()
         assert "console.log" not in content
-        assert "if (data.debug)" in content
+        assert "if (data.ready)" in content
         assert "else {" in content
         assert "processData(data);" in content
 
@@ -722,11 +723,13 @@ class TestFixDebugLogs:
         ts_file.write_text(
             textwrap.dedent("""\
             function process(data) {
-              if (data.debug) {
+              if (data.ready) {
                 console.log('[DEBUG] processing data', data);
+                step(data);
               }
-              else if (data.trace) {
+              else if (data.late) {
                 console.log('[TRACE] data', data);
+                step(data);
               }
               else {
                 processData(data);
@@ -743,7 +746,7 @@ class TestFixDebugLogs:
             },
             {
                 "file": str(ts_file),
-                "line": 6,
+                "line": 7,
                 "tag": "TRACE",
                 "content": "console.log('[TRACE] data', data);",
             },
@@ -753,8 +756,8 @@ class TestFixDebugLogs:
 
         content = ts_file.read_text()
         assert "console.log" not in content
-        assert "if (data.debug)" in content
-        assert "else if (data.trace)" in content
+        assert "if (data.ready)" in content
+        assert "else if (data.late)" in content
         assert "else {" in content
 
 

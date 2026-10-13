@@ -7,6 +7,8 @@ import importlib.util
 import pytest
 
 import desloppify.languages.typescript.fixers.logs as logs_mod
+from desloppify.base.discovery.source import clear_source_file_cache_for_tests
+from desloppify.languages.typescript.detectors.logs import detect_logs
 from desloppify.languages.typescript.fixers.logs import (
     fix_debug_logs,
     remove_debug_logs,
@@ -66,10 +68,16 @@ def _fix(source: str, *lines: int, path: str = "a.ts"):
             id="switch-case",
         ),
         pytest.param(
-            "if (debug) {\n  console.log('[T] a');\n}\n",
+            "if (ready) {\n  console.log('[T] a');\n  go();\n}\n",
             [2],
-            "if (debug) {\n}\n",
-            id="empty-block-is-left",
+            "if (ready) {\n  go();\n}\n",
+            id="guard-block-keeps-a-statement",
+        ),
+        pytest.param(
+            "for (const x of xs) {\n  console.log('[T] x', x);\n}\n",
+            [2],
+            "for (const x of xs) {\n}\n",
+            id="empty-loop-block-is-left",
         ),
         pytest.param(
             "function f() {\n  // section: catalog\n  // DEBUG: temporary logging\n"
@@ -103,7 +111,7 @@ def test_jsx_handler_body():
     ("source", "line", "reason"),
     [
         pytest.param(
-            "if (debug) console.log('[T] a');\nelse go();\n",
+            "if (ready) console.log('[T] a');\nelse go();\n",
             1,
             "not_standalone",
             id="unbraced-if",
@@ -145,6 +153,61 @@ def test_jsx_handler_body():
             id="no-semicolons",
         ),
         pytest.param("console.log('not tagged');\n", 1, "not_found", id="untagged"),
+        pytest.param(
+            "console.warn('[T] config missing');\n",
+            1,
+            "not_debug_level",
+            id="warn",
+        ),
+        pytest.param(
+            "console.error('[T] failed', err);\n",
+            1,
+            "not_debug_level",
+            id="error",
+        ),
+        pytest.param(
+            "if (process.env.NODE_ENV !== 'production') {\n"
+            "  console.log('[T] dev only');\n  go();\n}\n",
+            2,
+            "env_guard",
+            id="node-env-guard",
+        ),
+        pytest.param(
+            "if (isDev) {\n  console.log('[T] dev only');\n  go();\n}\n",
+            2,
+            "env_guard",
+            id="is-dev-guard",
+        ),
+        pytest.param(
+            "if (import.meta.env.DEV) {\n  console.log('[T] dev only');\n  go();\n}\n",
+            2,
+            "env_guard",
+            id="import-meta-env-guard",
+        ),
+        pytest.param(
+            "function f() {\n  if (isProduction) return;\n  console.log('[T] dev only');\n}\n",
+            3,
+            "env_guard",
+            id="after-production-exit",
+        ),
+        pytest.param(
+            "if (ready) {\n  console.log('[T] a');\n}\n",
+            2,
+            "empties_guard",
+            id="empties-if-block",
+        ),
+        pytest.param(
+            "if (ready) {\n  go();\n} else {\n  console.log('[T] a');\n}\n",
+            4,
+            "empties_guard",
+            id="empties-else-block",
+        ),
+        pytest.param(
+            "console.log('----');\nconsole.log('[T] a', x);\nconsole.log('----');\n",
+            2,
+            "partial_printout",
+            id="part-of-a-printout",
+        ),
     ],
 )
 def test_skips(source, line, reason):
@@ -186,3 +249,98 @@ def test_without_treesitter_nothing_changes(tmp_path, monkeypatch, capsys):
     assert result.skip_reasons == {"needs_treesitter": 1}
     assert ts_file.read_text() == "console.log('[T] a');\n"
     assert "needs tree-sitter" in capsys.readouterr().err
+
+
+# Round trips: the real detector feeds the fixer, which writes the file, and a
+# second detect-and-fix pass changes nothing.
+_DEV_LOGIN = r"""export async function mailLoginUrl(address: string, link: string) {
+  if (!mailerReady()) {
+    if (isProduction) {
+      throw new Error('Mail delivery is not configured.')
+    }
+
+    // Local development: show the login URL in the terminal instead.
+    console.log('\n\x1b[35m========================\x1b[0m')
+    console.log('\x1b[35m  Login URL for \x1b[1m%s\x1b[0m', address)
+    console.log('\x1b[35m  -> %s\x1b[0m', link)
+    console.log('\x1b[35m========================\x1b[0m\n')
+    return
+  }
+  await deliver(address, link)
+}
+"""
+
+
+def _round_trip(tmp_path, source: str) -> tuple[str, list]:
+    path = tmp_path / "src" / "a.ts"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(source)
+    first = fix_debug_logs(detect_logs(tmp_path).entries)
+    clear_source_file_cache_for_tests()
+    after = path.read_text()
+    assert count_syntax_errors(after, "a.ts") == 0, after
+    second = fix_debug_logs(detect_logs(tmp_path).entries)
+    assert second.entries == []
+    assert path.read_text() == after
+    return after, first.entries
+
+
+@needs_treesitter
+@pytest.mark.parametrize(
+    ("source", "expected"),
+    [
+        pytest.param(
+            "export function f(items: number[]) {\n  console.log(\n    '[Cart] items',\n"
+            "    items.length,\n    JSON.stringify(items),\n  );\n  return items;\n}\n",
+            "export function f(items: number[]) {\n  return items;\n}\n",
+            id="multi-line-console-log",
+        ),
+        pytest.param(
+            "export function f(n: number) {\n"
+            "  console.log(`\\x1b[36m[Sync] ${n} rows\\x1b[0m`);\n  return n;\n}\n",
+            "export function f(n: number) {\n  return n;\n}\n",
+            id="template-literal-with-ansi-codes",
+        ),
+        pytest.param(_DEV_LOGIN, None, id="guarded-dev-printout-untouched"),
+        pytest.param(
+            "export function f() {\n  if (isDev) {\n    console.log('[Dev] state', state);\n"
+            "    go();\n  }\n}\n",
+            None,
+            id="is-dev-block-untouched",
+        ),
+        pytest.param(
+            "export function f(message: string) {\n  // Avoid importing the logger here.\n"
+            "  console.warn(`[env] ${message}`);\n}\n",
+            None,
+            id="console-warn-untouched",
+        ),
+    ],
+)
+def test_round_trip(set_project_root, tmp_path, source, expected):
+    after, fixed = _round_trip(tmp_path, source)
+    assert after == (source if expected is None else expected)
+    assert bool(fixed) == (expected is not None)
+
+
+@needs_treesitter
+def test_reported_dev_login_printout_is_refused(tmp_path):
+    """Stale entries from the old ANSI-as-tag detector don't get the printout deleted."""
+    path = tmp_path / "mailer.ts"
+    path.write_text(_DEV_LOGIN)
+    entries = [{"file": str(path), "line": n, "tag": "unknown"} for n in (8, 9, 10, 11)]
+    result = fix_debug_logs(entries)
+    assert result.entries == []
+    assert path.read_text() == _DEV_LOGIN
+    assert result.skip_reasons == {"not_found": 4}
+
+
+@needs_treesitter
+def test_tagged_line_of_a_printout_is_kept():
+    source = (
+        "function banner(url: string) {\n  console.log('==========');\n"
+        "  console.log('\\x1b[36m[Link] %s\\x1b[0m', url);\n  console.log('==========');\n}\n"
+    )
+    text, fixed, skipped = _fix(source, 3)
+    assert text == source
+    assert fixed == []
+    assert skipped == ["partial_printout"]
