@@ -123,21 +123,21 @@
       "id": "tsconfig_health::tsconfig.json::noImplicitOverride",
       "tier": 2,
       "confidence": "medium",
-      "zone": "production",
+      "zone": "config",
       "summary": "tsconfig never sets noImplicitOverride: a method that overrides a base class method needs no `override`"
     },
     {
       "id": "tsconfig_health::tsconfig.json::noUncheckedIndexedAccess",
       "tier": 3,
       "confidence": "medium",
-      "zone": "production",
+      "zone": "config",
       "summary": "tsconfig never sets noUncheckedIndexedAccess: `arr[i]` and `record[key]` are typed as never undefined"
     },
     {
       "id": "tsconfig_health::tsconfig.json::verbatimModuleSyntax",
       "tier": 2,
       "confidence": "medium",
-      "zone": "production",
+      "zone": "config",
       "summary": "tsconfig never sets verbatimModuleSyntax: type-only imports can be emitted as runtime imports"
     },
     {
@@ -169,7 +169,7 @@
     "structural": 10,
     "test_coverage": 30,
     "tsconfig_health": 4,
-    "type_error": 9,
+    "type_error": 8,
     "unused": 10
   },
   "reduced_coverage": [

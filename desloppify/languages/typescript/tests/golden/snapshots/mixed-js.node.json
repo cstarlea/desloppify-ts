@@ -74,14 +74,14 @@
       "id": "tsconfig_health::tsconfig.json::noUncheckedIndexedAccess",
       "tier": 3,
       "confidence": "medium",
-      "zone": "production",
+      "zone": "config",
       "summary": "tsconfig never sets noUncheckedIndexedAccess: `arr[i]` and `record[key]` are typed as never undefined"
     },
     {
       "id": "tsconfig_health::tsconfig.json::verbatimModuleSyntax",
       "tier": 2,
       "confidence": "medium",
-      "zone": "production",
+      "zone": "config",
       "summary": "tsconfig never sets verbatimModuleSyntax: type-only imports can be emitted as runtime imports"
     }
   ],

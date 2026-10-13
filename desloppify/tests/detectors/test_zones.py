@@ -127,17 +127,36 @@ class TestMatchPattern:
         """'setup.py' matches 'setup.py' at root."""
         assert _match_pattern("setup.py", "setup.py") is True
 
-    def test_fallback_substring_match(self):
-        """Fallback substring matches on full path (e.g. 'tsconfig')."""
-        assert _match_pattern("project/tsconfig.json", "tsconfig") is True
+    @pytest.mark.parametrize(
+        ("path", "pattern"),
+        [
+            ("project/tsconfig.json", "tsconfig"),
+            ("tsconfig.build.json", "tsconfig"),
+            ("vite.config.ts", "vite.config"),
+            ("packages/a/vite.config.mts", "vite.config"),
+            ("eslint.config.mjs", "eslint"),
+            (".eslintrc.cjs", "eslint"),
+            (".prettierrc.js", "prettier"),
+            ("vitest.setup.ts", "vitest.setup."),
+            ("src/setupTests.ts", "setupTests."),
+        ],
+    )
+    def test_fallback_tool_name_on_basename(self, path, pattern):
+        assert _match_pattern(path, pattern) is True
 
-    def test_fallback_substring_no_match(self):
-        """Fallback substring does NOT match unrelated paths."""
-        assert _match_pattern("src/app.ts", "tsconfig") is False
-
-    def test_fallback_vite_config(self):
-        """'vite.config' matches 'vite.config.ts' via fallback substring."""
-        assert _match_pattern("vite.config.ts", "vite.config") is True
+    @pytest.mark.parametrize(
+        ("path", "pattern"),
+        [
+            ("src/app.ts", "tsconfig"),
+            # Directories and other words in the name don't count
+            ("src/lib/eslint-rules/rule.ts", "eslint"),
+            ("src/tsconfig-paths/resolve.ts", "tsconfig"),
+            ("src/lib/prettier-utils.ts", "prettier"),
+            ("src/myeslint.config.ts", "eslint"),
+        ],
+    )
+    def test_fallback_no_substring_match(self, path, pattern):
+        assert _match_pattern(path, pattern) is False
 
 
 # ── classify_file() ──────────────────────────────────────────
@@ -274,6 +293,21 @@ class TestClassifyFile:
         ):
             assert classify_file(path, TS_ZONE_RULES) == Zone.GENERATED, path
         assert classify_file("public/sw.js", TS_ZONE_RULES) == Zone.PRODUCTION
+
+    def test_tool_config_names_match_the_file_not_its_directory(self):
+        from desloppify.languages.typescript._zones import TS_ZONE_RULES
+
+        for path in (
+            "src/lib/eslint-rules/rule.ts",
+            "src/lib/eslint-rules/index.ts",
+            "src/tsconfig-paths/resolve.ts",
+            "src/lib/prettier-utils.ts",
+        ):
+            assert classify_file(path, TS_ZONE_RULES) == Zone.PRODUCTION, path
+        for path in ("eslint.config.mjs", ".eslintrc.cjs", ".prettierrc.js"):
+            assert classify_file(path, TS_ZONE_RULES) == Zone.CONFIG, path
+        for path in ("vitest.setup.ts", "jest.setup.js", "src/setupTests.ts"):
+            assert classify_file(path, TS_ZONE_RULES) == Zone.TEST, path
 
     def test_production_default(self):
         """File not matching any rule defaults to PRODUCTION."""
@@ -595,8 +629,9 @@ class TestDirectoryZones:
         assert zone_map.get("src/core") == Zone.PRODUCTION
         assert zone_map.get("src") == Zone.PRODUCTION
 
-    def test_unknown_directory_is_production(self, zone_map):
-        assert zone_map.get("elsewhere/tests") == Zone.PRODUCTION
+    def test_unknown_path_follows_the_rules(self, zone_map):
+        assert zone_map.get("elsewhere/tests") == Zone.TEST
+        assert zone_map.get("elsewhere/docs") == Zone.PRODUCTION
 
     def test_absolute_paths_terminate(self):
         zone_map = FileZoneMap(["/app/tests/a.ts"], COMMON_ZONE_RULES)
@@ -899,3 +934,16 @@ class TestPatternOverrides:
         # Unscanned files (CSS, Markdown) carrying issues honor overrides too.
         assert zone_map.get("www/src/custom.css") == Zone.VENDOR
         assert zone_map.get("docs/intro.md") == Zone.PRODUCTION
+
+    def test_unscanned_files_follow_path_rules(self):
+        from desloppify.languages.typescript._zones import TS_ZONE_RULES
+
+        zone_map = FileZoneMap(["tools/dash/server.mjs", "src/app.ts"], TS_ZONE_RULES)
+        assert zone_map.get("tools/dash/public/styles.css") == Zone.SCRIPT
+        assert zone_map.get("src/vendor/lib.css") == Zone.VENDOR
+        assert zone_map.get("src/app/globals.css") == Zone.PRODUCTION
+        # An override still wins over the rules.
+        zone_map = FileZoneMap(
+            ["src/app.ts"], TS_ZONE_RULES, overrides={"tools/**": "production"}
+        )
+        assert zone_map.get("tools/dash/public/styles.css") == Zone.PRODUCTION

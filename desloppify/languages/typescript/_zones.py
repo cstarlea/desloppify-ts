@@ -46,8 +46,8 @@ TS_ZONE_RULES = [
             "/benchmark/",
             "/benchmarks/",
             ".bench.",
-            "vitest.setup",
-            "jest.setup",
+            "vitest.setup.",
+            "jest.setup.",
         ],
     ),
     ZoneRule(

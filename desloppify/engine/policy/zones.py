@@ -84,7 +84,9 @@ class ZoneRule:
       - "name.py" → basename exact match (has extension, no /)
       - "*.x.ts"  → basename glob (contains ``*`` or ``?``)
       - "^dir/"   → path starts-with (anchored at the project root)
-      - fallback  → substring on full path
+      - "a/b.ts"  → path suffix (the file, at the root or below a directory)
+      - fallback  → tool name: basename (less a leading dot) starts with it,
+                    then "." or "rc" ("eslint" → .eslintrc.cjs, eslint.config.js)
 
     A file matching any ``exclude`` pattern skips the rule.
     """
@@ -132,8 +134,19 @@ def _match_pattern(rel_path: str, pattern: str) -> bool:
         if ext and len(ext) <= 5 and ext.isalnum():
             return basename == pattern
 
-    # Fallback: substring on full path (vite.config, tsconfig, eslint, etc.)
-    return pattern in rel_path
+    # Path: "src/config.ts" → that file, at the root or below a directory
+    if "/" in pattern:
+        path = pattern.lstrip("/")
+        return rel_path.lstrip("/") == path or rel_path.endswith(f"/{path}")
+
+    # Tool name: "vite.config", "tsconfig", "eslint", "setupTests." → the
+    # basename, less a leading dot, starts with it, then "." or "rc"
+    # (vite.config.ts, tsconfig.build.json, .eslintrc.cjs). Directories don't
+    # count: src/lib/eslint-rules/x.ts is not config.
+    name = basename.lstrip(".")
+    if pattern.endswith("."):
+        return name.startswith(pattern)
+    return name == pattern or name.startswith((f"{pattern}.", f"{pattern}rc"))
 
 
 # ── Common zone rules (shared across languages) ──────────
@@ -345,6 +358,7 @@ class FileZoneMap:
         self._rules = rules
         self._dir_files: dict[str, list[Zone]] = {}
         self._dir_zones: dict[str, Zone] = {}
+        self._unscanned_zones: dict[str, Zone] = {}
         for file_path in files:
             rel_path = rel_fn(file_path) if rel_fn else file_path
             zone = classify_file(rel_path, rules, overrides)
@@ -397,12 +411,13 @@ class FileZoneMap:
         if dir_zone is not None:
             return dir_zone
 
-        # Files outside the scan (CSS, Markdown) still honor explicit overrides.
-        key = matching_override(rel_path, self._overrides)
-        if key is not None and self._overrides:
-            return normalize_zone(self._overrides[key]) or Zone.PRODUCTION
-
-        return Zone.PRODUCTION
+        # Files outside the scan (CSS, Markdown) follow the same overrides and
+        # path rules: tools/dashboard/styles.css is script like its .mjs files.
+        zone = self._unscanned_zones.get(rel_path)
+        if zone is None:
+            zone = classify_file(rel_path, self._rules, self._overrides)
+            self._unscanned_zones[rel_path] = zone
+        return zone
 
     def exclude(self, files: list[str], *zones: Zone) -> list[str]:
         """Return files NOT in the given zones."""

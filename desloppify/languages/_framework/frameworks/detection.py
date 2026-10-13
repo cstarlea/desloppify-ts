@@ -87,6 +87,8 @@ def _node_framework_evidence(
 ) -> tuple[bool, FrameworkEvidence]:
     dep_hits = tuple(sorted(set(cfg.dependencies).intersection(deps)))
     dev_dep_hits = tuple(sorted(set(cfg.dev_dependencies).intersection(dev_deps)))
+    if (deps | dev_deps).intersection(cfg.dev_dependency_peer_of):
+        dev_dep_hits = ()
     config_hits = _existing_relpaths(
         package_root, project_root, cfg.config_files, kind="file"
     )

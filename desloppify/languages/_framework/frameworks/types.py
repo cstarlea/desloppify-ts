@@ -24,6 +24,9 @@ class DetectionConfig:
     marker_files: tuple[str, ...] = ()
     marker_dirs: tuple[str, ...] = ()
     script_pattern: str | None = None
+    # A dev-dependency hit doesn't count when one of these is also listed:
+    # it is there as their peer (vitest needs vite).
+    dev_dependency_peer_of: tuple[str, ...] = ()
 
     # Markers are valuable for routing context, but default to "context only"
     # so frameworks don't light up purely from directory shape.

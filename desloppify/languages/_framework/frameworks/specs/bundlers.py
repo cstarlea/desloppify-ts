@@ -32,6 +32,9 @@ VITE_SPEC = FrameworkSpec(
         dependencies=("vite",),
         dev_dependencies=("vite",),
         config_files=config_names("vite.config"),
+        # `vite`, `vite build`, but not vitest or vite-node
+        script_pattern=r"(?<![\w@/.-])vite(?![\w.-])",
+        dev_dependency_peer_of=("vitest",),
     ),
     entry_conventions=VITE_ENTRY_CONVENTIONS,
     public_env_prefixes=("VITE_",),
