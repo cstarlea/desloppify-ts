@@ -93,6 +93,23 @@ def _project_root_from_state_path(state_path_value: str | Path | None) -> Path |
     return None
 
 
+def _external_state_dir(
+    state_path_value: str | Path | None, project_root: Path
+) -> Path | None:
+    """Directory of an explicit ``--state`` outside ``<project_root>/.desloppify``.
+
+    Everything desloppify writes then goes next to that state file, so
+    nothing lands in the scanned project.
+    """
+    if state_path_value in (None, ""):
+        return None
+    try:
+        state_dir = Path(state_path_value).resolve().parent
+    except OSError:
+        return None
+    return None if state_dir == project_root / ".desloppify" else state_dir
+
+
 def _is_submodule_checkout(directory: Path) -> bool:
     """True when ``directory/.git`` is a gitfile pointing into ``.git/modules``.
 
@@ -324,6 +341,9 @@ def main() -> None:
                 )
             if inferred is not None:
                 runtime.project_root = inferred
+            runtime.state_dir = _external_state_dir(
+                getattr(args, "state", None), get_project_root()
+            )
             _warn_if_running_installed_package_from_checkout()
 
             # Lightweight commands that don't need state/config/exclusions.

@@ -15,7 +15,7 @@ from pathlib import Path
 import desloppify
 from desloppify.app.commands.runner.run_logs import make_run_log_writer
 from desloppify.base.discovery.file_paths import safe_write_text
-from desloppify.base.discovery.paths import get_project_root
+from desloppify.base.discovery.paths import get_project_root, get_state_dir
 from desloppify.base.exception_sets import CommandError
 from desloppify.base.output.terminal import colorize
 
@@ -381,7 +381,7 @@ def run_codex_pipeline(
     plan = resolved_services.load_plan()
 
     stamp = run_stamp()
-    desloppify_dir = repo_root / ".desloppify"
+    desloppify_dir = get_state_dir()
     run_dir = desloppify_dir / "triage_runs" / stamp
     prompts_dir = run_dir / "prompts"
     output_dir = run_dir / "output"

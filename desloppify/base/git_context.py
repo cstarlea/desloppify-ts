@@ -6,6 +6,7 @@ import logging
 import shutil
 import subprocess  # nosec B404
 from dataclasses import dataclass
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -72,6 +73,20 @@ def detect_git_context() -> GitContext:
         return GitContext(available=False)
 
 
+def is_git_tracked(path: Path) -> bool:
+    """True when ``path`` is a file git tracks; False if git can't tell."""
+    if not path.is_file():
+        return False
+    try:
+        result = _run_git_command(
+            "-C", str(path.parent), "ls-files", "--error-unmatch", "--", path.name
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired, OSError) as exc:
+        logger.debug("git ls-files unavailable: %s", exc)
+        return False
+    return result.returncode == 0
+
+
 def update_pr_body(pr_number: int, body: str) -> bool:
     """Update PR description via ``gh pr edit``.  Returns True on success."""
     try:
@@ -95,4 +110,4 @@ def update_pr_body(pr_number: int, body: str) -> bool:
         return False
 
 
-__all__ = ["GitContext", "detect_git_context", "update_pr_body"]
+__all__ = ["GitContext", "detect_git_context", "is_git_tracked", "update_pr_body"]

@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, cast
 
-from desloppify.base.discovery.paths import get_project_root
+from desloppify.base.discovery.paths import get_state_dir as _runtime_state_dir
 from desloppify.base.enums import Status, canonical_issue_status, issue_status_tokens
 from desloppify.engine._state.issue_semantics import (
     WORK_ITEM_KINDS,
@@ -87,7 +87,7 @@ _SCAN_METADATA_SOURCES = {"empty", "scan", "plan_reconstruction"}
 
 def get_state_dir() -> Path:
     """Return the active state directory for the current runtime context."""
-    return get_project_root() / ".desloppify"
+    return _runtime_state_dir()
 
 
 def get_state_file() -> Path:

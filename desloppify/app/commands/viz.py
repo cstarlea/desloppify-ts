@@ -11,13 +11,14 @@ from desloppify.app.output.visualize import (
     generate_tree_text,
     generate_visualization,
 )
+from desloppify.base.discovery.paths import get_state_dir
 from desloppify.base.exception_sets import CommandError
 from desloppify.base.output.terminal import colorize
 
 
 def _cmd_viz(args: argparse.Namespace) -> None:
     path, lang, state = load_cmd_context(args)
-    output = Path(getattr(args, "output", None) or ".desloppify/treemap.html")
+    output = Path(getattr(args, "output", None) or get_state_dir() / "treemap.html")
     print(colorize("Collecting file data and building dependency graph...", "dim"))
     _, output_result = generate_visualization(path, state, output, lang=lang)
     if output_result.status != "written":

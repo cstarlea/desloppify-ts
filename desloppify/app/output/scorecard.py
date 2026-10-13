@@ -28,7 +28,12 @@ from desloppify.app.output.scorecard_parts.theme import (
     scale,
     score_color,
 )
-from desloppify.base.discovery.paths import get_project_root
+from desloppify.base.discovery.paths import (
+    get_project_root,
+    get_state_dir,
+    state_dir_is_external,
+)
+from desloppify.base.git_context import is_git_tracked
 from desloppify.engine.planning.scorecard_dimensions import (
     collapse_elegance_dimensions,
     limit_scorecard_dimensions,
@@ -38,6 +43,8 @@ from desloppify.engine.planning.scorecard_dimensions import (
 from desloppify.state_scoring import headline_score, score_snapshot
 
 logger = logging.getLogger(__name__)
+
+DEFAULT_BADGE_PATH = "scorecard.png"
 
 
 def generate_scorecard(state: dict, output_path: str | Path) -> Path:
@@ -152,17 +159,22 @@ def get_badge_config(args, config: dict | None = None) -> tuple[Path | None, boo
     if disabled:
         return None, True
 
-    path_str = (
-        getattr(args, "badge_path", None)
-        or cfg.get("badge_path")
-        or os.environ.get("DESLOPPIFY_BADGE_PATH", "scorecard.png")
+    explicit = getattr(args, "badge_path", None) or os.environ.get(
+        "DESLOPPIFY_BADGE_PATH"
     )
-    path = Path(path_str)
+    configured = cfg.get("badge_path")
+    if not explicit and configured and configured != DEFAULT_BADGE_PATH:
+        explicit = str(configured)
+    path = Path(explicit or DEFAULT_BADGE_PATH)
     # On Windows, "/tmp/foo.png" is root-anchored but drive-relative.
     # Treat any rooted path as user-intended absolute-like input.
     is_root_anchored = bool(path.root)
     if not path.is_absolute() and not is_root_anchored:
         path = get_project_root() / path
+    if not explicit and (state_dir_is_external() or is_git_tracked(path)):
+        # The default never writes over a committed file, nor into a project
+        # whose state lives elsewhere.
+        return get_state_dir() / DEFAULT_BADGE_PATH, False
     return path, False
 
 

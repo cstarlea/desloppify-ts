@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from desloppify.base.discovery.file_paths import safe_write_text
-from desloppify.base.discovery.paths import get_project_root
+from desloppify.base.discovery.paths import get_state_dir, readable_state_file
 from desloppify.base.output.fallbacks import log_best_effort_failure
 
 from .migration import (
@@ -37,8 +37,8 @@ def _rename_key(d: dict, old: str, new: str) -> bool:
 
 
 def _default_config_file() -> Path:
-    """Resolve config path from the active runtime project root."""
-    return get_project_root() / ".desloppify" / "config.json"
+    """Resolve the config path desloppify saves to."""
+    return get_state_dir() / "config.json"
 
 
 logger = logging.getLogger(__name__)
@@ -157,7 +157,16 @@ def load_config(path: Path | None = None) -> dict[str, Any]:
     migration from state-*.json files.
     """
     p = path or _default_config_file()
-    config = _load_config_payload(p)
+    source = path or readable_state_file("config.json")
+    if source != p:
+        # The project's committed config, read for an external state dir:
+        # never repaired or rewritten in place.
+        try:
+            config = _load_config_json(source)
+        except (json.JSONDecodeError, UnicodeDecodeError, OSError, ValueError):
+            config = {}
+    else:
+        config = _load_config_payload(p)
     changed = _migrate_legacy_noise_keys(config)
     changed |= _apply_schema_defaults_and_normalization(config)
 

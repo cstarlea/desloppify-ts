@@ -36,6 +36,38 @@ def get_project_root(
     return _default_project_root()
 
 
+def get_state_dir(*, runtime: RuntimeContext | None = None) -> Path:
+    """Return the directory desloppify writes its files to.
+
+    That is ``<project_root>/.desloppify``, unless ``--state`` moved it.
+    """
+    override = resolve_runtime_context(runtime).state_dir
+    if override is not None:
+        return Path(override).resolve()
+    return get_project_root(runtime=runtime) / ".desloppify"
+
+
+def state_dir_is_external(*, runtime: RuntimeContext | None = None) -> bool:
+    """True when ``--state`` moved the state directory out of the project."""
+    return get_state_dir(runtime=runtime) != (
+        get_project_root(runtime=runtime) / ".desloppify"
+    )
+
+
+def readable_state_file(name: str, *, runtime: RuntimeContext | None = None) -> Path:
+    """Path to read the project setting file ``name`` from.
+
+    With an external state directory that has no copy yet, the project's own
+    ``.desloppify/<name>`` is read instead, so committed settings still
+    apply; saves go to ``get_state_dir()``.
+    """
+    own = get_state_dir(runtime=runtime) / name
+    if own.exists() or not state_dir_is_external(runtime=runtime):
+        return own
+    project_copy = get_project_root(runtime=runtime) / ".desloppify" / name
+    return project_copy if project_copy.exists() else own
+
+
 def get_default_path(
     *,
     project_root: Path | str | None = None,
@@ -140,7 +172,10 @@ __all__ = [
     "DEFAULT_PATH",
     "get_area",
     "get_project_root",
+    "get_state_dir",
     "get_default_path",
     "get_default_scan_path",
     "read_code_snippet",
+    "readable_state_file",
+    "state_dir_is_external",
 ]

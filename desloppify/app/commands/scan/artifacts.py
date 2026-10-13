@@ -15,7 +15,7 @@ from desloppify.app.commands.scan.workflow import (
     ScanNoiseSnapshot,
 )
 from desloppify.base.config import config_for_query
-from desloppify.base.discovery.paths import get_project_root
+from desloppify.base.discovery.paths import get_project_root, get_state_dir
 from desloppify.base.exception_sets import PLAN_LOAD_EXCEPTIONS
 from desloppify.base.output.contract import OutputResult
 from desloppify.base.output.fallbacks import log_best_effort_failure
@@ -188,6 +188,17 @@ def emit_scorecard_badge(
 
     rel_path = _badge_relative_path(badge_path)
     if quiet:
+        return badge_path, OutputResult(
+            ok=True, status="written", message=f"scorecard badge written to {rel_path}"
+        )
+    if badge_path.parent == get_state_dir():
+        print(
+            colorize(
+                f"  Scorecard → {rel_path}  (kept out of the repo; "
+                "write it there with --badge-path scorecard.png)",
+                "dim",
+            )
+        )
         return badge_path, OutputResult(
             ok=True, status="written", message=f"scorecard badge written to {rel_path}"
         )

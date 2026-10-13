@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from desloppify.base.discovery.paths import get_project_root
+from desloppify.base.discovery.paths import get_state_dir
 from desloppify.base.runtime_state import current_runtime_context
 
 
@@ -13,7 +13,7 @@ def query_file_path() -> Path:
     runtime = current_runtime_context()
     if isinstance(runtime.query_file, Path):
         return runtime.query_file
-    return get_project_root() / ".desloppify" / "query.json"
+    return get_state_dir() / "query.json"
 
 
 def set_query_file(path: Path | str | None) -> None:

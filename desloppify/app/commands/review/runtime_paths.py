@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from desloppify.base.discovery.paths import get_project_root
+from desloppify.base.discovery.paths import get_project_root, get_state_dir
 
 # ── Test override hooks (monkeypatch these in tests) ──────────────
 PROJECT_ROOT: Path | None = None
@@ -27,6 +27,15 @@ def runtime_project_root(*, project_root_override: Path | None = None) -> Path:
     return get_project_root()
 
 
+def _state_dir(project_root_override: Path | None) -> Path:
+    override = (
+        project_root_override if project_root_override is not None else PROJECT_ROOT
+    )
+    if isinstance(override, Path):
+        return override / ".desloppify"
+    return get_state_dir()
+
+
 def review_packet_dir(
     *,
     project_root_override: Path | None = None,
@@ -40,11 +49,7 @@ def review_packet_dir(
     )
     if isinstance(override, Path):
         return override
-    return (
-        runtime_project_root(project_root_override=project_root_override)
-        / ".desloppify"
-        / "review_packets"
-    )
+    return _state_dir(project_root_override) / "review_packets"
 
 
 def blind_packet_path(
@@ -60,11 +65,7 @@ def blind_packet_path(
     if isinstance(stamp, str) and stamp.strip():
         packet_dir = review_packet_dir(project_root_override=project_root_override)
         return packet_dir / f"review_packet_blind_{stamp.strip()}.json"
-    return (
-        runtime_project_root(project_root_override=project_root_override)
-        / ".desloppify"
-        / "review_packet_blind.json"
-    )
+    return _state_dir(project_root_override) / "review_packet_blind.json"
 
 
 def subagent_runs_dir(
@@ -80,12 +81,7 @@ def subagent_runs_dir(
     )
     if isinstance(override, Path):
         return override
-    return (
-        runtime_project_root(project_root_override=project_root_override)
-        / ".desloppify"
-        / "subagents"
-        / "runs"
-    )
+    return _state_dir(project_root_override) / "subagents" / "runs"
 
 
 def external_session_root(
@@ -101,11 +97,7 @@ def external_session_root(
     )
     if isinstance(override, Path):
         return override
-    return (
-        runtime_project_root(project_root_override=project_root_override)
-        / ".desloppify"
-        / "external_review_sessions"
-    )
+    return _state_dir(project_root_override) / "external_review_sessions"
 
 
 __all__ = [

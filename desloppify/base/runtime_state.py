@@ -98,6 +98,9 @@ class RuntimeContext:
 
     exclusions: tuple[str, ...] = ()
     project_root: Path | None = None
+    # Set when --state points outside ``<project_root>/.desloppify``: every
+    # file desloppify writes (plan, config, locks, query, scorecard) goes here.
+    state_dir: Path | None = None
     query_file: Path | None = None
     file_text_cache: FileTextCache = field(default_factory=FileTextCache)
     cache_enabled: bool = False

@@ -11,7 +11,7 @@ from desloppify import state as state_mod
 from desloppify.app import skill_docs as skill_docs_mod
 from desloppify.app.commands.helpers.rendering import unscored_open_note
 from desloppify.base import registry as registry_mod
-from desloppify.base.discovery.paths import get_project_root
+from desloppify.base.discovery.paths import get_project_root, get_state_dir
 from desloppify.base.exception_sets import PLAN_LOAD_EXCEPTIONS
 from desloppify.base.output.fallbacks import log_best_effort_failure
 from desloppify.base.output.user_message import print_user_message
@@ -230,6 +230,13 @@ def _print_badge_hint(badge_path: Path | None) -> None:
     if not (badge_path and badge_path.exists()):
         return
 
+    if badge_path.parent == get_state_dir():
+        try:
+            shown = badge_path.relative_to(get_project_root())
+        except ValueError:
+            shown = badge_path
+        print(f"A scorecard image was saved to `{shown}`.")
+        return
     rel_path = (
         badge_path.name if badge_path.parent == get_project_root() else str(badge_path)
     )

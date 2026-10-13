@@ -8,12 +8,14 @@ from pathlib import Path
 from typing import Any
 
 from desloppify.base.discovery.file_paths import safe_write_text
-from desloppify.base.discovery.paths import get_project_root
+from desloppify.base.discovery.paths import get_state_dir, readable_state_file
 from desloppify.engine._state.schema import utc_now
+
+_POLICY_FILE = "project_policy.json"
 
 
 def _default_policy_path() -> Path:
-    return get_project_root() / ".desloppify" / "project_policy.json"
+    return get_state_dir() / _POLICY_FILE
 
 
 @dataclass(frozen=True)
@@ -25,7 +27,7 @@ class PolicyLoadResult:
 
 
 def load_policy_result(path: Path | None = None) -> PolicyLoadResult:
-    p = path or _default_policy_path()
+    p = path or readable_state_file(_POLICY_FILE)
     if not p.exists():
         return PolicyLoadResult(ok=True, policy={"rules": []})
     try:
