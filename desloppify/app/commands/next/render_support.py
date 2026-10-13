@@ -259,6 +259,7 @@ def show_empty_queue(
     *,
     plan_start_strict: float | None = None,
     target_strict: float | None = None,
+    score_name: str = "strict",
 ) -> bool:
     del target_strict
     if queue.get("items"):
@@ -269,7 +270,8 @@ def show_empty_queue(
         print(colorize("\n  Queue cleared!", "green"))
         print(
             colorize(
-                f"  Frozen plan-start: strict {plan_start_strict:.1f} → Live estimate: strict {strict:.1f}{delta_str}",
+                f"  Frozen plan-start: {score_name} {plan_start_strict:.1f}"
+                f" → Live estimate: {score_name} {strict:.1f}{delta_str}",
                 "cyan",
             )
         )
@@ -281,7 +283,11 @@ def show_empty_queue(
         )
         return True
 
-    suffix = f" Strict score: {strict:.1f}/100" if strict is not None else ""
+    suffix = (
+        f" {score_name.capitalize()} score: {strict:.1f}/100"
+        if strict is not None
+        else ""
+    )
     print(colorize(f"\n  Nothing to do!{suffix}", "green"))
     return True
 

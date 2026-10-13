@@ -15,6 +15,7 @@ from desloppify.app.commands.helpers.queue_progress_render import (
 )
 from desloppify.base.exception_sets import PLAN_LOAD_EXCEPTIONS
 from desloppify.base.output.terminal import colorize
+from desloppify.engine._state.schema_scores import subjective_unassessed
 from desloppify.engine._work_queue.context import queue_context
 from desloppify.engine._work_queue.core import QueueBuildOptions
 from desloppify.engine._work_queue.helpers import is_subjective_queue_item
@@ -48,6 +49,12 @@ class QueueBreakdown:
     focus_cluster: str | None = None
     focus_cluster_count: int = 0
     focus_cluster_total: int = 0
+    # Open objective issues in scope, how many of them the queue can serve,
+    # and how many items sit in the backlog outside the queue.
+    objective_open: int = 0
+    objective_planned: int = 0
+    backlog: int = 0
+    never_queued: int = 0
 
     @property
     def objective_actionable(self) -> int:
@@ -228,6 +235,14 @@ def plan_aware_queue_breakdown(
         focus_cluster=focus_cluster,
         focus_cluster_count=focus_cluster_count,
         focus_cluster_total=focus_cluster_total,
+        objective_open=getattr(snapshot, "objective_in_scope_count", 0),
+        objective_planned=getattr(snapshot, "planned_objective_count", 0),
+        never_queued=getattr(snapshot, "never_queued_open_count", 0),
+        backlog=sum(
+            1
+            for item in getattr(snapshot, "backlog_items", ())
+            if not str(item.get("id", "")).startswith(("workflow::", "triage::"))
+        ),
     )
 
 
@@ -272,11 +287,39 @@ def get_plan_start_strict(plan: dict | None) -> float | None:
     return plan.get("plan_start_scores", {}).get("strict")
 
 
+def headline_scores(
+    state: dict, plan: dict | None
+) -> tuple[str, float | None, float | None]:
+    """Return the name, plan-start value and live value of the score to lead with.
+
+    Strict, except before the first subjective review: strict then counts
+    every unreviewed subjective dimension as 0, so the objective score leads.
+    """
+    start = (plan or {}).get("plan_start_scores") or {}
+    live = score_snapshot(state)
+    name, live_score = (
+        ("objective", live.objective)
+        if subjective_unassessed(state) and live.objective is not None
+        else ("strict", live.strict)
+    )
+    start_score = start.get(name)
+    if not isinstance(start_score, int | float):
+        # Plans seeded before objective was recorded: show the live value.
+        has_start = isinstance(start.get("strict"), int | float)
+        start_score = live_score if name == "objective" and has_start else None
+    return (
+        name,
+        float(start_score) if start_score is not None else None,
+        live_score,
+    )
+
+
 def print_frozen_score_with_queue_context(
     breakdown: QueueBreakdown,
     *,
     frozen_strict: float,
     live_score: float | None = None,
+    score_name: str = "strict",
 ) -> None:
     """Show frozen plan-start score + queue progress.
 
@@ -284,7 +327,10 @@ def print_frozen_score_with_queue_context(
     work remains in the queue.
     """
     block = format_queue_block(
-        breakdown, frozen_score=frozen_strict, live_score=live_score
+        breakdown,
+        frozen_score=frozen_strict,
+        live_score=live_score,
+        score_name=score_name,
     )
     print()
     for text, style in block:
@@ -301,6 +347,8 @@ def print_objective_drained_banner(
     frozen_strict: float,
     remaining: int,
     breakdown: QueueBreakdown,
+    *,
+    score_name: str = "strict",
 ) -> None:
     """Show a phase-transition banner when objective work is drained."""
     kind_labels: list[str] = []
@@ -309,13 +357,26 @@ def print_objective_drained_banner(
     if breakdown.workflow > 0:
         kind_labels.append("workflow")
     kind_desc = " + ".join(kind_labels) if kind_labels else "non-objective"
-    print(
-        colorize(
-            f"\n  Objective queue complete (plan-start was {frozen_strict:.1f})."
-            f" {remaining} {kind_desc} item{'s' if remaining != 1 else ''} remain.",
-            "cyan",
+    items = f"{remaining} {kind_desc} item{'s' if remaining != 1 else ''}"
+    if breakdown.objective_planned > 0:
+        planned = breakdown.objective_planned
+        headline = (
+            f"{items} come first; {planned} planned objective"
+            f" item{'s' if planned != 1 else ''} follow"
+            f" (plan-start {score_name} was {frozen_strict:.1f})."
         )
-    )
+    else:
+        headline = (
+            f"Objective queue complete (plan-start {score_name} was"
+            f" {frozen_strict:.1f}). {items} remain."
+        )
+        if breakdown.objective_open > 0:
+            headline += (
+                f" {breakdown.objective_open} open objective"
+                f" issue{'s are' if breakdown.objective_open != 1 else ' is'}"
+                " in the backlog."
+            )
+    print(colorize(f"\n  {headline}", "cyan"))
     print(
         colorize(
             "  Run `desloppify next` for remaining work,"
@@ -342,11 +403,13 @@ def print_execution_or_reveal(
 
     mode = score_display_mode(breakdown, frozen_strict)
 
+    score_name, start_score, live_score = headline_scores(state, plan)
     if mode is ScoreDisplayMode.FROZEN:
         print_frozen_score_with_queue_context(
             breakdown,
-            frozen_strict=frozen_strict,
-            live_score=score_snapshot(state).strict,
+            frozen_strict=start_score if start_score is not None else frozen_strict,
+            live_score=live_score,
+            score_name=score_name,
         )
         return
 
@@ -355,7 +418,12 @@ def print_execution_or_reveal(
     score_update_mod.print_score_update(state, prev)
 
     if mode is ScoreDisplayMode.PHASE_TRANSITION:
-        print_objective_drained_banner(frozen_strict, breakdown.queue_total, breakdown)
+        print_objective_drained_banner(
+            start_score if start_score is not None else frozen_strict,
+            breakdown.queue_total,
+            breakdown,
+            score_name=score_name,
+        )
 
 
 def show_score_with_plan_context(state: dict, prev) -> None:
@@ -379,6 +447,7 @@ __all__ = [
     "format_queue_block",
     "format_queue_headline",
     "get_plan_start_strict",
+    "headline_scores",
     "plan_aware_queue_breakdown",
     "print_execution_or_reveal",
     "print_objective_drained_banner",

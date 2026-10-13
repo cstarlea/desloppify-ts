@@ -16,8 +16,10 @@ Phase is determined by `_phase_for_snapshot()` from the persisted lifecycle mode
 live item partitions. Legacy fine-grained phase names are migrated once at
 plan load by `migrate_legacy_phase()`.
 
-1. **LIFECYCLE_PHASE_REVIEW_INITIAL** — fresh boundary, no scores yet. Shows subjective review items.
-   Objective items are NOT visible until initial review completes.
+1. **LIFECYCLE_PHASE_REVIEW_INITIAL** — fresh boundary with unscored dimensions, after an earlier
+   review scored at least one. Shows subjective review items; objective items are NOT visible
+   until it completes. Before the first review ever runs, the placeholders wait in the backlog
+   (`deferred_review_items`) and objective work comes first.
 
 2. **LIFECYCLE_PHASE_EXECUTE** — the main work phase. Shows objective (mechanical defect) items.
    Only issues in `queue_order` are executable (post-triage). Pre-triage: all objectives visible.

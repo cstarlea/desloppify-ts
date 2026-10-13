@@ -26,6 +26,7 @@ from desloppify.engine._plan.policy import stale as stale_policy_mod
 from desloppify.engine._plan.policy.subjective import SubjectiveVisibility
 from desloppify.engine._plan.schema import PlanModel, ensure_plan_defaults
 from desloppify.engine._state.schema import StateModel
+from desloppify.engine._state.schema_scores import subjective_unassessed
 
 from .context import has_objective_backlog, is_mid_cycle
 from .defer_policy import (
@@ -265,6 +266,10 @@ def sync_subjective_dimensions(
     result = QueueSyncResult()
     order: list[str] = plan["queue_order"]
     mid_cycle = is_mid_cycle(plan)
+    # Before the first review, its placeholders stay out of the queue so they
+    # never block objective work or the scan; ``next`` points at the review
+    # once the objective queue is done.
+    inject_unscored = not mid_cycle and not subjective_unassessed(state)
 
     # --- Compute all ID sets once -----------------------------------------
     unscored_ids = current_unscored_ids(state)
@@ -308,15 +313,17 @@ def sync_subjective_dimensions(
     # --- Single prune pass ------------------------------------------------
     evicting_under_target = should_defer_under_target and not escalated
     if evicting_under_target:
-        keep_ids = stale_injectable if mid_cycle else (unscored_ids | stale_injectable)
+        keep_ids = (
+            (unscored_ids | stale_injectable) if inject_unscored else stale_injectable
+        )
     else:
         keep_ids = stale_injectable | under_target_injectable
-        if not mid_cycle:
+        if inject_unscored:
             keep_ids |= unscored_ids
     _prune_subjective_ids(order, keep_ids=keep_ids, pruned=result.pruned)
 
     # --- Inject unscored (cycle boundaries only) --------------------------
-    if not mid_cycle:
+    if inject_unscored:
         _inject_subjective_ids(
             order,
             inject_ids=unscored_ids - skipped_ids,

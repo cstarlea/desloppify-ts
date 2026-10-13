@@ -50,10 +50,28 @@ def _state_with_stale_dimensions(*dim_keys: str, score: float = 50.0) -> dict:
     }
 
 
-def _state_with_unscored_dimensions(*dim_keys: str) -> dict:
-    """Build a minimal state with unscored (placeholder) subjective dimensions."""
+def _state_with_unscored_dimensions(*dim_keys: str, reviewed: bool = True) -> dict:
+    """Build a minimal state with unscored (placeholder) subjective dimensions.
+
+    ``reviewed`` adds one dimension a past review scored at 100; without it no
+    review has ever run, and the placeholders stay out of the queue.
+    """
     dim_scores: dict = {}
     assessments: dict = {}
+    if reviewed:
+        dim_scores["naming_quality"] = {
+            "score": 100.0,
+            "strict": 100.0,
+            "checks": 1,
+            "failing": 0,
+            "detectors": {
+                "subjective_assessment": {
+                    "dimension_key": "naming_quality",
+                    "placeholder": False,
+                }
+            },
+        }
+        assessments["naming_quality"] = {"score": 100.0}
     for dim_key in dim_keys:
         dim_scores[dim_key] = {
             "score": 0,
@@ -146,6 +164,20 @@ def test_unscored_injected_at_back():
     assert plan["queue_order"][0] == "some_issue::file.py::abc123"
     assert plan["queue_order"][1].startswith("subjective::")
     assert plan["queue_order"][2].startswith("subjective::")
+
+
+def test_unscored_not_injected_before_first_review():
+    """With no review ever run, placeholders stay out of the queue."""
+    plan = _plan_with_queue("some_issue::file.py::abc123")
+    stale = "subjective::design_coherence"
+    plan["queue_order"].append(stale)
+    state = _state_with_unscored_dimensions("design_coherence", reviewed=False)
+
+    result = sync_subjective_dimensions(plan, state)
+
+    assert result.injected == []
+    assert result.pruned == [stale]
+    assert plan["queue_order"] == ["some_issue::file.py::abc123"]
 
 
 def test_unscored_injection_unconditional():

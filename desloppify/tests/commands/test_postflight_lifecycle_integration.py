@@ -14,11 +14,24 @@ from desloppify.engine._work_queue.snapshot import build_queue_snapshot
 
 
 def _placeholder_state() -> dict:
+    """One unscored dimension, after a review already scored another."""
     display = DISPLAY_NAMES["naming_quality"]
     return {
         "issues": {},
         "work_items": {},
         "dimension_scores": {
+            DISPLAY_NAMES["logic_clarity"]: {
+                "score": 100.0,
+                "strict": 100.0,
+                "failing": 0,
+                "checks": 1,
+                "detectors": {
+                    "subjective_assessment": {
+                        "placeholder": False,
+                        "dimension_key": "logic_clarity",
+                    }
+                },
+            },
             display: {
                 "score": 0,
                 "strict": 0,
@@ -30,13 +43,14 @@ def _placeholder_state() -> dict:
                         "dimension_key": "naming_quality",
                     }
                 },
-            }
+            },
         },
         "subjective_assessments": {
+            "logic_clarity": {"score": 100.0, "placeholder": False},
             "naming_quality": {
                 "score": 0,
                 "placeholder": True,
-            }
+            },
         },
         "assessment_import_audit": [],
     }

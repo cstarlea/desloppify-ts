@@ -5,7 +5,16 @@ from __future__ import annotations
 from desloppify.base import config as config_mod
 from desloppify.base.config import target_strict_score_from_config
 from desloppify.base.output.terminal import colorize
-from desloppify.state_scoring import ScoreSnapshot, score_snapshot
+from desloppify.state_scoring import (
+    ScoreSnapshot,
+    score_snapshot,
+    subjective_unassessed,
+)
+
+PROVISIONAL_STRICT_NOTE = (
+    "is provisional: the unassessed subjective dimensions count as 0 "
+    "until `desloppify review --prepare` scores them"
+)
 
 
 def _format_delta(value: float, prev: float | None) -> tuple[str, str]:
@@ -62,7 +71,9 @@ def print_score_update(
         config = config_mod.load_config()
 
     target = target_strict_score_from_config(config)
-    print_strict_target_nudge(new.strict, target)
+    print_strict_target_nudge(
+        new.strict, target, provisional=subjective_unassessed(state)
+    )
 
 
 def print_strict_target_nudge(
@@ -70,13 +81,19 @@ def print_strict_target_nudge(
     target: float,
     *,
     show_next: bool = True,
+    provisional: bool = False,
 ) -> None:
     """Print a one-liner with strict→target and optional next-command nudge."""
     gap = round(target - strict, 1)
-    if gap > 0:
-        suffix = (
-            " — run `desloppify next` to find the next improvement" if show_next else ""
+    suffix = (
+        " — run `desloppify next` to find the next improvement" if show_next else ""
+    )
+    if provisional:
+        print(
+            colorize(f"  Strict {strict:.1f} {PROVISIONAL_STRICT_NOTE}{suffix}", "dim")
         )
+        return
+    if gap > 0:
         print(colorize(f"  Strict {strict:.1f} (target: {target:.1f}){suffix}", "dim"))
     else:
         print(
@@ -84,4 +101,8 @@ def print_strict_target_nudge(
         )
 
 
-__all__ = ["print_score_update", "print_strict_target_nudge"]
+__all__ = [
+    "PROVISIONAL_STRICT_NOTE",
+    "print_score_update",
+    "print_strict_target_nudge",
+]

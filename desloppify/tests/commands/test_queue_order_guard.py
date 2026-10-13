@@ -98,8 +98,8 @@ def _setup_plan(
 # ---------------------------------------------------------------------------
 
 
-def test_guard_blocks_out_of_order(tmp_path, monkeypatch, capsys):
-    """Resolving item #2 when item #1 is next should be blocked."""
+def test_guard_reports_out_of_order(tmp_path, monkeypatch, capsys):
+    """Resolving item #2 when item #1 is next prints a notice."""
     state = _state_with_issues("a", "b", "c")
     _setup_plan(tmp_path, monkeypatch, ["a", "b", "c"])
 
@@ -203,16 +203,16 @@ def test_guard_empty_queue(tmp_path, monkeypatch):
     assert blocked is False
 
 
-def test_guard_prints_reorganize_commands(tmp_path, monkeypatch, capsys):
-    """Blocked output should show plan reorder/skip/next commands."""
+def test_guard_notice_does_not_demand_reorder(tmp_path, monkeypatch, capsys):
+    """The notice names the next item and doesn't ask for a reorder first."""
     state = _state_with_issues("a", "b")
     _setup_plan(tmp_path, monkeypatch, ["a", "b"])
 
     _check_queue_order_guard(state, ["b"], "fixed")
     captured = capsys.readouterr()
-    assert "plan reorder" in captured.out
-    assert "plan skip" in captured.out
-    assert "next" in captured.out
+    assert "The current next item is still: a" in captured.out
+    assert "plan reorder" not in captured.out
+    assert "violation" not in captured.out.lower()
 
 
 # ---------------------------------------------------------------------------

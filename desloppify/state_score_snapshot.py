@@ -10,6 +10,7 @@ from desloppify.engine._state.schema_scores import (
     get_overall_score,
     get_strict_score,
     get_verified_strict_score,
+    subjective_unassessed,
 )
 from desloppify.engine._state.scoring import suppression_metrics
 
@@ -29,20 +30,6 @@ class HeadlineScore(NamedTuple):
     name: str  # "overall" or "objective"
     score: float | None
     provisional: bool
-
-
-def subjective_unassessed(state: StateModel) -> bool:
-    """Return True when the score has subjective dimensions and none is assessed."""
-    subjective = [
-        data["detectors"]["subjective_assessment"]
-        for data in (state.get("dimension_scores") or {}).values()
-        if isinstance(data, dict)
-        and isinstance(data.get("detectors"), dict)
-        and "subjective_assessment" in data["detectors"]
-    ]
-    return bool(subjective) and all(
-        isinstance(meta, dict) and meta.get("placeholder") for meta in subjective
-    )
 
 
 def headline_score(state: StateModel) -> HeadlineScore:

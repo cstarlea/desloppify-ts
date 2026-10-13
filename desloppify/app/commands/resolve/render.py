@@ -17,6 +17,7 @@ from desloppify.base.git_context import detect_git_context
 from desloppify.base.output.terminal import colorize
 from desloppify.engine._scoring.policy.core import is_wontfix_debt
 from desloppify.engine.plan_state import get_uncommitted_issues, suggest_commit_message
+from desloppify.state_scoring import subjective_unassessed
 
 
 def _print_resolve_summary(*, status: str, all_resolved: list[str]) -> None:
@@ -98,7 +99,12 @@ def _print_score_movement(
         )
     )
     if target_strict is not None:
-        print_strict_target_nudge(new.strict, target_strict, show_next=False)
+        print_strict_target_nudge(
+            new.strict,
+            target_strict,
+            show_next=False,
+            provisional=subjective_unassessed(state),
+        )
     print_strict_gap_note(status, overall=new.overall, strict=new.strict)
     print_post_resolve_guidance(
         status=status,

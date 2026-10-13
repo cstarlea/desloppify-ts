@@ -32,7 +32,10 @@ def format_queue_headline(breakdown) -> str:
         segments.append(f"{breakdown.subjective} subjective")
     if segments:
         detail = " \u00b7 ".join(segments)
-        return f"{label} ({detail})"
+        label = f"{label} ({detail})"
+    backlog = getattr(breakdown, "backlog", 0)
+    if backlog > 0:
+        label += f" \u00b7 Backlog: {backlog}"
     return label
 
 
@@ -41,9 +44,11 @@ def format_queue_block(
     *,
     frozen_score: float | None = None,
     live_score: float | None = None,
+    score_name: str = "strict",
 ) -> list[tuple[str, str]]:
     """Full queue block: focus banner + queue line + contextual hints."""
     lines: list[tuple[str, str]] = []
+    pending = " (subjective review pending)" if score_name == "objective" else ""
 
     if breakdown.focus_cluster:
         focus_line = (
@@ -62,19 +67,32 @@ def format_queue_block(
         if delta_str:
             lines.append(
                 (
-                    f"  Score: strict {live_score:.1f}/100 (plan start: {frozen_score:.1f}, {delta_str})",
+                    f"  Score: {score_name} {live_score:.1f}/100 "
+                    f"(plan start: {frozen_score:.1f}, {delta_str}){pending}",
                     "cyan",
                 )
             )
         else:
             lines.append(
                 (
-                    f"  Score (frozen at plan start): strict {frozen_score:.1f}/100",
+                    f"  Score (frozen at plan start): {score_name} "
+                    f"{frozen_score:.1f}/100{pending}",
                     "cyan",
                 )
             )
 
     lines.append((f"  {format_queue_headline(breakdown)}", "bold"))
+    never_queued = getattr(breakdown, "never_queued", 0)
+    if never_queued > 0:
+        lines.append(
+            (
+                f"  Never queued: {never_queued} open issue"
+                f"{'s' if never_queued != 1 else ''} `next` won't serve: the"
+                " detector is skipped in that file's zone, or the finding is"
+                " below its confidence bar. `desloppify show` lists them",
+                "dim",
+            )
+        )
 
     if getattr(breakdown, "stale_plan_ordered", 0) > 0:
         stale = breakdown.stale_plan_ordered

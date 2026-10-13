@@ -123,6 +123,36 @@ def _compute_item_impact(
     return 0.0
 
 
+def _never_queued(issue_id: str, issue: dict, forced_ids: set[str]) -> bool:
+    """Return True for findings the queue never serves: zone-skipped or evidence-only."""
+    if should_skip_detector_in_zone(issue.get("zone"), issue.get("detector")):
+        return True
+    meta = DETECTORS.get(issue.get("detector", ""))
+    if issue_id in forced_ids or not meta or not meta.standalone_threshold:
+        return False
+    threshold_rank = CONFIDENCE_ORDER.get(meta.standalone_threshold, 9)
+    return CONFIDENCE_ORDER.get(issue.get("confidence", "low"), 9) > threshold_rank
+
+
+def count_never_queued_open(
+    state: StateModel,
+    *,
+    scan_path: str | None,
+    forced_ids: set[str] | None = None,
+) -> int:
+    """Count open issues in scope that ``build_issue_items`` leaves out."""
+    scoped = path_scoped_issues(
+        (state.get("work_items") or state.get("issues", {})), scan_path
+    )
+    return sum(
+        1
+        for issue_id, issue in scoped.items()
+        if not issue.get("suppressed")
+        and issue.get("status", "open") == "open"
+        and _never_queued(issue_id, issue, forced_ids or set())
+    )
+
+
 def build_issue_items(
     state: StateModel,
     *,
@@ -144,21 +174,14 @@ def build_issue_items(
             continue
         if not status_matches(issue.get("status", "open"), status_filter):
             continue
-        if should_skip_detector_in_zone(issue.get("zone"), issue.get("detector")):
-            continue
         if chronic and not (
             issue.get("status") == "open" and issue.get("reopen_count", 0) >= 2
         ):
             continue
-
-        # Evidence-only: skip issues below standalone confidence threshold
-        detector = issue.get("detector", "")
-        meta = DETECTORS.get(detector)
-        if issue_id not in forced_ids and meta and meta.standalone_threshold:
-            threshold_rank = CONFIDENCE_ORDER.get(meta.standalone_threshold, 9)
-            issue_rank = CONFIDENCE_ORDER.get(issue.get("confidence", "low"), 9)
-            if issue_rank > threshold_rank:
-                continue
+        # Zone-skipped and evidence-only (below standalone confidence) findings.
+        if _never_queued(issue_id, issue, forced_ids):
+            continue
+        meta = DETECTORS.get(issue.get("detector", ""))
 
         item = cast(WorkQueueItem, dict(issue))
         item["id"] = issue_id

@@ -678,8 +678,42 @@ def test_under_target_subjective_appear_when_no_objective_backlog():
     assert all(fid.startswith("subjective::") for fid in ids)
 
 
+def test_first_review_waits_behind_objective_backlog():
+    """Before any review has run, objective work is served first.
+
+    The placeholder waits in the backlog, so it never blocks the queue.
+    """
+    objective_issues = [
+        _issue(f"smells::src/{c}.py::x", detector="smells", tier=3) for c in "ab"
+    ]
+    state = _state(
+        objective_issues,
+        dimension_scores={
+            "Naming quality": {
+                "score": 0.0,
+                "strict": 0.0,
+                "failing": 0,
+                "detectors": {
+                    "subjective_assessment": {
+                        "dimension_key": "naming_quality",
+                        "placeholder": True,
+                    },
+                },
+            },
+        },
+    )
+    state["subjective_assessments"] = {
+        "naming_quality": {"score": 0.0, "placeholder": True}
+    }
+
+    queue = build_work_queue(state, count=None, include_subjective=True)
+    ids = [item["id"] for item in queue["items"]]
+
+    assert ids == ["smells::src/a.py::x", "smells::src/b.py::x"]
+
+
 def test_unassessed_subjective_visible_with_objective_backlog():
-    """When initial reviews exist, only they are shown — objective items hidden.
+    """Once a review has run, unscored dimensions are reviewed first.
 
     Initial reviews are the first phase: scan → review → score → plan.
     Objective work becomes visible only after initial reviews are done.
@@ -690,6 +724,17 @@ def test_unassessed_subjective_visible_with_objective_backlog():
     state = _state(
         objective_issues,
         dimension_scores={
+            "Logic clarity": {
+                "score": 100.0,
+                "strict": 100.0,
+                "failing": 0,
+                "detectors": {
+                    "subjective_assessment": {
+                        "dimension_key": "logic_clarity",
+                        "placeholder": False,
+                    },
+                },
+            },
             "Naming quality": {
                 "score": 0.0,
                 "strict": 0.0,

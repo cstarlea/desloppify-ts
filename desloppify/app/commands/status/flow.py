@@ -11,6 +11,7 @@ from desloppify.app.commands.helpers.queue_progress import (
     ScoreDisplayMode,
     format_queue_block,
     get_plan_start_strict,
+    headline_scores,
     plan_aware_queue_breakdown,
     print_frozen_score_with_queue_context,
     print_objective_drained_banner,
@@ -152,11 +153,16 @@ def print_score_section(
         _logger.debug("Plan-aware queue count failed: %s", exc)
 
     mode = score_display_mode(breakdown, plan_start_strict)
+    score_name, start_score, _ = headline_scores(state, plan)
+    live_score = getattr(scores, score_name)
+    if start_score is None:
+        start_score = plan_start_strict
     if mode is ScoreDisplayMode.FROZEN:
         print_frozen_score_with_queue_context(
             breakdown,
-            frozen_strict=plan_start_strict,
-            live_score=scores.strict,
+            frozen_strict=start_score,
+            live_score=live_score,
+            score_name=score_name,
         )
     else:
         for line, style in score_summary_lines(
@@ -186,7 +192,10 @@ def print_score_section(
                 print(colorize(text, style))
         if mode is ScoreDisplayMode.PHASE_TRANSITION:
             print_objective_drained_banner(
-                plan_start_strict, breakdown.queue_total, breakdown
+                start_score,
+                breakdown.queue_total,
+                breakdown,
+                score_name=score_name,
             )
     return breakdown
 

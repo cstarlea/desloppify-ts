@@ -16,6 +16,7 @@ from desloppify.base.output.fallbacks import log_best_effort_failure
 from desloppify.base.output.terminal import colorize
 from desloppify.engine._concerns.generators import generate_concerns
 from desloppify.engine._state.schema import StateModel
+from desloppify.state_scoring import subjective_unassessed
 
 logger = logging.getLogger(__name__)
 
@@ -384,7 +385,12 @@ def show_score_delta(
     _print_score_legend(state, gap)
 
     if target_strict is not None and new.strict is not None:
-        print_strict_target_nudge(new.strict, target_strict, show_next=False)
+        print_strict_target_nudge(
+            new.strict,
+            target_strict,
+            show_next=False,
+            provisional=subjective_unassessed(state),
+        )
 
     _print_integrity_warnings(state)
 

@@ -42,7 +42,7 @@ desloppify status              # check scores — are we at target?
 
 After scanning, **always run `desloppify next`** — it tells you exactly what to do, in order. Don't interpret the scan output yourself or ask the user what to do. Just run `next` and follow its instructions.
 
-The scan will tell you if subjective dimensions need review. Follow its instructions. To trigger a review manually:
+Before the first subjective review, `next` serves the objective work first; the review is optional and doesn't block `scan`. When the objective queue is done, `next` points at it. To trigger a review manually:
 ```bash
 desloppify review --prepare    # then follow your runner's review workflow
 ```

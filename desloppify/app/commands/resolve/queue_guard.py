@@ -1,4 +1,4 @@
-"""Queue-order enforcement helpers for resolve command flows."""
+"""Queue-order notice for resolve command flows."""
 
 from __future__ import annotations
 
@@ -94,36 +94,20 @@ def _prune_front_covered_clusters(
             out_of_order.discard(cluster_id)
 
 
-def _print_queue_order_violation(front_id: str, out_of_order: set[str]) -> None:
+def _print_queue_order_notice(front_id: str, out_of_order: set[str]) -> None:
     print(
         colorize(
-            "\n  Queue order violation: these items are not next in the plan queue:\n",
+            "\n  Note: resolving out of plan order. Not next in the queue:",
             "yellow",
         )
     )
     for issue_id in sorted(out_of_order):
         print(f"    {issue_id}")
-    print(colorize(f"\n  The current next item is: {front_id}", "dim"))
+    print(colorize(f"  The current next item is still: {front_id}", "dim"))
     print(
         colorize(
-            "  Items must be resolved in plan order. If you need to reprioritize:",
-            "dim",
-        )
-    )
-    print(
-        colorize(
-            "    desloppify plan reorder <pattern> top            # move to front",
-            "dim",
-        )
-    )
-    print(
-        colorize(
-            "    desloppify plan skip <pattern> --reason '...'    # skip for now", "dim"
-        )
-    )
-    print(
-        colorize(
-            "    desloppify next                                  # see what's next\n",
+            "  That's fine if you fixed it. The next scan reopens anything "
+            "still present.\n",
             "dim",
         )
     )
@@ -136,7 +120,12 @@ def _check_queue_order_guard(
     *,
     plan_access: ResolvePlanAccess | None = None,
 ) -> bool:
-    """Warn and block if resolving items not at the front of the plan queue."""
+    """Print a notice when resolving items not at the front of the plan queue.
+
+    Returns True when a notice was printed. Resolving out of order is allowed:
+    a scan reopens a "fixed" issue whose finding is still present, and
+    ``require_triage_current_or_exit`` keeps guarding review findings.
+    """
     if status != "fixed":
         return False
     resolved_plan_access = plan_access or load_resolve_plan_access()
@@ -208,7 +197,7 @@ def _check_queue_order_guard(
     if not out_of_order:
         return False
 
-    _print_queue_order_violation(front_id, out_of_order)
+    _print_queue_order_notice(front_id, out_of_order)
     return True
 
 

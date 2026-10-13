@@ -63,13 +63,12 @@ def _load_state_with_guards(
     plan_access = load_resolve_plan_access()
 
     if not getattr(args, "force_resolve", False):
-        if _check_queue_order_guard(
+        _check_queue_order_guard(
             state,
             args.patterns,
             args.status,
             plan_access=plan_access,
-        ):
-            return None
+        )
 
     if args.status == "fixed":
         require_triage_current_or_exit(

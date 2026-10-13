@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from desloppify.app.commands.helpers.guardrails import triage_guardrail_messages
 from desloppify.app.commands.helpers.lang import resolve_lang
 from desloppify.app.commands.helpers.query import write_query
+from desloppify.app.commands.helpers.queue_progress import headline_scores
 from desloppify.base.config import target_strict_score_from_config
 from desloppify.base.discovery.file_paths import safe_write_text
 from desloppify.base.exception_sets import CommandError
@@ -175,7 +176,7 @@ def _render_empty_queue_view(
     explain_snapshot=None,
 ) -> None:
     """Render and persist the empty queue state."""
-    strict_score = score_snapshot(state).strict
+    score_name, plan_start_score, score = headline_scores(state, plan_for_queue)
     plan_start_strict = None
     if show_plan_context and plan_for_queue:
         plan_start_strict, _ = _plan_queue_context(
@@ -183,15 +184,20 @@ def _render_empty_queue_view(
             plan_data=plan_for_queue,
             context=ctx,
         )
+    if plan_start_strict is not None and plan_start_score is not None:
+        plan_start_strict = plan_start_score
     _render_queue_header(
         queue, opts.explain, snapshot=explain_snapshot, plan=plan_for_queue
     )
     _show_empty_queue(
         queue,
-        strict_score,
+        score,
         plan_start_strict=plan_start_strict,
         target_strict=target_strict,
+        score_name=score_name,
     )
+    next_nudges_mod.render_backlog_hint(getattr(ctx, "snapshot", None))
+    next_nudges_mod.render_deferred_review_hint(getattr(ctx, "snapshot", None))
     _write_next_payload(
         queue=queue,
         items=items,
@@ -272,7 +278,9 @@ def _render_terminal_queue_view(
             queue_total=queue_total,
             plan_start_strict=plan_start_strict,
             breakdown=breakdown,
+            plan=plan_for_queue,
         )
+    next_nudges_mod.render_deferred_review_hint(getattr(ctx, "snapshot", None))
     print()
 
     if items and plan_data and show_execution_prompt:
@@ -338,7 +346,11 @@ def _apply_queue_view_transforms(
 ) -> list[dict]:
     visible = items
     if collapse_plan_clusters and effective_cluster and plan_for_queue:
-        visible = filter_cluster_focus(visible, plan_for_queue, effective_cluster)
+        focused = filter_cluster_focus(visible, plan_for_queue, effective_cluster)
+        # A remembered focus whose cluster has nothing queued must not hide the
+        # rest of the queue behind a "Queue cleared!".
+        if focused or opts.cluster:
+            visible = focused
     elif (
         collapse_plan_clusters
         and plan_for_queue
@@ -348,9 +360,9 @@ def _apply_queue_view_transforms(
         visible = collapse_clusters(visible, plan_for_queue)
 
     if opts.count:
+        queue["total"] = len(visible)
         visible = visible[: opts.count]
         queue["items"] = visible
-        queue["total"] = len(visible)
     return visible
 
 

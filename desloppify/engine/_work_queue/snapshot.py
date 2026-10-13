@@ -39,7 +39,11 @@ from desloppify.engine._state.issue_semantics import (
     is_triage_finding,
 )
 from desloppify.engine._state.schema import StateModel
-from desloppify.engine._work_queue.ranking import build_issue_items
+from desloppify.engine._state.schema_scores import subjective_unassessed
+from desloppify.engine._work_queue.ranking import (
+    build_issue_items,
+    count_never_queued_open,
+)
 from desloppify.engine._work_queue.synthetic import (
     build_subjective_items,
     build_triage_stage_items,
@@ -79,6 +83,11 @@ class QueueSnapshot:
     workflow_postflight_count: int
     triage_pending_count: int
     has_unplanned_objective_blockers: bool
+    # Before the first subjective review, its placeholders wait in the
+    # backlog instead of gating objective work and the scan.
+    deferred_review_items: tuple[WorkQueueItem, ...] = ()
+    # Open issues the queue never serves (zone-skipped or evidence-only).
+    never_queued_open_count: int = 0
 
 
 # ---------------------------------------------------------------------------
@@ -395,6 +404,31 @@ class _Partitions(NamedTuple):
     triage_items: list[WorkQueueItem]
     explicit_queue_items: list[WorkQueueItem]
     anchored_execution_items: list[WorkQueueItem]
+    deferred_review_items: list[WorkQueueItem]
+
+
+def _defer_first_review(
+    initial_review_items: list[WorkQueueItem],
+    postflight_assessment_items: list[WorkQueueItem],
+) -> list[WorkQueueItem]:
+    """Collect never-run review placeholders, one per dimension.
+
+    A dimension shows up both as a ``subjective::<dim>`` item and as a
+    ``subjective_review::.::<dim>`` assessment request; keep the request.
+    """
+    request_dims = {
+        str(item.get("id", "")).rsplit("::", 1)[-1]
+        for item in postflight_assessment_items
+        if is_assessment_request(item)
+    }
+    return [
+        *postflight_assessment_items,
+        *(
+            item
+            for item in initial_review_items
+            if str(item.get("id", "")).rsplit("::", 1)[-1] not in request_dims
+        ),
+    ]
 
 
 def _build_item_partitions(
@@ -481,6 +515,14 @@ def _build_item_partitions(
     ] + list(assessment_request_items_list)
     postflight_review_items = list(executable_review_items)
 
+    deferred_review_items: list[WorkQueueItem] = []
+    if subjective_unassessed(state):
+        deferred_review_items = _defer_first_review(
+            initial_review_items, postflight_assessment_items
+        )
+        initial_review_items = []
+        postflight_assessment_items = []
+
     scan_items, postflight_workflow_items, triage_items = _workflow_partitions(
         effective_plan,
         state,
@@ -499,6 +541,7 @@ def _build_item_partitions(
         triage_items=triage_items,
         explicit_queue_items=explicit_queue_items,
         anchored_execution_items=anchored_execution_items,
+        deferred_review_items=deferred_review_items,
     )
 
 
@@ -513,6 +556,7 @@ def _build_backlog(
             *p.objective_items,
             *p.initial_review_items,
             *p.postflight_assessment_items,
+            *p.deferred_review_items,
             *p.review_issue_items,
             *p.scan_items,
             *p.postflight_workflow_items,
@@ -594,6 +638,12 @@ def build_queue_snapshot(
         all_postflight_triage_items=tuple(p.triage_items),
         execution_items=tuple(execution_items),
         backlog_items=tuple(backlog_items),
+        deferred_review_items=tuple(p.deferred_review_items),
+        never_queued_open_count=count_never_queued_open(
+            state,
+            scan_path=_resolved_scan_path(options, state),
+            forced_ids=_live_planned_queue_ids(effective_plan),
+        ),
         objective_in_scope_count=len(p.objective_items),
         planned_objective_count=len(p.explicit_objective_items),
         objective_execution_count=sum(

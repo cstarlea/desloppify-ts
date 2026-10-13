@@ -6,6 +6,7 @@ from desloppify.app.commands.helpers.queue_progress import (
     QueueBreakdown,
     ScoreDisplayMode,
     format_queue_block,
+    headline_scores,
     print_frozen_score_with_queue_context,
     score_display_mode,
 )
@@ -108,6 +109,8 @@ def _render_frozen_queue_status(
     strict_score: float | None,
     plan_start_strict: float | None,
     breakdown: QueueBreakdown | None,
+    score_name: str = "strict",
+    plan_start_score: float | None = None,
 ) -> bool:
     """Render frozen-score status. Returns True if score was rendered as frozen."""
     mode = score_display_mode(breakdown, plan_start_strict)
@@ -115,8 +118,11 @@ def _render_frozen_queue_status(
         return False
     print_frozen_score_with_queue_context(
         breakdown,
-        frozen_strict=plan_start_strict,
+        frozen_strict=plan_start_score
+        if plan_start_score is not None
+        else plan_start_strict,
         live_score=strict_score,
+        score_name=score_name,
     )
     return True
 
@@ -125,8 +131,19 @@ def _render_north_star(
     *,
     strict_score: float | None,
     target_strict_score: float,
+    objective_score: float | None = None,
 ) -> None:
     if strict_score is None:
+        return
+    if objective_score is not None:
+        print(
+            colorize(
+                f"\n  Score: objective {objective_score:.1f}/100 (subjective review "
+                f"pending; strict {strict_score:.1f} counts the unassessed "
+                "dimensions as 0)",
+                "cyan",
+            )
+        )
         return
     gap = round(float(target_strict_score) - float(strict_score), 1)
     if gap > 0:
@@ -229,6 +246,43 @@ def _subjective_summary_parts(
     return parts
 
 
+def render_deferred_review_hint(snapshot: object) -> None:
+    """Point at the first subjective review once the objective queue is done."""
+    deferred = getattr(snapshot, "deferred_review_items", ())
+    if not deferred or getattr(snapshot, "objective_execution_count", 0):
+        return
+    count = len(deferred)
+    print(
+        colorize(
+            f"\n  Subjective review pending: {count} dimension"
+            f"{'s are' if count != 1 else ' is'} unscored. This is optional and "
+            "does not block `desloppify scan`.",
+            "cyan",
+        )
+    )
+    print(colorize("  To score them: `desloppify review --prepare`", "dim"))
+
+
+def render_backlog_hint(snapshot: object) -> None:
+    """Say where open objective work went when the queue has none of it."""
+    backlog = getattr(snapshot, "objective_backlog_count", 0)
+    if not backlog or getattr(snapshot, "objective_execution_count", 0):
+        return
+    print(
+        colorize(
+            f"\n  {backlog} open objective issue{'s are' if backlog != 1 else ' is'}"
+            " in the backlog, outside the queue.",
+            "cyan",
+        )
+    )
+    print(
+        colorize(
+            "  Browse: `desloppify backlog` · Queue one: `desloppify plan promote <id>`",
+            "dim",
+        )
+    )
+
+
 def render_followup_nudges(
     state: dict,
     dim_scores: dict,
@@ -239,8 +293,11 @@ def render_followup_nudges(
     queue_total: int = 0,
     plan_start_strict: float | None = None,
     breakdown: QueueBreakdown | None = None,
+    plan: dict | None = None,
 ) -> None:
     subjective_threshold = target_strict_score
+    score_name, plan_start_score, headline_live = headline_scores(state, plan)
+    provisional = score_name == "objective"
     subjective_entries = scorecard_subjective(state, dim_scores)
     followup = build_subjective_followup(
         state,
@@ -251,14 +308,17 @@ def render_followup_nudges(
     )
     unassessed_subjective = unassessed_subjective_dimensions(dim_scores)
     rendered_frozen = _render_frozen_queue_status(
-        strict_score=strict_score,
+        strict_score=headline_live if provisional else strict_score,
         plan_start_strict=plan_start_strict,
         breakdown=breakdown,
+        score_name=score_name,
+        plan_start_score=plan_start_score if provisional else None,
     )
     if not rendered_frozen:
         _render_north_star(
             strict_score=strict_score,
             target_strict_score=target_strict_score,
+            objective_score=headline_live if provisional else None,
         )
     _render_live_queue_block(
         breakdown=breakdown,

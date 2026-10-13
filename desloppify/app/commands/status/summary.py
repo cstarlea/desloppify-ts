@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from desloppify.app.commands.helpers.rendering import unscored_open_note
+from desloppify.app.commands.helpers.score_update import PROVISIONAL_STRICT_NOTE
 from desloppify.base.output.terminal import LOC_COMPACT_THRESHOLD, colorize
 from desloppify.engine._state.filtering import open_scope_breakdown
 from desloppify.state_io import (
@@ -59,7 +60,14 @@ def score_summary_lines(
         )
         if target_strict is not None:
             gap = round(target_strict - strict_score, 1)
-            if gap > 0:
+            if provisional:
+                lines.append(
+                    (
+                        f"  Strict {strict_score:.1f} {PROVISIONAL_STRICT_NOTE}",
+                        "dim",
+                    )
+                )
+            elif gap > 0:
                 lines.append(
                     (
                         f"  Strict {strict_score:.1f} (target: {target_strict:.1f})"

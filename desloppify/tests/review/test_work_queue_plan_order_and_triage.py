@@ -751,6 +751,17 @@ def test_triage_stages_hidden_during_initial_reviews():
     state = _state(
         objective_issues,
         dimension_scores={
+            "Logic clarity": {
+                "score": 100.0,
+                "strict": 100.0,
+                "failing": 0,
+                "detectors": {
+                    "subjective_assessment": {
+                        "dimension_key": "logic_clarity",
+                        "placeholder": False,
+                    },
+                },
+            },
             "Naming quality": {
                 "score": 0.0,
                 "strict": 0.0,

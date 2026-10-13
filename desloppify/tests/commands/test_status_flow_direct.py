@@ -19,7 +19,7 @@ def test_print_score_section_frozen_mode_uses_frozen_renderer(monkeypatch) -> No
     monkeypatch.setattr(
         flow_mod,
         "print_frozen_score_with_queue_context",
-        lambda _breakdown, frozen_strict, live_score: frozen_calls.append(
+        lambda _breakdown, frozen_strict, live_score, **_k: frozen_calls.append(
             (frozen_strict, live_score)
         ),
     )
@@ -68,7 +68,7 @@ def test_print_score_section_phase_transition_renders_live_scores(
     assert "strict 85.0/100" in out
     assert "verified 84.0/100" in out
     assert "Queue: 2 items" in out
-    assert "Objective queue complete (plan-start was 80.0)." in out
+    assert "Objective queue complete (plan-start strict was 80.0)." in out
     assert "subjective + workflow items remain" in out
 
 

@@ -1,7 +1,7 @@
 """Integration tests for lifecycle transitions through reconcile → work queue.
 
 Exercises the full lifecycle by walking through each stage:
-  scan → initial reviews → objectives → postflight scan → subjective review
+  scan → objectives (the first review is optional and waits) → reviews
   → score checkpoint/create-plan → triage
 
 Between scans, items are completed via ``purge_ids`` (what ``plan resolve``
@@ -183,13 +183,13 @@ def _add_review_issues(state: dict) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Test 1: Fresh scan — only initial reviews visible
+# Test 1: Fresh scan, no review ever run — objective work first
 # ---------------------------------------------------------------------------
 
 
-class TestPhase1OnlyInitialReviews:
-    def test_only_initial_reviews_visible(self, monkeypatch):
-        """Fresh scan with placeholders: only subjective initial review items appear."""
+class TestPhase1ObjectiveFirstBeforeAnyReview:
+    def test_objectives_visible_before_first_review(self, monkeypatch):
+        """Fresh scan with only placeholders: the review waits behind objective work."""
         state = _build_state(
             OBJECTIVE_ISSUES, [_placeholder_dim_entries(k) for k in DIM_KEYS]
         )
@@ -197,10 +197,24 @@ class TestPhase1OnlyInitialReviews:
 
         ids = _queue_ids(state, plan)
 
-        assert all(fid.startswith("subjective::") for fid in ids)
-        assert len(ids) == len(DIM_KEYS)
-        assert "obj-1" not in ids
-        assert "obj-2" not in ids
+        assert ids == ["obj-1", "obj-2"]
+        assert not any(fid.startswith("subjective::") for fid in plan["queue_order"])
+
+    def test_unscored_dimension_reviewed_first_once_a_review_ran(self, monkeypatch):
+        """After a first review, a still-unscored dimension leads the new cycle."""
+        state = _build_state(
+            OBJECTIVE_ISSUES,
+            [
+                _scored_dim_entries("naming_quality", 90.0),
+                _placeholder_dim_entries("logic_clarity"),
+                _placeholder_dim_entries("type_safety"),
+            ],
+        )
+        plan = _reconcile(state, empty_plan(), monkeypatch)
+
+        ids = _queue_ids(state, plan)
+
+        assert ids == ["subjective::logic_clarity", "subjective::type_safety"]
 
 
 # ---------------------------------------------------------------------------
@@ -384,15 +398,13 @@ class TestFullLifecycleGoldenPath:
         )
         plan = empty_plan()
 
-        # ── Scan 1: initial reviews ──
+        # ── Scan 1: no review yet, so objective work comes first ──
         plan = _reconcile(state, plan, monkeypatch)
         ids = _queue_ids(state, plan)
-        assert all(fid.startswith("subjective::") for fid in ids), f"Scan 1: {ids}"
-        assert len(ids) == len(DIM_KEYS)
+        assert ids == ["obj-1", "obj-2"], f"Scan 1: {ids}"
 
         # ── Between scans: complete reviews ──
         _spoof_reviews_complete(state)
-        purge_ids(plan, [fid for fid in ids if fid.startswith("subjective::")])
 
         ids = _queue_ids(state, plan)
         # Objectives unlocked immediately, no workflow items yet

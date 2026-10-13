@@ -18,7 +18,7 @@ Every queue build derives the display phase again from the live items. The displ
 
 | Phase | When | What `next` shows |
 |---|---|---|
-| `review_initial` | Fresh boundary (no `plan_start_scores`, or a reset) and unscored subjective dimensions | Initial subjective review. Objective work stays hidden |
+| `review_initial` | Fresh boundary (no `plan_start_scores`, or a reset), unscored subjective dimensions, and at least one dimension already assessed | Initial subjective review. Objective work stays hidden |
 | `scan` (preferred) | Lifecycle mode is `execute` (`current_lifecycle_phase`), nothing is queued for execution, and a scan-phase item exists | As for `scan` below |
 | `assessment` | Subjective re-review items or assessment requests | Those items |
 | `workflow` | Score checkpoint, import scores, communicate score, create plan | Those workflow items |
@@ -28,6 +28,16 @@ Every queue build derives the display phase again from the live items. The displ
 | `scan` | Nothing above | `workflow::deferred-disposition` if any temporary skips exist, otherwise `workflow::run-scan` |
 
 If execution work exists and the persisted mode is `execute`, the snapshot hides the assessment, workflow, triage and review items. Objective issues found mid-cycle go to the backlog, not the queue.
+
+### Before the first subjective review
+
+While no subjective dimension has ever been assessed (`subjective_unassessed()` in `engine/_state/schema_scores.py`), the review is optional and never blocks:
+
+- `sync_subjective_dimensions()` keeps unscored `subjective::` IDs out of `queue_order`, and prunes any an older plan left there.
+- The snapshot moves the initial-review items and the `subjective_review::` assessment requests into `deferred_review_items`, one per dimension. They sit in the backlog and drive no phase, so objective work runs in `execute` and a drained queue goes straight to `scan`, which the scan preflight allows.
+- Once the objective queue is done, `next` says the review is pending and prints `desloppify review --prepare` once.
+
+After any dimension has been assessed, unscored dimensions go back to leading a fresh cycle as `review_initial`.
 
 `reconcile_plan` derives the same phase from `queue_order` (`_resolve_reconcile_display_phase`). `test_phase_derivation_equivalence_matrix` keeps the two in step.
 
