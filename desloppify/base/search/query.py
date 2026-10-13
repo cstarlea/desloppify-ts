@@ -247,7 +247,6 @@ def write_query(data: dict, *, query_file: Path) -> OutputResult:
         safe_write_text(
             query_file, json.dumps(payload, indent=2, default=json_default) + "\n"
         )
-        print("  → query.json updated", file=sys.stderr)
         if truncation_notes:
             print(
                 "  ⚠ query.json payload exceeded budget; wrote truncated artifact.",

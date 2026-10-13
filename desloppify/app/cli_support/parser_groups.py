@@ -113,7 +113,7 @@ examples:
         action="append",
         default=None,
         metavar="KEY=VALUE",
-        help="Language runtime option override (repeatable, e.g. --lang-opt roslyn_cmd='dotnet run ...')",
+        help="Language runtime option override (repeatable, e.g. --lang-opt monorepo_mode=packages)",
     )
     p_scan.add_argument(
         "--force-rescan",
@@ -217,10 +217,11 @@ examples:
         help="Path to investigation notes file to attach to a issue",
     )
     p_show.add_argument(
+        "--all",
         "--no-budget",
         action="store_true",
         dest="no_budget",
-        help="Bypass per-detector noise budget (show all matching issues)",
+        help="Show every matching issue, including those the noise budget hides",
     )
 
 

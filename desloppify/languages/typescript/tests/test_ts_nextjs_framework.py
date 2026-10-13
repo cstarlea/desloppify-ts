@@ -23,6 +23,7 @@ from desloppify.languages._framework.node.frameworks.nextjs.scanners import (
     scan_nextjs_use_server_not_first,
     scan_rsc_missing_use_client,
 )
+from desloppify.languages.framework import framework_summary_lines
 from desloppify.languages.typescript import TypeScriptConfig
 
 HAS_TREESITTER = importlib.util.find_spec("tree_sitter_language_pack") is not None
@@ -448,6 +449,60 @@ def test_env_leak_issue_per_variable_names_it(tmp_path: Path):
         ("nextjs::app/providers.tsx::env_leak_in_client::PORT", 3),
     ]
     assert "process.env.APP_URL" in leaks[0][2]
+
+
+def _applicable_labels(path: Path) -> list[str]:
+    lang = _FakeLang()
+    return [
+        p.label
+        for p in TypeScriptConfig().phases
+        if "framework smells" in p.label and p.applies and p.applies(path, lang)
+    ]
+
+
+def test_framework_phases_apply_only_to_detected_frameworks(tmp_path: Path):
+    _write(tmp_path, "package.json", '{"dependencies": {"next": "15"}}\n')
+    assert _applicable_labels(tmp_path) == ["Next.js framework smells"]
+
+
+def test_framework_phases_apply_to_workspace_package_frameworks(tmp_path: Path):
+    _write(tmp_path, "package.json", '{"workspaces": ["apps/*"]}\n')
+    _write(tmp_path, "apps/api/package.json", '{"dependencies": {"express": "5"}}\n')
+    assert _applicable_labels(tmp_path) == ["Express framework smells"]
+
+
+def test_no_framework_phase_applies_without_frameworks(tmp_path: Path):
+    _write(tmp_path, "package.json", '{"dependencies": {"zod": "4"}}\n')
+    assert _applicable_labels(tmp_path) == []
+
+
+def test_framework_summary_single_package(tmp_path: Path):
+    _write(
+        tmp_path,
+        "package.json",
+        '{"dependencies": {"next": "15"}, "devDependencies": {"vite": "6"}}\n',
+    )
+    assert framework_summary_lines(tmp_path, _FakeLang()) == [
+        "Frameworks: nextjs, vite"
+    ]
+
+
+def test_framework_summary_none_detected(tmp_path: Path):
+    _write(tmp_path, "package.json", '{"dependencies": {"zod": "4"}}\n')
+    assert framework_summary_lines(tmp_path, _FakeLang()) == [
+        "Frameworks: none detected"
+    ]
+
+
+def test_framework_summary_per_workspace_package(tmp_path: Path):
+    _write(tmp_path, "package.json", '{"workspaces": ["apps/*", "packages/*"]}\n')
+    _write(tmp_path, "apps/web/package.json", '{"dependencies": {"next": "15"}}\n')
+    _write(tmp_path, "apps/api/package.json", '{"dependencies": {"hono": "4"}}\n')
+    _write(tmp_path, "packages/util/package.json", '{"name": "util"}\n')
+    assert sorted(framework_summary_lines(tmp_path, _FakeLang())) == [
+        "Frameworks in apps/api: hono",
+        "Frameworks in apps/web: nextjs",
+    ]
 
 
 def _env_leaks(tmp_path: Path, content: str) -> list[tuple[str, int]]:

@@ -37,7 +37,7 @@ _VALID_PATTERN_HINTS = (
     "f41b3eb7              (8-char hash suffix from dashboard)",
     "review::path::name    (ID prefix)",
     "review                (all issues from detector)",
-    "src/foo.py            (all issues in file)",
+    "src/foo.ts            (all issues in file)",
     "timing_attack         (issue name - last ::segment of ID)",
     "review::*naming*      (glob pattern)",
     "my-cluster            (cluster name - expands to members)",

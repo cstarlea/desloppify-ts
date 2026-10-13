@@ -235,6 +235,33 @@ class TestShowStructuralAreas:
         assert "Structural Debt" in out
         assert "(unknown)" in out
 
+    def _two_areas(self, *, status="open", zone=None):
+        issues = {}
+        for area, tier in (("alpha", 3), ("beta", 4)):
+            for i in range(3):
+                issue = self._make_issue(
+                    f"{area}{i}", file=f"src/{area}/{i}.ts", tier=tier, status=status
+                )
+                issue["detector"] = "smells"
+                if zone:
+                    issue["zone"] = zone
+                issues[issue["id"]] = issue
+        return {"issues": issues}
+
+    def test_workflow_points_at_open_items_without_wontfix_debt(self, capsys):
+        show_structural_areas(self._two_areas())
+        out = capsys.readouterr().out
+        assert "desloppify show <area> --top 50" in out
+        assert "--status wontfix" not in out
+
+    def test_workflow_points_at_wontfix_when_there_is_debt(self, capsys):
+        show_structural_areas(self._two_areas(status="wontfix"))
+        assert "show <area> --status wontfix --top 50" in capsys.readouterr().out
+
+    def test_unscored_test_zone_issues_are_left_out(self, capsys):
+        show_structural_areas(self._two_areas(zone="test"))
+        assert capsys.readouterr().out == ""
+
 
 class TestShowIgnoreSummary:
     def test_prints_last_scan_and_recent_suppression(self, capsys):

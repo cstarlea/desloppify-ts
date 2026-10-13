@@ -138,6 +138,15 @@ def prewarm_review_phase_detectors(path, lang, phases) -> None:
     _prewarm_review_phase_detectors(path, lang, phases)
 
 
+def framework_summary_lines(path, lang) -> list[str]:
+    """Lines naming the detected frameworks, per package for monorepos."""
+    from desloppify.languages._framework.frameworks.phases import (
+        framework_summary_lines as _summary,
+    )
+
+    return _summary(path, lang)
+
+
 def clear_review_phase_prefetch(lang) -> None:
     """Clear in-memory shared review detector prefetch state."""
     from desloppify.languages._framework.base.shared_phases_review import (
@@ -163,6 +172,7 @@ __all__ = [
     "default_lang",
     "disable_parse_cache",
     "enable_parse_cache",
+    "framework_summary_lines",
     "get_lang",
     "get_lang_hook",
     "make_lang_run",

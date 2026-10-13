@@ -164,7 +164,10 @@ def _framework_smells_phase(spec: FrameworkSpec) -> DetectorPhase:
             _log(f"         {spec.label} packages: {shown}{more}")
         return issues, ({spec.id: potential} if potential > 0 else {})
 
-    return DetectorPhase(label, run)
+    def applies(path: Path, lang: LangRuntimeContract) -> bool:
+        return bool(_framework_roots(path, lang, spec))
+
+    return DetectorPhase(label, run, applies=applies)
 
 
 def _framework_tool_phase(spec: FrameworkSpec, tool: ToolIntegration) -> DetectorPhase:
@@ -199,7 +202,12 @@ def _framework_tool_phase(spec: FrameworkSpec, tool: ToolIntegration) -> Detecto
         )
         return resolved_phase.run(scan_root, lang)
 
-    return DetectorPhase(tool_phase.label, run, slow=tool_phase.slow)
+    def applies(path: Path, lang: LangRuntimeContract) -> bool:
+        return (
+            spec.id in detect_ecosystem_frameworks(path, lang, spec.ecosystem).present
+        )
+
+    return DetectorPhase(tool_phase.label, run, slow=tool_phase.slow, applies=applies)
 
 
 def framework_phases(lang_name: str) -> list[DetectorPhase]:
@@ -216,4 +224,32 @@ def framework_phases(lang_name: str) -> list[DetectorPhase]:
     return phases
 
 
-__all__ = ["framework_phases"]
+def framework_summary_lines(path: Path, lang: LangRuntimeContract) -> list[str]:
+    """One line per package naming the Node frameworks detected for *path*.
+
+    The scan's own package comes first (``Frameworks: nextjs, vite``), then each
+    workspace package that uses a framework (``Frameworks in apps/web: ...``).
+    """
+    ensure_builtin_specs_loaded()
+    order = list(list_framework_specs(ecosystem="node"))
+
+    def names(present: dict[str, Any]) -> str:
+        return ", ".join(fid for fid in order if fid in present)
+
+    own = names(detect_ecosystem_frameworks(path, lang, "node").present)
+    packages = [
+        (_display_root(package.package_root), names(package.present))
+        for package in workspace_framework_detections(path, lang, "node")
+        if package.present
+    ]
+    if not packages:
+        return [f"Frameworks: {own or 'none detected'}"]
+    lines = [f"Frameworks: {own}"] if own else []
+    limit = 10
+    lines.extend(f"Frameworks in {root}: {found}" for root, found in packages[:limit])
+    if len(packages) > limit:
+        lines.append(f"... and {len(packages) - limit} more packages with frameworks")
+    return lines
+
+
+__all__ = ["framework_phases", "framework_summary_lines"]

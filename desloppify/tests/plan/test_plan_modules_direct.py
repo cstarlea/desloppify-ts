@@ -240,3 +240,46 @@ def test_build_open_plan_queue_uses_core_options_shape(monkeypatch) -> None:
     assert captured[0].scan_path == "src"
     assert captured[0].status == "open"
     assert captured[0].subjective_threshold == 91.0
+
+
+def test_generate_issues_skips_inapplicable_phases_and_prints_frameworks(
+    monkeypatch, capsys
+):
+    from desloppify.languages.framework import DetectorPhase
+
+    ran: list[str] = []
+
+    def _phase(label: str, applies):
+        def run(_path, _lang):
+            ran.append(label)
+            return [], {}
+
+        return DetectorPhase(label, run, applies=applies)
+
+    lang = SimpleNamespace(
+        phases=[
+            _phase("Always", None),
+            _phase("Next.js framework smells", lambda *_a: True),
+            _phase("Nuxt framework smells", lambda *_a: False),
+        ],
+        zone_map=None,
+        name="typescript",
+    )
+    monkeypatch.setattr(plan_scan_mod, "_build_zone_map", lambda *_a, **_k: None)
+    monkeypatch.setattr(
+        plan_scan_mod, "framework_summary_lines", lambda *_a: ["Frameworks: nextjs"]
+    )
+    monkeypatch.setattr(
+        plan_scan_mod, "prewarm_review_phase_detectors", lambda *_a, **_k: None
+    )
+    monkeypatch.setattr(
+        plan_scan_mod, "clear_review_phase_prefetch", lambda *_a, **_k: None
+    )
+
+    plan_scan_mod._generate_issues_from_lang(Path("."), lang)
+
+    err = capsys.readouterr().err
+    assert ran == ["Always", "Next.js framework smells"]
+    assert "Frameworks: nextjs" in err
+    assert "[2/2] Next.js framework smells" in err
+    assert "Nuxt" not in err

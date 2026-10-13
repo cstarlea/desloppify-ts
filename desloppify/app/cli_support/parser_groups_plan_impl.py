@@ -45,7 +45,7 @@ typical workflow:
 patterns (used by reorder, skip, resolve, describe, note, etc.):
   Patterns match issues by detector, file, ID prefix, glob, or name.
   Cluster names also work as patterns — they expand to all member IDs.
-  Examples: "security", "src/foo.py", "unused::*React*", "my-cluster"
+  Examples: "security", "src/foo.ts", "unused::*React*", "my-cluster"
 
 subcommands:
   show       Show plan metadata summary

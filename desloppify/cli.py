@@ -25,7 +25,6 @@ from desloppify.base.exception_sets import CommandError
 from desloppify.base.output.cli_logging import configure_cli_logging
 from desloppify.base.output.fallbacks import log_best_effort_failure
 from desloppify.base.output.terminal import colorize
-from desloppify.base.registry import detector_names
 from desloppify.base.runtime_state import runtime_scope
 from desloppify.state_io import load_state
 
@@ -34,8 +33,10 @@ logger = logging.getLogger(__name__)
 
 @lru_cache(maxsize=1)
 def _get_detector_names_cached() -> tuple[str, ...]:
-    """Compute detector names once."""
-    return tuple(detector_names())
+    """The detectors ``detect`` can run directly, computed once."""
+    from desloppify.languages.framework import default_lang
+
+    return tuple(sorted(default_lang().detect_commands))
 
 
 def _get_detector_names() -> list[str]:

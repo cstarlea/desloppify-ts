@@ -51,6 +51,9 @@ class DetectorPhase:
         [Path, LangRuntimeContract], tuple[list[DetectorEntry], dict[str, int]]
     ]
     slow: bool = False
+    # Optional precondition: a phase whose ``applies`` returns False is left out
+    # of the scan (and its progress line) entirely, e.g. absent frameworks.
+    applies: Callable[[Path, LangRuntimeContract], bool] | None = None
 
 
 class LangRuntimeContract(Protocol):

@@ -43,6 +43,7 @@ from desloppify.languages.typescript.detectors.deps import (
 from desloppify.languages.typescript.detectors.deps.packages import discover_packages
 from desloppify.languages.typescript.detectors.exports import cmd_exports
 from desloppify.languages.typescript.detectors.facade import detect_reexport_facades
+from desloppify.languages.typescript.detectors.lint import detect_lint_result
 from desloppify.languages.typescript.detectors.logs import cmd_logs
 from desloppify.languages.typescript.detectors.patterns.cli import cmd_patterns
 from desloppify.languages.typescript.detectors.props import cmd_props
@@ -125,6 +126,36 @@ def cmd_gods(args: argparse.Namespace) -> None:
             str(e.get("name", "")),
             str(e["loc"]),
             ", ".join(e["reasons"]),
+        ],
+    )
+
+
+def cmd_lint(args: argparse.Namespace) -> None:
+    """Findings from the project's own linter (ESLint, XO, Biome or oxlint)."""
+    result = detect_lint_result(Path(args.path))
+    if result.checked_files is None and not getattr(args, "json", False):
+        reason = result.coverage.summary if result.coverage else None
+        print(
+            colorize(
+                f"\nThe project's linter did not run: {reason}"
+                if reason
+                else "\nNo linter config found (ESLint, XO, Biome or oxlint).",
+                "yellow",
+            )
+        )
+        return
+    display_entries(
+        args,
+        result.entries,
+        label=f"Lint findings ({', '.join(result.linters)})",
+        empty_msg="No lint findings.",
+        columns=["File", "Line", "Rule", "Message"],
+        widths=[50, 6, 30, 50],
+        row_fn=lambda e: [
+            rel(e["file"]),
+            str(e["line"]),
+            e["rule"],
+            (e["message"].splitlines() or [""])[0],
         ],
     )
 
@@ -338,6 +369,7 @@ def get_detect_commands() -> dict[str, Callable[..., None]]:
             cmd_complexity=cmd_complexity,
         ),
         extra_registry={
+            "lint": cmd_lint,
             "logs": cmd_logs,
             "unused": cmd_unused,
             "exports": cmd_exports,
@@ -369,6 +401,7 @@ __all__ = [
     "cmd_facade",
     "cmd_gods",
     "cmd_large",
+    "cmd_lint",
     "cmd_logs",
     "cmd_naming",
     "cmd_orphaned",

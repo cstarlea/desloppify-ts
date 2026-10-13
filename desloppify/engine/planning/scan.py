@@ -20,6 +20,7 @@ from desloppify.languages.framework import (
     LangRun,
     clear_review_phase_prefetch,
     default_lang,
+    framework_summary_lines,
     make_lang_run,
     prewarm_review_phase_detectors,
 )
@@ -143,7 +144,13 @@ def _generate_issues_from_lang(
 ) -> tuple[list[Issue], dict[str, int]]:
     """Run detector phases from a LangRun."""
     _build_zone_map(path, lang, zone_overrides)
-    phases = _select_phases(lang, include_slow=include_slow, profile=profile)
+    for line in framework_summary_lines(path, lang):
+        _stderr(f"  {line}")
+    phases = [
+        phase
+        for phase in _select_phases(lang, include_slow=include_slow, profile=profile)
+        if phase.applies is None or phase.applies(path, lang)
+    ]
     prewarm_review_phase_detectors(path, lang, phases)
     try:
         issues, all_potentials = _run_phases(path, lang, phases)

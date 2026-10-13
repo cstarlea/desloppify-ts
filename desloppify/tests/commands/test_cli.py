@@ -534,8 +534,23 @@ class TestDetectorNames:
 
     def test_contains_known_detectors(self):
         names = _get_detector_names()
-        for name in ["logs", "unused", "smells", "cycles", "dupes"]:
+        for name in ["logs", "unused", "smells", "cycles", "dupes", "lint"]:
             assert name in names
+
+    def test_lists_only_typescript_direct_detectors(self):
+        from desloppify.languages.framework import default_lang
+
+        names = _get_detector_names()
+        assert names == sorted(default_lang().detect_commands)
+        for foreign in ["cargo_error", "clippy_warning", "rust_doctest", "dict_keys"]:
+            assert foreign not in names
+
+    def test_detect_help_epilog(self, capsys):
+        with pytest.raises(SystemExit):
+            create_parser().parse_args(["detect", "--help"])
+        out = capsys.readouterr().out
+        assert "detectors: complexity, concerns" in out
+        assert "rust_" not in out and "cargo_error" not in out
 
 
 # ===========================================================================
