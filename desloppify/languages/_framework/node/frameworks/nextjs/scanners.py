@@ -18,6 +18,8 @@ from desloppify.languages._framework.node.js_text import (
 from desloppify.languages._framework.node.js_text import (
     strip_js_ts_comments as _strip_ts_comments,
 )
+from desloppify.languages.typescript.syntax.queries import descendants, statements
+from desloppify.languages.typescript.syntax.tree import ParsedSource, parse_text
 
 from .info import NextjsFrameworkInfo
 
@@ -1129,10 +1131,13 @@ def scan_nextjs_env_leaks_in_client(
             line_no = uncommented[: m.start()].count("\n") + 1
             occurrences.append((name, line_no))
 
+        server_only = _server_only_env_uses(content, filepath)
         bad_occurrences = [
             (name, line_no)
             for (name, line_no) in occurrences
-            if not name.startswith("NEXT_PUBLIC_") and name not in _CLIENT_ENV_ALLOWLIST
+            if not name.startswith("NEXT_PUBLIC_")
+            and name not in _CLIENT_ENV_ALLOWLIST
+            and (name, line_no) not in server_only
         ]
         if not bad_occurrences:
             continue
@@ -1144,6 +1149,98 @@ def scan_nextjs_env_leaks_in_client(
             entries.append({"file": filepath, "line": first_lines[name], "var": name})
 
     return entries, scanned
+
+
+_WINDOW_CHECK_RE = re.compile(
+    r"""^typeof window ?(?P<op>[!=]==?) ?['"]undefined['"]$"""
+    r"""|^['"]undefined['"] ?(?P<rop>[!=]==?) ?typeof window$"""
+)
+_EXITS = frozenset({"return_statement", "throw_statement"})
+
+
+def _window_check(parsed: ParsedSource, condition) -> bool | None:
+    """True for ``typeof window === 'undefined'`` (server), False for ``!==`` (browser), else None."""
+    while condition.type == "parenthesized_expression" and condition.named_children:
+        condition = condition.named_children[0]
+    text = " ".join(parsed.text(condition).split())
+    match = _WINDOW_CHECK_RE.match(text)
+    if match is None:
+        return None
+    return (match.group("op") or match.group("rop")).startswith("=")
+
+
+def _exits(node) -> bool:
+    while node.type == "statement_block":
+        body = statements(node)
+        if not body:
+            return False
+        node = body[-1]
+    return node.type in _EXITS
+
+
+def _server_only(parsed: ParsedSource, node) -> bool:
+    """Whether ``node`` only runs where ``window`` is undefined, by a ``typeof window`` guard."""
+    child, parent = node, node.parent
+    while parent is not None:
+        if parent.type in ("if_statement", "ternary_expression"):
+            condition = parent.child_by_field_name("condition")
+            server = None if condition is None else _window_check(parsed, condition)
+            if server is not None and child != condition:
+                in_then = child == parent.child_by_field_name("consequence")
+                if in_then == server:
+                    return True
+        if parent.type in ("statement_block", "program"):
+            for earlier in statements(parent):
+                if earlier == child:
+                    break
+                if earlier.type != "if_statement" or earlier.child_by_field_name(
+                    "alternative"
+                ):
+                    continue
+                condition = earlier.child_by_field_name("condition")
+                consequence = earlier.child_by_field_name("consequence")
+                if (
+                    condition is not None
+                    and consequence is not None
+                    and _window_check(parsed, condition) is False
+                    and _exits(consequence)
+                ):
+                    return True
+        child, parent = parent, parent.parent
+    return False
+
+
+def _env_name(parsed: ParsedSource, node) -> str | None:
+    obj = node.child_by_field_name("object")
+    if obj is None or " ".join(parsed.text(obj).split()) != "process.env":
+        return None
+    if node.type == "member_expression":
+        prop = node.child_by_field_name("property")
+        return None if prop is None else parsed.text(prop)
+    index = node.child_by_field_name("index")
+    if index is None or index.type != "string":
+        return None
+    return parsed.text(index)[1:-1]
+
+
+def _server_only_env_uses(content: str, filepath: str) -> set[tuple[str, int]]:
+    """``(name, line)`` of env reads behind a server-only ``typeof window`` guard.
+
+    A line that also reads the same variable unguarded is left out. Empty
+    without tree-sitter.
+    """
+    parsed = parse_text(content, filepath)
+    if parsed is None:
+        return set()
+    guarded: set[tuple[str, int]] = set()
+    unguarded: set[tuple[str, int]] = set()
+    for node in descendants(parsed.root, ("member_expression", "subscript_expression")):
+        name = _env_name(parsed, node)
+        if name is None:
+            continue
+        key = (name, parsed.line(node))
+        (guarded if _server_only(parsed, node) else unguarded).add(key)
+    return guarded - unguarded
 
 
 def scan_nextjs_route_handlers_and_middleware_misuse(

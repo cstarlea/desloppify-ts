@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib.util
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -23,6 +24,9 @@ from desloppify.languages._framework.node.frameworks.nextjs.scanners import (
     scan_rsc_missing_use_client,
 )
 from desloppify.languages.typescript import TypeScriptConfig
+
+HAS_TREESITTER = importlib.util.find_spec("tree_sitter_language_pack") is not None
+needs_treesitter = pytest.mark.skipif(not HAS_TREESITTER, reason="needs tree-sitter")
 
 
 @pytest.fixture(autouse=True)
@@ -444,3 +448,86 @@ def test_env_leak_issue_per_variable_names_it(tmp_path: Path):
         ("nextjs::app/providers.tsx::env_leak_in_client::PORT", 3),
     ]
     assert "process.env.APP_URL" in leaks[0][2]
+
+
+def _env_leaks(tmp_path: Path, content: str) -> list[tuple[str, int]]:
+    _write(tmp_path, "package.json", '{"dependencies": {"next": "15"}}\n')
+    _write(tmp_path, "app/providers.tsx", content)
+    issues, _ = _nextjs_phase().run(tmp_path, _FakeLang())
+    return sorted(
+        (i["id"].rsplit("::", 1)[1], i["detail"]["line"])
+        for i in issues
+        if "env_leak" in i["id"]
+    )
+
+
+def test_env_leak_plain_read_in_client_still_fires(tmp_path: Path):
+    content = (
+        "'use client'\n"
+        "export const secret = process.env.SECRET\n"
+        "export function f() {\n"
+        "  if (typeof window !== 'undefined') console.log('hi')\n"
+        "  return process.env.OTHER\n"
+        "}\n"
+    )
+    assert _env_leaks(tmp_path, content) == [("OTHER", 5), ("SECRET", 2)]
+
+
+@needs_treesitter
+def test_env_leak_skips_typeof_window_guards(tmp_path: Path):
+    content = (
+        "'use client'\n"
+        "function getBaseUrl() {\n"
+        "  if (typeof window !== 'undefined') return ''\n"
+        "  return `http://localhost:${process.env.PORT ?? 3000}`\n"
+        "}\n"
+        "function b() {\n"
+        "  if (typeof window === 'undefined') {\n"
+        "    return process.env['DB_URL']\n"
+        "  }\n"
+        "  return '/api'\n"
+        "}\n"
+        "function c() {\n"
+        "  if ('undefined' != typeof window) {\n"
+        "    return '/api'\n"
+        "  } else {\n"
+        "    return process.env.API_HOST\n"
+        "  }\n"
+        "}\n"
+        "const d = typeof window === 'undefined' ? process.env.TOKEN : ''\n"
+        "function e() {\n"
+        "  if (typeof window !== 'undefined') {\n"
+        "    throw new Error('server only')\n"
+        "  }\n"
+        "  return process.env.KEY\n"
+        "}\n"
+    )
+    assert _env_leaks(tmp_path, content) == []
+
+
+@needs_treesitter
+def test_env_leak_in_browser_branch_still_fires(tmp_path: Path):
+    content = (
+        "'use client'\n"
+        "function a() {\n"
+        "  if (typeof window !== 'undefined') {\n"
+        "    return process.env.BROWSER_SIDE\n"
+        "  }\n"
+        "  return ''\n"
+        "}\n"
+        "function b() {\n"
+        "  if (typeof window === 'undefined') return ''\n"
+        "  return process.env.AFTER_SERVER_RETURN\n"
+        "}\n"
+        "function c() {\n"
+        "  if (typeof window !== 'undefined') log()\n"
+        "  return process.env.NO_EXIT\n"
+        "}\n"
+        "const d = typeof window !== 'undefined' ? process.env.TERNARY : ''\n"
+    )
+    assert _env_leaks(tmp_path, content) == [
+        ("AFTER_SERVER_RETURN", 10),
+        ("BROWSER_SIDE", 4),
+        ("NO_EXIT", 14),
+        ("TERNARY", 16),
+    ]
