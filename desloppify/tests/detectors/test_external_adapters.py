@@ -266,6 +266,52 @@ class TestJscpdAdapter:
         assert len(result) == 1
         assert result[0]["distinct_files"] == 2
 
+    @staticmethod
+    def _pair_report(tmp_path, fragment: str) -> dict:
+        return {
+            "duplicates": [
+                {
+                    "fragment": fragment,
+                    "lines": len(fragment.splitlines()),
+                    "firstFile": {"name": str(tmp_path / "a.ts"), "start": 1},
+                    "secondFile": {"name": str(tmp_path / "b.ts"), "start": 1},
+                }
+            ]
+        }
+
+    @pytest.mark.parametrize(
+        "fragment",
+        [
+            # Whole imports, a directive, comments and blank lines
+            "'use client'\n\nimport * as React from 'react'\n// ui\n"
+            "import { Button } from '@/components/ui/button'\n"
+            "import type { X } from './x';\nimport './styles.css'\n",
+            # Starts and ends inside a multi-line import
+            "  b,\n  type C,\n} from './shared'\n/* note */\n"
+            "import Default, { d as e } from 'lib'\nimport {\n  f,\n  g",
+            # Re-exports
+            "export * from './a'\nexport * as ns from './b'\n"
+            "export { x, type Y } from './c'\nexport type { Z } from './d'\n",
+        ],
+    )
+    def test_drops_import_only_fragments(self, tmp_path, fragment):
+        assert (
+            _parse_jscpd_report(self._pair_report(tmp_path, fragment), tmp_path) == []
+        )
+
+    @pytest.mark.parametrize(
+        "fragment",
+        [
+            "import { z } from 'zod'\nimport { db } from './db'\n\n"
+            "const schema = z.object({ id: z.string() })\n",
+            "export const A = 1\nimport B from 'c'\nimport D from 'e'\n",
+            "import { a } from 'a'\nexport function f() {\n",
+        ],
+    )
+    def test_keeps_fragments_with_code_beside_imports(self, tmp_path, fragment):
+        result = _parse_jscpd_report(self._pair_report(tmp_path, fragment), tmp_path)
+        assert len(result) == 1
+
     def test_skips_files_outside_scan_path(self, tmp_path):
         f_in = str(tmp_path / "a.py")
         f_out = "/other/path/b.py"

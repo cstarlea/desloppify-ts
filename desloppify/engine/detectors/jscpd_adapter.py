@@ -13,6 +13,7 @@ import hashlib
 import json
 import logging
 import os
+import re
 import shutil
 import signal
 import subprocess  # nosec B404
@@ -89,6 +90,29 @@ def _jscpd_ignore_arg(scan_path: Path) -> str:
     return ",".join(sorted(patterns))
 
 
+_BLOCK_COMMENT_RE = re.compile(r"/\*.*?\*/", re.DOTALL)
+_LINE_COMMENT_RE = re.compile(r"(?<![:'\"])//[^\n]*")
+_MODULE_SPEC = r"""(['"])[^'"\n]*\1"""
+# Import and re-export statements, directives, and the cut-off import a
+# window can start or end in.
+_IMPORT_ONLY_PARTS = (
+    re.compile(rf"\b(?:import|export)\b[\w\s,{{}}*$]*?\bfrom\s*{_MODULE_SPEC}\s*;?"),
+    re.compile(rf"\bimport\s*{_MODULE_SPEC}\s*;?"),
+    re.compile(r"""^\s*(['"])use (?:client|server|strict)\1\s*;?""", re.MULTILINE),
+    re.compile(rf"^[\w\s,{{}}*$]*\}}\s*from\s*{_MODULE_SPEC}\s*;?"),
+    re.compile(r"(?:\bimport\b|\bexport\s*(?:type\s*)?[{*])[\w\s,{}*$]*$"),
+)
+
+
+def _is_import_only(fragment: str) -> bool:
+    """Whether a fragment holds nothing but imports, ``export ... from``,
+    directives, comments and blank lines: every module repeats those."""
+    text = _LINE_COMMENT_RE.sub("", _BLOCK_COMMENT_RE.sub("", fragment))
+    for pattern in _IMPORT_ONLY_PARTS:
+        text = pattern.sub("", text)
+    return not text.strip()
+
+
 def _parse_jscpd_report(report: dict, scan_path: Path) -> list[dict]:
     """Parse a jscpd JSON report dict and return clustered duplication entries.
 
@@ -107,6 +131,8 @@ def _parse_jscpd_report(report: dict, scan_path: Path) -> list[dict]:
 
     for dup in duplicates:
         fragment = dup.get("fragment", "")
+        if _is_import_only(fragment):
+            continue
         fragment_key = hashlib.sha256(
             fragment.strip()[:200].encode("utf-8", errors="replace")
         ).hexdigest()[:16]
