@@ -12,6 +12,9 @@ from desloppify.base.discovery.file_paths import resolve_path
 from desloppify.base.discovery.paths import get_project_root
 from desloppify.base.output.fallbacks import log_best_effort_failure
 from desloppify.base.text_utils import strip_c_style_comments
+from desloppify.languages._framework.frameworks.registry import (
+    framework_entry_conventions,
+)
 from desloppify.languages._framework.node.frameworks.supabase import (
     is_edge_function_entry,
 )
@@ -205,10 +208,57 @@ def _is_shape_class(statement, node) -> bool:
     return True
 
 
+# Expressions that only build a value: object and array literals of
+# literals and references (``export const metadata = {...}``, ``as const``).
+_DATA_EXPRESSIONS = _LITERALS | {
+    "object",
+    "array",
+    "pair",
+    "spread_element",
+    "shorthand_property_identifier",
+    "property_identifier",
+    "computed_property_name",
+    "identifier",
+    "member_expression",
+    "unary_expression",
+    "parenthesized_expression",
+    "as_expression",
+    "satisfies_expression",
+    "string_fragment",
+    "escape_sequence",
+    "template_substitution",
+}
+_TYPE_NODES = frozenset(
+    {"type_annotation", "type_identifier", "generic_type", "predefined_type"}
+)
+_DECLARATIONS = frozenset({"lexical_declaration", "variable_declaration"})
+
+
+def _is_data(node) -> bool:
+    if node.type in _TYPE_NODES:
+        return True
+    if node.type not in _DATA_EXPRESSIONS:
+        return False
+    if node.type in ("as_expression", "satisfies_expression"):
+        return _is_data(node.named_children[0])
+    return all(_is_data(child) for child in node.named_children)
+
+
+def _is_data_declaration(node) -> bool:
+    """``const X = { ... }``: every declarator binds a plain data literal."""
+    if node.type not in _DECLARATIONS:
+        return False
+    declarators = [c for c in node.named_children if c.type == "variable_declarator"]
+    return bool(declarators) and all(
+        (value := d.child_by_field_name("value")) is not None and _is_data(value)
+        for d in declarators
+    )
+
+
 def _is_runtime_statement(parsed: ParsedSource, node) -> bool:
     if node.type in _TYPE_ONLY_STATEMENTS or directive(parsed, node) is not None:
         return False
-    if _is_shape_class(node, node):
+    if _is_shape_class(node, node) or _is_data_declaration(node):
         return False
     if node.type != "export_statement":
         return True
@@ -216,13 +266,17 @@ def _is_runtime_statement(parsed: ParsedSource, node) -> bool:
         return False  # re-export
     declaration = node.child_by_field_name("declaration")
     if declaration is not None:
-        return declaration.type not in _TYPE_ONLY_STATEMENTS and not _is_shape_class(
-            node, declaration
+        return (
+            declaration.type not in _TYPE_ONLY_STATEMENTS
+            and not _is_shape_class(node, declaration)
+            and not _is_data_declaration(declaration)
         )
-    # ``export { a }`` forwards a binding; ``export default <expr>`` / ``export =`` run code.
-    return node.child_by_field_name("value") is not None or not any(
-        child.type == "export_clause" for child in node.named_children
-    )
+    # ``export { a }`` and ``export default a`` forward a binding;
+    # ``export default <expr>`` / ``export =`` run code.
+    value = node.child_by_field_name("value")
+    if value is not None:
+        return value.type != "identifier"
+    return not any(child.type == "export_clause" for child in node.named_children)
 
 
 def _has_testable_logic_lines(content: str) -> bool:
@@ -315,6 +369,39 @@ def is_runtime_entrypoint(filepath: str, content: str) -> bool:
     return ("serve((" in lowered or "serve (" in lowered) and (
         "deno.land/std/http/server" in lowered or "jsr:@std/http/server" in lowered
     )
+
+
+def is_served_asset(filepath: str) -> bool:
+    """A file in a static directory the package's framework serves by URL
+    (Next's ``public/``, SvelteKit's ``static/``): an asset, not a module."""
+    package = _package_dir(filepath)
+    try:
+        relative = Path(resolve_path(filepath)).relative_to(package).as_posix()
+    except ValueError:
+        return False
+    return any(
+        relative.startswith(tuple(d + "/" for d in convention.static_dirs))
+        and _framework_applies(convention, package)
+        for convention in framework_entry_conventions()
+        if convention.static_dirs
+    )
+
+
+@lru_cache(maxsize=256)
+def _framework_applies(convention, package: str) -> bool:
+    return convention.applies_to(Path(package))
+
+
+_INTEGRATION_RE = re.compile(r"(?:^|[./_-])(?:integration|e2e)(?=[./_-])")
+
+
+def is_integration_test(test_path: str) -> bool:
+    """``x.integration.test.ts``, ``e2e/x.spec.ts``: a test driving the composed stack."""
+    posix = test_path.replace("\\", "/")
+    return any(
+        part in ("integration", "__integration__", "e2e")
+        for part in posix.split("/")[:-1]
+    ) or bool(_INTEGRATION_RE.search(os.path.basename(posix)))
 
 
 def public_entry_files(production_files: set[str]) -> set[str]:

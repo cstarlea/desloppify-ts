@@ -7,7 +7,11 @@ import math
 from desloppify.base.discovery.paths import get_project_root
 from desloppify.engine.policy.zones import FileZoneMap, Zone
 
-from .heuristics import _has_testable_logic, _is_runtime_entrypoint
+from .heuristics import (
+    _has_testable_logic,
+    _is_runtime_entrypoint,
+    _is_served_asset,
+)
 from .metrics import (
     _COMPLEXITY_TIER_UPGRADE,
     _MIN_LOC,
@@ -70,7 +74,9 @@ def _discover_scorable_and_tests(
     scorable = {
         filepath
         for filepath in zone_map.include_only(all_files, Zone.PRODUCTION)
-        if _file_loc(filepath) >= _MIN_LOC and _has_testable_logic(filepath, lang_name)
+        if _file_loc(filepath) >= _MIN_LOC
+        and _has_testable_logic(filepath, lang_name)
+        and not _is_served_asset(filepath, lang_name)
     }
 
     potential = round(sum(min(math.sqrt(_file_loc(f)), 50) for f in scorable))

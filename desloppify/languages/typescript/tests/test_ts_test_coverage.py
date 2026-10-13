@@ -249,11 +249,11 @@ def test_type_only_files_have_no_testable_logic(content):
 @pytest.mark.parametrize(
     "content",
     [
-        "export type A =\n  | 'a'\n  | 'b';\nexport const a: A = 'a';\n",
+        "export type A =\n  | 'a'\n  | 'b';\nexport const a: A = pick('a');\n",
         "export enum Color {\n  Red,\n}\n",
         "export default {\n  a: 1,\n};\n",
         "export default function () {\n  return 1;\n}\n",
-        "const a = 1;\nexport { a };\n",
+        "const a = make();\nexport { a };\n",
     ],
 )
 def test_runtime_statements_are_testable_logic(content):

@@ -127,13 +127,6 @@
       "summary": "Untested module (13 LOC, 1 importers)"
     },
     {
-      "id": "test_coverage::src/lib/constants.ts::untested_module",
-      "tier": 3,
-      "confidence": "high",
-      "zone": "production",
-      "summary": "Untested module (11 LOC, 0 importers)"
-    },
-    {
       "id": "test_coverage::src/lib/notifications.ts::untested_module",
       "tier": 3,
       "confidence": "high",
@@ -153,20 +146,6 @@
       "confidence": "high",
       "zone": "production",
       "summary": "Untested module (10 LOC, 2 importers)"
-    },
-    {
-      "id": "test_coverage::src/locales/en.ts::untested_module",
-      "tier": 3,
-      "confidence": "high",
-      "zone": "production",
-      "summary": "Untested module (11 LOC, 1 importers)"
-    },
-    {
-      "id": "test_coverage::src/locales/fr.ts::untested_module",
-      "tier": 3,
-      "confidence": "high",
-      "zone": "production",
-      "summary": "Untested module (11 LOC, 1 importers)"
     },
     {
       "id": "test_coverage::src/main.tsx::untested_module",
@@ -229,7 +208,7 @@
     "single_use": 9,
     "smells": 18,
     "structural": 18,
-    "test_coverage": 54,
+    "test_coverage": 44,
     "tsconfig_health": 3,
     "unused": 18
   },

@@ -677,7 +677,7 @@ class TestDetectTestCoverage:
 
     def test_quality_issue_placeholder_test(self, tmp_path):
         """Placeholder coverage smoke tests should be flagged explicitly."""
-        prod_f = _write_file(tmp_path, "utils.ts", "export const foo = 1;\n" * 12)
+        prod_f = _write_file(tmp_path, "utils.ts", "export const foo = () => 1;\n" * 12)
         test_f = _write_file(
             tmp_path,
             "utils.test.ts",
@@ -707,7 +707,7 @@ class TestDetectTestCoverage:
         self, tmp_path
     ):
         """A good direct test should suppress placeholder-smoke quality noise."""
-        prod_f = _write_file(tmp_path, "utils.ts", "export const foo = 1;\n" * 12)
+        prod_f = _write_file(tmp_path, "utils.ts", "export const foo = () => 1;\n" * 12)
         placeholder_test = _write_file(
             tmp_path,
             "utils.placeholder.test.ts",
@@ -763,7 +763,7 @@ class TestDetectTestCoverage:
         self, tmp_path
     ):
         """Direct-test quality should produce one representative issue per module."""
-        prod_f = _write_file(tmp_path, "utils.ts", "export const foo = 1;\n" * 12)
+        prod_f = _write_file(tmp_path, "utils.ts", "export const foo = () => 1;\n" * 12)
         placeholder_test = _write_file(
             tmp_path,
             "utils.placeholder.test.ts",

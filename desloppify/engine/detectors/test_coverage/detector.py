@@ -20,7 +20,11 @@ from .discovery import (
     _no_tests_issues,
     _normalize_graph_paths,
 )
-from .heuristics import _has_inline_tests, _public_entry_files
+from .heuristics import (
+    _has_inline_tests,
+    _modules_composed_by_tested_index,
+    _public_entry_files,
+)
 from .issues import (
     _generate_issues,
 )
@@ -108,8 +112,11 @@ def run_test_coverage(
     # A tested public entry exercises what it imports: tests through the
     # package's API count as covering the modules behind it.
     tested_entries = directly_tested & _public_entry_files(production_files, lang_name)
-    covered_via_entry = transitively_tested & transitive_coverage(
-        tested_entries, graph, production_files
+    covered_via_entry = transitively_tested & (
+        transitive_coverage(tested_entries, graph, production_files)
+        | _modules_composed_by_tested_index(
+            test_files, production_files, graph, lang_name
+        )
     )
     transitively_tested -= covered_via_entry
     test_quality = analyze_test_quality(test_files, lang_name)

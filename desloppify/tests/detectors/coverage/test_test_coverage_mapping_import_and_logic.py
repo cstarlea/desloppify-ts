@@ -588,10 +588,10 @@ class TestHasTestableLogic:
         assert _has_testable_logic(f, "typescript") is False
 
     def test_ts_type_with_runtime_export(self, tmp_path):
-        """File with types AND a runtime export has testable logic."""
+        """File with types AND a computed runtime export has testable logic."""
         content = (
             "export interface Foo { bar: string; }\n"
-            "export const DEFAULT_FOO: Foo = { bar: 'hello' };\n"
+            "export const DEFAULT_FOO: Foo = { bar: greet('hello') };\n"
         )
         f = _write_file(tmp_path, "types.ts", content)
         assert _has_testable_logic(f, "typescript") is True
@@ -632,7 +632,9 @@ class TestHasTestableLogic:
 
     def test_ts_barrel_with_runtime_code(self, tmp_path):
         """Barrel file that also has runtime code is testable."""
-        content = "export { Foo } from './foo';\nexport const VERSION = '1.0.0';\n"
+        content = (
+            "export { Foo } from './foo';\nexport const VERSION = read('1.0.0');\n"
+        )
         f = _write_file(tmp_path, "index.ts", content)
         assert _has_testable_logic(f, "typescript") is True
 
