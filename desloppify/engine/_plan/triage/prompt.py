@@ -275,7 +275,7 @@ Available plan tools (the agent executing your plan has access to these):
 - `desloppify plan focus <name>` — focus the queue on one cluster
 - `desloppify plan skip <id> --permanent --note "why" --attest "..."` — permanently dismiss
 - `desloppify plan skip <id> --note "revisit later"` — temporarily defer
-- `desloppify plan resolve <id> --note "what I did" --attest "..."` — mark resolved
+- `desloppify plan resolve <id> --note "what I did" --confirm` — mark resolved
 - `desloppify plan reorder <id> top|bottom|before|after <target>` — reorder
 - `desloppify plan cluster show <name>` — inspect a cluster
 - `desloppify scan` — re-scan after making changes to verify progress

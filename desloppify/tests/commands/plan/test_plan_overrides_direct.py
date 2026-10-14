@@ -156,9 +156,10 @@ def test_override_resolve_cmd_confirm_requires_note(capsys) -> None:
         path=".",
         exclude=None,
     )
-    override_resolve_cmd_mod.cmd_plan_resolve(args)
-    out = capsys.readouterr().out
-    assert "--confirm requires --note" in out
+    with pytest.raises(CommandError) as refused:
+        override_resolve_cmd_mod.cmd_plan_resolve(args)
+    assert refused.value.exit_code == 2
+    assert "--confirm requires --note" in refused.value.message
 
 
 def test_override_resolve_cmd_resolves_state_backed_strategy_item(monkeypatch) -> None:
@@ -501,38 +502,42 @@ def test_cmd_plan_resolve_workflow_gate_integration_paths(monkeypatch, capsys) -
         "queue_order": [resolve_workflow_mod.WORKFLOW_CREATE_PLAN_ID],
         "epic_triage_meta": {"triage_stages": {}},
     }
-    override_resolve_cmd_mod.cmd_plan_resolve(
-        argparse.Namespace(
-            patterns=[resolve_workflow_mod.WORKFLOW_CREATE_PLAN_ID],
-            attest=None,
-            note=None,
-            confirm=False,
-            force_resolve=False,
-            state=None,
-            lang=None,
-            path=".",
-            exclude=None,
+    with pytest.raises(CommandError) as refused:
+        override_resolve_cmd_mod.cmd_plan_resolve(
+            argparse.Namespace(
+                patterns=[resolve_workflow_mod.WORKFLOW_CREATE_PLAN_ID],
+                attest=None,
+                note=None,
+                confirm=False,
+                force_resolve=False,
+                state=None,
+                lang=None,
+                path=".",
+                exclude=None,
+            )
         )
-    )
+    assert refused.value.exit_code == 2
     out_triage = capsys.readouterr().out
 
     current_plan = {
         "queue_order": [resolve_workflow_mod.WORKFLOW_CREATE_PLAN_ID],
         "epic_triage_meta": {"triage_stages": {}},
     }
-    override_resolve_cmd_mod.cmd_plan_resolve(
-        argparse.Namespace(
-            patterns=[resolve_workflow_mod.WORKFLOW_CREATE_PLAN_ID],
-            attest=None,
-            note="too short",
-            confirm=False,
-            force_resolve=True,
-            state=None,
-            lang=None,
-            path=".",
-            exclude=None,
+    with pytest.raises(CommandError) as refused:
+        override_resolve_cmd_mod.cmd_plan_resolve(
+            argparse.Namespace(
+                patterns=[resolve_workflow_mod.WORKFLOW_CREATE_PLAN_ID],
+                attest=None,
+                note="too short",
+                confirm=False,
+                force_resolve=True,
+                state=None,
+                lang=None,
+                path=".",
+                exclude=None,
+            )
         )
-    )
+    assert refused.value.exit_code == 2
     out_short = capsys.readouterr().out
 
     current_plan = {
@@ -545,19 +550,21 @@ def test_cmd_plan_resolve_workflow_gate_integration_paths(monkeypatch, capsys) -
         "scan_gate_skipped": False,
     }
     state["scan_count"] = 4
-    override_resolve_cmd_mod.cmd_plan_resolve(
-        argparse.Namespace(
-            patterns=[resolve_workflow_mod.WORKFLOW_SCORE_CHECKPOINT_ID],
-            attest=None,
-            note=None,
-            confirm=False,
-            force_resolve=False,
-            state=None,
-            lang=None,
-            path=".",
-            exclude=None,
+    with pytest.raises(CommandError) as refused:
+        override_resolve_cmd_mod.cmd_plan_resolve(
+            argparse.Namespace(
+                patterns=[resolve_workflow_mod.WORKFLOW_SCORE_CHECKPOINT_ID],
+                attest=None,
+                note=None,
+                confirm=False,
+                force_resolve=False,
+                state=None,
+                lang=None,
+                path=".",
+                exclude=None,
+            )
         )
-    )
+    assert refused.value.exit_code == 2
     out_scan = capsys.readouterr().out
 
     assert "triage not complete" in out_triage
@@ -607,11 +614,12 @@ def test_override_misc_focus_and_scan_gate_paths(monkeypatch, capsys) -> None:
     out_blocked = capsys.readouterr().out
     assert "Scan gate: BLOCKED" in out_blocked
 
-    override_misc_mod.cmd_plan_scan_gate(
-        argparse.Namespace(skip=True, note="too short")
-    )
-    out_short = capsys.readouterr().out
-    assert "requires --note with at least 50 chars" in out_short
+    with pytest.raises(CommandError) as refused:
+        override_misc_mod.cmd_plan_scan_gate(
+            argparse.Namespace(skip=True, note="too short")
+        )
+    assert refused.value.exit_code == 2
+    assert "requires --note with at least 50 chars" in refused.value.message
 
     long_note = (
         "Skipping scan gate in this direct test because we are verifying "

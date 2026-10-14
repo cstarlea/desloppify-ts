@@ -40,7 +40,7 @@ typical workflow:
   desloppify plan cluster create ...    # group related issues
   desloppify plan focus <cluster>       # narrow scope
   desloppify next                       # work on the next item
-  desloppify plan resolve <id> --attest .. # mark as fixed
+  desloppify plan resolve <id> --note "..." --confirm  # mark as fixed
 
 patterns (used by reorder, skip, resolve, describe, note, etc.):
   Patterns match issues by detector, file, ID prefix, glob, or name.

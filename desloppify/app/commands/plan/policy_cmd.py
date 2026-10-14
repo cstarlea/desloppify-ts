@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 
+from desloppify.base.exception_sets import CommandError
 from desloppify.base.output.terminal import colorize
 from desloppify.engine.plan_state import (
     add_rule,
@@ -27,8 +28,7 @@ def cmd_policy_dispatch(args: argparse.Namespace) -> None:
 def _cmd_policy_add(args: argparse.Namespace) -> None:
     text = getattr(args, "rule_text", "")
     if not text or not text.strip():
-        print(colorize("  Rule text is required.", "red"))
-        return
+        raise CommandError("Rule text is required.", exit_code=2)
     result = load_policy_result()
     _print_policy_load_warning(result)
     policy = result.policy
@@ -62,8 +62,7 @@ def _cmd_policy_list(_args: argparse.Namespace) -> None:
 def _cmd_policy_remove(args: argparse.Namespace) -> None:
     index = getattr(args, "rule_index", None)
     if index is None:
-        print(colorize("  --index is required for remove.", "red"))
-        return
+        raise CommandError("--index is required for remove.", exit_code=2)
     result = load_policy_result()
     _print_policy_load_warning(result)
     policy = result.policy

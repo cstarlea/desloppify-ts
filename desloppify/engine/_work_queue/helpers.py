@@ -23,6 +23,10 @@ ATTEST_EXAMPLE = (
     "I have actually [DESCRIBE THE CONCRETE CHANGE YOU MADE] "
     "and I am not gaming the score by resolving without fixing."
 )
+SKIP_ATTEST_EXAMPLE = (
+    "I have reviewed this against the code and I am not gaming the score "
+    "by skipping a real defect."
+)
 
 
 def detail_dict(item: WorkQueueItem | dict[str, Any]) -> dict[str, Any]:
@@ -183,6 +187,7 @@ def primary_command_for_issue(
 __all__ = [
     "ALL_STATUSES",
     "ATTEST_EXAMPLE",
+    "SKIP_ATTEST_EXAMPLE",
     "detail_dict",
     "is_auto_fix_item",
     "is_review_issue",

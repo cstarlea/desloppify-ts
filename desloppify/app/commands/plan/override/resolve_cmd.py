@@ -4,16 +4,20 @@ from __future__ import annotations
 
 import argparse
 import logging
+import shlex
+import sys
+from typing import NoReturn
 
 from desloppify.app.commands.helpers.attestation import (
-    show_attestation_requirement,
-    show_note_length_requirement,
+    _MIN_NOTE_LENGTH,
+    attestation_refusal,
+    note_length_refusal,
     validate_attestation,
     validate_note_length,
 )
 from desloppify.app.commands.helpers.command_runtime import command_runtime
 from desloppify.app.commands.resolve.cmd import cmd_resolve
-from desloppify.base.exception_sets import PLAN_LOAD_EXCEPTIONS
+from desloppify.base.exception_sets import PLAN_LOAD_EXCEPTIONS, CommandError
 from desloppify.base.output.fallbacks import log_best_effort_failure
 from desloppify.base.output.terminal import colorize
 from desloppify.engine._work_queue.core import ATTEST_EXAMPLE
@@ -32,6 +36,40 @@ from .resolve_workflow import resolve_workflow_patterns
 logger = logging.getLogger(__name__)
 
 
+def confirm_command(patterns: list[str], note: str | None = None) -> str:
+    """The `plan resolve --confirm` command that works for ``patterns``."""
+    targets = " ".join(shlex.quote(pattern) for pattern in patterns) or "<id>"
+    note_arg = shlex.quote(note) if note else '"<what you did>"'
+    return f"desloppify plan resolve {targets} --note {note_arg} --confirm"
+
+
+def _print_hint(message: str) -> None:
+    print(colorize(message, "dim"), file=sys.stderr)
+
+
+def _refuse_note(patterns: list[str], note: str | None) -> NoReturn:
+    _print_hint(
+        f"  Describe the change in at least {_MIN_NOTE_LENGTH} characters, then run:"
+    )
+    _print_hint(f"    {confirm_command(patterns)}")
+    raise CommandError(note_length_refusal(note), exit_code=2)
+
+
+def _refuse_attestation(
+    patterns: list[str], note: str | None, attestation: str | None
+) -> NoReturn:
+    _print_hint("  Use --confirm to attest with your note:")
+    _print_hint(f"    {confirm_command(patterns, note)}")
+    _print_hint(
+        "  Or pass --attest yourself, with the keywords 'I have actually' and "
+        "'not gaming':"
+    )
+    _print_hint(f'    --attest "{ATTEST_EXAMPLE}"')
+    if not attestation:
+        raise CommandError("Plan resolve requires --confirm or --attest.", exit_code=2)
+    raise CommandError(attestation_refusal("Plan resolve", attestation), exit_code=2)
+
+
 def cmd_plan_resolve(args: argparse.Namespace) -> None:
     """Mark issues as fixed and delegate to resolve command UX."""
     patterns: list[str] = getattr(args, "patterns", [])
@@ -40,10 +78,10 @@ def cmd_plan_resolve(args: argparse.Namespace) -> None:
 
     if getattr(args, "confirm", False):
         if not note:
-            print(
-                colorize("  --confirm requires --note to describe what you did.", "red")
+            _print_hint(f"    {confirm_command(patterns)}")
+            raise CommandError(
+                "--confirm requires --note to describe what you did.", exit_code=2
             )
-            return
         attestation = f"I have actually {note} and I am not gaming the score."
         args.attest = attestation
 
@@ -56,19 +94,19 @@ def cmd_plan_resolve(args: argparse.Namespace) -> None:
             note=note,
         )
         if workflow_outcome.status == "blocked":
-            return
+            raise CommandError(
+                f"Not resolved: {', '.join(synthetic_ids)}.", exit_code=2
+            )
         if workflow_outcome.status == "handled":
             return
         patterns = workflow_outcome.remaining_patterns
         args.patterns = patterns
 
     if not validate_note_length(note):
-        show_note_length_requirement(note)
-        return
+        _refuse_note(patterns, note)
 
     if not validate_attestation(attestation):
-        show_attestation_requirement("Plan resolve", attestation, ATTEST_EXAMPLE)
-        return
+        _refuse_attestation(patterns, note, attestation)
 
     plan: dict | None = None
     try:
@@ -76,7 +114,7 @@ def cmd_plan_resolve(args: argparse.Namespace) -> None:
         state = runtime.state
         plan = load_plan()
         if check_cluster_guard(patterns, plan, state):
-            return
+            raise CommandError("Cannot resolve an empty cluster.", exit_code=2)
     except PLAN_LOAD_EXCEPTIONS:
         plan = None
 
@@ -117,4 +155,4 @@ def cmd_plan_resolve(args: argparse.Namespace) -> None:
     cmd_resolve(resolve_args)
 
 
-__all__ = ["cmd_plan_resolve"]
+__all__ = ["cmd_plan_resolve", "confirm_command"]

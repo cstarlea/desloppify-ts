@@ -8,6 +8,7 @@ from desloppify.app.commands.helpers.command_runtime import command_runtime
 from desloppify.app.commands.helpers.state import require_issue_inventory
 from desloppify.app.commands.plan.shared.cluster_membership import cluster_issue_ids
 from desloppify.app.commands.plan.shared.patterns import resolve_ids_from_patterns
+from desloppify.base.exception_sets import CommandError
 from desloppify.base.output.terminal import colorize
 from desloppify.engine._plan.promoted_ids import add_promoted_ids
 from desloppify.engine.plan_ops import (
@@ -64,21 +65,15 @@ def cmd_plan_reorder(args: argparse.Namespace) -> None:
     target: str | None = getattr(args, "target", None)
 
     if position in ("before", "after") and target is None:
-        print(
-            colorize(
-                f"  '{position}' requires --target (-t). Example: plan reorder <pat> {position} -t <id>",
-                "red",
-            )
+        raise CommandError(
+            f"'{position}' requires --target (-t). Example: plan reorder <pat> {position} -t <id>",
+            exit_code=2,
         )
-        return
     if position in ("up", "down") and target is None:
-        print(
-            colorize(
-                f"  '{position}' requires --target (-t) with an integer offset. Example: plan reorder <pat> {position} -t 3",
-                "red",
-            )
+        raise CommandError(
+            f"'{position}' requires --target (-t) with an integer offset. Example: plan reorder <pat> {position} -t 3",
+            exit_code=2,
         )
-        return
 
     plan = load_plan()
 
@@ -93,9 +88,8 @@ def cmd_plan_reorder(args: argparse.Namespace) -> None:
     if position in ("up", "down") and target is not None:
         try:
             offset = int(target)
-        except (ValueError, TypeError):
-            print(colorize(f"  Invalid offset: {target}", "red"))
-            return
+        except (ValueError, TypeError) as exc:
+            raise CommandError(f"Invalid offset: {target}", exit_code=2) from exc
         target = None
 
     count = move_items(plan, issue_ids, position, target=target, offset=offset)
@@ -121,13 +115,10 @@ def cmd_plan_promote(args: argparse.Namespace) -> None:
     target: str | None = getattr(args, "target", None)
 
     if position in ("before", "after") and target is None:
-        print(
-            colorize(
-                f"  '{position}' requires --target (-t). Example: plan promote <pat> {position} -t <id>",
-                "red",
-            )
+        raise CommandError(
+            f"'{position}' requires --target (-t). Example: plan promote <pat> {position} -t <id>",
+            exit_code=2,
         )
-        return
 
     plan = load_plan()
     target = resolve_target(plan, target, position)

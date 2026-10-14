@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import argparse
 
+import pytest
+
 import desloppify.app.commands.plan.override.resolve_cmd as override_mod
 import desloppify.app.commands.plan.override.resolve_workflow as override_workflow_mod
 from desloppify.app.commands.plan.override.resolve_helpers import (
     blocked_triage_stages as _blocked_triage_stages,
 )
+from desloppify.base.exception_sets import CommandError
 from desloppify.engine._plan.constants import TRIAGE_STAGE_IDS
 from desloppify.engine._plan.schema import empty_plan
 
@@ -112,7 +115,9 @@ def test_plan_resolve_rejects_blocked_triage_stage(monkeypatch, capsys):
     )
 
     args = _args(patterns=["triage::reflect"])
-    override_mod.cmd_plan_resolve(args)
+    with pytest.raises(CommandError) as refused:
+        override_mod.cmd_plan_resolve(args)
+    assert refused.value.exit_code == 2
 
     out = capsys.readouterr().out
     assert "Cannot resolve" in out
@@ -181,7 +186,9 @@ def test_plan_resolve_observe_requires_strategize(monkeypatch, capsys):
     )
 
     args = _args(patterns=["triage::observe"])
-    override_mod.cmd_plan_resolve(args)
+    with pytest.raises(CommandError) as refused:
+        override_mod.cmd_plan_resolve(args)
+    assert refused.value.exit_code == 2
 
     out = capsys.readouterr().out
     assert "Cannot resolve" in out

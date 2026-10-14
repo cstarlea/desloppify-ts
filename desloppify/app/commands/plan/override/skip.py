@@ -24,6 +24,7 @@ from desloppify.engine._plan.refresh_lifecycle import (
     invalidate_postflight_scan,
 )
 from desloppify.engine._plan.sync import reconcile_plan
+from desloppify.engine._work_queue.core import SKIP_ATTEST_EXAMPLE
 from desloppify.engine.plan_ops import (
     SKIP_KIND_LABELS,
     SKIPPABLE_STATUSES,
@@ -51,10 +52,6 @@ logger = logging.getLogger(__name__)
 _BULK_SKIP_THRESHOLD = 5
 _TRIAGE_SKIP_ATTESTATION_PHRASES = ("not gaming",)
 _TRIAGE_SKIP_ATTESTATION_ALTERNATIVES = (("reviewed", "i have actually"),)
-_TRIAGE_SKIP_ATTEST_EXAMPLE = (
-    "I have reviewed this triage skip against the code and I am not gaming "
-    "the score by suppressing a real defect."
-)
 
 
 def _validate_skip_requirements(
@@ -73,7 +70,7 @@ def _validate_skip_requirements(
         show_attestation_requirement(
             "Permanent skip" if kind == "permanent" else "False positive",
             attestation,
-            _TRIAGE_SKIP_ATTEST_EXAMPLE,
+            SKIP_ATTEST_EXAMPLE,
             required_phrases=_TRIAGE_SKIP_ATTESTATION_PHRASES,
             any_of_phrases=_TRIAGE_SKIP_ATTESTATION_ALTERNATIVES,
         )
@@ -191,7 +188,8 @@ def _warn_or_block_bulk_skip(issue_ids: list[str], *, confirm: bool) -> None:
         return
     raise CommandError(
         f"Skipping {len(issue_ids)} items requires --confirm. "
-        "Review the items first, or skip individually."
+        "Review the items first, or skip individually.",
+        exit_code=2,
     )
 
 
@@ -236,7 +234,7 @@ def cmd_plan_skip(args: argparse.Namespace) -> None:
         reason=reason,
         attestation=attestation,
     ):
-        return
+        raise CommandError("Deferral not confirmed.", exit_code=2)
     if not _validate_skip_requirements(kind=kind, attestation=attestation, note=note):
         raise CommandError(
             "Invalid plan skip attestation or note.",

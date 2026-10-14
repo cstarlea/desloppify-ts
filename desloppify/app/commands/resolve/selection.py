@@ -40,7 +40,8 @@ class ResolveQueryContext:
 def _validate_resolve_inputs(args: argparse.Namespace, attestation: str | None) -> None:
     if args.status == "wontfix" and not args.note:
         raise CommandError(
-            "Wontfix items become technical debt. Add --note to record your reasoning for future review."
+            "Wontfix items become technical debt. Add --note to record your reasoning for future review.",
+            exit_code=2,
         )
     if args.status == "open":
         return
@@ -50,7 +51,7 @@ def _validate_resolve_inputs(args: argparse.Namespace, attestation: str | None) 
             attestation,
             ATTEST_EXAMPLE,
         )
-        raise CommandError("Manual resolve requires a valid attestation.")
+        raise CommandError("Manual resolve requires a valid attestation.", exit_code=2)
 
 
 def _previous_score_snapshot(state: dict) -> state_mod.ScoreSnapshot:
@@ -117,5 +118,6 @@ def _enforce_batch_wontfix_confirmation(
             f"Estimated strict-score debt added now: {strict_delta:.1f} points."
         )
     raise CommandError(
-        "Re-run with --confirm-batch-wontfix if this debt is intentional."
+        "Re-run with --confirm-batch-wontfix if this debt is intentional.",
+        exit_code=2,
     )

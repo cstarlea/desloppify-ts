@@ -66,7 +66,7 @@ class TestCmdResolve:
 
         with pytest.raises(CommandError) as exc_info:
             cmd_resolve(FakeArgs())
-        assert exc_info.value.exit_code == 1
+        assert exc_info.value.exit_code == 2
 
     def test_fixed_without_attestation_exits(self, monkeypatch, capsys):
         monkeypatch.setattr(resolve_mod, "state_path", lambda a: "/tmp/fake.json")
@@ -81,7 +81,7 @@ class TestCmdResolve:
 
         with pytest.raises(CommandError) as exc_info:
             cmd_resolve(FakeArgs())
-        assert exc_info.value.exit_code == 1
+        assert exc_info.value.exit_code == 2
         err = capsys.readouterr().err
         assert "Manual resolve requires --attest" in err
         assert "Required keywords: 'I have actually' and 'not gaming'." in err
@@ -100,7 +100,7 @@ class TestCmdResolve:
 
         with pytest.raises(CommandError) as exc_info:
             cmd_resolve(FakeArgs())
-        assert exc_info.value.exit_code == 1
+        assert exc_info.value.exit_code == 2
         err = capsys.readouterr().err
         assert "missing required keyword(s)" in err
         assert "'i have actually'" in err
@@ -350,7 +350,7 @@ class TestCmdResolve:
 
         with pytest.raises(CommandError) as exc_info:
             cmd_resolve(FakeArgs())
-        assert exc_info.value.exit_code == 1
+        assert exc_info.value.exit_code == 2
         err = capsys.readouterr().err
         assert "Large wontfix batch detected" in err
         assert "Estimated strict-score debt added now: 2.4 points." in err

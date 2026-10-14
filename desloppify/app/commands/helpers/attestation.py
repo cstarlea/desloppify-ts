@@ -50,6 +50,22 @@ def validate_attestation(
     )
 
 
+def _attestation_problem(
+    label: str, attestation: str | None, missing: list[str]
+) -> str:
+    if not attestation:
+        return f"{label} requires --attest."
+    missing_str = ", ".join(f"'{keyword}'" for keyword in missing)
+    return f"{label} attestation is missing required keyword(s): {missing_str}."
+
+
+def attestation_refusal(label: str, attestation: str | None) -> str:
+    """One-line reason ``attestation`` fails the default keyword check."""
+    return _attestation_problem(
+        label, attestation, _missing_attestation_keywords(attestation)
+    )
+
+
 def show_attestation_requirement(
     label: str,
     attestation: str | None,
@@ -64,13 +80,8 @@ def show_attestation_requirement(
         required_phrases=phrases,
         any_of_phrases=any_of_phrases,
     )
-    if not attestation:
-        _emit_warning(f"{label} requires --attest.")
-    elif missing:
-        missing_str = ", ".join(f"'{keyword}'" for keyword in missing)
-        _emit_warning(
-            f"{label} attestation is missing required keyword(s): {missing_str}."
-        )
+    if not attestation or missing:
+        _emit_warning(_attestation_problem(label, attestation, missing))
     display_phrases = list(
         _ATTESTATION_KEYWORD_HINT
         if required_phrases is None
@@ -99,17 +110,24 @@ def validate_note_length(note: str | None) -> bool:
     return note is not None and len(note.strip()) >= _MIN_NOTE_LENGTH
 
 
+def note_length_refusal(note: str | None) -> str:
+    """One-line reason ``note`` fails the minimum length check."""
+    current = len((note or "").strip())
+    return (
+        f"Note must be at least {_MIN_NOTE_LENGTH} characters (got {current}). "
+        "Describe what you actually did."
+    )
+
+
 def show_note_length_requirement(note: str | None) -> None:
     """Emit a warning about minimum note length."""
-    current = len((note or "").strip())
-    _emit_warning(
-        f"Note must be at least {_MIN_NOTE_LENGTH} characters (got {current}). "
-        f"Describe what you actually did."
-    )
+    _emit_warning(note_length_refusal(note))
 
 
 __all__ = [
     "_MIN_NOTE_LENGTH",
+    "attestation_refusal",
+    "note_length_refusal",
     "show_attestation_requirement",
     "show_note_length_requirement",
     "validate_attestation",

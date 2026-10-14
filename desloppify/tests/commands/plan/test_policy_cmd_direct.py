@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import argparse
 
+import pytest
+
 import desloppify.app.commands.plan.policy_cmd as policy_cmd_mod
+from desloppify.base.exception_sets import CommandError
 from desloppify.engine._plan.policy.project import PolicyLoadResult
 
 
@@ -38,9 +41,10 @@ def test_cmd_policy_dispatch_routes_add_and_remove(monkeypatch) -> None:
 
 
 def test_policy_add_requires_non_blank_text(capsys) -> None:
-    policy_cmd_mod._cmd_policy_add(_args(rule_text="  "))
-    out = capsys.readouterr().out
-    assert "Rule text is required" in out
+    with pytest.raises(CommandError) as refused:
+        policy_cmd_mod._cmd_policy_add(_args(rule_text="  "))
+    assert refused.value.exit_code == 2
+    assert "Rule text is required" in refused.value.message
 
 
 def test_policy_add_saves_and_reports_new_rule(monkeypatch, capsys) -> None:
@@ -104,9 +108,10 @@ def test_policy_remove_validates_index_and_saves_when_found(
         policy_cmd_mod, "save_policy", lambda policy: saved.append(policy)
     )
 
-    policy_cmd_mod._cmd_policy_remove(_args(rule_index=None))
-    out_missing_index = capsys.readouterr().out
-    assert "--index is required" in out_missing_index
+    with pytest.raises(CommandError) as refused:
+        policy_cmd_mod._cmd_policy_remove(_args(rule_index=None))
+    assert refused.value.exit_code == 2
+    assert "--index is required" in refused.value.message
 
     monkeypatch.setattr(policy_cmd_mod, "remove_rule", lambda _policy, _idx: None)
     policy_cmd_mod._cmd_policy_remove(_args(rule_index=9))
