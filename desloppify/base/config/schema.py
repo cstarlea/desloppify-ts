@@ -109,7 +109,8 @@ CONFIG_SCHEMA: dict[str, ConfigKey] = {
     "commit_message_template": ConfigKey(
         str,
         "desloppify: {status} {count} issue(s) — {summary}",
-        "Template for suggested commit messages",
+        "Template for suggested commit messages ({status} is autofix or fix;"
+        " {autofix_count} and {manual_count} split {count})",
     ),
     "transition_messages": ConfigKey(
         dict,

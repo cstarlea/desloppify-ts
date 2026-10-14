@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from desloppify.app.commands.helpers.rendering import rating_label
 from desloppify.base.discovery.paths import read_code_snippet
+from desloppify.base.enums import resolved_statuses
 from desloppify.base.output.terminal import colorize, log
 from desloppify.base.output.user_message import print_user_message
 from desloppify.engine._scoring.results.core import (
@@ -335,10 +336,18 @@ def _render_cluster_drill_header(
     items: list[dict],
     plan: dict,
     cluster_name: str,
+    issues: dict,
 ) -> bool:
     clusters = plan.get("clusters", {})
     cluster_data = clusters.get(cluster_name, {})
-    total = len(cluster_data.get("issue_ids", []))
+    done = resolved_statuses()
+    total = sum(
+        1
+        for issue_id in cluster_data.get("issue_ids", [])
+        if issues.get(issue_id, {}).get("status") not in done
+    )
+    if total == 0:
+        return False
     desc = cluster_data.get("description") or ""
     shown = f", showing {len(items)}" if len(items) < total else ""
     print(
@@ -392,6 +401,7 @@ def render_terminal_items(
             items=items,
             plan=plan,
             cluster_name=effective_cluster,
+            issues=issues_scoped,
         )
 
     if group != "item":

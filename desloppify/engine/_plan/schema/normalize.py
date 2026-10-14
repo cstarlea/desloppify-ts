@@ -42,6 +42,7 @@ CONTAINER_TYPES: tuple[tuple[str, type[list] | type[dict]], ...] = (
     ("epic_triage_meta", dict),
     ("commit_log", list),
     ("uncommitted_issues", list),
+    ("uncommitted_autofix", list),
 )
 
 

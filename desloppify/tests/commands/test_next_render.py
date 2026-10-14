@@ -754,3 +754,38 @@ def test_render_plan_note_shown(monkeypatch, capsys) -> None:
     )
     out = capsys.readouterr().out
     assert "Note: Handle edge case first" in out
+
+
+def test_cluster_drill_header_counts_only_unresolved_members(
+    monkeypatch, capsys
+) -> None:
+    """Members already resolved in state are not "remaining"."""
+    monkeypatch.setattr(render_mod, "read_code_snippet", lambda *a, **k: None)
+    monkeypatch.setattr(render_mod, "colorize", lambda t, _s: t)
+    ids = ["smells::a.py::f1", "smells::b.py::f2", "smells::c.py::f3"]
+    issues = {
+        ids[0]: {"status": "fixed"},
+        ids[1]: {"status": "open"},
+        ids[2]: {"status": "open"},
+    }
+    plan = {
+        "active_cluster": "import-cleanup",
+        "clusters": {"import-cleanup": {"issue_ids": ids}},
+    }
+
+    render_mod.render_terminal_items(
+        [_issue_item(id=ids[1])], {}, issues, group="item", explain=False, plan=plan
+    )
+    out = capsys.readouterr().out
+    assert "Cluster: import-cleanup (2 remaining, showing 1)" in out
+
+    issues[ids[1]]["status"] = issues[ids[2]]["status"] = "fixed"
+    render_mod.render_terminal_items(
+        [_issue_item(id="workflow::run-scan")],
+        {},
+        issues,
+        group="item",
+        explain=False,
+        plan=plan,
+    )
+    assert "Cluster: import-cleanup" not in capsys.readouterr().out

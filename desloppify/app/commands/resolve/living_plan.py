@@ -114,8 +114,15 @@ def update_living_plan_after_resolve(
     attestation: str | None,
     state: dict | None = None,
     state_file: Path | str | None = None,
+    autofix: bool = False,
 ) -> tuple[dict | None, ClusterContext]:
-    """Apply resolve side effects to the living plan when it exists."""
+    """Apply resolve side effects to the living plan when it exists.
+
+    ``autofix``: `desloppify autofix` resolved the issues, so the log entry
+    and commit tracking credit autofix rather than the user.
+    """
+    actor = "autofix" if autofix else "user"
+    command = "autofix" if autofix else "resolve"
     plan_path = plan_path_for_state(Path(state_file)) if state_file else None
     plan = None
     ctx = ClusterContext(
@@ -134,9 +141,9 @@ def update_living_plan_after_resolve(
             print(colorize(msg, "green"))
         append_log_entry(
             plan,
-            "resolve",
+            command,
             issue_ids=all_resolved,
-            actor="user",
+            actor=actor,
             note=getattr(args, "note", None),
             detail={"status": args.status, "attestation": attestation},
         )
@@ -147,7 +154,7 @@ def update_living_plan_after_resolve(
                     "cluster_done",
                     issue_ids=all_resolved,
                     cluster_name=cluster_name,
-                    actor="user",
+                    actor=actor,
                 )
                 # Mark cluster as done so cluster_is_active() returns False
                 plan["clusters"][cluster_name]["execution_status"] = (
@@ -156,11 +163,11 @@ def update_living_plan_after_resolve(
             # Clear focus when the active cluster is done
             if plan.get("active_cluster") in set(completed_clusters):
                 plan["active_cluster"] = None
-        elif ctx.cluster_name and ctx.cluster_remaining > 0:
+        elif not autofix and ctx.cluster_name and ctx.cluster_remaining > 0:
             # Auto-focus on the cluster while there's still work in it
             plan["active_cluster"] = ctx.cluster_name
         if args.status == "fixed":
-            add_uncommitted_issues(plan, all_resolved)
+            add_uncommitted_issues(plan, all_resolved, autofix=autofix)
         elif args.status == "open":
             purge_uncommitted_ids(plan, all_resolved)
         transition_phase: str | None = None
@@ -182,17 +189,17 @@ def update_living_plan_after_resolve(
                 maybe_append_execution_drain(
                     state or {},
                     plan,
-                    trigger_action="resolve",
+                    trigger_action=command,
                     issue_ids=all_resolved,
                     cluster_name=ctx.cluster_name,
                     phase_before=phase_before,
-                    source_command="resolve",
+                    source_command=command,
                 )
                 maybe_append_entered_planning(
                     state,
                     plan,
-                    source_command="resolve",
-                    trigger_action="resolve",
+                    source_command=command,
+                    trigger_action=command,
                     issue_ids=all_resolved,
                     phase_before=phase_before,
                 )
@@ -210,7 +217,7 @@ def update_living_plan_after_resolve(
     except PLAN_LOAD_EXCEPTIONS as exc:
         _logger.debug("plan update failed after resolve", exc_info=True)
         warn_plan_load_degraded_once(
-            command_label="resolve",
+            command_label=command,
             error_kind=exc.__class__.__name__,
             behavior="Living-plan queue metadata could not be updated after resolve.",
         )

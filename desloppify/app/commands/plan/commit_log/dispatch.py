@@ -17,6 +17,7 @@ from desloppify.engine.plan_state import (
     load_plan,
     record_commit,
     save_plan,
+    uncommitted_source_note,
 )
 from desloppify.state_io import load_state
 
@@ -43,7 +44,10 @@ def _cmd_commit_log_status(plan: dict) -> None:
         print(f"  PR:      #{pr}")
 
     uncommitted = get_uncommitted_issues(plan)
-    print(f"\n  Uncommitted:  {summary['uncommitted']} issue(s)")
+    print(
+        f"\n  Uncommitted:  {summary['uncommitted']} issue(s)"
+        f"{uncommitted_source_note(plan)}"
+    )
     for fid in uncommitted[:10]:
         print(f"    {fid}")
     if len(uncommitted) > 10:

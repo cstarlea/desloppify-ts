@@ -14,6 +14,9 @@ from desloppify.app.commands.helpers.lang import resolve_lang
 from desloppify.app.commands.helpers.query import write_query
 from desloppify.app.commands.helpers.queue_progress import show_score_with_plan_context
 from desloppify.app.commands.helpers.state import state_path
+from desloppify.app.commands.resolve.living_plan import (
+    update_living_plan_after_resolve,
+)
 from desloppify.base.discovery.file_paths import rel
 from desloppify.base.output.terminal import colorize
 
@@ -98,7 +101,32 @@ def _apply_and_report(
     show_score_with_plan_context(state, prev)
 
     if fixer.post_fix:
+        work_items = state.get("work_items") or state.get("issues", {})
+        open_before = {
+            issue_id
+            for issue_id, issue in work_items.items()
+            if issue.get("status") == "open"
+        }
         fixer.post_fix(path, state, prev.overall or 0, False, lang=lang)
+        work_items = state.get("work_items") or state.get("issues", {})
+        resolved_ids += [
+            issue_id
+            for issue_id in open_before
+            if work_items.get(issue_id, {}).get("status") == "fixed"
+        ]
+        state_mod.save_state(state, state_file)
+
+    if resolved_ids:
+        update_living_plan_after_resolve(
+            args=argparse.Namespace(
+                status="fixed", note=f"desloppify autofix {fixer_name}"
+            ),
+            all_resolved=resolved_ids,
+            attestation=None,
+            state=state,
+            state_file=state_file,
+            autofix=True,
+        )
         state_mod.save_state(state, state_file)
 
     if skip_reasons is None:

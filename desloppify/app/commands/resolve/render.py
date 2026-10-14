@@ -16,7 +16,11 @@ from desloppify.base.exception_sets import PLAN_LOAD_EXCEPTIONS, CommandError
 from desloppify.base.git_context import detect_git_context
 from desloppify.base.output.terminal import colorize
 from desloppify.engine._scoring.policy.core import is_wontfix_debt
-from desloppify.engine.plan_state import get_uncommitted_issues, suggest_commit_message
+from desloppify.engine.plan_state import (
+    get_uncommitted_issues,
+    suggest_commit_message,
+    uncommitted_source_note,
+)
 from desloppify.state_scoring import subjective_unassessed
 
 
@@ -160,11 +164,16 @@ def _print_subjective_reset_hint(
     )
 
 
-def _render_uncommitted_block(uncommitted: list[str], just_resolved: list[str]) -> None:
+def _render_uncommitted_block(
+    uncommitted: list[str], just_resolved: list[str], source_note: str = ""
+) -> None:
     """Print the uncommitted issues section."""
     count = len(uncommitted)
     just_set = set(just_resolved)
-    print(f"\n  Uncommitted work ({count} resolved issue{'s' if count != 1 else ''}):")
+    print(
+        f"\n  Uncommitted work: {count} resolved issue{'s' if count != 1 else ''}"
+        f"{source_note}"
+    )
     for fid in uncommitted[:5]:
         marker = colorize("●", "green") if fid in just_set else "○"
         tag = "  (just now)" if fid in just_set else ""
@@ -220,7 +229,9 @@ def render_commit_guidance(
         if pr_number:
             print(f"  PR: #{pr_number}")
 
-        _render_uncommitted_block(uncommitted, just_resolved)
+        _render_uncommitted_block(
+            uncommitted, just_resolved, uncommitted_source_note(plan)
+        )
         _render_committed_block(plan.get("commit_log", []))
 
         template = config.get(

@@ -239,6 +239,9 @@ def quarantine_malformed_entries(
     _quarantine_list_entries(
         plan, "uncommitted_issues", _id_problem("uncommitted ID"), quarantine
     )
+    _quarantine_list_entries(
+        plan, "uncommitted_autofix", _id_problem("uncommitted ID"), quarantine
+    )
     _quarantine_list_entries(plan, "execution_log", _execution_log_problem, quarantine)
     _quarantine_list_entries(plan, "commit_log", _commit_problem, quarantine)
 
