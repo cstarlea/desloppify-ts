@@ -855,7 +855,7 @@ class TestFunctionShapeOnSyntaxTree:
         ]
 
     def test_concise_async_arrow_without_await_is_flagged(self):
-        content = "export const get = async (id: string) =>\n  fetch(id);\n"
+        content = "export const get = async (id: string) =>\n  cache[id];\n"
         assert _messages(_detect_async_no_await, content, "async_no_await") == [
             (1, "async get has no await")
         ]

@@ -67,6 +67,8 @@ TS_SMELL_CHECKS = [
         "label": "Async functions without await",
         "pattern": None,
         "severity": "medium",
+        # Test stubs and fakes mirror async interfaces with plain values.
+        "skip_in_tests": True,
     },
     {
         "id": "magic_number",
