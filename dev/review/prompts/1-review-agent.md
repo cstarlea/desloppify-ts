@@ -1,11 +1,11 @@
-You are assessing {TYPE} #{NUMBER} for the desloppify project (Python CLI, codebase health tracking).
+You are assessing {TYPE} #{NUMBER} for the desloppify-ts project (Python CLI, codebase health tracking).
 
 Your job: understand this item honestly and assess whether it should be accepted. No bias either way — the goal is making the codebase better, not clearing a queue.
 
 ## Context
 
 - Internal tool, not a library. No backward-compat for APIs/imports.
-- Data migration code (`.desloppify/` state JSON formats) matters — don't break it.
+- Data migration code (`.desloppify-ts/` state JSON formats) matters — don't break it.
 - Many contributions are AI-generated: plausible-looking but solving fake problems. Be skeptical.
 - All open PRs and issues (for spotting potential duplicates by title/description): {FULL_LIST}
 

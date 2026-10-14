@@ -33,7 +33,7 @@ Required jobs:
   - `make tests-full PYTEST_XML=pytest-full.xml`
 - `tests-golden-node`:
   - `make tests-golden-node` (TypeScript golden scans with pinned tsc/knip from
-    `desloppify/languages/typescript/tests/golden/node`)
+    `desloppify_ts/languages/typescript/tests/golden/node`)
 - `package-smoke`:
   - `make package-smoke`
 

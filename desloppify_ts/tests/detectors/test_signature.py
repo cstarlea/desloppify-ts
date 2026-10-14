@@ -1,0 +1,389 @@
+"""Tests for desloppify_ts.engine.detectors.signature — detect_signature_variance."""
+
+from desloppify_ts.engine.detectors.base import FunctionInfo
+from desloppify_ts.engine.detectors.signature import (
+    _ALLOWLIST,
+    detect_signature_variance,
+)
+
+
+def _fn(name, file, params=None, line=1, return_annotation=None):
+    """Helper: create a FunctionInfo with given name, file, and params."""
+    return FunctionInfo(
+        name=name,
+        file=file,
+        line=line,
+        end_line=line + 5,
+        loc=5,
+        body="pass",
+        params=params or [],
+        return_annotation=return_annotation,
+    )
+
+
+# ── Basic variance detection ────────────────────────────────
+
+
+def test_detects_variance_across_files():
+    """Functions with the same name but different params across 3+ files are flagged."""
+    functions = [
+        _fn("process", "a.py", ["data"]),
+        _fn("process", "b.py", ["data", "strict"]),
+        _fn("process", "c.py", ["data"]),
+    ]
+    entries, total = detect_signature_variance(functions)
+    assert total == 3
+    assert len(entries) == 1
+    assert entries[0]["name"] == "process"
+    assert entries[0]["occurrences"] == 3
+    assert entries[0]["file_count"] == 3
+    assert entries[0]["signature_count"] == 2
+
+
+def test_no_variance_identical_signatures():
+    """Identical signatures across 3+ files produce no issues."""
+    functions = [
+        _fn("process", "a.py", ["data", "strict"]),
+        _fn("process", "b.py", ["data", "strict"]),
+        _fn("process", "c.py", ["data", "strict"]),
+    ]
+    entries, total = detect_signature_variance(functions)
+    assert total == 3
+    assert len(entries) == 0
+
+
+def test_fewer_than_min_occurrences_skipped():
+    """Functions in fewer than min_occurrences distinct files are skipped."""
+    functions = [
+        _fn("process", "a.py", ["data"]),
+        _fn("process", "b.py", ["data", "extra"]),
+    ]
+    entries, total = detect_signature_variance(functions)
+    assert len(entries) == 0
+
+
+def test_custom_min_occurrences():
+    """Custom min_occurrences lowers the threshold."""
+    functions = [
+        _fn("process", "a.py", ["data"]),
+        _fn("process", "b.py", ["data", "extra"]),
+    ]
+    entries, _ = detect_signature_variance(functions, min_occurrences=2)
+    assert len(entries) == 1
+    assert entries[0]["name"] == "process"
+
+
+def test_detects_return_annotation_variance():
+    """Same param signature but different return annotations should be flagged."""
+    functions = [
+        _fn("process", "a.py", ["data"], return_annotation="list[str]"),
+        _fn("process", "b.py", ["data"], return_annotation="dict[str, int]"),
+        _fn("process", "c.py", ["data"], return_annotation="list[str]"),
+    ]
+    entries, _ = detect_signature_variance(functions)
+    assert len(entries) == 1
+    entry = entries[0]
+    assert entry["has_return_variance"] is True
+    assert entry["return_signature_count"] == 2
+    assert entry["has_param_variance"] is False
+
+
+def test_missing_return_annotations_do_not_trigger_return_variance():
+    """Missing annotations are ignored for return-variance detection."""
+    functions = [
+        _fn("process", "a.py", ["data"], return_annotation="list[str]"),
+        _fn("process", "b.py", ["data"], return_annotation=None),
+        _fn("process", "c.py", ["data"], return_annotation="list[str]"),
+    ]
+    entries, _ = detect_signature_variance(functions)
+    assert entries == []
+
+
+def test_phase_pattern_grouping_detects_variance_for_private_phase_functions():
+    """_phase_* and phase_* functions are compared via the phase_* naming group."""
+    functions = [
+        _fn(
+            "_phase_unused",
+            "lang/python/phases.py",
+            ["path", "lang"],
+            return_annotation="tuple[list[dict], dict[str, int]]",
+        ),
+        _fn(
+            "_phase_smells",
+            "lang/typescript/phases.py",
+            ["path", "lang"],
+            return_annotation="tuple[list[Issue], dict[str, int]]",
+        ),
+        _fn(
+            "phase_dupes",
+            "lang/base.py",
+            ["path", "lang"],
+            return_annotation="tuple[list[Issue], dict[str, int]]",
+        ),
+    ]
+    entries, _ = detect_signature_variance(functions, min_occurrences=3)
+    phase_entries = [
+        e for e in entries if e["name"] == "phase_*" and e["group_type"] == "pattern"
+    ]
+    assert len(phase_entries) == 1
+    assert phase_entries[0]["has_return_variance"] is True
+
+
+# ── Filtering rules ─────────────────────────────────────────
+
+
+def test_private_functions_skipped():
+    """Single-underscore private functions are skipped."""
+    functions = [
+        _fn("_helper", "a.py", ["x"]),
+        _fn("_helper", "b.py", ["x", "y"]),
+        _fn("_helper", "c.py", ["x", "y", "z"]),
+    ]
+    entries, _ = detect_signature_variance(functions)
+    assert len(entries) == 0
+
+
+def test_dunder_methods_not_skipped_but_allowlisted():
+    """Dunder methods like __init__ are in the allowlist and thus skipped."""
+    functions = [
+        _fn("__init__", "a.py", ["self"]),
+        _fn("__init__", "b.py", ["self", "x"]),
+        _fn("__init__", "c.py", ["self", "x", "y"]),
+    ]
+    entries, _ = detect_signature_variance(functions)
+    assert len(entries) == 0
+
+
+def test_allowlisted_names_skipped():
+    """Names in the allowlist (e.g., 'main', 'get', 'post') are skipped."""
+    for name in ["main", "get", "post", "setUp", "handle"]:
+        assert name in _ALLOWLIST
+        functions = [
+            _fn(name, "a.py", ["x"]),
+            _fn(name, "b.py", ["x", "y"]),
+            _fn(name, "c.py", []),
+        ]
+        entries, _ = detect_signature_variance(functions)
+        assert len(entries) == 0, f"{name} should be skipped"
+
+
+def test_test_functions_skipped():
+    """Functions starting with test_ are skipped."""
+    functions = [
+        _fn("test_something", "a.py", ["x"]),
+        _fn("test_something", "b.py", ["x", "y"]),
+        _fn("test_something", "c.py", []),
+    ]
+    entries, _ = detect_signature_variance(functions)
+    assert len(entries) == 0
+
+
+# ── self/cls filtering ───────────────────────────────────────
+
+
+def test_default_exports_skipped():
+    """Importers name a default export, so its local name isn't an API name."""
+    functions = [
+        FunctionInfo(
+            "Page", f"app/{d}/page.tsx", 1, 5, 5, "", params=p, default_export=True
+        )
+        for d, p in (("a", []), ("b", ["params"]), ("c", ["params", "searchParams"]))
+    ]
+    entries, _ = detect_signature_variance(functions)
+    assert entries == []
+
+
+def test_object_members_skipped():
+    """An object-literal member's parameters are set by the shape its object fills."""
+    functions = [
+        FunctionInfo(
+            "onError", f"{d}/server.ts", 1, 5, 5, "", params=p, object_member=True
+        )
+        for d, p in (("a", []), ("b", ["err"]), ("c", ["opts"]))
+    ]
+    entries, _ = detect_signature_variance(functions)
+    assert entries == []
+
+
+def test_route_handler_methods_allowlisted():
+    functions = [
+        _fn("GET", "a/route.ts", []),
+        _fn("GET", "b/route.ts", ["request"]),
+        _fn("GET", "c/route.ts", ["request", "context"]),
+    ]
+    entries, _ = detect_signature_variance(functions)
+    assert entries == []
+
+
+def test_self_and_cls_ignored_in_comparison():
+    """Parameters named 'self' and 'cls' are excluded from signature comparison."""
+    functions = [
+        _fn("process", "a.py", ["self", "data"]),
+        _fn("process", "b.py", ["cls", "data"]),
+        _fn("process", "c.py", ["data"]),
+    ]
+    entries, _ = detect_signature_variance(functions)
+    # After stripping self/cls, all have ["data"]
+    assert len(entries) == 0
+
+
+def test_self_stripped_but_variance_remains():
+    """Even after stripping self/cls, actual param differences are caught."""
+    functions = [
+        _fn("process", "a.py", ["self", "data"]),
+        _fn("process", "b.py", ["self", "data", "extra"]),
+        _fn("process", "c.py", ["data"]),
+    ]
+    entries, _ = detect_signature_variance(functions)
+    assert len(entries) == 1
+    assert entries[0]["signature_count"] == 2
+
+
+# ── Sorting ──────────────────────────────────────────────────
+
+
+def test_entries_sorted_by_signature_count_then_occurrences():
+    """Results sorted by descending signature_count, then descending occurrences."""
+    functions = [
+        # "alpha" has 3 variants across 4 files
+        _fn("alpha", "a.py", ["x"]),
+        _fn("alpha", "b.py", ["x", "y"]),
+        _fn("alpha", "c.py", ["x", "y", "z"]),
+        _fn("alpha", "d.py", ["x"]),
+        # "beta" has 2 variants across 3 files
+        _fn("beta", "e.py", ["a"]),
+        _fn("beta", "f.py", ["a", "b"]),
+        _fn("beta", "g.py", ["a"]),
+    ]
+    entries, _ = detect_signature_variance(functions)
+    assert len(entries) == 2
+    assert entries[0]["name"] == "alpha"
+    assert entries[1]["name"] == "beta"
+
+
+# ── Same file duplicates ────────────────────────────────────
+
+
+def test_same_file_multiple_definitions_needs_distinct_files():
+    """Multiple definitions in the same file still need min distinct files."""
+    functions = [
+        _fn("process", "a.py", ["x"], line=1),
+        _fn("process", "a.py", ["x", "y"], line=20),
+        _fn("process", "b.py", ["x"]),
+    ]
+    # Only 2 distinct files, default min_occurrences=3
+    entries, _ = detect_signature_variance(functions)
+    assert len(entries) == 0
+
+
+# ── Empty input ──────────────────────────────────────────────
+
+
+def test_empty_functions_list():
+    """Empty input returns empty results."""
+    entries, total = detect_signature_variance([])
+    assert total == 0
+    assert entries == []
+
+
+# ── Variants detail ──────────────────────────────────────────
+
+
+def test_variants_contain_correct_detail():
+    """Each entry's variants list has file, line, params, param_count."""
+    functions = [
+        _fn("process", "a.py", ["data"], line=10),
+        _fn("process", "b.py", ["data", "strict"], line=20),
+        _fn("process", "c.py", ["data"], line=30),
+    ]
+    entries, _ = detect_signature_variance(functions)
+    assert len(entries) == 1
+    variants = entries[0]["variants"]
+    assert len(variants) == 3
+    for v in variants:
+        assert "file" in v
+        assert "line" in v
+        assert "params" in v
+        assert "param_count" in v
+    # Check specific variant
+    a_variant = [v for v in variants if v["file"] == "a.py"][0]
+    assert a_variant["line"] == 10
+    assert a_variant["params"] == ["data"]
+    assert a_variant["param_count"] == 1
+
+
+# ── Name collisions that aren't an inconsistent API ─────────
+
+
+def _exported(name, file, params, exported=True):
+    fn = _fn(name, file, params)
+    fn.exported = exported
+    return fn
+
+
+def test_module_local_functions_are_not_grouped():
+    """Unexported components that happen to share a name are independent."""
+    functions = [
+        _exported("StatRow", "panel.tsx", ["label", "value", "onChange"], False),
+        _exported("StatRow", "preview.tsx", ["label", "color"], False),
+        _exported("StatRow", "board.tsx", ["label", "value"], False),
+    ]
+    assert detect_signature_variance(functions)[0] == []
+    # An extractor that can't tell (exported=None) keeps the old behaviour.
+    unknown = [_fn("StatRow", f, p) for f, p in [("a", ["x"]), ("b", []), ("c", [])]]
+    assert len(detect_signature_variance(unknown)[0]) == 1
+
+
+def test_names_group_per_package():
+    functions = [
+        _exported("createContext", "examples/a/server.ts", ["opts"]),
+        _exported("createContext", "examples/b/server.ts", ["req", "res"]),
+        _exported("createContext", "examples/c/server.ts", ["event", "context"]),
+    ]
+    scope = {
+        "examples/a/server.ts": "examples/a",
+        "examples/b/server.ts": "examples/b",
+        "examples/c/server.ts": "examples/c",
+    }
+    assert detect_signature_variance(functions, scope_of=scope.__getitem__)[0] == []
+    assert len(detect_signature_variance(functions, scope_of=lambda _f: "")[0]) == 1
+
+
+def _strategy(file, params):
+    return [
+        _exported("createWriter", file, params),
+        _exported("writeRow", file, ["state"]),
+        _exported("finish", file, ["state"]),
+    ]
+
+
+def test_modules_implementing_one_interface_are_not_grouped():
+    """Strategy modules each export the same set of names for their own state."""
+    functions = [
+        *_strategy("exporters/csv.ts", []),
+        *_strategy("exporters/json.ts", ["options"]),
+        *_strategy("exporters/xml.ts", ["options"]),
+        _exported("canFlush", "exporters/json.ts", ["state"]),
+        _exported("canFlush", "exporters/xml.ts", ["state"]),
+        _exported("canFlush", "stream/buffer.ts", ["state", "chunkId"]),
+    ]
+    assert detect_signature_variance(functions)[0] == []
+
+
+def test_unrelated_modules_still_report_beside_an_interface_pair():
+    functions = [
+        _exported("formatPrice", "a/price.ts", ["cents"]),
+        _exported("formatPrice", "b/cart.ts", ["amount", "currency"]),
+        _exported("formatPrice", "c/invoice.ts", ["value"]),
+        # Two parallel builders (classic/mini) share an interface: left out.
+        _exported("formatPrice", "classic/schemas.ts", ["params"]),
+        _exported("formatPrice", "mini/schemas.ts", ["params"]),
+        _exported("string", "classic/schemas.ts", ["params"]),
+        _exported("string", "mini/schemas.ts", ["params"]),
+        _exported("number", "classic/schemas.ts", ["params"]),
+        _exported("number", "mini/schemas.ts", ["params"]),
+    ]
+    entries, _ = detect_signature_variance(functions)
+    assert [e["name"] for e in entries] == ["formatPrice"]
+    assert entries[0]["files"] == ["a/price.ts", "b/cart.ts", "c/invoice.ts"]
+    assert entries[0]["signature_count"] == 3

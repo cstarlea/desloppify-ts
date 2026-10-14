@@ -1,6 +1,6 @@
 # Configuration
 
-Project settings live in `.desloppify/config.json`. `desloppify config show` lists the top-level keys; `desloppify config set <key> <value>` and `desloppify config unset <key> [<value>]` change them. TypeScript settings sit under `languages.typescript` and are edited in the file.
+Project settings live in `.desloppify-ts/config.json`. `desloppify-ts config show` lists the top-level keys; `desloppify-ts config set <key> <value>` and `desloppify-ts config unset <key> [<value>]` change them. TypeScript settings sit under `languages.typescript` and are edited in the file.
 
 Nothing in the defaults assumes a directory layout, a naming scheme or a data library. Project-specific rules come from three places:
 
@@ -11,18 +11,18 @@ Nothing in the defaults assumes a directory layout, a naming scheme or a data li
 ## Files, tools and outputs
 
 - **Which files.** The scan walks the project root and skips anything your `.gitignore` excludes (through `git ls-files`), plus `exclude` patterns and the built-in exclusions. Outside a git work tree it walks everything. A scan whose root is missing, or holds no TypeScript or JavaScript files, exits with status 2 and saves nothing.
-- **Tool downloads.** `allow_tool_download` (default `false`) lets a scan fetch a pinned jscpd with `npx` when neither the project nor `PATH` has one. `scan --allow-tool-download` and `DESLOPPIFY_ALLOW_TOOL_DOWNLOAD=1` allow it for one run. tsc and Knip are never downloaded.
-- **Where writes go.** State, plan, locks, `query.json` and the tsc build info live in `.desloppify/`. With `--state` pointing outside it, they move next to that file, along with config saves, the scorecard and `treemap.html`. A committed `.desloppify/config.json` is still read, but it's never rewritten. `--state` is accepted before or after any subcommand.
-- **Scorecard.** `badge_path` (default `scorecard.png`) is written in the project only when git doesn't track that file and the state directory is the project's own. Otherwise the card goes to the state directory. To write it into the repo anyway, set `--badge-path`, `DESLOPPIFY_BADGE_PATH` or a non-default `badge_path`.
+- **Tool downloads.** `allow_tool_download` (default `false`) lets a scan fetch a pinned jscpd with `npx` when neither the project nor `PATH` has one. `scan --allow-tool-download` and `DESLOPPIFY_TS_ALLOW_TOOL_DOWNLOAD=1` allow it for one run. tsc and Knip are never downloaded.
+- **Where writes go.** State, plan, locks, `query.json` and the tsc build info live in `.desloppify-ts/`. With `--state` pointing outside it, they move next to that file, along with config saves, the scorecard and `treemap.html`. A committed `.desloppify-ts/config.json` is still read, but it's never rewritten. `--state` is accepted before or after any subcommand.
+- **Scorecard.** `badge_path` (default `scorecard.png`) is written in the project only when git doesn't track that file and the state directory is the project's own. Otherwise the card goes to the state directory. To write it into the repo anyway, set `--badge-path`, `DESLOPPIFY_TS_BADGE_PATH` or a non-default `badge_path`.
 
 ## Presets
 
 ```bash
-desloppify config set presets bulletproof-react
-desloppify config unset presets bulletproof-react
+desloppify-ts config set presets bulletproof-react
+desloppify-ts config unset presets bulletproof-react
 ```
 
-`presets` is a list. `config set` rejects unknown names and lists the known ones. Run `desloppify scan` afterwards to apply the change.
+`presets` is a list. `config set` rejects unknown names and lists the known ones. Run `desloppify-ts scan` afterwards to apply the change.
 
 | Preset | Layers, top first | Turned on by |
 |---|---|---|
@@ -93,7 +93,7 @@ The `patterns` detector reports an area (a directory two levels deep) that mixes
 }
 ```
 
-An area is reported when it uses `threshold` (default 2) or more patterns of a family, or a pattern that fewer than 10% of areas use. Analysis needs at least five areas that use some pattern. A family with `"type": "complementary"` is only counted in `desloppify detect patterns`.
+An area is reported when it uses `threshold` (default 2) or more patterns of a family, or a pattern that fewer than 10% of areas use. Analysis needs at least five areas that use some pattern. A family with `"type": "complementary"` is only counted in `desloppify-ts detect patterns`.
 
 ## shadcn/ui
 

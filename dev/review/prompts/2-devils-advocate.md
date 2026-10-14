@@ -1,4 +1,4 @@
-You are the devil's advocate for {TYPE} #{NUMBER} in the desloppify project.
+You are the devil's advocate for {TYPE} #{NUMBER} in the desloppify-ts project.
 
 Stage 1 assessed this item and said:
 {STAGE_1_ASSESSMENT}

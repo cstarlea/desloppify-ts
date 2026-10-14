@@ -5,12 +5,12 @@ for context-isolated subjective reviews.
 
 ### Review workflow
 
-Define a reviewer agent in `.cursor/agents/desloppify-reviewer.md`:
+Define a reviewer agent in `.cursor/agents/desloppify-ts-reviewer.md`:
 
 ```markdown
 ---
-name: desloppify-reviewer
-description: Scores subjective codebase quality dimensions for desloppify
+name: desloppify-ts-reviewer
+description: Scores subjective codebase quality dimensions for desloppify-ts
 tools:
   - read
   - search
@@ -23,5 +23,5 @@ Launch multiple reviewer subagents, each with a subset of dimensions.
 Each agent writes its output to `results/batch-N.raw.txt` (matching the batch index).
 Merge assessments (average where dimensions overlap) and findings, then import.
 
-<!-- desloppify-overlay: cursor -->
-<!-- desloppify-end -->
+<!-- desloppify-ts-overlay: cursor -->
+<!-- desloppify-ts-end -->

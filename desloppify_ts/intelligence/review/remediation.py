@@ -1,0 +1,35 @@
+"""Remediation plan generation helpers."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+from desloppify_ts.engine._state.schema import StateModel
+
+
+def render_empty_remediation_plan(state: StateModel) -> str:
+    """Build the empty remediation plan output."""
+    from desloppify_ts.intelligence.review._prepare.remediation_engine import (
+        render_empty_remediation_plan as _render_empty_remediation_plan,
+    )
+
+    return _render_empty_remediation_plan(state)
+
+
+def generate_remediation_plan(
+    state: StateModel,
+    *,
+    output_path: Path | None = None,
+) -> str:
+    """Generate remediation markdown for open holistic issues."""
+    from desloppify_ts.intelligence.review._prepare.remediation_engine import (
+        generate_remediation_plan as _generate_remediation_plan,
+    )
+
+    return _generate_remediation_plan(
+        state,
+        output_path=output_path,
+    )
+
+
+__all__ = ["generate_remediation_plan", "render_empty_remediation_plan"]

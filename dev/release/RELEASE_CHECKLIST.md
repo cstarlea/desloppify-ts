@@ -1,6 +1,6 @@
 # Release Checklist
 
-Releases publish the `desloppify-ts` distribution to PyPI from `cstarlea/desloppify`. The import package and the `desloppify` command keep their names.
+Releases publish the `desloppify-ts` distribution to PyPI from `cstarlea/desloppify-ts`. The command is also `desloppify-ts`; the import package is `desloppify_ts`.
 
 Replace `CURRENT` with the version being released (e.g., `1.1.0`) and `NEXT` with the following version (e.g., `1.1.1`).
 
@@ -16,15 +16,15 @@ Replace `CURRENT` with the version being released (e.g., `1.1.0`) and `NEXT` wit
 
 One-time setup (already done if a release has gone out):
 
-- On pypi.org, add a trusted publisher for the project `desloppify-ts` (a "pending publisher" before the first upload): owner `cstarlea`, repository `desloppify`, workflow `python-publish.yml`, environment `pypi`.
+- On pypi.org, add a trusted publisher for the project `desloppify-ts` (a "pending publisher" before the first upload): owner `cstarlea`, repository `desloppify-ts`, workflow `python-publish.yml`, environment `pypi`.
 - On GitHub, keep the `pypi` environment (Settings → Environments). Optionally add yourself as a required reviewer so each upload waits for approval.
-- `gh variable set PYPI_PUBLISH --repo cstarlea/desloppify --body true`
+- `gh variable set PYPI_PUBLISH --repo cstarlea/desloppify-ts --body true`
 
 ## Setup
 
 Create a GitHub label for the release:
 ```bash
-gh label create "release:vCURRENT" --repo cstarlea/desloppify --description "Included in vCURRENT" --color 1D76DB
+gh label create "release:vCURRENT" --repo cstarlea/desloppify-ts --description "Included in vCURRENT" --color 1D76DB
 ```
 
 Tag every issue and PR that lands during this cycle with `release:vCURRENT`.
@@ -52,15 +52,15 @@ Tag every issue and PR that lands during this cycle with `release:vCURRENT`.
 
 - [ ] Create the GitHub release from `main`. This creates the tag and starts the publish workflow:
   ```bash
-  gh release create vCURRENT --repo cstarlea/desloppify --target main \
+  gh release create vCURRENT --repo cstarlea/desloppify-ts --target main \
     --title "vCURRENT" --notes-file dev/release-notes-drafts/vCURRENT.md
   ```
 - [ ] Watch the run, and approve the `pypi` environment if it asks:
   ```bash
-  gh run watch --repo cstarlea/desloppify \
-    "$(gh run list --repo cstarlea/desloppify --workflow python-publish.yml --limit 1 --json databaseId --jq '.[0].databaseId')"
+  gh run watch --repo cstarlea/desloppify-ts \
+    "$(gh run list --repo cstarlea/desloppify-ts --workflow python-publish.yml --limit 1 --json databaseId --jq '.[0].databaseId')"
   ```
-- [ ] Check the upload: `uvx --from "desloppify-ts==CURRENT" desloppify --version`
+- [ ] Check the upload: `uvx --from "desloppify-ts==CURRENT" desloppify-ts --version`
 
 If the tag doesn't match the version, the workflow fails before uploading. Delete the release and the tag (`gh release delete vCURRENT --cleanup-tag`), fix `pyproject.toml`, and release again.
 
@@ -70,16 +70,16 @@ If the tag doesn't match the version, the workflow fails before uploading. Delet
 
 - [ ] Notify and close the issues and PRs tagged with this release:
   ```bash
-  gh issue list --repo cstarlea/desloppify --label "release:vCURRENT" --state open --json number --jq '.[].number' | while read num; do
-    gh issue comment "$num" --repo cstarlea/desloppify --body "Released in vCURRENT — https://github.com/cstarlea/desloppify/releases/tag/vCURRENT"
-    gh issue close "$num" --repo cstarlea/desloppify
+  gh issue list --repo cstarlea/desloppify-ts --label "release:vCURRENT" --state open --json number --jq '.[].number' | while read num; do
+    gh issue comment "$num" --repo cstarlea/desloppify-ts --body "Released in vCURRENT — https://github.com/cstarlea/desloppify-ts/releases/tag/vCURRENT"
+    gh issue close "$num" --repo cstarlea/desloppify-ts
   done
 
-  gh pr list --repo cstarlea/desloppify --label "release:vCURRENT" --state all --json number --jq '.[].number' | while read num; do
-    gh pr comment "$num" --repo cstarlea/desloppify --body "Released in vCURRENT — https://github.com/cstarlea/desloppify/releases/tag/vCURRENT"
+  gh pr list --repo cstarlea/desloppify-ts --label "release:vCURRENT" --state all --json number --jq '.[].number' | while read num; do
+    gh pr comment "$num" --repo cstarlea/desloppify-ts --body "Released in vCURRENT — https://github.com/cstarlea/desloppify-ts/releases/tag/vCURRENT"
   done
   ```
 - [ ] Create the next release label:
   ```bash
-  gh label create "release:vNEXT" --repo cstarlea/desloppify --description "Included in vNEXT" --color 1D76DB
+  gh label create "release:vNEXT" --repo cstarlea/desloppify-ts --description "Included in vNEXT" --color 1D76DB
   ```

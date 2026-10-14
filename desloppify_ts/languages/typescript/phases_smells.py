@@ -1,0 +1,137 @@
+"""TypeScript smells phase runner."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+import desloppify_ts.languages.typescript.detectors.react.context as react_context_mod
+import desloppify_ts.languages.typescript.detectors.react.hook_bloat as react_hook_bloat_mod
+import desloppify_ts.languages.typescript.detectors.react.state_sync as react_state_sync_mod
+import desloppify_ts.languages.typescript.detectors.smells as smells_detector_mod
+from desloppify_ts.base.output.terminal import log
+from desloppify_ts.engine._state.filtering import make_issue
+from desloppify_ts.engine.policy.zones import adjust_potential
+from desloppify_ts.languages._framework.base.smell_contracts import (
+    normalize_smell_entries,
+)
+from desloppify_ts.languages._framework.base.types import LangRuntimeContract
+from desloppify_ts.languages._framework.issue_factories import make_smell_issues
+from desloppify_ts.state_io import Issue
+
+
+def phase_smells(
+    path: Path, lang: LangRuntimeContract
+) -> tuple[list[Issue], dict[str, int]]:
+    smell_entries, total_smell_files = smells_detector_mod.detect_smells(path)
+    normalized_smells = normalize_smell_entries(smell_entries)
+    results = make_smell_issues(
+        [entry.to_mapping() for entry in normalized_smells],
+        log,
+    )
+    _add_density(results, smell_entries)
+
+    react_entries, total_effects = react_state_sync_mod.detect_state_sync(path)
+    for entry in react_entries:
+        setter_str = ", ".join(entry["setters"])
+        results.append(
+            make_issue(
+                "react",
+                entry["file"],
+                setter_str,
+                tier=3,
+                confidence="medium",
+                summary=f"State sync anti-pattern: useEffect only calls {setter_str}",
+                detail={"line": entry["line"], "setters": entry["setters"]},
+            )
+        )
+    if react_entries:
+        log(f"         react: {len(react_entries)} state sync anti-patterns")
+
+    nesting_entries, _ = react_context_mod.detect_context_nesting(path)
+    for entry in nesting_entries:
+        providers_str = " → ".join(entry["providers"][:5])
+        results.append(
+            make_issue(
+                "react",
+                entry["file"],
+                f"nesting::{entry['depth']}",
+                tier=3,
+                confidence="medium",
+                summary=f"Deep provider nesting ({entry['depth']} levels): {providers_str}",
+                detail={"depth": entry["depth"], "providers": entry["providers"]},
+            )
+        )
+    if nesting_entries:
+        log(f"         react: {len(nesting_entries)} deep provider nesting")
+
+    hook_entries, _ = react_hook_bloat_mod.detect_hook_return_bloat(path)
+    for entry in hook_entries:
+        results.append(
+            make_issue(
+                "react",
+                entry["file"],
+                f"hook_bloat::{entry['hook']}",
+                tier=3,
+                confidence="medium",
+                summary=f"Hook return bloat: {entry['hook']} returns {entry['field_count']} fields",
+                detail={
+                    "hook": entry["hook"],
+                    "field_count": entry["field_count"],
+                    "line": entry["line"],
+                },
+            )
+        )
+    if hook_entries:
+        log(f"         react: {len(hook_entries)} bloated hook returns")
+
+    bool_entries, _ = react_hook_bloat_mod.detect_boolean_state_explosion(path)
+    for entry in bool_entries:
+        states_str = ", ".join(entry["states"][:5])
+        results.append(
+            make_issue(
+                "react",
+                entry["file"],
+                f"bool_state::{entry['prefix']}",
+                tier=3,
+                confidence="low",
+                summary=(
+                    f"Boolean state explosion: {entry['count']} boolean useState hooks "
+                    f"({states_str})"
+                ),
+                detail={
+                    "count": entry["count"],
+                    "setters": entry["setters"],
+                    "states": entry["states"],
+                    "line": entry["line"],
+                },
+            )
+        )
+    if bool_entries:
+        log(f"         react: {len(bool_entries)} boolean state explosions")
+
+    potentials: dict[str, int] = {
+        "smells": adjust_potential(lang.zone_map, total_smell_files),
+        "react": total_effects,
+    }
+
+    return results, potentials
+
+
+def _add_density(issues: list[Issue], entries: list[dict]) -> None:
+    """Per-file density (matches per 1,000 lines) for the smells that report it."""
+    loc_by_smell = {entry["id"]: entry["loc"] for entry in entries if "loc" in entry}
+    if not loc_by_smell:
+        return
+    for issue in issues:
+        detail = issue["detail"]
+        loc = loc_by_smell.get(detail.get("smell_id"), {}).get(issue["file"])
+        if not loc:
+            continue
+        density = round(1000 * detail["count"] / loc, 2)
+        detail["loc"] = loc
+        detail["density"] = density
+        shown = f"{density:.0f}" if density >= 100 else f"{density:.2g}"
+        issue["summary"] += f", {shown} per 1,000 lines"
+
+
+__all__ = ["phase_smells"]

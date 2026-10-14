@@ -1,0 +1,119 @@
+"""detect command: run a single detector directly (bypass state tracking)."""
+
+from __future__ import annotations
+
+import argparse
+import sys
+
+from desloppify_ts.app.commands.helpers.command_runtime import command_runtime
+from desloppify_ts.app.commands.helpers.lang import resolve_lang, resolve_lang_settings
+from desloppify_ts.app.commands.helpers.runtime_options import (
+    LangRuntimeOptionsError,
+    print_lang_runtime_options_error,
+    resolve_lang_runtime_options,
+)
+from desloppify_ts.base.exception_sets import CommandError
+from desloppify_ts.base.output.terminal import colorize
+from desloppify_ts.base.registry import DETECTORS
+from desloppify_ts.languages.framework import LangRunOverrides, make_lang_run
+
+
+def _resolve_detector_key(
+    detector: str, detect_commands: dict[str, object]
+) -> str | None:
+    """Resolve detector input to a command key."""
+    detector = detector.strip()
+    if detector in detect_commands:
+        return detector
+
+    normalized = detector.lower().replace("-", "_")
+    if normalized in detect_commands:
+        return normalized
+
+    denormalized = detector.lower().replace("_", "-")
+    if denormalized in detect_commands:
+        return denormalized
+
+    return None
+
+
+def _unknown_detector_message(
+    *,
+    detector_input: str,
+    lang_name: str,
+    detect_commands: dict[str, object],
+    scan_path: str,
+) -> str:
+    """Build a useful error for direct-detect/catalog detector mismatches."""
+    available = ", ".join(sorted(detect_commands))
+    normalized = detector_input.strip().lower().replace("-", "_")
+    if normalized in DETECTORS:
+        return (
+            f"Unknown direct detector for {lang_name}: {detector_input}\n"
+            f"  `{normalized}` is a scan/show detector, but this language does not "
+            "expose it as a direct `detect` command.\n"
+            f"  Run: desloppify-ts scan --path {scan_path}\n"
+            f"  Then inspect: desloppify-ts show {normalized}\n"
+            f"  Available direct detectors: {available}"
+        )
+    return (
+        f"Unknown detector for {lang_name}: {detector_input}\n  Available: {available}"
+    )
+
+
+def cmd_detect(args: argparse.Namespace) -> None:
+    """Run a single detector directly (bypass state tracking)."""
+    detector_input = args.detector
+
+    lang_cfg = resolve_lang(args)
+
+    # Validate detector name
+    detector = _resolve_detector_key(detector_input, lang_cfg.detect_commands)
+    if detector is None:
+        raise CommandError(
+            _unknown_detector_message(
+                detector_input=detector_input,
+                lang_name=lang_cfg.name,
+                detect_commands=lang_cfg.detect_commands,
+                scan_path=getattr(args, "path", ".") or ".",
+            )
+        )
+
+    # Set default thresholds for detectors that expect them
+    if getattr(args, "threshold", None) is None:
+        if detector == "large":
+            args.threshold = lang_cfg.large_threshold
+        elif detector == "complexity":
+            args.threshold = lang_cfg.complexity_threshold
+        elif detector == "dupes":
+            args.threshold = 0.8
+
+    runtime = command_runtime(args)
+    lang_settings = resolve_lang_settings(runtime.config, lang_cfg)
+    try:
+        lang_options = resolve_lang_runtime_options(args, lang_cfg)
+    except LangRuntimeOptionsError as exc:
+        print_lang_runtime_options_error(exc, lang_name=lang_cfg.name)
+        raise CommandError(str(exc), exit_code=2) from exc
+    lang = make_lang_run(
+        lang_cfg,
+        overrides=LangRunOverrides(
+            runtime_settings=lang_settings,
+            runtime_options=lang_options,
+        ),
+    )
+    args.lang_runtime_options = dict(lang_options)
+    args.lang_run = lang
+    try:
+        lang.detect_commands[detector](args)
+    finally:
+        args.lang_runtime_options = None
+        args.lang_run = None
+    if not getattr(args, "json", False):
+        scan_path = getattr(args, "path", ".") or "."
+        print(
+            colorize(
+                f"\n  Next command: `desloppify-ts scan --path {scan_path}`", "dim"
+            ),
+            file=sys.stderr,
+        )

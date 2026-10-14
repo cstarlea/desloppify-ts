@@ -1,0 +1,178 @@
+"""Summary-line rendering helpers for the status command."""
+
+from __future__ import annotations
+
+from desloppify_ts.app.commands.helpers.rendering import unscored_open_note
+from desloppify_ts.app.commands.helpers.score_update import PROVISIONAL_STRICT_NOTE
+from desloppify_ts.base.output.terminal import LOC_COMPACT_THRESHOLD, colorize
+from desloppify_ts.engine._state.filtering import open_scope_breakdown
+from desloppify_ts.state_io import (
+    scan_metrics_available,
+    scan_reconstructed_issue_count,
+    scan_source,
+)
+
+
+def score_summary_lines(
+    *,
+    overall_score: float | None,
+    objective_score: float | None,
+    strict_score: float | None,
+    verified_strict_score: float | None,
+    target_strict: float | None = None,
+    provisional: bool = False,
+) -> list[tuple[str, str]]:
+    """Return formatted top-line score summary rows.
+
+    ``provisional`` (no subjective dimension assessed yet) leads with the
+    objective score.
+    """
+    if (
+        overall_score is not None
+        and objective_score is not None
+        and strict_score is not None
+        and verified_strict_score is not None
+    ):
+        scores_line = (
+            f"  Scores: overall {overall_score:.1f}/100 · "
+            f"objective {objective_score:.1f}/100 · "
+            f"strict {strict_score:.1f}/100 · "
+            f"verified {verified_strict_score:.1f}/100"
+        )
+        lines: list[tuple[str, str]] = (
+            [
+                (
+                    f"\n  Score: {objective_score:.1f}/100 objective "
+                    "(provisional until the subjective dimensions are assessed)",
+                    "bold",
+                ),
+                (scores_line, "dim"),
+            ]
+            if provisional
+            else [("\n" + scores_line, "bold")]
+        )
+        lines.append(
+            (
+                "  Score guide: overall (lenient) · objective (mechanical only) · "
+                "strict (penalizes wontfix) · verified (scan-confirmed only)",
+                "dim",
+            )
+        )
+        if target_strict is not None:
+            gap = round(target_strict - strict_score, 1)
+            if provisional:
+                lines.append(
+                    (
+                        f"  Strict {strict_score:.1f} {PROVISIONAL_STRICT_NOTE}",
+                        "dim",
+                    )
+                )
+            elif gap > 0:
+                lines.append(
+                    (
+                        f"  Strict {strict_score:.1f} (target: {target_strict:.1f})"
+                        " — run `desloppify-ts next` to find the next improvement",
+                        "dim",
+                    )
+                )
+            else:
+                lines.append(
+                    (
+                        f"  Strict {strict_score:.1f} — target {target_strict:.1f} reached!",
+                        "green",
+                    )
+                )
+        else:
+            lines.append(("  Focus on strict — it's your north star.", "dim"))
+        return lines
+    return [
+        ("\n  Scores unavailable", "bold"),
+        ("  Run a full scan to compute overall/objective/strict scores.", "yellow"),
+    ]
+
+
+def print_scan_metrics(state: dict) -> None:
+    """Print aggregate codebase metrics from the last scan."""
+    if not scan_metrics_available(state):
+        if scan_source(state) == "plan_reconstruction":
+            reconstructed = scan_reconstructed_issue_count(state)
+            print(
+                colorize(
+                    "  Scan metrics unavailable · "
+                    f"reconstructed {reconstructed} open review item(s) from saved plan",
+                    "dim",
+                )
+            )
+            return
+        print(
+            colorize(
+                f"  Scans: {state.get('scan_count', 0)} | Last: {state.get('last_scan', 'never')}",
+                "dim",
+            )
+        )
+        return
+
+    metrics = state.get("codebase_metrics", {})
+    total_files = sum(m.get("total_files", 0) for m in metrics.values())
+    total_loc = sum(m.get("total_loc", 0) for m in metrics.values())
+    total_dirs = sum(m.get("total_directories", 0) for m in metrics.values())
+    if total_files:
+        loc_str = (
+            f"{total_loc:,}"
+            if total_loc < LOC_COMPACT_THRESHOLD
+            else f"{total_loc // 1000}K"
+        )
+        print(
+            colorize(
+                f"  {total_files} files · {loc_str} LOC · {total_dirs} dirs · "
+                f"Last scan: {state.get('last_scan', 'never')}",
+                "dim",
+            )
+        )
+        return
+    print(
+        colorize(
+            f"  Scans: {state.get('scan_count', 0)} | Last: {state.get('last_scan', 'never')}",
+            "dim",
+        )
+    )
+
+
+def print_scan_completeness(state: dict) -> None:
+    """Warn when one or more language scans were partial."""
+    completeness = state.get("scan_completeness", {})
+    incomplete = [lang for lang, status in completeness.items() if status != "full"]
+    if incomplete:
+        print(
+            colorize(
+                f"  * Incomplete scan ({', '.join(incomplete)} — slow phases skipped)",
+                "yellow",
+            )
+        )
+
+
+def print_open_scope_breakdown(state: dict) -> None:
+    """Print open counts with explicit in-scope/out-of-scope semantics."""
+    issues = state.get("work_items") or state.get("issues", {})
+    if not isinstance(issues, dict):
+        return
+
+    counts = open_scope_breakdown(issues, state.get("scan_path"))
+    note = unscored_open_note(state.get("stats") or {})
+    print(
+        colorize(
+            "  "
+            f"open (in-scope): {counts['in_scope']}{note} · "
+            f"open (out-of-scope carried): {counts['out_of_scope']} · "
+            f"open (global): {counts['global']}",
+            "dim",
+        )
+    )
+
+
+__all__ = [
+    "print_open_scope_breakdown",
+    "print_scan_completeness",
+    "print_scan_metrics",
+    "score_summary_lines",
+]

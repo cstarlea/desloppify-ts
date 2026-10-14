@@ -1,8 +1,8 @@
 .DS_Store
 __pycache__/
 *.egg-info/
-.desloppify/
-.desloppify.*/
+.desloppify-ts/
+.desloppify-ts.*/
 .venv/
 build/
 dist/
@@ -50,4 +50,4 @@ dev/website/
 dev/release/release-notes-drafts/
 
 # Pinned Node tools for opt-in golden scans (npm ci in that directory)
-desloppify/languages/typescript/tests/golden/node/node_modules/
+desloppify_ts/languages/typescript/tests/golden/node/node_modules/

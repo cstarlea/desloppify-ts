@@ -1,0 +1,185 @@
+"""Public framework facade for non-language-package consumers.
+
+Use this module from app/engine layers instead of importing
+``desloppify_ts.languages._framework`` directly.
+"""
+
+from __future__ import annotations
+
+from desloppify_ts.languages._framework.base.types import (
+    DetectorCoverageRecord,
+    DetectorCoverageStatus,
+    DetectorPhase,
+    FixerConfig,
+    FixResult,
+    LangConfig,
+    LangRuntimeContract,
+    LangSecurityResult,
+    ScanCoverageRecord,
+)
+from desloppify_ts.languages._framework.runtime_support.runtime import (
+    LangRun,
+    LangRunOverrides,
+    make_lang_run,
+)
+
+DEFAULT_LANG = "typescript"
+
+_DEFAULT_CONFIG: LangConfig | None = None
+
+
+def default_lang() -> LangConfig:
+    """The TypeScript language config (the only language plugin)."""
+    global _DEFAULT_CONFIG
+    if _DEFAULT_CONFIG is None:
+        from desloppify_ts.languages.typescript import TypeScriptConfig
+
+        _DEFAULT_CONFIG = TypeScriptConfig()
+    return _DEFAULT_CONFIG
+
+
+def get_lang(name: str) -> LangConfig:
+    """Resolve a language name recorded in state or config.
+
+    Raises ValueError for anything but ``typescript``.
+    """
+    if name != DEFAULT_LANG:
+        raise ValueError(
+            f"Unknown language: {name!r}. desloppify-ts only supports {DEFAULT_LANG!r}."
+        )
+    return default_lang()
+
+
+def get_lang_hook(lang_name: str | None, hook_name: str) -> object | None:
+    """Return a TypeScript hook module (e.g. ``test_coverage``), or None."""
+    if lang_name != DEFAULT_LANG:
+        return None
+    from desloppify_ts.languages.typescript import LANG_HOOKS
+
+    return LANG_HOOKS.get(hook_name)
+
+
+def enable_parse_cache() -> None:
+    """Enable tree-sitter parse cache via facade boundary."""
+    from desloppify_ts.languages._framework.treesitter import (
+        enable_parse_cache as _enable_parse_cache,
+    )
+
+    _enable_parse_cache()
+
+
+def disable_parse_cache() -> None:
+    """Disable tree-sitter parse cache via facade boundary."""
+    from desloppify_ts.languages._framework.treesitter import (
+        disable_parse_cache as _disable_parse_cache,
+    )
+
+    _disable_parse_cache()
+
+
+def reset_grammar_load_failures() -> None:
+    """Forget tree-sitter grammar load failures from earlier scans."""
+    from desloppify_ts.languages._framework.treesitter import (
+        reset_grammar_load_failures as _reset,
+    )
+
+    _reset()
+
+
+def prepare_grammars() -> tuple[dict[str, str | None], list[str]]:
+    """Download and load the tree-sitter grammars scans need.
+
+    Returns each grammar's load error (None when it loads) and the grammars
+    that had to be downloaded. Raises ImportError without the language pack.
+    """
+    from desloppify_ts.languages._framework.treesitter import (
+        prepare_grammars as _prepare,
+    )
+
+    return _prepare()
+
+
+def record_grammar_load_failures(lang) -> None:
+    """Report grammars that failed to load as reduced scan coverage.
+
+    Tree-sitter phases skip a language whose grammar can't load (for example
+    when the language pack can't download it offline). Without this the
+    skipped detectors would read as clean.
+    """
+    from desloppify_ts.languages._framework.base.shared_phases_helpers import (
+        record_reduced_coverage,
+    )
+    from desloppify_ts.languages._framework.treesitter import grammar_load_failures
+
+    failures = grammar_load_failures()
+    if not failures:
+        return
+    grammars = ", ".join(sorted(failures))
+    first_error = next(iter(failures.values()))
+    record_reduced_coverage(
+        lang,
+        DetectorCoverageStatus(
+            detector="treesitter",
+            status="reduced",
+            confidence=0.5,
+            summary=f"tree-sitter grammar(s) failed to load: {grammars} ({first_error[:160]})",
+            impact="AST-based detectors (imports, complexity, cohesion, smells) were skipped for these languages.",
+            remediation="Run `desloppify-ts setup --grammars` with network access, then rerun scan.",
+            tool="tree-sitter-language-pack",
+            reason="grammar_unavailable",
+        ),
+    )
+
+
+def prewarm_review_phase_detectors(path, lang, phases) -> None:
+    """Prime expensive shared review detectors for overlap during scan."""
+    from desloppify_ts.languages._framework.base.shared_phases_review import (
+        prewarm_review_phase_detectors as _prewarm_review_phase_detectors,
+    )
+
+    _prewarm_review_phase_detectors(path, lang, phases)
+
+
+def framework_summary_lines(path, lang) -> list[str]:
+    """Lines naming the detected frameworks, per package for monorepos."""
+    from desloppify_ts.languages._framework.frameworks.phases import (
+        framework_summary_lines as _summary,
+    )
+
+    return _summary(path, lang)
+
+
+def clear_review_phase_prefetch(lang) -> None:
+    """Clear in-memory shared review detector prefetch state."""
+    from desloppify_ts.languages._framework.base.shared_phases_review import (
+        clear_review_phase_prefetch as _clear_review_phase_prefetch,
+    )
+
+    _clear_review_phase_prefetch(lang)
+
+
+__all__ = [
+    "DEFAULT_LANG",
+    "LangConfig",
+    "LangRun",
+    "LangRunOverrides",
+    "DetectorCoverageRecord",
+    "DetectorPhase",
+    "FixerConfig",
+    "FixResult",
+    "LangRuntimeContract",
+    "LangSecurityResult",
+    "ScanCoverageRecord",
+    "clear_review_phase_prefetch",
+    "default_lang",
+    "disable_parse_cache",
+    "enable_parse_cache",
+    "framework_summary_lines",
+    "get_lang",
+    "get_lang_hook",
+    "make_lang_run",
+    "prepare_grammars",
+    "prewarm_review_phase_detectors",
+    "record_grammar_load_failures",
+    "reset_grammar_load_failures",
+]

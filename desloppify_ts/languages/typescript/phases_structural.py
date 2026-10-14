@@ -1,0 +1,288 @@
+"""Structural TypeScript phase helpers and runner."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+import desloppify_ts.languages.typescript.detectors.concerns as concerns_detector_mod
+import desloppify_ts.languages.typescript.detectors.deps.packages as packages_mod
+import desloppify_ts.languages.typescript.detectors.props as props_detector_mod
+from desloppify_ts.base.discovery.paths import get_project_root
+from desloppify_ts.base.output.terminal import log
+from desloppify_ts.engine._state.filtering import make_issue
+from desloppify_ts.engine.detectors import complexity as complexity_detector_mod
+from desloppify_ts.engine.detectors import flat_dirs as flat_dirs_detector_mod
+from desloppify_ts.engine.detectors import gods as gods_detector_mod
+from desloppify_ts.engine.detectors import large as large_detector_mod
+from desloppify_ts.engine.policy.zones import Zone, adjust_potential
+from desloppify_ts.languages._framework.base.structural import (
+    add_structural_signal,
+    merge_structural_signals,
+)
+from desloppify_ts.languages._framework.base.types import LangRuntimeContract
+from desloppify_ts.languages._framework.frameworks.registry import (
+    framework_route_roots,
+)
+from desloppify_ts.languages.typescript.extractors_classes import extract_ts_classes
+from desloppify_ts.languages.typescript.extractors_components import (
+    detect_passthrough_components,
+    extract_ts_components,
+)
+from desloppify_ts.languages.typescript.phases_config import (
+    TS_CLASS_GOD_RULES,
+    TS_COMPLEXITY_SIGNALS,
+    TS_GOD_RULES,
+)
+from desloppify_ts.state_io import Issue
+
+
+def _detect_structural_signals(
+    path: Path, lang: LangRuntimeContract
+) -> tuple[list[Issue], int]:
+    """Detect large files, complexity, god components and classes, and mixed concerns."""
+    structural: dict[str, dict] = {}
+
+    large_entries, file_count = large_detector_mod.detect_large_files(
+        path,
+        file_finder=lang.file_finder,
+        threshold=lang.large_threshold,
+    )
+    for entry in large_entries:
+        add_structural_signal(
+            structural,
+            entry["file"],
+            f"large ({entry['loc']} LOC)",
+            {"loc": entry["loc"]},
+        )
+
+    complexity_entries, _ = complexity_detector_mod.detect_complexity(
+        path,
+        signals=TS_COMPLEXITY_SIGNALS,
+        file_finder=lang.file_finder,
+        threshold=lang.complexity_threshold,
+    )
+    for entry in complexity_entries:
+        add_structural_signal(
+            structural,
+            entry["file"],
+            f"complexity score {entry['score']}",
+            {
+                "complexity_score": entry["score"],
+                "complexity_signals": entry["signals"],
+            },
+        )
+        lang.complexity_map[entry["file"]] = entry["score"]
+
+    god_entries, _ = gods_detector_mod.detect_gods(
+        extract_ts_components(path), TS_GOD_RULES, min_reasons=2
+    )
+    for entry in god_entries:
+        add_structural_signal(
+            structural,
+            entry["file"],
+            f"{entry['detail'].get('hook_total', 0)} hooks ({', '.join(entry['reasons'][:2])})",
+            {
+                "hook_total": entry["detail"].get("hook_total", 0),
+                "hook_reasons": entry["reasons"],
+            },
+        )
+
+    _add_god_class_signals(structural, path, lang)
+
+    concern_entries, _ = concerns_detector_mod.detect_mixed_concerns(
+        path, concerns_detector_mod.configured_data_clients(path, lang)
+    )
+    for entry in concern_entries:
+        add_structural_signal(
+            structural,
+            entry["file"],
+            f"mixed: {', '.join(entry['concerns'][:3])}",
+            {"concerns": entry["concerns"]},
+        )
+
+    results = merge_structural_signals(structural, log, zone_map=lang.zone_map)
+    return results, file_count
+
+
+def _add_god_class_signals(
+    structural: dict, path: Path, lang: LangRuntimeContract
+) -> None:
+    """One structural signal per file for its god classes (two or more class rules hit)."""
+    entries, _ = gods_detector_mod.detect_gods(
+        extract_ts_classes(path, lang.file_finder(path)),
+        TS_CLASS_GOD_RULES,
+        min_reasons=2,
+    )
+    by_file: dict[str, list[dict]] = {}
+    for entry in sorted(entries, key=lambda e: e["line"]):
+        by_file.setdefault(entry["file"], []).append(entry)
+    for filepath, file_entries in by_file.items():
+        if len(file_entries) == 1:
+            entry = file_entries[0]
+            signal = f"god class {entry['name']} ({', '.join(entry['reasons'][:2])})"
+        else:
+            names = [e["name"] for e in file_entries]
+            more = f" +{len(names) - 3}" if len(names) > 3 else ""
+            signal = f"god classes {', '.join(names[:3])}{more}"
+        add_structural_signal(
+            structural,
+            filepath,
+            signal,
+            {
+                "god_classes": [
+                    {"name": e["name"], "line": e["line"], "reasons": e["reasons"]}
+                    for e in file_entries
+                ]
+            },
+        )
+    if entries:
+        log(f"         god classes: {len(entries)}")
+
+
+def _detect_flat_dirs(path: Path, lang: LangRuntimeContract) -> tuple[list[Issue], int]:
+    """Detect flat directories with too many files or missing sub-organization."""
+    results: list[Issue] = []
+    zone_map = lang.zone_map
+
+    def non_test_files(scan_path: Path) -> list[str]:
+        # Co-located *.test.ts files would otherwise double many counts.
+        files = lang.file_finder(scan_path)
+        if zone_map is None:
+            return files
+        return [f for f in files if zone_map.get(f) != Zone.TEST]
+
+    packages = packages_mod.discover_packages(path, get_project_root())
+    flat_entries, dir_count = flat_dirs_detector_mod.detect_flat_dirs(
+        path,
+        file_finder=non_test_files,
+        config=flat_dirs_detector_mod.FlatDirDetectionConfig(),
+        route_roots=framework_route_roots(path, [p.directory for p in packages]),
+    )
+    for entry in flat_entries:
+        child_dir_count = int(entry.get("child_dir_count", 0))
+        combined_score = int(entry.get("combined_score", entry.get("file_count", 0)))
+        results.append(
+            make_issue(
+                "flat_dirs",
+                entry["directory"],
+                "",
+                tier=3,
+                confidence="medium",
+                summary=flat_dirs_detector_mod.format_flat_dir_summary(entry),
+                detail={
+                    "file_count": entry["file_count"],
+                    "child_dir_count": child_dir_count,
+                    "combined_score": combined_score,
+                    "kind": entry.get("kind", "overload"),
+                    "parent_sibling_count": int(entry.get("parent_sibling_count", 0)),
+                    "wrapper_item_count": int(entry.get("wrapper_item_count", 0)),
+                    "sparse_child_count": int(entry.get("sparse_child_count", 0)),
+                    "sparse_child_ratio": float(entry.get("sparse_child_ratio", 0.0)),
+                    "sparse_child_file_threshold": int(
+                        entry.get("sparse_child_file_threshold", 0)
+                    ),
+                },
+            )
+        )
+    if flat_entries:
+        log(
+            f"         flat dirs: {len(flat_entries)} overloaded directories "
+            "(files/subdirs/combined)"
+        )
+    return results, dir_count
+
+
+def _detect_props_bloat(
+    path: Path, lang: LangRuntimeContract
+) -> tuple[list[Issue], int]:
+    """Detect bloated prop interfaces in TypeScript files."""
+    results: list[Issue] = []
+    props_thresh = lang.props_threshold
+    prop_entries, prop_count = props_detector_mod.detect_prop_interface_bloat(
+        path, threshold=props_thresh
+    )
+    for entry in prop_entries:
+        prop_count_value = entry["prop_count"]
+        if prop_count_value >= 50:
+            confidence, tier = "high", 4
+        elif prop_count_value >= 30:
+            confidence, tier = "medium", 3
+        else:
+            confidence, tier = "low", 3
+        results.append(
+            make_issue(
+                "props",
+                entry["file"],
+                entry["interface"],
+                tier=tier,
+                confidence=confidence,
+                summary=(
+                    f"Bloated {entry.get('kind', 'props')}: {entry['interface']} "
+                    f"({prop_count_value} fields)"
+                ),
+                detail={
+                    "prop_count": prop_count_value,
+                    "line": entry["line"],
+                    "kind": entry.get("kind", "props"),
+                },
+            )
+        )
+    return results, prop_count
+
+
+def _detect_passthrough(path: Path) -> list[Issue]:
+    """Detect passthrough components that forward most props unchanged."""
+    results: list[Issue] = []
+    passthrough_entries = detect_passthrough_components(path)
+    for entry in passthrough_entries:
+        results.append(
+            make_issue(
+                "props",
+                entry["file"],
+                f"passthrough::{entry['component']}",
+                tier=entry["tier"],
+                confidence=entry["confidence"],
+                summary=(
+                    f"Passthrough component: {entry['component']} "
+                    f"({entry['passthrough']}/{entry['total_props']} props forwarded, "
+                    f"{entry['ratio']:.0%})"
+                ),
+                detail={
+                    "passthrough": entry["passthrough"],
+                    "total_props": entry["total_props"],
+                    "ratio": entry["ratio"],
+                    "line": entry["line"],
+                    "passthrough_props": entry["passthrough_props"],
+                    "direct_props": entry["direct_props"],
+                },
+            )
+        )
+    return results
+
+
+def phase_structural(
+    path: Path, lang: LangRuntimeContract
+) -> tuple[list[Issue], dict[str, int]]:
+    structural_results, file_count = _detect_structural_signals(path, lang)
+    flat_results, dir_count = _detect_flat_dirs(path, lang)
+    props_results, prop_count = _detect_props_bloat(path, lang)
+    passthrough_results = _detect_passthrough(path)
+
+    results = structural_results + flat_results + props_results + passthrough_results
+    potentials = {
+        "structural": adjust_potential(lang.zone_map, file_count),
+        "flat_dirs": dir_count,
+        "props": max(prop_count, len(passthrough_results))
+        if prop_count
+        else len(passthrough_results),
+    }
+    return results, potentials
+
+
+__all__ = [
+    "_detect_flat_dirs",
+    "_detect_passthrough",
+    "_detect_props_bloat",
+    "_detect_structural_signals",
+    "phase_structural",
+]

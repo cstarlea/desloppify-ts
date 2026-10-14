@@ -1,6 +1,6 @@
 ## Rovo Dev Overlay
 
-Desloppify is installed as a Rovo Dev skill at `.rovodev/skills/desloppify/SKILL.md`. Rovo Dev discovers skills in both the user-level (`~/.rovodev/skills/`) and project-level (`.rovodev/skills/`) directories, and lazy-loads the skill body into context via the built-in `get_skill` tool when desloppify is invoked.
+Desloppify TS is installed as a Rovo Dev skill at `.rovodev/skills/desloppify-ts/SKILL.md`. Rovo Dev discovers skills in both the user-level (`~/.rovodev/skills/`) and project-level (`.rovodev/skills/`) directories, and lazy-loads the skill body into context via the built-in `get_skill` tool when desloppify-ts is invoked.
 
 ### Subagents
 
@@ -13,7 +13,7 @@ Rovo Dev supports parallel subagents via the `invoke_subagents` tool. The `Gener
 Use the first-class `--runner rovodev` for automated batch reviews:
 
 ```bash
-desloppify review --run-batches --runner rovodev --parallel --scan-after-import
+desloppify-ts review --run-batches --runner rovodev --parallel --scan-after-import
 # Each batch is its own `acli rovodev run` subprocess, so concurrency is bounded
 # by `--max-parallel-batches` (default 3), NOT by Rovo Dev's in-process
 # subagent limit. Bump it for faster wall-clock review on large packets:
@@ -24,10 +24,10 @@ This spawns `acli rovodev run` subprocesses (one per batch), recovers the JSON p
 
 Optional environment overrides:
 
-- `DESLOPPIFY_ROVODEV_NO_YOLO=1` opts out of `--yolo` (the default). With `--yolo` enabled the agent can write the per-batch output file in non-interactive mode without permission prompts; turn it off only for interactive review work.
-- `DESLOPPIFY_ROVODEV_OUTPUT_SCHEMA='<schema or path>'` is forwarded as `--output-schema`, constraining the agent's reply to a JSON shape.
-- `DESLOPPIFY_ROVODEV_EXTRA_ARGS="--config-override '{...}'"` is shell-split and appended verbatim before the prompt (useful for `--config-override`, `--restore`, `--worktree`, etc.).
-- `DESLOPPIFY_ROVODEV_EXECUTABLE=acli` overrides the binary name (useful when `acli` is shipped under a different name in CI).
+- `DESLOPPIFY_TS_ROVODEV_NO_YOLO=1` opts out of `--yolo` (the default). With `--yolo` enabled the agent can write the per-batch output file in non-interactive mode without permission prompts; turn it off only for interactive review work.
+- `DESLOPPIFY_TS_ROVODEV_OUTPUT_SCHEMA='<schema or path>'` is forwarded as `--output-schema`, constraining the agent's reply to a JSON shape.
+- `DESLOPPIFY_TS_ROVODEV_EXTRA_ARGS="--config-override '{...}'"` is shell-split and appended verbatim before the prompt (useful for `--config-override`, `--restore`, `--worktree`, etc.).
+- `DESLOPPIFY_TS_ROVODEV_EXECUTABLE=acli` overrides the binary name (useful when `acli` is shipped under a different name in CI).
 
 #### Manual subagent path
 
@@ -35,10 +35,10 @@ If you prefer to drive batches from inside an existing Rovo Dev session, use the
 
 1. Prepare review prompts and the blind packet:
    ```bash
-   desloppify review --run-batches --dry-run
+   desloppify-ts review --run-batches --dry-run
    ```
    This generates one prompt file per batch in
-   `.desloppify/subagents/runs/<run-id>/prompts/` and prints the run directory.
+   `.desloppify-ts/subagents/runs/<run-id>/prompts/` and prints the run directory.
 
 2. Note the run id printed by step 1 (e.g. `20260509_122030`). Replace
    `<run-id>` in the paths below with that real value before invoking —
@@ -50,11 +50,11 @@ If you prefer to drive batches from inside an existing Rovo Dev session, use the
    `invoke_subagents` at 4 per call) using `invoke_subagents`,
    passing one task per batch. Each subagent should:
    - read its prompt file at
-     `.desloppify/subagents/runs/<run-id>/prompts/batch-N.md`
-   - read `.desloppify/review_packet_blind.json`
+     `.desloppify-ts/subagents/runs/<run-id>/prompts/batch-N.md`
+   - read `.desloppify-ts/review_packet_blind.json`
    - inspect the repository as instructed by the prompt's dimension list
    - write ONLY valid JSON to
-     `.desloppify/subagents/runs/<run-id>/results/batch-N.raw.txt`
+     `.desloppify-ts/subagents/runs/<run-id>/results/batch-N.raw.txt`
 
    Example invocation (with `<run-id>` already substituted):
    ```
@@ -62,7 +62,7 @@ If you prefer to drive batches from inside an existing Rovo Dev session, use the
      subagent_names=["General Purpose", "General Purpose", "General Purpose"],
      task_names=["review-batch-1", "review-batch-2", "review-batch-3"],
      task_descriptions=[
-       "Review batch 1. Read .desloppify/subagents/runs/20260509_122030/prompts/batch-1.md, follow it exactly, inspect the repository, and write ONLY valid JSON to .desloppify/subagents/runs/20260509_122030/results/batch-1.raw.txt. Do not edit repository source files.",
+       "Review batch 1. Read .desloppify-ts/subagents/runs/20260509_122030/prompts/batch-1.md, follow it exactly, inspect the repository, and write ONLY valid JSON to .desloppify-ts/subagents/runs/20260509_122030/results/batch-1.raw.txt. Do not edit repository source files.",
        "Review batch 2. ...",
        "Review batch 3. ..."
      ],
@@ -76,7 +76,7 @@ If you prefer to drive batches from inside an existing Rovo Dev session, use the
 4. After every prompt for the run has a matching result file, import them
    (using the same real run id):
    ```bash
-   desloppify review --import-run .desloppify/subagents/runs/<run-id> --scan-after-import
+   desloppify-ts review --import-run .desloppify-ts/subagents/runs/<run-id> --scan-after-import
    ```
 
 ### Key constraints
@@ -89,7 +89,7 @@ If you prefer to drive batches from inside an existing Rovo Dev session, use the
   if you suspect the limit has changed.
 - Subagents do not inherit parent conversation context — the prompt file and
   the blind packet must contain everything they need.
-- Subagents must consume `.desloppify/review_packet_blind.json` (not full
+- Subagents must consume `.desloppify-ts/review_packet_blind.json` (not full
   `query.json`) to avoid score anchoring.
 - The importer expects `results/batch-N.raw.txt` files, not `.json` filenames.
 - The blind packet intentionally omits score history to prevent anchoring bias.
@@ -103,7 +103,7 @@ pipeline (strategize → observe → reflect → organize → enrich → sense-c
 → commit) via `acli rovodev run` subprocesses:
 
 ```bash
-desloppify plan triage --run-stages --runner rovodev
+desloppify-ts plan triage --run-stages --runner rovodev
 ```
 
 Useful flags:
@@ -113,35 +113,35 @@ Useful flags:
 - `--stage-timeout-seconds N` overrides the per-stage timeout.
 
 Each stage's prompt, output, log, and run summary land under
-`.desloppify/triage_runs/<timestamp>/`; rerunning resumes from the last
+`.desloppify-ts/triage_runs/<timestamp>/`; rerunning resumes from the last
 confirmed stage. The `runner` field in `run_summary.json` is set to
 `"rovodev"` for provenance.
 
-The same `DESLOPPIFY_ROVODEV_*` environment overrides documented for the
-review runner above (`DESLOPPIFY_ROVODEV_NO_YOLO`,
-`DESLOPPIFY_ROVODEV_OUTPUT_SCHEMA`, `DESLOPPIFY_ROVODEV_EXTRA_ARGS`,
-`DESLOPPIFY_ROVODEV_EXECUTABLE`) apply to triage stages too.
+The same `DESLOPPIFY_TS_ROVODEV_*` environment overrides documented for the
+review runner above (`DESLOPPIFY_TS_ROVODEV_NO_YOLO`,
+`DESLOPPIFY_TS_ROVODEV_OUTPUT_SCHEMA`, `DESLOPPIFY_TS_ROVODEV_EXTRA_ARGS`,
+`DESLOPPIFY_TS_ROVODEV_EXECUTABLE`) apply to triage stages too.
 
 #### Manual stage-prompt path
 
 If you prefer to drive triage from inside an existing Rovo Dev session,
 run each stage by hand:
 
-1. Get the stage prompt: `desloppify plan triage --stage-prompt <stage>`
+1. Get the stage prompt: `desloppify-ts plan triage --stage-prompt <stage>`
 2. If the stage benefits from parallel review work, fan it out with
    `invoke_subagents` (in groups respecting Rovo Dev's per-call cap);
    otherwise run the stage directly in the parent session.
-3. Confirm the stage: `desloppify plan triage --confirm <stage> --attestation "..."`
-4. Complete: `desloppify plan triage --complete --strategy "..." --attestation "..."`
+3. Confirm the stage: `desloppify-ts plan triage --confirm <stage> --attestation "..."`
+4. Complete: `desloppify-ts plan triage --complete --strategy "..." --attestation "..."`
 
 ### Atlassian context
 
 Rovo Dev ships with first-class Atlassian (Jira / Confluence / Bitbucket)
-tooling. When triaging or planning desloppify work, you can pull related
+tooling. When triaging or planning desloppify-ts work, you can pull related
 Jira issues, design docs, or PR history via the built-in Atlassian MCP
 toolset, or load the `full-context-mode` skill via the `/full-context`
 slash command for guided organisational research — no extra setup
 required.
 
-<!-- desloppify-overlay: rovodev -->
-<!-- desloppify-end -->
+<!-- desloppify-ts-overlay: rovodev -->
+<!-- desloppify-ts-end -->

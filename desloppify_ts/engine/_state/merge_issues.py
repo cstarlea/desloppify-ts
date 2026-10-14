@@ -1,0 +1,380 @@
+"""Issue upsert/verification helpers for scan merge."""
+
+from __future__ import annotations
+
+import os
+from collections.abc import Mapping
+from typing import Any
+
+from desloppify_ts.base.discovery.file_paths import matches_exclusion
+from desloppify_ts.engine._state.filtering import (
+    issue_suppression_fingerprint,
+    matched_ignore_pattern,
+)
+from desloppify_ts.engine._state.issue_semantics import (
+    is_assessment_request,
+    is_import_only_issue,
+)
+from desloppify_ts.engine.policy.zones import should_skip_issue
+
+
+def find_suspect_detectors(
+    existing: dict,
+    current_by_detector: dict[str, int],
+    force_resolve: bool,
+    ran_detectors: set[str] | None = None,
+) -> set[str]:
+    """Detectors that had open issues but likely did not actually run this scan."""
+    if force_resolve:
+        return set()
+
+    previous_open_by_detector: dict[str, int] = {}
+    for issue in existing.values():
+        if issue["status"] != "open":
+            continue
+        detector = issue.get("detector", "unknown")
+        previous_open_by_detector[detector] = (
+            previous_open_by_detector.get(detector, 0) + 1
+        )
+
+    suspect: set[str] = {
+        str(issue.get("detector", "unknown"))
+        for issue in existing.values()
+        if isinstance(issue, dict) and is_import_only_issue(issue)
+    }
+
+    for detector, previous_count in previous_open_by_detector.items():
+        if detector in suspect:
+            continue
+        if current_by_detector.get(detector, 0) > 0:
+            continue
+        if ran_detectors is not None:
+            if detector not in ran_detectors:
+                suspect.add(detector)
+            continue
+        if previous_count >= 3:
+            suspect.add(detector)
+
+    return suspect
+
+
+def _mark_scan_verified(
+    issue: dict,
+    now: str,
+    *,
+    note: str | None,
+    attestation_text: str,
+) -> None:
+    """Record scan corroboration without changing the manual disposition.
+
+    ``note=None`` keeps the issue's note (a wontfix keeps its justification).
+    """
+    issue["suppressed"] = False
+    issue["suppressed_at"] = None
+    issue["suppression_pattern"] = None
+    if note is not None:
+        issue["note"] = note
+    existing = issue.get("resolution_attestation")
+    if not isinstance(existing, dict):
+        existing = {}
+        issue["resolution_attestation"] = existing
+    existing["scan_verified"] = True
+    existing["scan_verified_at"] = now
+    existing["scan_verification_text"] = attestation_text
+
+
+# Statuses that leave the finding itself unresolved: the issue is still open,
+# or its work was deferred or triaged out. A scan that confirms the finding is
+# gone resolves all of them the same way.
+_AUTO_RESOLVABLE_STATUSES = frozenset({"open", "deferred", "triaged_out"})
+
+# Statuses that keep their manual disposition on a confirmed absence and are
+# marked scan-verified instead. If the finding later comes back, a fixed issue
+# is reopened.
+_SCAN_VERIFIABLE_STATUSES = frozenset({"wontfix", "fixed", "false_positive"})
+
+_CONFIRMED_ABSENCE_STATUSES = _AUTO_RESOLVABLE_STATUSES | _SCAN_VERIFIABLE_STATUSES
+
+# User judgements that a reported finding doesn't overturn: a scan never
+# changes these statuses.
+_KEPT_ON_RETURN_STATUSES = frozenset({"wontfix", "false_positive"})
+
+
+def _is_scan_verified(issue: dict) -> bool:
+    attestation = issue.get("resolution_attestation")
+    return isinstance(attestation, dict) and attestation.get("scan_verified") is True
+
+
+def _clear_scan_verified(issue: dict) -> None:
+    attestation = issue.get("resolution_attestation")
+    if not isinstance(attestation, dict):
+        return
+    attestation["scan_verified"] = False
+    attestation.pop("scan_verified_at", None)
+    attestation.pop("scan_verification_text", None)
+
+
+def _mark_auto_resolved(
+    issue: dict,
+    now: str,
+    *,
+    reason: str,
+    previous_status: str,
+) -> None:
+    issue["status"] = "auto_resolved"
+    issue["resolved_at"] = now
+    # The attestation belonged to the skip decision; the scan, not a person,
+    # resolved the issue.
+    issue.pop("resolution_attestation", None)
+    note = f"Auto-resolved: {reason}"
+    if previous_status != "open":
+        note += f" (was {previous_status})"
+    issue["note"] = note
+
+
+def verify_disappeared(
+    existing: dict,
+    current_ids: set[str],
+    suspect_detectors: set[str],
+    now: str,
+    *,
+    lang: str | None,
+    scan_path: str | None,
+    exclude: tuple[str, ...] = (),
+    project_root: str | None = None,
+    zone_map=None,
+    confirmed_detectors: set[str] | None = None,
+) -> tuple[int, int, set[str]]:
+    """Update scan corroboration for issues absent from scan.
+
+    Returns (resolved_count, skipped_other_lang, changed_detectors).
+    An absence is confirmed when the detector is known to have run in the
+    current scan, the zone policy now skips it, or the source file no longer
+    exists. Open, deferred and triaged_out issues then become
+    ``auto_resolved``; wontfix, fixed and false_positive issues keep their
+    status and are marked scan-verified. Issues outside ``scan_path`` are
+    never confirmed and keep their mark as it was.
+    """
+    resolved = skipped_other_lang = 0
+    resolved_detectors: set[str] = set()
+
+    for issue_id, previous in existing.items():
+        previous_status = previous.get("status")
+        if (
+            issue_id in current_ids
+            or previous_status not in _CONFIRMED_ABSENCE_STATUSES
+        ):
+            continue
+
+        if lang and previous.get("lang") and previous["lang"] != lang:
+            skipped_other_lang += 1
+            continue
+
+        # Suspect detectors (e.g. 'review') are import-only and must never
+        # be auto-resolved by a scan — check this BEFORE the scope filter
+        # so that review issues with file="." aren't wrongly resolved as
+        # "out of current scan scope".
+        if previous.get("detector", "unknown") in suspect_detectors:
+            continue
+
+        if scan_path and scan_path != ".":
+            prefix = scan_path.rstrip("/") + "/"
+            if (
+                not previous["file"].startswith(prefix)
+                and previous["file"] != scan_path
+            ):
+                continue
+
+        if exclude and any(matches_exclusion(previous["file"], ex) for ex in exclude):
+            continue
+
+        # If the source file no longer exists on disk, auto-resolve:
+        # the issue cannot be actionable for a deleted file.
+        file_path = previous.get("file", "")
+        file_deleted = False
+        if project_root and file_path and file_path != ".":
+            file_deleted = not os.path.exists(os.path.join(project_root, file_path))
+        # Auto-resolve if zone policy now says this detector should be
+        # skipped for this file's zone (e.g. test_coverage on test files).
+        # Bug reported by @claytona500 in PR #478.
+        detector = previous.get("detector", "")
+        if zone_map and file_path and should_skip_issue(zone_map, file_path, detector):
+            reason = f"zone policy now skips {detector} for this file"
+        elif file_deleted:
+            reason = "source file no longer exists"
+        elif (
+            detector
+            and confirmed_detectors is not None
+            and detector in confirmed_detectors
+        ):
+            reason = "absent from latest detector output"
+        else:
+            continue
+        if previous_status in _SCAN_VERIFIABLE_STATUSES:
+            if _is_scan_verified(previous):
+                continue
+            _mark_scan_verified(
+                previous,
+                now,
+                note=None,
+                attestation_text=f"Scan confirmed the finding is gone: {reason}",
+            )
+        else:
+            _mark_auto_resolved(
+                previous, now, reason=reason, previous_status=previous_status
+            )
+        resolved_detectors.add(detector or "unknown")
+        resolved += 1
+
+    return resolved, skipped_other_lang, resolved_detectors
+
+
+def upsert_issues(
+    existing: dict,
+    current_issues: list[dict],
+    ignore: list[str],
+    now: str,
+    *,
+    lang: str | None,
+    ignore_metadata: Mapping[str, Any] | None = None,
+) -> tuple[set[str], int, int, dict[str, int], int, set[str]]:
+    """Insert new issues and update existing ones.
+
+    Returns (current_ids, new_count, reopened_count, by_detector, ignored_count, changed_detectors).
+    """
+    current_ids: set[str] = set()
+    new_count = reopened_count = ignored_count = 0
+    by_detector: dict[str, int] = {}
+    changed_detectors: set[str] = set()
+    effective_ignore_metadata = _suppression_metadata_from_state(
+        existing,
+        ignore_metadata,
+    )
+
+    for issue in current_issues:
+        issue_id = issue["id"]
+        detector = issue.get("detector", "unknown")
+        current_ids.add(issue_id)
+        by_detector[detector] = by_detector.get(detector, 0) + 1
+        matched_ignore = matched_ignore_pattern(
+            issue_id,
+            issue["file"],
+            ignore,
+            issue=issue,
+            ignore_metadata=effective_ignore_metadata,
+        )
+        if matched_ignore:
+            ignored_count += 1
+
+        if lang:
+            issue["lang"] = lang
+
+        if issue_id not in existing:
+            existing[issue_id] = dict(issue)
+            if matched_ignore:
+                existing[issue_id]["suppressed"] = True
+                existing[issue_id]["suppressed_at"] = now
+                existing[issue_id]["suppression_pattern"] = matched_ignore
+                continue
+            new_count += 1
+            changed_detectors.add(detector)
+            continue
+
+        previous = existing[issue_id]
+        previous.update(
+            last_seen=now,
+            tier=issue["tier"],
+            confidence=issue["confidence"],
+            summary=issue["summary"],
+            detail=issue.get("detail", {}),
+        )
+        if "zone" in issue:
+            previous["zone"] = issue["zone"]
+        if lang and not previous.get("lang"):
+            previous["lang"] = lang
+
+        if matched_ignore:
+            previous["suppressed"] = True
+            previous["suppressed_at"] = now
+            previous["suppression_pattern"] = matched_ignore
+            continue
+
+        previous["suppressed"] = False
+        previous["suppressed_at"] = None
+        previous["suppression_pattern"] = None
+
+        if previous["status"] in _KEPT_ON_RETURN_STATUSES:
+            # A wontfix or false_positive judgement covers the finding being
+            # reported: the status stays, and a scan-verified mark is cleared
+            # so the issue counts again where the mode counts it.
+            if _is_scan_verified(previous):
+                _clear_scan_verified(previous)
+                changed_detectors.add(detector)
+            continue
+
+        if previous["status"] in ("fixed", "auto_resolved"):
+            # Review-request issues are condition-based. When just
+            # completed by an agent import, skip reopening to avoid a
+            # resolve-then-reopen loop on the same scan cycle.
+            if (
+                is_assessment_request(previous)
+                and previous["status"] in {"fixed", "auto_resolved"}
+                and (previous.get("resolution_attestation") or {}).get("kind")
+                == "agent_import"
+            ):
+                continue
+            previous_status = previous["status"]
+            previous["reopen_count"] = previous.get("reopen_count", 0) + 1
+            previous.pop("resolution_attestation", None)
+            previous.update(
+                status="open",
+                resolved_at=None,
+                note=(
+                    f"Reopened (×{previous['reopen_count']}) "
+                    f"— reappeared in scan (was {previous_status})"
+                ),
+            )
+            reopened_count += 1
+            changed_detectors.add(detector)
+
+    return (
+        current_ids,
+        new_count,
+        reopened_count,
+        by_detector,
+        ignored_count,
+        changed_detectors,
+    )
+
+
+def _suppression_metadata_from_state(
+    existing: Mapping[str, Any],
+    ignore_metadata: Mapping[str, Any] | None,
+) -> dict[str, dict[str, Any]]:
+    metadata: dict[str, dict[str, Any]] = {}
+    for pattern, raw in (ignore_metadata or {}).items():
+        if isinstance(raw, Mapping):
+            metadata[str(pattern)] = dict(raw)
+
+    for issue in existing.values():
+        if not isinstance(issue, Mapping) or not issue.get("suppressed"):
+            continue
+        pattern = issue.get("suppression_pattern")
+        if not pattern or "*" in str(pattern) or "::" not in str(pattern):
+            continue
+        entry = metadata.setdefault(str(pattern), {})
+        fingerprints = entry.setdefault("fingerprints", [])
+        if not isinstance(fingerprints, list):
+            fingerprints = []
+            entry["fingerprints"] = fingerprints
+        fingerprint = issue_suppression_fingerprint(issue)
+        if fingerprint not in fingerprints:
+            fingerprints.append(fingerprint)
+    return metadata
+
+
+__all__ = [
+    "verify_disappeared",
+    "find_suspect_detectors",
+    "upsert_issues",
+]

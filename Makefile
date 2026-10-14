@@ -23,9 +23,9 @@ PYTEST_TIMEOUT ?= 120
 PYTEST := pytest --timeout=$(PYTEST_TIMEOUT)
 
 sync-docs:
-	mkdir -p desloppify/data/global
-	find desloppify/data/global -maxdepth 1 -type f -name '*.md' -delete
-	cp docs/*.md desloppify/data/global/
+	mkdir -p desloppify_ts/data/global
+	find desloppify_ts/data/global -maxdepth 1 -type f -name '*.md' -delete
+	cp docs/*.md desloppify_ts/data/global/
 
 install-hooks:
 	@hooks=$$(git rev-parse --git-path hooks 2>/dev/null || echo .git/hooks) && \
@@ -58,8 +58,8 @@ arch:
 	$(LINT_IMPORTS) --config $(IMPORTLINTER_CONFIG)
 
 ci-contracts:
-	$(PYTEST) -q desloppify/tests/ci/test_ci_contracts.py
-	$(PYTEST) -q desloppify/tests/commands/test_lifecycle_transitions.py -k "assessment_then_score_when_no_review_followup"
+	$(PYTEST) -q desloppify_ts/tests/ci/test_ci_contracts.py
+	$(PYTEST) -q desloppify_ts/tests/commands/test_lifecycle_transitions.py -k "assessment_then_score_when_no_review_followup"
 
 tests:
 	$(PYTEST) -q $(PYTEST_XML_FLAG)
@@ -69,12 +69,12 @@ tests-full:
 		{ echo "tests-full needs the [full] extra: run make install-full."; exit 1; }
 	$(PYTEST) -q $(PYTEST_XML_FLAG)
 
-GOLDEN_NODE_DIR := desloppify/languages/typescript/tests/golden/node
+GOLDEN_NODE_DIR := desloppify_ts/languages/typescript/tests/golden/node
 
 tests-golden-node:
 	npm ci --prefix $(GOLDEN_NODE_DIR) --no-audit --no-fund
-	DESLOPPIFY_REQUIRE_NODE_GOLDEN=1 $(PYTEST) -q -rs desloppify/languages/typescript/tests/test_ts_golden.py \
-		desloppify/languages/typescript/tests/test_ts_fixer_roundtrip.py
+	DESLOPPIFY_TS_REQUIRE_NODE_GOLDEN=1 $(PYTEST) -q -rs desloppify_ts/languages/typescript/tests/test_ts_golden.py \
+		desloppify_ts/languages/typescript/tests/test_ts_fixer_roundtrip.py
 
 package-smoke:
 	rm -rf dist .pkg-smoke
@@ -85,11 +85,10 @@ package-smoke:
 		python -m pip install --upgrade pip && \
 		WHEEL=$$(ls -t dist/desloppify_ts-*.whl | head -n 1) && \
 		python -m pip install "$$WHEEL[full]" && \
-		python -c "from importlib.resources import files; from pathlib import Path; docs=Path('docs'); bundled=files('desloppify.data.global'); names=sorted(p.name for p in docs.glob('*.md')); assert names; missing=[name for name in names if not bundled.joinpath(name).is_file()]; assert not missing, f'missing bundled docs: {missing}'; mismatched=[name for name in names if bundled.joinpath(name).read_text(encoding='utf-8') != (docs / name).read_text(encoding='utf-8')]; assert not mismatched, f'mismatched bundled docs: {mismatched}'" && \
+		python -c "from importlib.resources import files; from pathlib import Path; docs=Path('docs'); bundled=files('desloppify_ts.data.global'); names=sorted(p.name for p in docs.glob('*.md')); assert names; missing=[name for name in names if not bundled.joinpath(name).is_file()]; assert not missing, f'missing bundled docs: {missing}'; mismatched=[name for name in names if bundled.joinpath(name).read_text(encoding='utf-8') != (docs / name).read_text(encoding='utf-8')]; assert not mismatched, f'mismatched bundled docs: {mismatched}'" && \
 		python -c "import importlib.metadata as m,sys; extras=set(m.metadata('desloppify-ts').get_all('Provides-Extra') or []); required={'full','treesitter','scorecard'}; missing=required-extras; print('missing extras metadata:', sorted(missing)) if missing else None; sys.exit(1 if missing else 0)" && \
-		desloppify --help > /dev/null && \
-		desloppify --version | head -n 1 | grep -q '^desloppify [0-9]' && \
-		desloppify-ts --version > /dev/null
+		desloppify-ts --help > /dev/null && \
+		desloppify-ts --version | head -n 1 | grep -q '^desloppify-ts [0-9]'
 	rm -rf .pkg-smoke
 
 ci-fast: lint typecheck arch ci-contracts tests

@@ -1,6 +1,6 @@
 # How Scoring Works
 
-Desloppify computes health scores from 0 to 100. 100 means no counted failures. The code lives in `desloppify/engine/_scoring/`:
+Desloppify TS computes health scores from 0 to 100. 100 means no counted failures. The code lives in `desloppify_ts/engine/_scoring/`:
 
 - `policy/core.py` holds the weights and the per-mode failure rules.
 - `detection.py` counts failures per detector.
@@ -73,7 +73,7 @@ A carried score expires. `carried_forward_since_scan` records the first scan it 
 
 ### Disabled detectors and dimensions
 
-The `disabled` config key takes detector names (`smells`) and mechanical dimensions (`Test health`; case, `_` and `-` don't matter). Set it with `desloppify config set disabled <name>`, and remove one entry with `desloppify config unset disabled <name>`. A disabled detector is taken out of scoring altogether; this is different from `ignore`, which hides issues but leaves the detector's checks in the denominator:
+The `disabled` config key takes detector names (`smells`) and mechanical dimensions (`Test health`; case, `_` and `-` don't matter). Set it with `desloppify-ts config set disabled <name>`, and remove one entry with `desloppify-ts config unset disabled <name>`. A disabled detector is taken out of scoring altogether; this is different from `ignore`, which hides issues but leaves the detector's checks in the denominator:
 
 - Its potential is dropped and new issues from it are discarded, so its dimension is recomputed from the remaining detectors. A dimension with every detector disabled disappears and isn't carried forward.
 - Its existing issues are hidden from `status`, `show`, `next` and the score, like suppressed issues (pattern `disabled:<detector>`). Their status doesn't change, so a disabled detector isn't counted as a fix. Wontfix issues are left untouched.
@@ -129,7 +129,7 @@ A class is a god class when it meets two of these rules:
 - 40 or more decorators on the class, its methods and their parameters. Field decorators (ORM columns, validators, Angular inputs) declare a shape, so they don't count.
 - 300 or more lines.
 
-One rule alone isn't enough. NestJS services and Angular components routinely inject several collaborators, and a controller stacks decorators on every route. The classes are listed in the issue's `detail.god_classes` (`desloppify detect gods` shows them).
+One rule alone isn't enough. NestJS services and Angular components routinely inject several collaborators, and a controller stacks decorators on every route. The classes are listed in the issue's `detail.god_classes` (`desloppify-ts detect gods` shows them).
 
 ### Type checks
 
@@ -150,7 +150,7 @@ When tsc doesn't run (not installed, no tsconfig, dependencies not installed, a 
 - A directory under the scan path with its own `eslint.config.*` belongs to another project, such as a package in a monorepo, and is neither linted nor counted; the scan records reduced coverage naming it, and scanning that directory lints it. Nested Biome and oxlint configs extend the root one, so they aren't boundaries.
 - The linter is the project's `node_modules/.bin/<linter>`, never a global install or `npx`. With no project linter configured, the detector does nothing.
 - Rule IDs are ESLint's (`@typescript-eslint/no-floating-promises`). oxlint's codes are renamed to match (`typescript(no-explicit-any)` is `@typescript-eslint/no-explicit-any`), so a rule that oxlint and ESLint both report on a line is one issue. Biome's are its category without `lint/` (`suspicious/noDoubleEquals`).
-- Formatting rules (`meta.type: "layout"`, `@stylistic/*`, `prettier/*`) aren't issues. Neither are rules that check what a desloppify detector already reports, so the same problem isn't counted twice: unused variables and imports (`unused`), `no-explicit-any`, `ban-ts-comment`, `no-non-null-assertion`, `no-empty`, `require-await`, `no-magic-numbers`, `default-case`, `no-warning-comments`, `complexity`, `max-lines-per-function` (smells), `max-lines` (structural), `no-eval`, `no-new-func`, `react/no-danger` (security), and Biome's equivalents. The list is `DUPLICATED_BY` in `detectors/lint/rules.py`.
+- Formatting rules (`meta.type: "layout"`, `@stylistic/*`, `prettier/*`) aren't issues. Neither are rules that check what a desloppify-ts detector already reports, so the same problem isn't counted twice: unused variables and imports (`unused`), `no-explicit-any`, `ban-ts-comment`, `no-non-null-assertion`, `no-empty`, `require-await`, `no-magic-numbers`, `default-case`, `no-warning-comments`, `complexity`, `max-lines-per-function` (smells), `max-lines` (structural), `no-eval`, `no-new-func`, `react/no-danger` (security), and Biome's equivalents. The list is `DUPLICATED_BY` in `detectors/lint/rules.py`.
 - Confidence comes from the rule. ESLint's `problem` rules are high and `suggestion` rules medium; Biome's correctness, suspicious and security groups and oxlint's correctness and suspicious categories count as `problem`, their style and nursery rules as stylistic. Naming, ordering and file-name conventions, and typescript-eslint's stylistic rules, are low. The type-aware typescript-eslint rules have their own table: async and comparison bugs (`no-floating-promises`, `no-misused-promises`, `await-thenable`, `switch-exhaustiveness-check`, ...) are high, the `no-unsafe-*` family and `restrict-template-expressions` are medium (an untyped dependency or compiler options let `any` in), and cleanups (`no-unnecessary-type-assertion`, `prefer-nullish-coalescing`, ...) are low. A rule set to `warn` is one step lower. Severity `error` alone doesn't make a finding high.
 - A file the linter can't parse isn't counted; reduced coverage says how many. Biome and oxlint don't list the files they linted, so for them the potential is the scan's files in the scan path.
 
@@ -162,7 +162,7 @@ When a linter doesn't run (not installed, dependencies not installed, a config o
 
 ### Knip
 
-Knip runs once per scan (`detectors/knip_adapter.py`, cached like tsc), and only when the project installs it: desloppify never downloads it. In a monorepo it runs from the workspace root, with `--workspace` when the scan path is one package. Three detectors read the run, all under Code quality:
+Knip runs once per scan (`detectors/knip_adapter.py`, cached like tsc), and only when the project installs it: desloppify-ts never downloads it. In a monorepo it runs from the workspace root, with `--workspace` when the scan path is one package. Three detectors read the run, all under Code quality:
 
 - `exports` reports Knip's unused exports and types (`exports::<file>::<name>`), unused enum members (`exports::<file>::<Enum>.<Member>`) and duplicate exports, one name exported under several (`exports::<file>::<a>=<b>`, tier 3, medium confidence). A deprecated alias isn't a duplicate (it's kept on purpose, and `deprecated` reports it), nor is an alias already reported as an unused export. A published package's public API isn't unused just because nothing in the repo imports it: an export (or the enum holding a member) that a non-private package's `exports`, `main`, `module` or `types` entry exposes, directly or through re-exports, isn't reported (`deps/public_api.py`, which needs tree-sitter). Unused exports in apps, private packages and modules no entry re-exports are still reported.
 - `orphaned` uses Knip's unused files as corroboration and reports nothing new. An orphan Knip also reports goes from medium to high confidence, unless an import Knip can't resolve either may point at it. An orphan Knip doesn't report is a file it reaches from an entry point it knows (a plugin's config, a manifest field) or one its config ignores, so it drops to low confidence.
@@ -181,7 +181,7 @@ Without Knip, `exports` falls back to a conservative import check (`exports_fall
 
 ### jscpd
 
-`boilerplate_duplication` (Duplication) runs jscpd from the scan root. It uses the project's own install first, then one on `PATH`. A scan downloads jscpd only when you allow it, with `scan --allow-tool-download`, the `allow_tool_download` config key or `DESLOPPIFY_ALLOW_TOOL_DOWNLOAD=1`. It then runs the pinned version (`JSCPD_VERSION` in `detectors/jscpd_adapter.py`) with `npx`. Otherwise the detector is skipped and records reduced coverage.
+`boilerplate_duplication` (Duplication) runs jscpd from the scan root. It uses the project's own install first, then one on `PATH`. A scan downloads jscpd only when you allow it, with `scan --allow-tool-download`, the `allow_tool_download` config key or `DESLOPPIFY_TS_ALLOW_TOOL_DOWNLOAD=1`. It then runs the pinned version (`JSCPD_VERSION` in `detectors/jscpd_adapter.py`) with `npx`. Otherwise the detector is skipped and records reduced coverage.
 
 ### Backend security
 

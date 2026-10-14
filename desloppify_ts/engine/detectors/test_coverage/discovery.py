@@ -1,0 +1,143 @@
+"""File discovery and mapping helpers for test coverage detector."""
+
+from __future__ import annotations
+
+import math
+
+from desloppify_ts.base.discovery.paths import get_project_root
+from desloppify_ts.engine.policy.zones import FileZoneMap, Zone
+
+from .heuristics import (
+    _has_testable_logic,
+    _is_runtime_entrypoint,
+    _is_served_asset,
+)
+from .metrics import (
+    _COMPLEXITY_TIER_UPGRADE,
+    _MIN_LOC,
+    _file_loc,
+    _importer_count,
+    _loc_weight,
+)
+
+# Max untested modules to report when there are zero tests
+_MAX_NO_TESTS_ENTRIES = 50
+
+
+def _root_relative_fn():
+    """A function making paths under the project root relative, with ``/`` separators."""
+    root_prefix = get_project_root().as_posix().rstrip("/") + "/"
+
+    def _to_rel(path: str) -> str:
+        posix = path.replace("\\", "/")
+        return posix[len(root_prefix) :] if posix.startswith(root_prefix) else path
+
+    return _to_rel
+
+
+def _normalize_graph_paths(graph: dict) -> dict:
+    """Normalize graph paths to relative paths."""
+    _to_rel = _root_relative_fn()
+    needs_norm = any(_to_rel(k) != k for k in graph)
+    if not needs_norm:
+        return graph
+
+    norm_graph: dict = {}
+    for key, value in graph.items():
+        rel_key = _to_rel(key)
+        norm_graph[rel_key] = {
+            **value,
+            "imports": {_to_rel(imp) for imp in value.get("imports", set())},
+        }
+    return norm_graph
+
+
+def _discover_scorable_and_tests(
+    *,
+    graph: dict,
+    zone_map: FileZoneMap,
+    lang_name: str,
+    extra_test_files: set[str] | None,
+) -> tuple[set[str], set[str], set[str], int]:
+    """Return (production_files, test_files, scorable_files, potential)."""
+    _to_rel = _root_relative_fn()
+    all_files = zone_map.all_files()
+    production_files = set(
+        zone_map.include_only(all_files, Zone.PRODUCTION, Zone.SCRIPT)
+    )
+    test_files = set(zone_map.include_only(all_files, Zone.TEST))
+
+    if extra_test_files:
+        test_files |= {_to_rel(f) for f in extra_test_files}
+
+    # Scripts resolve test imports but aren't expected to have tests.
+    scorable = {
+        filepath
+        for filepath in zone_map.include_only(all_files, Zone.PRODUCTION)
+        if _file_loc(filepath) >= _MIN_LOC
+        and _has_testable_logic(filepath, lang_name)
+        and not _is_served_asset(filepath, lang_name)
+    }
+
+    potential = round(sum(min(math.sqrt(_file_loc(f)), 50) for f in scorable))
+    return production_files, test_files, scorable, potential
+
+
+def _no_tests_issues(
+    scorable: set[str],
+    graph: dict,
+    lang_name: str,
+    complexity_map: dict[str, float] | None = None,
+) -> list[dict]:
+    """Generate issues when there are zero test files."""
+    cmap = complexity_map or {}
+    by_loc = sorted(scorable, key=lambda f: -_file_loc(f))
+    entries = []
+    for filepath in by_loc[:_MAX_NO_TESTS_ENTRIES]:
+        loc = _file_loc(filepath)
+        importer_count = _importer_count(graph, filepath)
+        is_runtime_entry = _is_runtime_entrypoint(filepath, lang_name)
+        if is_runtime_entry:
+            entries.append(
+                {
+                    "file": filepath,
+                    "name": "runtime_entrypoint_no_direct_tests",
+                    "tier": 3,
+                    "confidence": "medium",
+                    "summary": (
+                        f"Runtime entrypoint ({loc} LOC, {importer_count} importers) — "
+                        "externally invoked; no direct tests found"
+                    ),
+                    "detail": {
+                        "kind": "runtime_entrypoint_no_direct_tests",
+                        "loc": loc,
+                        "importer_count": importer_count,
+                        "loc_weight": 0.0,
+                    },
+                }
+            )
+            continue
+        complexity = cmap.get(filepath, 0)
+        is_complex = complexity >= _COMPLEXITY_TIER_UPGRADE
+        is_critical = importer_count >= 10 or is_complex
+        tier = 2 if is_critical else 3
+        kind = "untested_critical" if is_critical else "untested_module"
+        detail: dict = {
+            "kind": kind,
+            "loc": loc,
+            "importer_count": importer_count,
+            "loc_weight": _loc_weight(loc),
+        }
+        if is_complex:
+            detail["complexity_score"] = complexity
+        entries.append(
+            {
+                "file": filepath,
+                "name": "",
+                "tier": tier,
+                "confidence": "high",
+                "summary": f"Untested module ({loc} LOC, {importer_count} importers) — no test files found",
+                "detail": detail,
+            }
+        )
+    return entries

@@ -1,0 +1,575 @@
+"""Zone classification system — deterministic file intent classification.
+
+Classifies files into zones (production, test, config, generated, script, vendor)
+based on path patterns. Zone metadata flows through issues, scoring, and the LLM.
+"""
+
+from __future__ import annotations
+
+import fnmatch
+import functools
+import logging
+import os
+import re
+from collections.abc import Callable
+from dataclasses import dataclass, field
+from enum import Enum
+
+from desloppify_ts.base.discovery.file_paths import resolve_path
+from desloppify_ts.base.output.fallbacks import log_best_effort_failure
+from desloppify_ts.engine.policy.zones_data import (
+    CONFIG_SKIP_DETECTORS,
+    SCRIPT_SKIP_DETECTORS,
+    SKIP_ALL_DETECTORS,
+    TEST_SKIP_DETECTORS,
+)
+
+logger = logging.getLogger(__name__)
+
+
+class Zone(str, Enum):  # noqa: UP042 - StrEnum changes str()/format() output; not a lint-only change
+    """File intent zone — determines scoring and detection policy."""
+
+    PRODUCTION = "production"
+    TEST = "test"
+    CONFIG = "config"
+    GENERATED = "generated"
+    SCRIPT = "script"
+    VENDOR = "vendor"
+
+
+# Zones excluded from the health score
+EXCLUDED_ZONES = {Zone.TEST, Zone.CONFIG, Zone.GENERATED, Zone.VENDOR}
+
+# String values for quick lookup in scoring (issues store zone as string)
+EXCLUDED_ZONE_VALUES = {z.value for z in EXCLUDED_ZONES}
+
+# Shared review filtering sets (enum-backed to keep comparisons type-safe).
+REVIEW_SELECTION_EXCLUDED_ZONES = frozenset({Zone.TEST, Zone.GENERATED, Zone.VENDOR})
+REVIEW_COVERAGE_EXCLUDED_ZONES = frozenset(
+    {Zone.TEST, Zone.GENERATED, Zone.VENDOR, Zone.CONFIG, Zone.SCRIPT}
+)
+
+
+def normalize_zone(zone: object) -> Zone | None:
+    """Normalize enum/string/duck-typed zone objects to a ``Zone`` member."""
+    if isinstance(zone, Zone):
+        return zone
+    raw = getattr(zone, "value", zone)
+    if isinstance(raw, Zone):
+        return raw
+    if isinstance(raw, str):
+        try:
+            return Zone(raw)
+        except ValueError:
+            return None
+    return None
+
+
+def zone_in(zone: object, zones: frozenset[Zone] | set[Zone]) -> bool:
+    """Return ``True`` when *zone* resolves to a member of *zones*."""
+    normalized = normalize_zone(zone)
+    return normalized in zones if normalized is not None else False
+
+
+@dataclass
+class ZoneRule:
+    """A classification rule: zone + list of path patterns.
+
+    Patterns are matched against relative file paths. First matching rule wins.
+    Pattern types (auto-detected from shape):
+      - "/dir/"   → substring match on full path (directory marker)
+      - ".ext"    → basename ends-with (suffix/extension, e.g. ".d.ts", ".test.")
+      - "prefix_" → basename starts-with (trailing underscore)
+      - "name.py" → basename exact match (has extension, no /)
+      - "*.x.ts"  → basename glob (contains ``*`` or ``?``)
+      - "^dir/"   → path starts-with (anchored at the project root)
+      - "a/b.ts"  → path suffix (the file, at the root or below a directory)
+      - fallback  → tool name: basename (less a leading dot) starts with it,
+                    then "." or "rc" ("eslint" → .eslintrc.cjs, eslint.config.js)
+
+    A file matching any ``exclude`` pattern skips the rule.
+    """
+
+    zone: Zone
+    patterns: list[str]
+    exclude: list[str] = field(default_factory=list)
+
+
+def _match_pattern(rel_path: str, pattern: str) -> bool:
+    """Match a zone pattern against a relative file path.
+
+    See ZoneRule docstring for pattern type conventions.
+    """
+    basename = os.path.basename(rel_path)
+
+    # Anchored pattern: "^tools/" → path starts-with
+    if pattern.startswith("^"):
+        return rel_path.startswith(pattern[1:])
+
+    # Glob pattern: "*.config.ts" → fnmatch on basename
+    if "*" in pattern or "?" in pattern:
+        return fnmatch.fnmatchcase(basename, pattern)
+
+    # Directory pattern: "/dir/" → substring on padded path
+    if pattern.startswith("/") and pattern.endswith("/"):
+        return pattern in ("/" + rel_path + "/")
+
+    # Suffix/extension pattern: starts with "." → contains on basename
+    if pattern.startswith("."):
+        return pattern in basename
+
+    # Prefix pattern: ends with "_" → basename starts-with
+    if pattern.endswith("_"):
+        return basename.startswith(pattern)
+
+    # Suffix pattern: starts with "_" → basename ends-with (_test.py, _pb2.py)
+    if pattern.startswith("_"):
+        return basename.endswith(pattern)
+
+    # Exact basename: has a proper file extension (1-5 chars after last dot),
+    # no "/" → exact basename match (config.py, setup.py, conftest.py)
+    if "/" not in pattern and "." in pattern:
+        ext = pattern.rsplit(".", 1)[-1]
+        if ext and len(ext) <= 5 and ext.isalnum():
+            return basename == pattern
+
+    # Path: "src/config.ts" → that file, at the root or below a directory
+    if "/" in pattern:
+        path = pattern.lstrip("/")
+        return rel_path.lstrip("/") == path or rel_path.endswith(f"/{path}")
+
+    # Tool name: "vite.config", "tsconfig", "eslint", "setupTests." → the
+    # basename, less a leading dot, starts with it, then "." or "rc"
+    # (vite.config.ts, tsconfig.build.json, .eslintrc.cjs). Directories don't
+    # count: src/lib/eslint-rules/x.ts is not config.
+    name = basename.lstrip(".")
+    if pattern.endswith("."):
+        return name.startswith(pattern)
+    return name == pattern or name.startswith((f"{pattern}.", f"{pattern}rc"))
+
+
+# ── Common zone rules (shared across languages) ──────────
+
+COMMON_ZONE_RULES = [
+    ZoneRule(Zone.VENDOR, ["/vendor/", "/third_party/", "/vendored/"]),
+    ZoneRule(Zone.GENERATED, ["/generated/", "/__generated__/"]),
+    ZoneRule(Zone.TEST, ["/tests/", "/test/", "/fixtures/"]),
+    # Example apps are runnable demos, untested by convention like scripts.
+    # Root tools/ only: src/agent/tools/ is often production (LLM tool definitions).
+    ZoneRule(Zone.SCRIPT, ["/scripts/", "/bin/", "^tools/", "/examples/", "/example/"]),
+]
+
+
+_GENERATED_MARKER_RE = re.compile(
+    r"@generated\b|\bauto-?generated\b|\bautomatically generated\b"
+    r"|\bcode generated\b.*\bdo not edit\b",
+    re.IGNORECASE,
+)
+_HEADER_BYTES = 4096
+_COMMENT_PREFIXES = ("//", "/*", "*", "#")
+
+
+def has_generated_header(text: str) -> bool:
+    """Return whether the file's leading comment block marks it as generated.
+
+    Only comments before the first line of code count (after an optional
+    shebang), so a ``@generated`` mention in the body is ignored.
+    """
+    in_block = False
+    for raw_line in text.lstrip("\ufeff").splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        if in_block:
+            in_block = "*/" not in line
+        elif line.startswith("/*"):
+            in_block = "*/" not in line[2:]
+        elif not line.startswith(_COMMENT_PREFIXES):
+            return False
+        if _GENERATED_MARKER_RE.search(line):
+            return True
+    return False
+
+
+def _file_has_generated_header(file_path: str) -> bool:
+    try:
+        with open(resolve_path(file_path), "rb") as handle:
+            head = handle.read(_HEADER_BYTES)
+    except OSError:
+        return False
+    return has_generated_header(head.decode("utf-8", errors="replace"))
+
+
+def _classify_directory(
+    rel_dir: str, rules: list[ZoneRule], file_zones: list[Zone]
+) -> Zone:
+    """Zone for a directory: its directory patterns, else its files' common zone."""
+    for rule in rules:
+        for pattern in rule.patterns:
+            if not pattern.endswith("/"):
+                continue
+            if pattern.startswith("/") and _match_pattern(rel_dir, pattern):
+                return rule.zone
+            if pattern.startswith("^") and _match_pattern(rel_dir + "/", pattern):
+                return rule.zone
+    zones = set(file_zones)
+    if len(zones) == 1:
+        return zones.pop()
+    return Zone.PRODUCTION
+
+
+_WILDCARDS = frozenset("*?")
+
+
+def is_override_pattern(key: str) -> bool:
+    """Return whether a ``zone_overrides`` key is a glob rather than a file path.
+
+    Only ``*`` and ``?`` make a pattern, so a literal ``app/[slug]/page.tsx``
+    stays a file; ``[...]`` classes work inside a pattern.
+    """
+    return any(ch in _WILDCARDS for ch in key)
+
+
+def _translate_segment(segment: str) -> str:
+    piece, i = "", 0
+    while i < len(segment):
+        ch = segment[i]
+        if ch == "*":
+            piece += "[^/]*"
+        elif ch == "?":
+            piece += "[^/]"
+        elif ch == "[" and "]" in segment[i + 2 :]:
+            end = segment.index("]", i + 2)
+            body = segment[i + 1 : end]
+            negate = body.startswith("!")
+            body = "".join("\\" + c if c in "\\[]^" else c for c in body[negate:])
+            piece += "[" + ("^" if negate else "") + body + "]"
+            i = end
+        else:
+            piece += re.escape(ch)
+        i += 1
+    return piece
+
+
+@functools.lru_cache(maxsize=512)
+def _compile_override_pattern(pattern: str) -> re.Pattern[str]:
+    """Compile a project-relative glob.
+
+    ``**`` spans any number of directories; ``*``, ``?`` and ``[...]`` stay
+    within one path segment. A trailing ``/**`` also matches the directory
+    itself, so ``www/**`` covers ``www`` and everything under it.
+    """
+    regex = ""
+    segments = pattern.strip("/").split("/")
+    for index, segment in enumerate(segments):
+        last = index == len(segments) - 1
+        if segment == "**":
+            if not last:
+                regex += "(?:[^/]+/)*"
+            elif regex:
+                regex = regex[:-1] + "(?:/.*)?"
+            else:
+                regex = ".*"
+            continue
+        regex += _translate_segment(segment) + ("" if last else "/")
+    return re.compile(regex)
+
+
+def override_specificity(pattern: str) -> tuple[int, int]:
+    """Rank patterns: a longer fixed leading path wins, then more literal characters.
+
+    ``www/docs/**`` beats ``www/**``, and ``www/**`` beats ``**/*.ts``.
+    """
+    prefix = 0
+    for ch in pattern:
+        if ch in _WILDCARDS or ch == "[":
+            break
+        prefix += 1
+    return prefix, sum(1 for ch in pattern if ch not in _WILDCARDS)
+
+
+def matching_override(rel_path: str, overrides: dict[str, str] | None) -> str | None:
+    """Return the ``zone_overrides`` key that decides *rel_path*, if any.
+
+    An exact path beats every pattern. Among matching patterns the most
+    specific wins (see ``override_specificity``); a tie goes to the pattern
+    that sorts first.
+    """
+    if not overrides:
+        return None
+    if rel_path in overrides:
+        return rel_path
+    matches = [
+        key
+        for key in overrides
+        if is_override_pattern(key)
+        and _compile_override_pattern(key).fullmatch(rel_path)
+    ]
+    if not matches:
+        return None
+    return min(
+        matches, key=lambda key: (tuple(-n for n in override_specificity(key)), key)
+    )
+
+
+def classify_file(
+    rel_path: str, rules: list[ZoneRule], overrides: dict[str, str] | None = None
+) -> Zone:
+    """Classify a file by its relative path. Overrides take priority."""
+    key = matching_override(rel_path, overrides)
+    if key is not None and overrides:
+        try:
+            return Zone(overrides[key])
+        except ValueError as exc:
+            log_best_effort_failure(logger, f"parse zone override for {rel_path}", exc)
+    for rule in rules:
+        if any(_match_pattern(rel_path, pattern) for pattern in rule.exclude):
+            continue
+        for pattern in rule.patterns:
+            if _match_pattern(rel_path, pattern):
+                return rule.zone
+    return Zone.PRODUCTION
+
+
+class FileZoneMap:
+    """Cached zone classification for a set of files.
+
+    Built once per scan from file list + zone rules.
+    """
+
+    def __init__(
+        self,
+        files: list[str],
+        rules: list[ZoneRule],
+        rel_fn: Callable[[str], str] | None = None,
+        overrides: dict[str, str] | None = None,
+    ):
+        """Build a zone map from files, ordered rules, and optional overrides.
+
+        A file whose leading comment marks it as generated (``@generated``,
+        "auto-generated", "Code generated ... DO NOT EDIT") is in the generated zone unless an
+        override or a vendor path says otherwise.
+        """
+        self._map: dict[str, Zone] = {}
+        self._rel_map: dict[str, Zone] = {}
+        self._rel_fn = rel_fn
+        self._overrides = overrides
+        self._rules = rules
+        self._dir_files: dict[str, list[Zone]] = {}
+        self._dir_zones: dict[str, Zone] = {}
+        self._unscanned_zones: dict[str, Zone] = {}
+        for file_path in files:
+            rel_path = rel_fn(file_path) if rel_fn else file_path
+            zone = classify_file(rel_path, rules, overrides)
+            if (
+                zone not in (Zone.GENERATED, Zone.VENDOR)
+                and matching_override(rel_path, overrides) is None
+                and _file_has_generated_header(file_path)
+            ):
+                zone = Zone.GENERATED
+            self._map[file_path] = zone
+            self._rel_map[rel_path] = zone
+            child, parent = rel_path, os.path.dirname(rel_path)
+            while parent and parent != child:
+                self._dir_files.setdefault(parent, []).append(zone)
+                child, parent = parent, os.path.dirname(parent)
+
+    def _directory_zone(self, rel_dir: str) -> Zone | None:
+        """Zone for a directory holding scanned files (directory-level issues)."""
+        rel_dir = rel_dir.rstrip("/")
+        file_zones = self._dir_files.get(rel_dir)
+        if file_zones is None:
+            return None
+        zone = self._dir_zones.get(rel_dir)
+        if zone is None:
+            zone = _classify_directory(rel_dir, self._rules, file_zones)
+            self._dir_zones[rel_dir] = zone
+        return zone
+
+    def get(self, path: str) -> Zone:
+        """Get zone for a file or directory path. PRODUCTION if not classified."""
+        direct = self._map.get(path)
+        if direct is not None:
+            return direct
+
+        rel_direct = self._rel_map.get(path)
+        if rel_direct is not None:
+            return rel_direct
+
+        rel_path = path
+        if self._rel_fn is not None:
+            try:
+                rel_path = self._rel_fn(path)
+            except (OSError, TypeError, ValueError):
+                rel_path = path
+            rel_zone = self._rel_map.get(rel_path)
+            if rel_zone is not None:
+                return rel_zone
+
+        dir_zone = self._directory_zone(rel_path) or self._directory_zone(path)
+        if dir_zone is not None:
+            return dir_zone
+
+        # Files outside the scan (CSS, Markdown) follow the same overrides and
+        # path rules: tools/dashboard/styles.css is script like its .mjs files.
+        zone = self._unscanned_zones.get(rel_path)
+        if zone is None:
+            zone = classify_file(rel_path, self._rules, self._overrides)
+            self._unscanned_zones[rel_path] = zone
+        return zone
+
+    def exclude(self, files: list[str], *zones: Zone) -> list[str]:
+        """Return files NOT in the given zones."""
+        zone_set = set(zones)
+        return [
+            file_path
+            for file_path in files
+            if self._map.get(file_path, Zone.PRODUCTION) not in zone_set
+        ]
+
+    def include_only(self, files: list[str], *zones: Zone) -> list[str]:
+        """Return files that ARE in the given zones."""
+        zone_set = set(zones)
+        return [
+            file_path
+            for file_path in files
+            if self._map.get(file_path, Zone.PRODUCTION) in zone_set
+        ]
+
+    def counts(self) -> dict[str, int]:
+        """Return file count per zone."""
+        counts: dict[str, int] = {}
+        for zone in self._map.values():
+            counts[zone.value] = counts.get(zone.value, 0) + 1
+        return counts
+
+    def production_count(self) -> int:
+        """Count files classified as production."""
+        return len(self._map) - self.non_production_count()
+
+    def non_production_count(self) -> int:
+        """Count files in excluded zones (test/config/generated/vendor)."""
+        return sum(1 for z in self._map.values() if z in EXCLUDED_ZONES)
+
+    def all_files(self) -> list[str]:
+        """Return all classified file paths."""
+        return list(self._map.keys())
+
+    def items(self) -> list[tuple[str, Zone]]:
+        """Return all (path, zone) pairs."""
+        return list(self._map.items())
+
+
+# ── Zone detection policies ────────────────────────────────
+
+
+@dataclass
+class ZonePolicy:
+    """Per-zone detection policy.
+
+    skip_detectors: detectors to skip entirely for this zone.
+    downgrade_detectors: detectors whose confidence is downgraded to "low".
+    exclude_from_score: whether issues in this zone are excluded from scoring.
+    """
+
+    skip_detectors: set[str] = field(default_factory=set)
+    downgrade_detectors: set[str] = field(default_factory=set)
+    exclude_from_score: bool = False
+
+
+ZONE_POLICIES: dict[Zone, ZonePolicy] = {
+    Zone.PRODUCTION: ZonePolicy(),
+    Zone.TEST: ZonePolicy(
+        skip_detectors=TEST_SKIP_DETECTORS,
+        downgrade_detectors={"smells"},
+        exclude_from_score=True,
+    ),
+    Zone.CONFIG: ZonePolicy(
+        skip_detectors=CONFIG_SKIP_DETECTORS,
+        exclude_from_score=True,
+    ),
+    Zone.GENERATED: ZonePolicy(
+        skip_detectors=SKIP_ALL_DETECTORS,
+        exclude_from_score=True,
+    ),
+    Zone.VENDOR: ZonePolicy(
+        skip_detectors=SKIP_ALL_DETECTORS,
+        exclude_from_score=True,
+    ),
+    Zone.SCRIPT: ZonePolicy(
+        skip_detectors=SCRIPT_SKIP_DETECTORS,
+        downgrade_detectors={"structural"},
+    ),
+}
+
+
+# ── Helpers for phase runners ─────────────────────────────
+
+
+def adjust_potential(zone_map, total: int) -> int:
+    """Subtract non-production files from a potential count.
+
+    Uses the zone map's own file list — no need to pass files separately.
+    No-op if zone_map is None.
+    """
+    if zone_map is None:
+        return total
+    return max(total - zone_map.non_production_count(), 0)
+
+
+def should_skip_detector_in_zone(zone: object, detector: object) -> bool:
+    """Return whether a detector is excluded by an issue's stored zone.
+
+    Queue consumers only have the zone stamped onto an issue, not the source
+    ``FileZoneMap`` used during scanning.  Keep their policy decision aligned
+    with phase-time filtering rather than treating every non-production zone
+    as non-actionable.
+    """
+    normalized_zone = normalize_zone(zone)
+    if normalized_zone is None or not isinstance(detector, str):
+        return False
+    policy = ZONE_POLICIES.get(normalized_zone)
+    return policy is not None and detector in policy.skip_detectors
+
+
+def should_skip_issue(zone_map, filepath: str, detector: str) -> bool:
+    """Check whether a file's zone policy skips its detector."""
+    if zone_map is None:
+        return False
+    return should_skip_detector_in_zone(zone_map.get(filepath), detector)
+
+
+def drop_zone_skipped_issues(zone_map, issues: list) -> list:
+    """Issues whose file's zone does not skip their detector. No-op without a zone map."""
+    if zone_map is None:
+        return issues
+    return [
+        issue
+        for issue in issues
+        if not (
+            isinstance(issue.get("file"), str)
+            and isinstance(issue.get("detector"), str)
+            and should_skip_issue(zone_map, issue["file"], issue["detector"])
+        )
+    ]
+
+
+def filter_entries(
+    zone_map, entries: list[dict], detector: str, file_key: str = "file"
+) -> list[dict]:
+    """Filter detector entries by zone policy. No-op if zone_map is None.
+
+    If file_key points to a list (e.g. cycle entries with "files"), checks
+    the first element.
+    """
+    if zone_map is None:
+        return entries
+
+    def _get_path(entry):
+        val = entry[file_key]
+        return val[0] if isinstance(val, list) else val
+
+    return [
+        e for e in entries if not should_skip_issue(zone_map, _get_path(e), detector)
+    ]

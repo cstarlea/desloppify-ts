@@ -9,25 +9,25 @@ here.
 
 1. Prepare review prompts and the blind packet:
    ```bash
-   desloppify review --run-batches --dry-run
+   desloppify-ts review --run-batches --dry-run
    ```
    This generates one prompt file per batch in
-   `.desloppify/subagents/runs/<run-id>/prompts/` and prints the run directory.
+   `.desloppify-ts/subagents/runs/<run-id>/prompts/` and prints the run directory.
 
 2. Launch Hermes subagents in batches of 3 with `delegate_task(tasks=[...])`.
    Each subagent should:
    - read its prompt file at
-     `.desloppify/subagents/runs/<run-id>/prompts/batch-N.md`
-   - read `.desloppify/review_packet_blind.json`
+     `.desloppify-ts/subagents/runs/<run-id>/prompts/batch-N.md`
+   - read `.desloppify-ts/review_packet_blind.json`
    - inspect the repository from the prompt's dimension
    - write ONLY valid JSON to
-     `.desloppify/subagents/runs/<run-id>/results/batch-N.raw.txt`
+     `.desloppify-ts/subagents/runs/<run-id>/results/batch-N.raw.txt`
 
    Example task payload:
    ```json
    {
-     "goal": "Review batch N. Read the prompt at .desloppify/subagents/runs/<run-id>/prompts/batch-N.md, follow it exactly, inspect the repository, and write ONLY valid JSON to .desloppify/subagents/runs/<run-id>/results/batch-N.raw.txt.",
-     "context": "Repository root: <cwd>. Blind packet: .desloppify/review_packet_blind.json. The prompt file defines the required output schema. Do not edit repository source files. Only write the review result file.",
+     "goal": "Review batch N. Read the prompt at .desloppify-ts/subagents/runs/<run-id>/prompts/batch-N.md, follow it exactly, inspect the repository, and write ONLY valid JSON to .desloppify-ts/subagents/runs/<run-id>/results/batch-N.raw.txt.",
+     "context": "Repository root: <cwd>. Blind packet: .desloppify-ts/review_packet_blind.json. The prompt file defines the required output schema. Do not edit repository source files. Only write the review result file.",
      "toolsets": ["terminal", "file"]
    }
    ```
@@ -37,7 +37,7 @@ here.
 
 3. After all prompt files for that run have matching results, import them:
    ```bash
-   desloppify review --import-run .desloppify/subagents/runs/<run-id> --scan-after-import
+   desloppify-ts review --import-run .desloppify-ts/subagents/runs/<run-id> --scan-after-import
    ```
 
 ### Key constraints
@@ -53,13 +53,13 @@ here.
 
 Run triage stages sequentially. For each stage:
 
-1. Get the stage prompt or use the command suggested by `desloppify next`.
+1. Get the stage prompt or use the command suggested by `desloppify-ts next`.
 2. If the stage benefits from parallel review work, use `delegate_task(tasks=[...])`
    in groups of 3; otherwise run the stage directly in the parent session.
-3. Record the stage output with `desloppify plan triage --stage <stage> --report "..."`
+3. Record the stage output with `desloppify-ts plan triage --stage <stage> --report "..."`
    or the corresponding `--run-stages --runner ...` command when available.
-4. Confirm with `desloppify plan triage --confirm <stage> --attestation "..."`.
-5. Finish with `desloppify plan triage --complete --strategy "..." --attestation "..."`.
+4. Confirm with `desloppify-ts plan triage --confirm <stage> --attestation "..."`.
+5. Finish with `desloppify-ts plan triage --complete --strategy "..." --attestation "..."`.
 
-<!-- desloppify-overlay: hermes -->
-<!-- desloppify-end -->
+<!-- desloppify-ts-overlay: hermes -->
+<!-- desloppify-ts-end -->

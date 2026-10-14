@@ -35,7 +35,7 @@ While no subjective dimension has ever been assessed (`subjective_unassessed()` 
 
 - `sync_subjective_dimensions()` keeps unscored `subjective::` IDs out of `queue_order`, and prunes any an older plan left there.
 - The snapshot moves the initial-review items and the `subjective_review::` assessment requests into `deferred_review_items`, one per dimension. They sit in the backlog and drive no phase, so objective work runs in `execute` and a drained queue goes straight to `scan`, which the scan preflight allows.
-- Once the objective queue is done, `next` says the review is pending and prints `desloppify review --prepare` once.
+- Once the objective queue is done, `next` says the review is pending and prints `desloppify-ts review --prepare` once.
 
 After any dimension has been assessed, unscored dimensions go back to leading a fresh cycle as `review_initial`.
 
@@ -141,12 +141,12 @@ Resolving that item as fixed restarts the clock.
 
 `cli.main()` wraps every command in `command_lock()` (`app/commands/helpers/command_lock.py`).
 
-A command that may save holds the state lock and then the plan lock(s) from before its first load until it returns. They are taken in rank order, with a 600 s timeout. If it has to wait, it prints "Waiting for another desloppify command to finish...".
+A command that may save holds the state lock and then the plan lock(s) from before its first load until it returns. They are taken in rank order, with a 600 s timeout. If it has to wait, it prints "Waiting for another desloppify-ts command to finish...".
 
 Three cases run without the command lock:
 
 - **Read-only commands:** `status`, `show`, `next`, `backlog`, `detect`, `tree`, `viz`, `dev`, `move`, `setup` and `update-skill`.
-- **`plan triage --run-stages`:** it spawns desloppify subprocesses that take the locks themselves.
+- **`plan triage --run-stages`:** it spawns desloppify-ts subprocesses that take the locks themselves.
 - **`review --run-batches` and `review --scan-after-import`:** for the same reason.
 
 The primitive is `exclusive_file_lock()` (`base/discovery/file_paths.py`). It is:
