@@ -65,6 +65,8 @@ class _Function(NamedTuple):
     awaits: bool = False
     stub_exempt: bool = False
     object_member: bool = False
+    returns_promise: bool = False
+    fills_contract: bool = False
 
 
 _LAST: list = [
@@ -98,6 +100,7 @@ def _functions_tree(parsed: ParsedSource) -> list[_Function]:
             if block
             else (body.start_byte, body.end_byte)
         )
+        quiet_async = info.is_async and not info.is_generator and not _awaits(body)
         found.append(
             _Function(
                 name=definition.name,
@@ -107,12 +110,14 @@ def _functions_tree(parsed: ParsedSource) -> list[_Function]:
                 block=block,
                 is_async=info.is_async,
                 is_generator=info.is_generator,
-                awaits=info.is_async and _awaits(body),
+                awaits=info.is_async and not quiet_async,
                 # Parameter properties need a constructor; decorated members
                 # are framework hooks.
                 stub_exempt=(info.kind == "method" and info.name == "constructor")
                 or _decorated(info.node),
                 object_member=definition.object_member,
+                returns_promise=quiet_async and _returns_promise(body, block),
+                fills_contract=quiet_async and _fills_contract(info.node),
             )
         )
     return found
@@ -130,6 +135,75 @@ def _awaits(body) -> bool:
             return True
         stack.extend(c for c in node.named_children if c.type not in FUNCTIONS)
     return False
+
+
+_PROMISE_WRAPPERS = frozenset(
+    {
+        "parenthesized_expression",
+        "as_expression",
+        "satisfies_expression",
+        "non_null_expression",
+    }
+)
+
+
+def _promise_like(node) -> bool:
+    """A call (``.then`` chains, ``Promise.all``, a passthrough), ``new Promise``
+    or a ternary of them."""
+    while node.type in _PROMISE_WRAPPERS and node.named_children:
+        node = node.named_children[0]
+    if node.type == "call_expression":
+        return True
+    if node.type == "new_expression":
+        constructor = node.child_by_field_name("constructor")
+        return constructor is not None and constructor.text == b"Promise"
+    if node.type == "ternary_expression":
+        branches = [
+            node.child_by_field_name("consequence"),
+            node.child_by_field_name("alternative"),
+        ]
+        return all(b is not None and _promise_like(b) for b in branches)
+    return False
+
+
+def _returns_promise(body, block: bool) -> bool:
+    """Whether the function returns a promise on every path that returns a value.
+
+    ``async`` on such a function only turns a synchronous throw into a
+    rejection; there is nothing to await. A bare ``return;`` is allowed
+    beside them, a plain value is not.
+    """
+    if not block:
+        return _promise_like(body)
+    values = []
+    stack = [body]
+    while stack:
+        node = stack.pop()
+        if node.type == "return_statement":
+            value = next((c for c in node.named_children if c.type != "comment"), None)
+            if value is not None:
+                values.append(value)
+            continue
+        stack.extend(c for c in node.named_children if c.type not in FUNCTIONS)
+    return bool(values) and all(_promise_like(v) for v in values)
+
+
+def _fills_contract(node) -> bool:
+    """A class method marked ``override`` or in a class that ``implements`` an
+    interface: the signature, async included, comes from the contract."""
+    if node.parent is not None and node.parent.type == "public_field_definition":
+        node = node.parent
+    if any(c.type == "override_modifier" for c in node.children):
+        return True
+    body = node.parent
+    if body is None or body.type != "class_body" or body.parent is None:
+        return False
+    return any(
+        clause.type == "implements_clause"
+        for heritage in body.parent.children
+        if heritage.type == "class_heritage"
+        for clause in heritage.children
+    )
 
 
 def _decorated(node) -> bool:
@@ -235,9 +309,15 @@ def _detect_async_no_await(ctx, smell_counts: dict[str, list[dict]]) -> None:
         _async_no_await_regex(ctx, smell_counts)
         return
     for function in found:
-        # An object member fills a slot of the shape its object is passed as;
-        # ``async`` is how it returns the promise that slot asks for.
-        if function.object_member:
+        # An object member fills a slot of the shape its object is passed as,
+        # and a contract method's signature comes from the contract; ``async``
+        # is how they return the promise asked for. A function that returns
+        # a promise has nothing to await.
+        if (
+            function.object_member
+            or function.returns_promise
+            or function.fills_contract
+        ):
             continue
         if function.is_async and not function.is_generator and not function.awaits:
             _emit(
@@ -261,7 +341,10 @@ def _async_no_await_regex(ctx, smell_counts: dict[str, list[dict]]) -> None:
             if match.group(1)
             else _extract_function_body(ctx.lines, index)
         )
-        if body is not None and not re.search(r"\bawait\b", _code_text(body)):
+        if body is None:
+            continue
+        code = _code_text(body)
+        if not re.search(r"\bawait\b", code) and not _returns_promise_text(code):
             _emit(
                 smell_counts,
                 "async_no_await",
@@ -269,6 +352,27 @@ def _async_no_await_regex(ctx, smell_counts: dict[str, list[dict]]) -> None:
                 index + 1,
                 f"async {name or '(anonymous)'} has no await",
             )
+
+
+# What follows a ``return``: a call (``f(``, ``a.b?.c<T>(``), ``new Promise``,
+# or nothing.
+_PROMISE_RETURN_RE = re.compile(
+    r"\breturn\b(?:\s*(?P<bare>[;}]|$)|\s+new\s+Promise\b"
+    r"|\s+[A-Za-z_$][\w$]*(?:\s*\??\.\s*[A-Za-z_$][\w$]*)*\s*(?:<[^;()]*>)?\s*(?:\?\.)?\()",
+    re.MULTILINE,
+)
+
+
+def _returns_promise_text(code: str) -> bool:
+    """Line-based ``_returns_promise``: every ``return`` is a call or
+    ``new Promise`` (or bare), and at least one is not bare."""
+    returns = len(re.findall(r"\breturn\b", code))
+    matches = list(_PROMISE_RETURN_RE.finditer(code))
+    return (
+        returns > 0
+        and len(matches) == returns
+        and any(m.group("bare") is None for m in matches)
+    )
 
 
 def _scan_single_line_chain(

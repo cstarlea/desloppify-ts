@@ -27,6 +27,9 @@ _TEST_IDIOMS = (
     "f(3);\n"
     "f(4);\n"
     "try { f(); } catch (e) { }\n"
+    "async function fakeLoad() {\n"
+    "  f(5);\n"
+    "}\n"
 )
 _SKIPPED = {
     "hardcoded_url",
@@ -37,6 +40,7 @@ _SKIPPED = {
     "sort_no_comparator",
     "ts_expect_error_undocumented",
     "console_error_no_throw",
+    "async_no_await",
 }
 
 
