@@ -1,7 +1,7 @@
-desloppify-ts
-https://github.com/cstarlea/desloppify
+Desloppify TS (desloppify-ts)
+https://github.com/cstarlea/desloppify-ts
 
-desloppify-ts is a modified fork of desloppify by Peter O'Malley
+Desloppify TS is a modified fork of desloppify by Peter O'Malley
 (https://github.com/peteromallet/desloppify), distributed under the Open
 Source Native License (OSNL) 0.2. The full license is in LICENSE.
 
@@ -9,10 +9,12 @@ Copyright (c) 2025-2026 Peter O'Malley.
 
 Changes in this fork: the fork narrows desloppify to TypeScript and
 JavaScript, removes the other language plugins, and changes detectors,
-fixers, scoring, packaging and documentation throughout. The last
-multi-language version is tagged `pre-ts-only`; `git log pre-ts-only..`
-lists every change made since. Files under `desloppify/` and `docs/` may
-have been modified by the fork.
+fixers, scoring, packaging and documentation throughout, and renames the
+package, command and state folder to desloppify_ts, desloppify-ts and
+.desloppify-ts. The last multi-language version is tagged `pre-ts-only`;
+`git log pre-ts-only..` lists every change made since. Files under
+`desloppify_ts/` (upstream's `desloppify/`) and `docs/` may have been
+modified by the fork.
 
 Upstream contributions
 ----------------------

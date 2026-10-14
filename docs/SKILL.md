@@ -1,16 +1,16 @@
 ---
-name: desloppify
+name: desloppify-ts
 description: >
-  Multi-language codebase health scanner. Use when the user explicitly asks
-  to run desloppify, scan for technical debt, get a health score, or create
-  a cleanup plan. Do NOT trigger for general code review, renaming, or
-  fixing individual bugs.
+  Desloppify TS, a TypeScript and JavaScript codebase health scanner. Use when
+  the user explicitly asks to run desloppify-ts, scan for technical debt, get a
+  health score, or create a cleanup plan. Do NOT trigger for general code
+  review, renaming, or fixing individual bugs.
 ---
 
-<!-- desloppify-begin -->
-<!-- desloppify-skill-version: 11 -->
+<!-- desloppify-ts-begin -->
+<!-- desloppify-ts-skill-version: 12 -->
 
-# Desloppify
+# Desloppify TS
 
 ## 1. Your Job
 
@@ -27,8 +27,8 @@ Three phases, repeated as a cycle.
 If the workspace contains multiple programs (e.g., frontend + backend in sibling folders), scan each one separately — do not scan the parent directory:
 
 ```bash
-desloppify scan --path ./web
-desloppify scan --path ./admin
+desloppify-ts scan --path ./web
+desloppify-ts scan --path ./admin
 ```
 
 Each `--path` target should be a single coherent project. Scanning a parent that contains multiple programs mixes state and path context, producing unreliable results.
@@ -36,74 +36,74 @@ Each `--path` target should be a single coherent project. Scanning a parent that
 ### Phase 1: Scan and review — understand the codebase
 
 ```bash
-desloppify scan --path .       # analyse the codebase
-desloppify status              # check scores — are we at target?
+desloppify-ts scan --path .       # analyse the codebase
+desloppify-ts status              # check scores — are we at target?
 ```
 
-After scanning, **always run `desloppify next`** — it tells you exactly what to do, in order. Don't interpret the scan output yourself or ask the user what to do. Just run `next` and follow its instructions.
+After scanning, **always run `desloppify-ts next`** — it tells you exactly what to do, in order. Don't interpret the scan output yourself or ask the user what to do. Just run `next` and follow its instructions.
 
 Before the first subjective review, `next` serves the objective work first; the review is optional and doesn't block `scan`. When the objective queue is done, `next` points at it. To trigger a review manually:
 ```bash
-desloppify review --prepare    # then follow your runner's review workflow
+desloppify-ts review --prepare    # then follow your runner's review workflow
 ```
 
 ### Phase 2: Plan — decide what to work on
 
 After reviews, triage stages and plan creation appear in the execution queue surfaced by `next`. Complete them in order — `next` tells you what each stage expects in the `--report`:
 ```bash
-desloppify next                                        # shows the next execution workflow step
-desloppify plan triage --stage observe --report "themes and root causes..."
-desloppify plan triage --stage reflect --report "comparison against completed work..."
-desloppify plan triage --stage organize --report "summary of priorities..."
-desloppify plan triage --complete --strategy "execution plan..."
+desloppify-ts next                                        # shows the next execution workflow step
+desloppify-ts plan triage --stage observe --report "themes and root causes..."
+desloppify-ts plan triage --stage reflect --report "comparison against completed work..."
+desloppify-ts plan triage --stage organize --report "summary of priorities..."
+desloppify-ts plan triage --complete --strategy "execution plan..."
 ```
 
-For automated triage: `desloppify plan triage --run-stages --runner codex` (Codex), `--runner claude` (Claude), or `--runner rovodev` (Rovo Dev). Options: `--only-stages`, `--dry-run`, `--stage-timeout-seconds`.
+For automated triage: `desloppify-ts plan triage --run-stages --runner codex` (Codex), `--runner claude` (Claude), or `--runner rovodev` (Rovo Dev). Options: `--only-stages`, `--dry-run`, `--stage-timeout-seconds`.
 
 Then shape the queue. **The plan shapes everything `next` gives you** — `next` is the execution queue, not the full backlog. Don't skip this step.
 
 ```bash
-desloppify plan                          # see the living plan details
-desloppify plan queue                    # compact execution queue view
-desloppify plan reorder <pat> top        # reorder — what unblocks the most?
-desloppify plan cluster create <name>    # group related issues to batch-fix
-desloppify plan focus <cluster>          # scope next to one cluster
-desloppify plan skip <pat>              # defer — hide from next
+desloppify-ts plan                          # see the living plan details
+desloppify-ts plan queue                    # compact execution queue view
+desloppify-ts plan reorder <pat> top        # reorder — what unblocks the most?
+desloppify-ts plan cluster create <name>    # group related issues to batch-fix
+desloppify-ts plan focus <cluster>          # scope next to one cluster
+desloppify-ts plan skip <pat>              # defer — hide from next
 ```
 
 ### Phase 3: Execute — grind the queue to completion
 
-Trust the plan and execute. Rescan after a batch of fixes to verify them: a plain `desloppify scan` runs while the queue holds only detector findings, and the plan-start score stays frozen until the queue is clear.
+Trust the plan and execute. Rescan after a batch of fixes to verify them: a plain `desloppify-ts scan` runs while the queue holds only detector findings, and the plan-start score stays frozen until the queue is clear.
 
 **Branch first.** Create a dedicated branch — never commit health work directly to main:
 ```bash
-git checkout -b desloppify/code-health    # or desloppify/<focus-area>
-desloppify config set commit_pr 42        # link a PR for auto-updated descriptions
+git checkout -b desloppify_ts/code-health    # or desloppify_ts/<focus-area>
+desloppify-ts config set commit_pr 42        # link a PR for auto-updated descriptions
 ```
 
 **The loop:**
 ```bash
 # 1. Get the next item from the execution queue
-desloppify next
+desloppify-ts next
 
 # 2. Fix the issue in code
 
 # 3. Resolve it: next prints the exact command. --note needs 50+ characters;
 #    --confirm turns it into the attestation.
-desloppify plan resolve "<id>" --note "<what you did>" --confirm
+desloppify-ts plan resolve "<id>" --note "<what you did>" --confirm
 
 # 4. When you have a logical batch, commit and record
-git add <files> && git commit -m "desloppify: fix 3 deferred_import findings"
-desloppify plan commit-log record      # moves findings uncommitted → committed, updates PR
+git add <files> && git commit -m "desloppify-ts: fix 3 deferred_import findings"
+desloppify-ts plan commit-log record      # moves findings uncommitted → committed, updates PR
 
 # 5. Push periodically
-git push -u origin desloppify/code-health
+git push -u origin desloppify_ts/code-health
 
 # 6. Repeat until the queue is empty
 ```
 
 Score may temporarily drop after fixes — cascade effects are normal, keep going.
-If `next` suggests an auto-fixer, run `desloppify autofix <fixer> --dry-run` to preview, then apply. If a fixer says it is marked unsafe, fix those issues by hand rather than passing `--unsafe`. Applying a fixer resolves its issues in the plan as well, so there is nothing to `plan resolve` afterwards; when `next` shows "Ready to scan", run `desloppify scan`.
+If `next` suggests an auto-fixer, run `desloppify-ts autofix <fixer> --dry-run` to preview, then apply. If a fixer says it is marked unsafe, fix those issues by hand rather than passing `--unsafe`. Applying a fixer resolves its issues in the plan as well, so there is nothing to `plan resolve` afterwards; when `next` shows "Ready to scan", run `desloppify-ts scan`.
 
 **When the queue is clear, go back to Phase 1.** New issues will surface, cascades will have resolved, priorities will have shifted. This is the cycle.
 
@@ -129,11 +129,11 @@ Overall score = **25% mechanical** + **75% subjective**.
 
 Four paths to get subjective scores:
 
-- **Local runner (Codex)**: `desloppify review --run-batches --runner codex --parallel --scan-after-import` — automated end-to-end.
-- **Local runner (Claude)**: `desloppify review --prepare` → launch parallel subagents → `desloppify review --import merged.json` — see skill doc overlay for details.
-- **Local runner (Rovo Dev)**: `desloppify review --run-batches --runner rovodev --parallel --scan-after-import` — automated end-to-end via `acli rovodev run` subprocesses.
-- **Cloud/external**: `desloppify review --external-start --external-runner claude` → follow session template → `--external-submit`.
-- **Manual path**: `desloppify review --prepare` → review per dimension → `desloppify review --import file.json`.
+- **Local runner (Codex)**: `desloppify-ts review --run-batches --runner codex --parallel --scan-after-import` — automated end-to-end.
+- **Local runner (Claude)**: `desloppify-ts review --prepare` → launch parallel subagents → `desloppify-ts review --import merged.json` — see skill doc overlay for details.
+- **Local runner (Rovo Dev)**: `desloppify-ts review --run-batches --runner rovodev --parallel --scan-after-import` — automated end-to-end via `acli rovodev run` subprocesses.
+- **Cloud/external**: `desloppify-ts review --external-start --external-runner claude` → follow session template → `--external-submit`.
+- **Manual path**: `desloppify-ts review --prepare` → review per dimension → `desloppify-ts review --import file.json`.
 
 **Batch output vs import filenames:** Individual batch outputs from subagents must be named `batch-N.raw.txt` (plain text/JSON content, `.raw.txt` extension). The `.json` filenames in `--import merged.json` or `--import findings.json` refer to the final merged import file, not individual batch outputs. Do not name batch outputs with a `.json` extension.
 
@@ -177,9 +177,9 @@ Return machine-readable JSON for review imports. For `--external-submit`, includ
 
 #### Import paths
 
-- Robust session flow (recommended): `desloppify review --external-start --external-runner claude` → use generated prompt/template → run printed `--external-submit` command.
-- Durable scored import (legacy): `desloppify review --import findings.json --attested-external --attest "I validated this review was completed without awareness of overall score and is unbiased."`
-- Findings-only fallback: `desloppify review --import findings.json`
+- Robust session flow (recommended): `desloppify-ts review --external-start --external-runner claude` → use generated prompt/template → run printed `--external-submit` command.
+- Durable scored import (legacy): `desloppify-ts review --import findings.json --attested-external --attest "I validated this review was completed without awareness of overall score and is unbiased."`
+- Findings-only fallback: `desloppify-ts review --import findings.json`
 
 #### Reviewer agent prompt
 
@@ -198,25 +198,25 @@ See your editor's overlay section below for the agent config format.
 ### Plan commands
 
 ```bash
-desloppify plan reorder <cluster> top       # move all cluster members at once
-desloppify plan reorder <a> <b> top        # mix clusters + findings in one reorder
-desloppify plan reorder <pat> before -t X  # position relative to another item/cluster
-desloppify plan cluster reorder a,b top    # reorder multiple clusters as one block
-desloppify plan resolve <pat> --note "<what you did>" --confirm  # mark complete
-desloppify plan reopen <pat>               # reopen
-desloppify backlog                          # broader non-execution backlog
+desloppify-ts plan reorder <cluster> top       # move all cluster members at once
+desloppify-ts plan reorder <a> <b> top        # mix clusters + findings in one reorder
+desloppify-ts plan reorder <pat> before -t X  # position relative to another item/cluster
+desloppify-ts plan cluster reorder a,b top    # reorder multiple clusters as one block
+desloppify-ts plan resolve <pat> --note "<what you did>" --confirm  # mark complete
+desloppify-ts plan reopen <pat>               # reopen
+desloppify-ts backlog                          # broader non-execution backlog
 ```
 
 ### Commit tracking
 
 ```bash
-desloppify plan commit-log                      # see uncommitted + committed status
-desloppify plan commit-log record               # record HEAD commit, update PR description
-desloppify plan commit-log record --note "why"  # with rationale
-desloppify plan commit-log record --only "smells::*"  # record specific findings only
-desloppify plan commit-log history              # show commit records
-desloppify plan commit-log pr                   # preview PR body markdown
-desloppify config set commit_tracking_enabled false  # disable guidance
+desloppify-ts plan commit-log                      # see uncommitted + committed status
+desloppify-ts plan commit-log record               # record HEAD commit, update PR description
+desloppify-ts plan commit-log record --note "why"  # with rationale
+desloppify-ts plan commit-log record --only "smells::*"  # record specific findings only
+desloppify-ts plan commit-log history              # show commit records
+desloppify-ts plan commit-log pr                   # preview PR body markdown
+desloppify-ts config set commit_tracking_enabled false  # disable guidance
 ```
 
 After resolving findings as `fixed`, by `plan resolve` or by `autofix`, the tool shows uncommitted work (saying how much of it autofix did), committed history, and a suggested commit message. After committing externally, run `record` to move findings from uncommitted to committed and auto-update the linked PR description.
@@ -226,11 +226,11 @@ After resolving findings as `fixed`, by `plan resolve` or by `autofix`, the tool
 Directives are messages shown to agents at lifecycle phase transitions — use them to switch models, set constraints, or give context-specific instructions.
 
 ```bash
-desloppify directives                     # show all configured directives
-desloppify directives set execute "Switch to claude-sonnet-4-6. Focus on speed."
-desloppify directives set triage "Switch to claude-opus-4-6. Read carefully."
-desloppify directives set review "Use blind packet. Do not anchor on previous scores."
-desloppify directives unset execute       # remove a directive
+desloppify-ts directives                     # show all configured directives
+desloppify-ts directives set execute "Switch to claude-sonnet-4-6. Focus on speed."
+desloppify-ts directives set triage "Switch to claude-opus-4-6. Read carefully."
+desloppify-ts directives set review "Use blind packet. Do not anchor on previous scores."
+desloppify-ts directives unset execute       # remove a directive
 ```
 
 Available phases: `execute`, `review`, `triage`, `workflow`, `scan` (and fine-grained variants like `review_initial`, `triage_postflight`, etc.).
@@ -238,37 +238,37 @@ Available phases: `execute`, `review`, `triage`, `workflow`, `scan` (and fine-gr
 ### Quick reference
 
 ```bash
-desloppify next --count 5                         # top 5 execution items
-desloppify next --cluster <name>                  # drill into a cluster
-desloppify backlog --count 5                      # top 5 backlog items outside execution
-desloppify show <pattern>                         # filter by file/detector/ID
-desloppify show --status open                     # all open findings
-desloppify plan skip --permanent "<id>" --note "reason" \
+desloppify-ts next --count 5                         # top 5 execution items
+desloppify-ts next --cluster <name>                  # drill into a cluster
+desloppify-ts backlog --count 5                      # top 5 backlog items outside execution
+desloppify-ts show <pattern>                         # filter by file/detector/ID
+desloppify-ts show --status open                     # all open findings
+desloppify-ts plan skip --permanent "<id>" --note "reason" \
   --attest "I have reviewed this against the code and I am not gaming the score by skipping a real defect."  # accept debt
-desloppify exclude <path>                         # exclude a directory from scanning
-desloppify config show                            # show all config including excludes
-desloppify scan --path . --reset-subjective       # reset subjective baseline to 0
+desloppify-ts exclude <path>                         # exclude a directory from scanning
+desloppify-ts config show                            # show all config including excludes
+desloppify-ts scan --path . --reset-subjective       # reset subjective baseline to 0
 ```
 
 ## 4. Fix Tool Issues Upstream
 
-When desloppify itself appears wrong or inconsistent — a bug, a bad detection, a crash, confusing output — **fix it and open a PR**. If you can't confidently fix it, file an issue instead.
+When desloppify-ts itself appears wrong or inconsistent — a bug, a bad detection, a crash, confusing output — **fix it and open a PR**. If you can't confidently fix it, file an issue instead.
 
 ### Fix and PR (preferred)
 
 Clone the tool repo to a temp directory, make the fix there, and verify it works against the project you're scanning before pushing.
 
 ```bash
-git clone https://github.com/cstarlea/desloppify.git /tmp/desloppify-fix
-cd /tmp/desloppify-fix
+git clone https://github.com/cstarlea/desloppify-ts.git /tmp/desloppify-ts-fix
+cd /tmp/desloppify-ts-fix
 git checkout -b fix/<short-description>
 ```
 
 Make your changes, then run the test suite and verify the fix against the original project:
 
 ```bash
-python -m pytest desloppify/tests/ -q
-python -m desloppify scan --path <project-root>   # the project you were scanning
+python -m pytest desloppify_ts/tests/ -q
+python -m desloppify_ts scan --path <project-root>   # the project you were scanning
 ```
 
 Once it looks good, push and open a PR:
@@ -286,16 +286,16 @@ EOF
 )"
 ```
 
-Clean up after: `rm -rf /tmp/desloppify-fix`
+Clean up after: `rm -rf /tmp/desloppify-ts-fix`
 
 ### File an issue (fallback)
 
-If the fix is unclear or the change needs discussion, open an issue at `https://github.com/cstarlea/desloppify/issues` with a minimal repro: command, path, expected output, actual output.
+If the fix is unclear or the change needs discussion, open an issue at `https://github.com/cstarlea/desloppify-ts/issues` with a minimal repro: command, path, expected output, actual output.
 
 ## Prerequisite
 
-`command -v desloppify >/dev/null 2>&1 && echo "desloppify: installed" || echo "NOT INSTALLED — run: uv tool install 'desloppify-ts[full]' && desloppify setup"`
+`command -v desloppify-ts >/dev/null 2>&1 && echo "desloppify-ts: installed" || echo "NOT INSTALLED — run: uv tool install 'desloppify-ts[full]' && desloppify-ts setup"`
 
-If `uv` is not available: `pip install 'desloppify-ts[full]' && desloppify setup`
+If `uv` is not available: `pip install 'desloppify-ts[full]' && desloppify-ts setup`
 
-<!-- desloppify-end -->
+<!-- desloppify-ts-end -->

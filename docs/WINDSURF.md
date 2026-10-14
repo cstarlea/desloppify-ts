@@ -6,7 +6,7 @@ multiple Cascade panes manually.
 
 ### Review workflow
 
-1. Run `desloppify review --prepare` to generate `query.json`.
+1. Run `desloppify-ts review --prepare` to generate `query.json`.
 2. Ask the user to open additional Cascade panes for parallel review.
    Suggest splitting dimensions across 2-3 panes (e.g., naming + clarity
    in one, abstraction + error consistency in another).
@@ -18,5 +18,5 @@ multiple Cascade panes manually.
 If the user prefers a single-pane workflow, review all dimensions sequentially
 in one session.
 
-<!-- desloppify-overlay: windsurf -->
-<!-- desloppify-end -->
+<!-- desloppify-ts-overlay: windsurf -->
+<!-- desloppify-ts-end -->

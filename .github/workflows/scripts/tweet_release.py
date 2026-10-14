@@ -54,7 +54,7 @@ def generate_tweet_and_prompt(tag: str, headers: list[str], url: str) -> dict:
                     "role": "user",
                     "content": f"""You're writing a tweet and an image prompt for a software release announcement.
 
-Project: desloppify — a CLI tool that tracks codebase health and technical debt.
+Project: desloppify-ts — a CLI tool that tracks codebase health and technical debt.
 Release: {tag}
 Release URL: {url}
 
@@ -64,7 +64,7 @@ Feature headers from the release notes:
 Please produce JSON with exactly two keys:
 
 1. "tweet": Format MUST be:
-   Line 1: "Introducing desloppify {tag}!"
+   Line 1: "Introducing desloppify-ts {tag}!"
    Then as many short bullet points as you can fit (one per line, each starting with "- ").
    Each bullet should be a very short summary of a feature (3-6 words).
    The ENTIRE tweet MUST be under 280 characters. The release link will go in a follow-up reply.

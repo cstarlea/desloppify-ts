@@ -1,4 +1,4 @@
-You are orchestrating Stage 2 (challenge) of a review pipeline for the desloppify project.
+You are orchestrating Stage 2 (challenge) of a review pipeline for the desloppify-ts project.
 
 Stage 1 has assessed every open PR and issue. Each item has a file at `review/results/{type}-{number}.json` with a `stage1` section. Your job: make sure every verdict gets challenged from the opposite direction.
 

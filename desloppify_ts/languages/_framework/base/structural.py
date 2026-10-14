@@ -1,0 +1,93 @@
+"""Structural signal helpers shared across language phase implementations."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+from desloppify_ts.base.discovery.file_paths import count_lines, resolve_path
+from desloppify_ts.base.discovery.paths import get_project_root
+from desloppify_ts.engine._state.filtering import make_issue
+from desloppify_ts.engine.policy.zones import drop_zone_skipped_issues
+from desloppify_ts.state_io import Issue
+
+
+def add_structural_signal(structural: dict, file: str, signal: str, detail: dict):
+    """Add a complexity signal to the per-file structural dict.
+
+    Accumulates signals per file so they can be merged into tiered issues.
+    """
+    f = resolve_path(file)
+    structural.setdefault(f, {"signals": [], "detail": {}})
+    structural[f]["signals"].append(signal)
+    structural[f]["detail"].update(detail)
+
+
+def merge_structural_signals(
+    structural: dict,
+    stderr_fn,
+    *,
+    complexity_only_min: int = 50,
+    zone_map=None,
+) -> list[Issue]:
+    """Convert per-file structural signals into tiered issues.
+
+    3+ signals -> T4/high (needs decomposition).
+    1-2 signals -> T3/medium.
+    Complexity-only files (no large/god signals) need score >= complexity_only_min
+    to be flagged — lower complexity in small files is normal, not decomposition-worthy.
+    Files whose zone skips ``structural`` are dropped here, so the count logged
+    matches what the scan stores.
+    """
+    results = []
+    suppressed = 0
+    for filepath, data in structural.items():
+        if "loc" not in data["detail"]:
+            try:
+                p = (
+                    Path(filepath)
+                    if Path(filepath).is_absolute()
+                    else get_project_root() / filepath
+                )
+                data["detail"]["loc"] = count_lines(p)
+            except (OSError, UnicodeDecodeError):
+                data["detail"]["loc"] = 0
+
+        # Suppress complexity-only issues below the elevated threshold.
+        signals = data["signals"]
+        is_complexity_only = all(s.startswith("complexity") for s in signals)
+        if is_complexity_only:
+            score = data["detail"].get("complexity_score", 0)
+            if score < complexity_only_min:
+                suppressed += 1
+                continue
+
+        signal_count = len(signals)
+        tier = 4 if signal_count >= 3 else 3
+        confidence = "high" if signal_count >= 3 else "medium"
+        summary = "Large file: " + " / ".join(signals)
+        results.append(
+            make_issue(
+                "structural",
+                filepath,
+                "",
+                tier=tier,
+                confidence=confidence,
+                summary=summary,
+                detail=data["detail"],
+            )
+        )
+    if suppressed:
+        stderr_fn(
+            "         "
+            f"{suppressed} complexity-only files below threshold (< {complexity_only_min})"
+        )
+    kept = drop_zone_skipped_issues(zone_map, results)
+    zone_skipped = len(results) - len(kept)
+    skipped_note = (
+        f" ({zone_skipped} more in zones that skip structural)" if zone_skipped else ""
+    )
+    stderr_fn(f"         -> {len(kept)} structural issues{skipped_note}")
+    return kept
+
+
+__all__ = ["add_structural_signal", "merge_structural_signals"]

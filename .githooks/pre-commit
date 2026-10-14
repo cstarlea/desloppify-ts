@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # 1. Lint and format-check staged Python files with ruff (the `make lint` gate).
-# 2. Auto-sync docs/*.md → desloppify/data/global/ when any are staged.
+# 2. Auto-sync docs/*.md → desloppify_ts/data/global/ when any are staged.
 
 set -o pipefail
 
@@ -34,4 +34,4 @@ fi
 make sync-docs
 
 # Stage all changes in data/global — including deletions from renamed/removed docs.
-git add -A desloppify/data/global/
+git add -A desloppify_ts/data/global/

@@ -14,12 +14,12 @@ Enable subagents in Gemini CLI settings:
 }
 ```
 
-Optionally define a reviewer agent in `.gemini/agents/desloppify-reviewer.md`:
+Optionally define a reviewer agent in `.gemini/agents/desloppify-ts-reviewer.md`:
 
 ```yaml
 ---
-name: desloppify-reviewer
-description: Scores subjective codebase quality dimensions for desloppify
+name: desloppify-ts-reviewer
+description: Scores subjective codebase quality dimensions for desloppify-ts
 kind: local
 tools:
   - read_file
@@ -42,5 +42,5 @@ Merge assessments and findings, then import.
 When Gemini CLI adds parallel subagent execution, split dimensions across
 concurrent agent calls instead.
 
-<!-- desloppify-overlay: gemini -->
-<!-- desloppify-end -->
+<!-- desloppify-ts-overlay: gemini -->
+<!-- desloppify-ts-end -->

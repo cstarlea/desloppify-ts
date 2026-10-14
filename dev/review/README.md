@@ -52,7 +52,7 @@ review/
 Prerequisites:
 - On the release branch, not main (`git branch --show-current`)
 - Clean working tree (`git status`)
-- Tests green (`python -m pytest desloppify/tests/ -q`)
+- Tests green (`python -m pytest desloppify_ts/tests/ -q`)
 - `gh` authenticated (`gh auth status`)
 
 Each stage is a separate conversation. Pass the orchestrator/adjudicate prompt to a `general-purpose` agent:
@@ -68,5 +68,5 @@ Stages are idempotent — they skip items that already have result files. To re-
 After Stage 3, review locally before pushing:
 ```bash
 git log --oneline main..HEAD
-python -m pytest desloppify/tests/ -q
+python -m pytest desloppify_ts/tests/ -q
 ```

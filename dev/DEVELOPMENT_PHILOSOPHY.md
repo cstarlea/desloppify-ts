@@ -67,4 +67,4 @@ Use this to verify what agents see at each phase without running actual scans or
 
 ### Lifecycle integration tests
 
-`desloppify/tests/commands/test_lifecycle_transitions.py` exercises each transition programmatically — completing items via `purge_ids` between reconcile calls, matching the real CLI flow where reconcile only runs at scan boundaries.
+`desloppify_ts/tests/commands/test_lifecycle_transitions.py` exercises each transition programmatically — completing items via `purge_ids` between reconcile calls, matching the real CLI flow where reconcile only runs at scan boundaries.

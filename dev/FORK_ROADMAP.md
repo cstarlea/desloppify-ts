@@ -2,7 +2,7 @@
 
 _Last updated 2026-10-12. Originally built from a multi-agent review of upstream v1.0 (`3a7735d5`) on 2026-10-05; the appendix keeps that review's findings with their current status._
 
-The fork (`cstarlea/desloppify`) is a **TypeScript/JavaScript-only** code-health scanner. Upstream (`peteromallet/desloppify`) is unmaintained and is treated as read-only: something we may cherry-pick from, nothing more. The last multi-language commit is tagged `pre-ts-only`.
+The fork (`cstarlea/desloppify-ts`) is a **TypeScript/JavaScript-only** code-health scanner. Upstream (`peteromallet/desloppify`) is unmaintained and is treated as read-only: something we may cherry-pick from, nothing more. The last multi-language commit is tagged `pre-ts-only`.
 
 ---
 

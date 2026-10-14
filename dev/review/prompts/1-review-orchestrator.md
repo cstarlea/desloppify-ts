@@ -1,10 +1,10 @@
-You are orchestrating Stage 1 (assessment) of a review pipeline for the desloppify project.
+You are orchestrating Stage 1 (assessment) of a review pipeline for the desloppify-ts project.
 
 ## Prerequisites
 
 - You must be on the release branch (not main). Check: `git branch --show-current`
 - Working tree must be clean: `git status`
-- Tests must pass: `python -m pytest desloppify/tests/ -q`
+- Tests must pass: `python -m pytest desloppify_ts/tests/ -q`
 
 ## Steps
 

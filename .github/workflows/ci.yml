@@ -162,7 +162,7 @@ jobs:
         with:
           node-version: "22"
           cache: npm
-          cache-dependency-path: desloppify/languages/typescript/tests/golden/node/package-lock.json
+          cache-dependency-path: desloppify_ts/languages/typescript/tests/golden/node/package-lock.json
       - name: Install the package and pinned tools
         run: make install-full
       - name: Run TypeScript golden scans with real tsc/knip

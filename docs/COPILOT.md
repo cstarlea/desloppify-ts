@@ -5,28 +5,28 @@ Use them for context-isolated subjective reviews.
 
 ### Review workflow
 
-Define a reviewer in `.github/agents/desloppify-reviewer.md`:
+Define a reviewer in `.github/agents/desloppify-ts-reviewer.md`:
 
 ```yaml
 ---
-name: desloppify-reviewer
+name: desloppify-ts-reviewer
 tools: ['read', 'search']
 ---
 ```
 
 Use the prompt from the "Reviewer agent prompt" section above.
 
-Define an orchestrator in `.github/agents/desloppify-review-orchestrator.md`:
+Define an orchestrator in `.github/agents/desloppify-ts-review-orchestrator.md`:
 
 ```yaml
 ---
-name: desloppify-review-orchestrator
+name: desloppify-ts-review-orchestrator
 tools: ['agent', 'read', 'search']
-agents: ['desloppify-reviewer']
+agents: ['desloppify-ts-reviewer']
 ---
 ```
 
-Split dimensions across `desloppify-reviewer` calls (Copilot runs them concurrently), merge assessments and findings, then import.
+Split dimensions across `desloppify-ts-reviewer` calls (Copilot runs them concurrently), merge assessments and findings, then import.
 
-<!-- desloppify-overlay: copilot -->
-<!-- desloppify-end -->
+<!-- desloppify-ts-overlay: copilot -->
+<!-- desloppify-ts-end -->

@@ -33,9 +33,9 @@ classifiers = [
 dependencies = []
 
 [project.urls]
-Homepage = "https://github.com/cstarlea/desloppify"
-Repository = "https://github.com/cstarlea/desloppify"
-Issues = "https://github.com/cstarlea/desloppify/issues"
+Homepage = "https://github.com/cstarlea/desloppify-ts"
+Repository = "https://github.com/cstarlea/desloppify-ts"
+Issues = "https://github.com/cstarlea/desloppify-ts/issues"
 Upstream = "https://github.com/peteromallet/desloppify"
 
 [project.optional-dependencies]
@@ -65,26 +65,25 @@ dev = [
 ]
 
 [project.scripts]
-desloppify = "desloppify.cli:main"
-desloppify-ts = "desloppify.cli:main"
+desloppify-ts = "desloppify_ts.cli:main"
 
 [tool.setuptools.packages.find]
-include = ["desloppify*"]
-exclude = ["desloppify.tests", "desloppify.tests.*"]
+include = ["desloppify_ts*"]
+exclude = ["desloppify_ts.tests", "desloppify_ts.tests.*"]
 
 [tool.setuptools]
 include-package-data = false
 
 [tool.setuptools.package-data]
-"desloppify.app.output" = ["_viz_template.html"]
-"desloppify.data.global" = ["*.md"]
-"desloppify.languages._framework" = ["review_data/*.json"]
-"desloppify.languages.typescript" = ["review_data/*.json"]
+"desloppify_ts.app.output" = ["_viz_template.html"]
+"desloppify_ts.data.global" = ["*.md"]
+"desloppify_ts.languages._framework" = ["review_data/*.json"]
+"desloppify_ts.languages.typescript" = ["review_data/*.json"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
-testpaths = ['desloppify/tests', 'desloppify/languages/typescript/tests']
-norecursedirs = ["desloppify/tests/fixtures"]
+testpaths = ['desloppify_ts/tests', 'desloppify_ts/languages/typescript/tests']
+norecursedirs = ["desloppify_ts/tests/fixtures"]
 
 [tool.ruff]
 target-version = "py311"
@@ -105,20 +104,20 @@ ignore_missing_imports = true
 follow_imports = "skip"
 pretty = true
 files = [
-  "desloppify/app/commands/review/cmd.py",
-  "desloppify/app/commands/review/prepare.py",
-  "desloppify/app/commands/review/batch/core_models.py",
-  "desloppify/app/commands/review/batch/core_parse.py",
-  "desloppify/app/commands/review/batch/core_normalize.py",
-  "desloppify/app/commands/review/batch/core_merge_support.py",
-  "desloppify/app/commands/review/batch/orchestrator.py",
-  "desloppify/app/commands/review/importing/cmd.py",
-  "desloppify/app/commands/review/runtime/__init__.py",
-  "desloppify/app/commands/scan/reporting/dimensions.py",
-  "desloppify/app/commands/scan/reporting/summary.py",
-  "desloppify/app/commands/scan/reporting/presentation.py",
-  "desloppify/app/commands/scan/reporting/subjective.py",
-  "desloppify/app/commands/scan/workflow.py",
-  "desloppify/app/cli_support/parser.py",
-  "desloppify/app/cli_support/parser_groups.py",
+  "desloppify_ts/app/commands/review/cmd.py",
+  "desloppify_ts/app/commands/review/prepare.py",
+  "desloppify_ts/app/commands/review/batch/core_models.py",
+  "desloppify_ts/app/commands/review/batch/core_parse.py",
+  "desloppify_ts/app/commands/review/batch/core_normalize.py",
+  "desloppify_ts/app/commands/review/batch/core_merge_support.py",
+  "desloppify_ts/app/commands/review/batch/orchestrator.py",
+  "desloppify_ts/app/commands/review/importing/cmd.py",
+  "desloppify_ts/app/commands/review/runtime/__init__.py",
+  "desloppify_ts/app/commands/scan/reporting/dimensions.py",
+  "desloppify_ts/app/commands/scan/reporting/summary.py",
+  "desloppify_ts/app/commands/scan/reporting/presentation.py",
+  "desloppify_ts/app/commands/scan/reporting/subjective.py",
+  "desloppify_ts/app/commands/scan/workflow.py",
+  "desloppify_ts/app/cli_support/parser.py",
+  "desloppify_ts/app/cli_support/parser_groups.py",
 ]

@@ -1,0 +1,413 @@
+"""Tests for plan reconciliation — supersede, prune, cluster desync fix."""
+
+from __future__ import annotations
+
+from desloppify_ts.engine._plan.operations.cluster import add_to_cluster, create_cluster
+from desloppify_ts.engine._plan.scan_issue_reconcile import reconcile_plan_after_scan
+from desloppify_ts.engine._plan.schema import empty_plan, ensure_plan_defaults
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _plan_with_queue(*ids: str) -> dict:
+    plan = empty_plan()
+    plan["queue_order"] = list(ids)
+    return plan
+
+
+def _state_with_issues(*ids: str, status: str = "open") -> dict:
+    issues = {}
+    for fid in ids:
+        issues[fid] = {
+            "id": fid,
+            "status": status,
+            "detector": "test",
+            "file": "test.py",
+            "tier": 1,
+            "confidence": "high",
+            "summary": f"Issue {fid}",
+        }
+    return {"issues": issues, "scan_count": 5}
+
+
+# ---------------------------------------------------------------------------
+# _supersede_id clears override cluster ref
+# ---------------------------------------------------------------------------
+
+
+def test_supersede_clears_override_cluster_ref():
+    """When a issue is superseded, its override cluster ref should be cleared."""
+    plan = _plan_with_queue("a", "b")
+    ensure_plan_defaults(plan)
+
+    # Create a cluster and add issue "a" to it
+    create_cluster(plan, "my-cluster")
+    add_to_cluster(plan, "my-cluster", ["a"])
+
+    # Verify override has cluster ref
+    assert plan["overrides"]["a"]["cluster"] == "my-cluster"
+
+    # State where "a" is gone (not present = not alive)
+    state = _state_with_issues("b")
+
+    result = reconcile_plan_after_scan(plan, state)
+    assert "a" in result.superseded
+
+    # Override cluster ref should be cleared
+    override = plan["overrides"].get("a")
+    assert override is not None
+    assert override.get("cluster") is None
+
+
+def test_supersede_preserves_note_in_override():
+    """Superseding should preserve the note in the override (for history)."""
+    plan = _plan_with_queue("a")
+    ensure_plan_defaults(plan)
+
+    # Add an override with a note
+    plan["overrides"]["a"] = {
+        "issue_id": "a",
+        "note": "important context",
+        "cluster": None,
+        "created_at": "2025-01-01T00:00:00+00:00",
+    }
+
+    state = _state_with_issues()  # "a" is gone
+    reconcile_plan_after_scan(plan, state)
+
+    # Superseded entry should have the note
+    assert plan["superseded"]["a"]["note"] == "important context"
+
+
+def test_supersede_removes_from_cluster_issue_ids():
+    """Superseded issue should be removed from cluster issue_ids."""
+    plan = _plan_with_queue("a", "b")
+    ensure_plan_defaults(plan)
+
+    create_cluster(plan, "my-cluster")
+    add_to_cluster(plan, "my-cluster", ["a", "b"])
+
+    # "a" disappears
+    state = _state_with_issues("b")
+    reconcile_plan_after_scan(plan, state)
+
+    assert "a" not in plan["clusters"]["my-cluster"]["issue_ids"]
+    assert "b" in plan["clusters"]["my-cluster"]["issue_ids"]
+
+
+def test_reconcile_clears_focus_when_focused_cluster_becomes_empty():
+    """Reconcile should exit focus mode when the focused cluster loses its last issue."""
+    plan = _plan_with_queue("a")
+    ensure_plan_defaults(plan)
+    create_cluster(plan, "my-cluster")
+    add_to_cluster(plan, "my-cluster", ["a"])
+    plan["active_cluster"] = "my-cluster"
+
+    state = _state_with_issues()  # "a" disappeared
+    result = reconcile_plan_after_scan(plan, state)
+
+    assert "a" in result.superseded
+    assert plan["clusters"]["my-cluster"]["issue_ids"] == []
+    assert plan["active_cluster"] is None
+
+
+# ---------------------------------------------------------------------------
+# Reconcile logs execution
+# ---------------------------------------------------------------------------
+
+
+def test_reconcile_logs_execution_entry():
+    """Reconciliation should append a log entry when changes are made."""
+    plan = _plan_with_queue("gone")
+    ensure_plan_defaults(plan)
+    state = _state_with_issues("alive")
+
+    result = reconcile_plan_after_scan(plan, state)
+    assert result.changes > 0
+
+    log = plan.get("execution_log", [])
+    assert len(log) >= 1
+    entry = log[-1]
+    assert entry["action"] == "reconcile"
+    assert entry["actor"] == "system"
+    assert "superseded_count" in entry["detail"]
+
+
+def test_reconcile_no_log_when_no_changes():
+    """No log entry when reconciliation makes no changes."""
+    plan = _plan_with_queue("a")
+    ensure_plan_defaults(plan)
+    state = _state_with_issues("a")  # "a" still alive
+
+    result = reconcile_plan_after_scan(plan, state)
+    assert result.changes == 0
+
+    log = plan.get("execution_log", [])
+    reconcile_entries = [e for e in log if e["action"] == "reconcile"]
+    assert len(reconcile_entries) == 0
+
+
+def test_reconcile_prunes_existing_superseded_references():
+    """Already-superseded IDs should not linger in queue_order or clusters."""
+    plan = _plan_with_queue("a", "b")
+    ensure_plan_defaults(plan)
+    plan["superseded"]["a"] = {
+        "original_id": "a",
+        "status": "superseded",
+        "superseded_at": "2026-01-01T00:00:00+00:00",
+    }
+    plan["promoted_ids"] = ["a"]
+    create_cluster(plan, "my-cluster")
+    add_to_cluster(plan, "my-cluster", ["a", "b"])
+
+    result = reconcile_plan_after_scan(plan, _state_with_issues("b"))
+
+    assert result.changes > 0
+    assert "a" not in plan["queue_order"]
+    assert "a" not in plan["promoted_ids"]
+    assert "a" not in plan["clusters"]["my-cluster"]["issue_ids"]
+
+
+def test_reconcile_supersedes_resolved_action_references():
+    """Resolved IDs should not linger as queue/promoted/cluster work."""
+    plan = _plan_with_queue("a", "b")
+    ensure_plan_defaults(plan)
+    plan["promoted_ids"] = ["a", "b"]
+    create_cluster(plan, "my-cluster")
+    add_to_cluster(plan, "my-cluster", ["a", "b"])
+
+    state = _state_with_issues("b")
+    state["issues"]["a"] = {
+        "id": "a",
+        "status": "fixed",
+        "detector": "test",
+        "file": "test.py",
+        "tier": 1,
+        "confidence": "high",
+        "summary": "Issue a",
+    }
+
+    result = reconcile_plan_after_scan(plan, state)
+
+    assert "a" in result.superseded
+    assert "a" not in plan["queue_order"]
+    assert "a" not in plan["promoted_ids"]
+    assert "a" not in plan["clusters"]["my-cluster"]["issue_ids"]
+    assert "b" in plan["queue_order"]
+    assert "b" in plan["promoted_ids"]
+
+
+def test_reconcile_supersedes_skips_of_auto_resolved_issues():
+    """A scan-confirmed resolution clears the skip, as it clears queue entries.
+
+    Deferred and triaged_out skips whose issue is now auto_resolved are
+    superseded; a temporary skip past its review_after does not resurface
+    into the queue. Skips of issues still deferred, marked false_positive, or
+    wontfix (even once a scan confirms the finding is gone) stay.
+    """
+    plan = empty_plan()
+    ensure_plan_defaults(plan)
+    kinds = {
+        "deferred_gone": ("temporary", "auto_resolved"),
+        "wontfix_gone": ("permanent", "wontfix"),
+        "triaged_gone": ("triaged_out", "auto_resolved"),
+        "deferred_kept": ("temporary", "deferred"),
+        "false_positive": ("false_positive", "false_positive"),
+    }
+    state = _state_with_issues()
+    for fid, (kind, status) in kinds.items():
+        plan["skipped"][fid] = {
+            "issue_id": fid,
+            "kind": kind,
+            "skipped_at_scan": 1,
+            "review_after": 1 if kind == "temporary" else None,
+        }
+        state["issues"][fid] = {
+            **_state_with_issues(fid)["issues"][fid],
+            "status": status,
+        }
+    state["issues"]["wontfix_gone"]["resolution_attestation"] = {"scan_verified": True}
+    # deferred_kept is due to resurface (scan_count 5 >= 1 + 1).
+
+    result = reconcile_plan_after_scan(plan, state)
+
+    gone = {"deferred_gone", "triaged_gone"}
+    assert gone <= set(result.superseded)
+    assert set(plan["superseded"]) == gone
+    assert set(plan["skipped"]) == {"wontfix_gone", "false_positive"}
+    assert plan["skipped"]["wontfix_gone"]["kind"] == "permanent"
+    assert plan["queue_order"] == ["deferred_kept"]
+    assert result.resurfaced == ["deferred_kept"]
+    assert state["issues"]["deferred_kept"]["status"] == "open"
+
+
+def test_reconcile_keeps_new_skip_of_issue_that_came_back():
+    """A superseded issue that reappears can be skipped or queued again."""
+    plan = empty_plan()
+    ensure_plan_defaults(plan)
+    plan["skipped"]["a"] = {"issue_id": "a", "kind": "temporary", "skipped_at_scan": 1}
+    state = _state_with_issues("a", status="auto_resolved")
+    reconcile_plan_after_scan(plan, state)
+    assert "a" in plan["superseded"]
+
+    # The finding comes back (reopened), and the user skips it again.
+    state["issues"]["a"]["status"] = "deferred"
+    plan["skipped"]["a"] = {"issue_id": "a", "kind": "temporary", "skipped_at_scan": 5}
+
+    reconcile_plan_after_scan(plan, state)
+
+    assert "a" not in plan["superseded"]
+    assert plan["skipped"]["a"]["kind"] == "temporary"
+
+
+def test_reconcile_keeps_wontfix_and_false_positive_skips_of_queued_or_clustered_issues():
+    """Detaching a decided issue from the queue/cluster keeps its skip entry (2.41)."""
+    plan = _plan_with_queue("w", "f", "x")
+    ensure_plan_defaults(plan)
+    plan["promoted_ids"] = ["w"]
+    create_cluster(plan, "c")
+    add_to_cluster(plan, "c", ["w", "f", "x"])
+    state = _state_with_issues("x")
+    for fid, kind, status in (
+        ("w", "permanent", "wontfix"),
+        ("f", "false_positive", "false_positive"),
+    ):
+        plan["skipped"][fid] = {"issue_id": fid, "kind": kind, "skipped_at_scan": 1}
+        state["issues"][fid] = {
+            **_state_with_issues(fid)["issues"][fid],
+            "status": status,
+        }
+
+    result = reconcile_plan_after_scan(plan, state)
+
+    assert plan["skipped"]["w"]["kind"] == "permanent"
+    assert plan["skipped"]["f"]["kind"] == "false_positive"
+    assert not ({"w", "f"} & set(result.superseded))
+    assert not ({"w", "f"} & set(plan["superseded"]))
+    assert plan["queue_order"] == ["x"]
+    assert plan["promoted_ids"] == []
+    assert plan["clusters"]["c"]["issue_ids"] == ["x"]
+
+    # A second reconcile changes nothing.
+    assert reconcile_plan_after_scan(plan, state).changes == 0
+
+
+def test_reconcile_forgets_superseded_entry_of_decided_skip():
+    """An old superseded entry must not keep stripping a wontfix skip."""
+    plan = empty_plan()
+    ensure_plan_defaults(plan)
+    plan["superseded"]["w"] = {
+        "original_id": "w",
+        "status": "superseded",
+        "superseded_at": "2026-10-01T00:00:00+00:00",
+    }
+    plan["skipped"]["w"] = {"issue_id": "w", "kind": "permanent", "skipped_at_scan": 5}
+    state = _state_with_issues("w", status="wontfix")
+
+    reconcile_plan_after_scan(plan, state)
+
+    assert "w" not in plan["superseded"]
+    assert plan["skipped"]["w"]["kind"] == "permanent"
+
+
+# ---------------------------------------------------------------------------
+# Active clusters completed when all items resolved
+# ---------------------------------------------------------------------------
+
+
+def test_reconcile_marks_active_cluster_done_when_all_items_resolved():
+    """An active cluster whose items are all fixed/wontfix should become done."""
+    plan = _plan_with_queue("a", "b")
+    ensure_plan_defaults(plan)
+    create_cluster(plan, "my-cluster")
+    add_to_cluster(plan, "my-cluster", ["a", "b"])
+    plan["clusters"]["my-cluster"]["execution_status"] = "active"
+
+    # Both items are resolved in state
+    state = _state_with_issues("a", "b", status="fixed")
+
+    result = reconcile_plan_after_scan(plan, state)
+
+    assert "my-cluster" in result.clusters_completed
+    assert plan["clusters"]["my-cluster"]["execution_status"] == "done"
+
+
+def test_reconcile_leaves_active_cluster_when_items_still_open():
+    """An active cluster with open items should stay active."""
+    plan = _plan_with_queue("a", "b")
+    ensure_plan_defaults(plan)
+    create_cluster(plan, "my-cluster")
+    add_to_cluster(plan, "my-cluster", ["a", "b"])
+    plan["clusters"]["my-cluster"]["execution_status"] = "active"
+
+    # "a" is fixed but "b" is still open
+    state = _state_with_issues("b")
+    state["issues"]["a"] = {
+        "id": "a",
+        "status": "fixed",
+        "detector": "test",
+        "file": "test.py",
+        "tier": 1,
+        "confidence": "high",
+        "summary": "Issue a",
+    }
+
+    result = reconcile_plan_after_scan(plan, state)
+
+    assert "my-cluster" not in result.clusters_completed
+    assert plan["clusters"]["my-cluster"]["execution_status"] == "active"
+
+
+# ---------------------------------------------------------------------------
+# Line-shifted findings keep their plan place
+# ---------------------------------------------------------------------------
+
+
+def _line_state(**statuses: str) -> dict:
+    state = _state_with_issues(*statuses)
+    for fid, status in statuses.items():
+        state["issues"][fid]["status"] = status
+        state["issues"][fid]["detector"] = fid.split("::", 1)[0]
+    return state
+
+
+def test_line_shift_carries_queue_slot_and_cluster():
+    old, new = "unused::src/a.ts::x:5", "unused::src/a.ts::x:4"
+    plan = _plan_with_queue("unused::src/a.ts::y:1", old)
+    ensure_plan_defaults(plan)
+    create_cluster(plan, "manual")
+    add_to_cluster(plan, "manual", [old])
+    state = _line_state(
+        **{"unused::src/a.ts::y:1": "open", old: "auto_resolved", new: "open"}
+    )
+
+    result = reconcile_plan_after_scan(plan, state)
+
+    assert result.remapped == {old: new}
+    assert plan["queue_order"] == ["unused::src/a.ts::y:1", new]
+    assert plan["clusters"]["manual"]["issue_ids"] == [new]
+    assert plan["overrides"][new]["cluster"] == "manual"
+    assert old not in plan["superseded"]
+
+
+def test_line_shift_skips_ambiguous_and_review_matches():
+    old = "unused::src/a.ts::x:5"
+    review_old = "review::src/a.ts::naming:3"
+    plan = _plan_with_queue(old, review_old)
+    state = _line_state(
+        **{
+            old: "auto_resolved",
+            "unused::src/a.ts::x:4": "open",
+            "unused::src/a.ts::x:9": "open",
+            review_old: "auto_resolved",
+            "review::src/a.ts::naming:2": "open",
+        }
+    )
+
+    result = reconcile_plan_after_scan(plan, state)
+
+    assert result.remapped == {}
+    assert plan["queue_order"] == []
+    assert {old, review_old} <= set(plan["superseded"])

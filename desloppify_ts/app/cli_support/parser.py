@@ -1,0 +1,184 @@
+"""CLI parser construction helpers."""
+
+from __future__ import annotations
+
+import argparse
+import platform
+import sys
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as get_version
+
+from desloppify_ts import DIST_NAME
+from desloppify_ts.app.cli_support.parser_groups import (
+    _add_autofix_parser,
+    _add_backlog_parser,
+    _add_config_parser,
+    _add_detect_parser,
+    _add_directives_parser,
+    _add_exclude_parser,
+    _add_move_parser,
+    _add_next_parser,
+    _add_review_parser,
+    _add_scan_parser,
+    _add_setup_parser,
+    _add_show_parser,
+    _add_status_parser,
+    _add_suppress_parser,
+    _add_tree_parser,
+    _add_update_skill_parser,
+    _add_viz_parser,
+    _add_zone_parser,
+)
+from desloppify_ts.app.cli_support.parser_groups_plan_impl import add_plan_parser
+
+USAGE_EXAMPLES = """
+workflow:
+  scan       Run detectors, update state, show diff
+  status     Score dashboard with dimension health
+  next       Show the next execution item from the living plan
+  backlog    Show broader backlog items not currently in execution
+  plan       Living plan: prioritize, cluster, resolve, skip, annotate
+
+investigate:
+  show       Dig into issues by file/dir/detector/ID
+  tree       Annotated codebase tree (zoom with --focus)
+  viz        Interactive HTML treemap
+  detect     Run a single detector directly (bypass state)
+
+improve:
+  autofix    Auto-fix mechanical issues
+  suppress   Suppress issues matching a pattern
+  exclude    Exclude path pattern from scanning
+  move       Move file/dir and update import references
+  review     Holistic subjective review (LLM-based)
+
+configure:
+  zone       Show/set zone classifications
+  config     Project configuration
+  dev        Developer utilities
+  setup         Install bundled global AI skill files
+  update-skill  Install/update agent skill document
+
+examples:
+  desloppify-ts scan
+  desloppify-ts scan --skip-slow --profile ci
+  desloppify-ts plan                        # full prioritized markdown
+  desloppify-ts plan queue                  # compact table of execution items
+  desloppify-ts next --count 10             # top 10 execution items
+  desloppify-ts backlog --count 10          # top 10 backlog items
+  desloppify-ts show src/components/Modal.tsx
+  desloppify-ts plan resolve "unused::src/foo.tsx::React" \\
+    --note "removed the unused React import; the file uses the JSX runtime" --confirm
+  desloppify-ts review --run-batches --parallel --scan-after-import
+"""
+
+
+class _NoAbbrevArgumentParser(argparse.ArgumentParser):
+    """Argparse parser variant that disables long-option abbreviation."""
+
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault("allow_abbrev", False)
+        super().__init__(*args, **kwargs)
+
+
+def _cli_version_string() -> str:
+    """Return the best available CLI version label."""
+    try:
+        version_label = f"desloppify-ts {get_version(DIST_NAME)}"
+    except PackageNotFoundError:
+        version_label = "desloppify-ts (version unknown)"
+    return f"{version_label}\nPython {platform.python_version()} at {sys.executable}"
+
+
+def create_parser(*, detector_names: list[str]) -> argparse.ArgumentParser:
+    """Build top-level CLI parser with all subcommands."""
+    parser = _NoAbbrevArgumentParser(
+        prog="desloppify-ts",
+        description="Desloppify TS — codebase health tracker",
+        epilog=USAGE_EXAMPLES,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument(
+        "--exclude",
+        action="append",
+        default=None,
+        metavar="PATTERN",
+        help="Path pattern to exclude (component/prefix match; repeatable)",
+    )
+    parser.add_argument(
+        "--version",
+        "-V",
+        action="version",
+        version=_cli_version_string(),
+    )
+    sub = parser.add_subparsers(
+        dest="command",
+        parser_class=_NoAbbrevArgumentParser,
+    )
+    # workflow
+    _add_scan_parser(sub)
+    _add_status_parser(sub)
+    _add_next_parser(sub)
+    _add_backlog_parser(sub)
+    add_plan_parser(sub)
+    # investigate
+    _add_show_parser(sub)
+    _add_tree_parser(sub)
+    _add_viz_parser(sub)
+    _add_detect_parser(sub, detector_names)
+    # improve
+    _add_autofix_parser(sub)
+    _add_suppress_parser(sub)
+    _add_exclude_parser(sub)
+    _add_move_parser(sub)
+    _add_review_parser(sub)
+    # configure
+    _add_zone_parser(sub)
+    _add_config_parser(sub)
+    _add_directives_parser(sub)
+    _add_setup_parser(sub)
+    _add_update_skill_parser(sub)
+    for command_parser in sub.choices.values():
+        _inherit_options(command_parser, _INHERITED_OPTIONS)
+    return parser
+
+
+# Options a command defines that its subcommands also accept, so
+# ``desloppify-ts zone show --state X`` works like ``desloppify-ts zone --state X show``.
+_INHERITED_OPTIONS = ("--state", "--path")
+
+
+def _inherit_options(parser: argparse.ArgumentParser, names: tuple[str, ...]) -> None:
+    """Re-declare ``parser``'s options named ``names`` on all its subcommands.
+
+    The copies default to ``SUPPRESS``, so they only set the value when given
+    and never reset one passed before the subcommand.
+    """
+    actions = [
+        action
+        for action in parser._actions
+        if any(name in action.option_strings for name in names)
+    ]
+    if not actions:
+        return
+    for action in parser._actions:
+        if not isinstance(action, argparse._SubParsersAction):
+            continue
+        for child in action.choices.values():
+            for inherited in actions:
+                if any(
+                    opt in child._option_string_actions
+                    for opt in inherited.option_strings
+                ):
+                    continue
+                child.add_argument(
+                    *inherited.option_strings,
+                    dest=inherited.dest,
+                    type=inherited.type,
+                    default=argparse.SUPPRESS,
+                    help=inherited.help,
+                )
+            _inherit_options(child, tuple(a.option_strings[0] for a in actions))
+
+
+__all__ = ["USAGE_EXAMPLES", "create_parser"]

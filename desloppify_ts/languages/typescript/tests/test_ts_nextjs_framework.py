@@ -1,0 +1,588 @@
+"""Tests for Next.js framework spec integration (TypeScript)."""
+
+from __future__ import annotations
+
+import importlib.util
+from pathlib import Path
+from types import SimpleNamespace
+
+import pytest
+
+from desloppify_ts.languages._framework.frameworks.detection import (
+    detect_ecosystem_frameworks,
+)
+from desloppify_ts.languages._framework.node.frameworks.nextjs.info import (
+    nextjs_info_from_evidence,
+)
+from desloppify_ts.languages._framework.node.frameworks.nextjs.scanners import (
+    scan_nextjs_browser_globals_missing_use_client,
+    scan_nextjs_navigation_hooks_missing_use_client,
+    scan_nextjs_server_modules_in_pages_router,
+    scan_nextjs_server_navigation_apis_in_client,
+    scan_nextjs_use_server_in_client,
+    scan_nextjs_use_server_not_first,
+    scan_rsc_missing_use_client,
+)
+from desloppify_ts.languages.framework import framework_summary_lines
+from desloppify_ts.languages.typescript import TypeScriptConfig
+
+HAS_TREESITTER = importlib.util.find_spec("tree_sitter_language_pack") is not None
+needs_treesitter = pytest.mark.skipif(not HAS_TREESITTER, reason="needs tree-sitter")
+
+
+@pytest.fixture(autouse=True)
+def _root(tmp_path, set_project_root):
+    """Point PROJECT_ROOT at the tmp directory via RuntimeContext."""
+
+
+def _write(tmp_path: Path, name: str, content: str) -> Path:
+    p = tmp_path / name
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(content)
+    return p
+
+
+class _FakeLang(SimpleNamespace):
+    zone_map = None
+    dep_graph = None
+    file_finder = None
+
+    def __init__(self):
+        super().__init__(review_cache={}, detector_coverage={}, coverage_warnings=[])
+
+
+def test_detect_nextjs_present_when_next_dependency_and_app_present(tmp_path: Path):
+    _write(tmp_path, "package.json", '{"dependencies": {"next": "14.0.0"}}\n')
+    _write(
+        tmp_path, "app/page.tsx", "export default function Page() { return <div/> }\n"
+    )
+
+    detection = detect_ecosystem_frameworks(tmp_path, None, "node")
+    assert detection.package_root == tmp_path.resolve()
+    assert detection.package_json_relpath == "package.json"
+    assert "nextjs" in detection.present
+    assert "app" in (detection.present["nextjs"].get("marker_dir_hits") or [])
+
+
+def test_detect_nextjs_absent_when_only_app_tree_exists(tmp_path: Path):
+    _write(tmp_path, "package.json", '{"dependencies": {"react": "18.3.0"}}\n')
+    _write(
+        tmp_path, "app/page.tsx", "export default function Page() { return <div/> }\n"
+    )
+
+    detection = detect_ecosystem_frameworks(tmp_path, None, "node")
+    assert "nextjs" not in detection.present
+
+
+def test_detect_nextjs_package_root_for_external_scan_path(tmp_path: Path):
+    external = tmp_path.parent / f"{tmp_path.name}-external-next"
+    external.mkdir(parents=True, exist_ok=True)
+    (external / "package.json").write_text('{"dependencies": {"next": "14.0.0"}}\n')
+    (external / "app").mkdir(parents=True, exist_ok=True)
+    (external / "app" / "page.tsx").write_text(
+        "export default function Page(){return <div/>}\n"
+    )
+
+    detection = detect_ecosystem_frameworks(external, None, "node")
+    assert detection.package_root == external.resolve()
+    assert detection.package_json_relpath is not None
+    assert detection.package_json_relpath.endswith("package.json")
+    assert "nextjs" in detection.present
+
+
+def test_use_server_not_first_ignores_nested_inline_actions(tmp_path: Path):
+    _write(tmp_path, "package.json", '{"dependencies": {"next": "14.0.0"}}\n')
+    _write(
+        tmp_path,
+        "app/inline-action.tsx",
+        (
+            "export default async function Page() {\n"
+            "  async function doAction() {\n"
+            "    'use server'\n"
+            "    return 1\n"
+            "  }\n"
+            "  return <div>{String(!!doAction)}</div>\n"
+            "}\n"
+        ),
+    )
+    _write(
+        tmp_path,
+        "app/misplaced.ts",
+        "export const x = 1\n'use server'\nexport async function action(){ return 1 }\n",
+    )
+
+    info = nextjs_info_from_evidence(
+        {"marker_dir_hits": ["app"]},
+        package_root=tmp_path.resolve(),
+        package_json_relpath="package.json",
+    )
+    entries, _ = scan_nextjs_use_server_not_first(tmp_path, info)
+    files = {entry["file"] for entry in entries}
+    assert "app/misplaced.ts" in files
+    assert "app/inline-action.tsx" not in files
+
+
+def test_use_server_in_client_ignores_comments_and_string_literals(tmp_path: Path):
+    _write(tmp_path, "package.json", '{"dependencies": {"next": "14.0.0"}}\n')
+    _write(
+        tmp_path,
+        "app/page.tsx",
+        (
+            "'use client'\n"
+            'console.log("use server")\n'
+            "// 'use server'\n"
+            "export default function X(){return null}\n"
+        ),
+    )
+
+    info = nextjs_info_from_evidence(
+        {"marker_dir_hits": ["app"]},
+        package_root=tmp_path.resolve(),
+        package_json_relpath="package.json",
+    )
+    entries, _ = scan_nextjs_use_server_in_client(tmp_path, info)
+    assert not entries
+
+
+def test_server_navigation_apis_in_client_only_flags_not_found(tmp_path: Path):
+    _write(tmp_path, "package.json", '{"dependencies": {"next": "14.0.0"}}\n')
+    _write(
+        tmp_path,
+        "app/client-redirect.tsx",
+        (
+            "'use client'\n"
+            "import { redirect } from 'next/navigation'\n"
+            "export default function X(){ redirect('/'); return null }\n"
+        ),
+    )
+    _write(
+        tmp_path,
+        "app/client-notfound.tsx",
+        (
+            "'use client'\n"
+            "import { notFound } from 'next/navigation'\n"
+            "export default function X(){ notFound(); return null }\n"
+        ),
+    )
+
+    info = nextjs_info_from_evidence(
+        {"marker_dir_hits": ["app"]},
+        package_root=tmp_path.resolve(),
+        package_json_relpath="package.json",
+    )
+    entries, _ = scan_nextjs_server_navigation_apis_in_client(tmp_path, info)
+    files = {entry["file"] for entry in entries}
+    assert "app/client-notfound.tsx" in files
+    assert "app/client-redirect.tsx" not in files
+
+
+def test_server_modules_in_pages_router_skips_pages_api_routes(tmp_path: Path):
+    _write(tmp_path, "package.json", '{"dependencies": {"next": "14.0.0"}}\n')
+    _write(
+        tmp_path,
+        "pages/api/edge.ts",
+        (
+            "import { NextResponse } from 'next/server'\n"
+            "export const config = { runtime: 'edge' }\n"
+            "export default function handler(){ return NextResponse.json({ ok: true }) }\n"
+        ),
+    )
+
+    info = nextjs_info_from_evidence(
+        {"marker_dir_hits": ["pages"]},
+        package_root=tmp_path.resolve(),
+        package_json_relpath="package.json",
+    )
+    entries, _ = scan_nextjs_server_modules_in_pages_router(tmp_path, info)
+    assert not entries
+
+
+def test_typescript_config_includes_nextjs_framework_phases_without_next_lint():
+    cfg = TypeScriptConfig()
+    labels = [getattr(p, "label", "") for p in cfg.phases]
+    assert "Next.js framework smells" in labels
+    assert "next lint" not in labels  # replaced by the lint detector
+
+
+def test_nextjs_smells_phase_emits_issues_when_next_present(tmp_path: Path):
+    _write(
+        tmp_path,
+        "package.json",
+        '{"dependencies": {"next": "14.0.0", "react": "18.3.0"}}\n',
+    )
+    _write(
+        tmp_path,
+        "app/legacy.tsx",
+        "import { useRouter } from 'next/router'\nexport default function X(){return null}\n",
+    )
+    _write(
+        tmp_path,
+        "app/server-in-client.tsx",
+        (
+            "'use client'\n"
+            "import { cookies } from 'next/headers'\n"
+            "import fs from 'node:fs'\n"
+            "export default function X(){return null}\n"
+        ),
+    )
+
+    cfg = TypeScriptConfig()
+    phase = next(
+        p for p in cfg.phases if getattr(p, "label", "") == "Next.js framework smells"
+    )
+    issues, potentials = phase.run(tmp_path, _FakeLang())
+    assert potentials.get("nextjs", 0) >= 1
+    assert any(issue.get("detector") == "nextjs" for issue in issues)
+    assert any(
+        "next_router_in_app_router" in str(issue.get("id", "")) for issue in issues
+    )
+
+
+def test_browser_globals_missing_use_client_skips_test_and_story_files(tmp_path: Path):
+    _write(tmp_path, "package.json", '{"dependencies": {"next": "14.0.0"}}\n')
+    _write(
+        tmp_path,
+        "app/widget.tsx",
+        "export default function Widget(){ return <div>{window.innerWidth}</div> }\n",
+    )
+    for name in (
+        "app/widget.test.tsx",
+        "app/widget.spec.ts",
+        "app/widget.stories.tsx",
+        "app/__tests__/widget.tsx",
+        "app/__mocks__/widget.ts",
+    ):
+        _write(tmp_path, name, "it('x', () => { document.body.innerHTML = '' })\n")
+
+    info = nextjs_info_from_evidence(
+        {"marker_dir_hits": ["app"]},
+        package_root=tmp_path.resolve(),
+        package_json_relpath="package.json",
+    )
+    entries, scanned = scan_nextjs_browser_globals_missing_use_client(tmp_path, info)
+    assert {entry["file"] for entry in entries} == {"app/widget.tsx"}
+    assert scanned == 1
+
+
+@pytest.mark.parametrize(
+    ("scanner", "call"),
+    [
+        (scan_rsc_missing_use_client, "useState(0)"),
+        (scan_nextjs_navigation_hooks_missing_use_client, "useRouter()"),
+    ],
+    ids=["react_hooks", "navigation_hooks"],
+)
+def test_hook_rules_missing_use_client_skip_test_and_story_files(
+    tmp_path: Path, scanner, call
+):
+    _write(tmp_path, "package.json", '{"dependencies": {"next": "14.0.0"}}\n')
+    _write(
+        tmp_path,
+        "app/widget.tsx",
+        f"export default function Widget(){{ {call}; return null }}\n",
+    )
+    for name in (
+        "app/widget.test.tsx",
+        "app/widget.stories.tsx",
+        "app/__tests__/widget.tsx",
+    ):
+        _write(tmp_path, name, f"it('x', () => {{ renderHook(() => {call}) }})\n")
+
+    info = nextjs_info_from_evidence(
+        {"marker_dir_hits": ["app"]},
+        package_root=tmp_path.resolve(),
+        package_json_relpath="package.json",
+    )
+    entries, scanned = scanner(tmp_path, info)
+    assert {entry["file"] for entry in entries} == {"app/widget.tsx"}
+    assert scanned == 1
+
+
+def test_detect_orphaned_applies_scan_zones_and_entries(tmp_path: Path, capsys):
+    """`detect orphaned` reports what `scan` does: config files are zoned out."""
+    import json
+
+    from desloppify_ts.languages.typescript.commands import cmd_orphaned
+
+    body = "".join(f"export const v{i} = {i};\n" for i in range(20))
+    _write(tmp_path, "package.json", '{"dependencies": {"next": "15.0.0"}}\n')
+    _write(tmp_path, "next.config.ts", body)
+    _write(tmp_path, "app/page.tsx", body)
+    _write(tmp_path, "src/lonely.ts", body)
+    _write(tmp_path, "src/lonely.test.ts", body)
+
+    cmd_orphaned(SimpleNamespace(path=str(tmp_path), json=True, top=20))
+    payload = json.loads(capsys.readouterr().out)
+    assert [e["file"] for e in payload["entries"]] == ["src/lonely.ts"]
+    assert payload["entries"][0]["confidence"] == "medium"
+
+    cmd_orphaned(SimpleNamespace(path=str(tmp_path), json=False, top=20))
+    assert "Orphaned files: 1 file, 20 LOC" in capsys.readouterr().out
+
+
+def test_detect_naming_skips_tests_and_framework_names(tmp_path: Path, capsys):
+    """`detect naming` ignores test files and Next's reserved route file names."""
+    import json
+
+    from desloppify_ts.languages.typescript.commands import cmd_naming
+
+    body = "export const v = 1;\n"
+    _write(tmp_path, "package.json", '{"dependencies": {"next": "15.0.0"}}\n')
+    _write(tmp_path, "next.config.ts", body)
+    for i in range(6):
+        _write(tmp_path, f"src/app/dash/Widget{i}.tsx", body)
+        # Kebab-case test files beside PascalCase components.
+        _write(tmp_path, f"src/app/dash/widget-case-{i}.test.tsx", body)
+    for name in ("page", "layout", "loading", "error", "template", "not-found"):
+        _write(tmp_path, f"src/app/dash/{name}.tsx", body)
+    for i in range(12):
+        _write(tmp_path, f"src/lib/foo-bar-{i}.ts", body)
+    for i in range(6):
+        _write(tmp_path, f"src/lib/fooBar{i}.ts", body)
+
+    cmd_naming(SimpleNamespace(path=str(tmp_path), json=True, top=20))
+    payload = json.loads(capsys.readouterr().out)
+    assert [(e["directory"], e["minority"]) for e in payload["entries"]] == [
+        ("src/lib", "camelCase")
+    ]
+
+
+_LEGACY_ROUTER = "import { useRouter } from 'next/router'\nexport default function X(){return null}\n"
+
+
+def _nextjs_phase():
+    cfg = TypeScriptConfig()
+    return next(
+        p for p in cfg.phases if getattr(p, "label", "") == "Next.js framework smells"
+    )
+
+
+def _router_issue_files(issues) -> list[str]:
+    return sorted(i["file"] for i in issues if "next_router_in_app_router" in i["id"])
+
+
+def test_nextjs_smells_phase_runs_on_workspace_packages(tmp_path: Path):
+    _write(
+        tmp_path,
+        "package.json",
+        '{"private": true, "devDependencies": {"turbo": "2"}}\n',
+    )
+    _write(
+        tmp_path, "pnpm-workspace.yaml", "packages:\n  - 'apps/*'\n  - 'packages/*'\n"
+    )
+    _write(
+        tmp_path,
+        "apps/web/package.json",
+        '{"name": "web", "dependencies": {"next": "15"}}\n',
+    )
+    _write(tmp_path, "apps/web/app/legacy.tsx", _LEGACY_ROUTER)
+    _write(tmp_path, "packages/ui/package.json", '{"name": "ui"}\n')
+    _write(tmp_path, "packages/ui/app/legacy.tsx", _LEGACY_ROUTER)
+
+    issues, potentials = _nextjs_phase().run(tmp_path, _FakeLang())
+
+    assert _router_issue_files(issues) == ["apps/web/app/legacy.tsx"]
+    assert potentials == {"nextjs": 1}
+
+
+def test_nextjs_smells_phase_dedupes_package_nested_in_a_next_root(tmp_path: Path):
+    _write(
+        tmp_path,
+        "package.json",
+        '{"workspaces": ["examples/*"], "dependencies": {"next": "15"}}\n',
+    )
+    _write(tmp_path, "app/legacy.tsx", _LEGACY_ROUTER)
+    _write(
+        tmp_path,
+        "examples/blog/package.json",
+        '{"name": "blog", "dependencies": {"next": "15"}}\n',
+    )
+    _write(tmp_path, "examples/blog/app/legacy.tsx", _LEGACY_ROUTER)
+
+    issues, potentials = _nextjs_phase().run(tmp_path, _FakeLang())
+
+    assert _router_issue_files(issues) == [
+        "app/legacy.tsx",
+        "examples/blog/app/legacy.tsx",
+    ]
+    assert len({i["id"] for i in issues}) == len(issues)
+    assert potentials == {
+        "nextjs": 2
+    }  # the root walk already counted the example's files
+
+
+def test_nextjs_smells_phase_scoped_to_a_package_skips_siblings(tmp_path: Path):
+    _write(tmp_path, "package.json", '{"workspaces": ["apps/*"]}\n')
+    for name in ("web", "docs"):
+        manifest = f'{{"name": "{name}", "dependencies": {{"next": "15"}}}}\n'
+        _write(tmp_path, f"apps/{name}/package.json", manifest)
+        _write(tmp_path, f"apps/{name}/app/legacy.tsx", _LEGACY_ROUTER)
+
+    issues, _ = _nextjs_phase().run(tmp_path / "apps" / "web", _FakeLang())
+
+    assert _router_issue_files(issues) == ["apps/web/app/legacy.tsx"]
+
+
+def test_env_leak_issue_per_variable_names_it(tmp_path: Path):
+    _write(tmp_path, "package.json", '{"dependencies": {"next": "15"}}\n')
+    _write(
+        tmp_path,
+        "app/providers.tsx",
+        "'use client';\n"
+        "export const url = process.env.APP_URL ?? process.env.NEXT_PUBLIC_SITE;\n"
+        "export const port = process.env['PORT'];\n"
+        "export const again = process.env.APP_URL;\n",
+    )
+    cfg = TypeScriptConfig()
+    phase = next(
+        p for p in cfg.phases if getattr(p, "label", "") == "Next.js framework smells"
+    )
+    issues, _ = phase.run(tmp_path, _FakeLang())
+
+    leaks = sorted(
+        (i["id"], i["detail"]["line"], i["summary"])
+        for i in issues
+        if "env_leak" in i["id"]
+    )
+    assert [(id_, line) for id_, line, _ in leaks] == [
+        ("nextjs::app/providers.tsx::env_leak_in_client::APP_URL", 2),
+        ("nextjs::app/providers.tsx::env_leak_in_client::PORT", 3),
+    ]
+    assert "process.env.APP_URL" in leaks[0][2]
+
+
+def _applicable_labels(path: Path) -> list[str]:
+    lang = _FakeLang()
+    return [
+        p.label
+        for p in TypeScriptConfig().phases
+        if "framework smells" in p.label and p.applies and p.applies(path, lang)
+    ]
+
+
+def test_framework_phases_apply_only_to_detected_frameworks(tmp_path: Path):
+    _write(tmp_path, "package.json", '{"dependencies": {"next": "15"}}\n')
+    assert _applicable_labels(tmp_path) == ["Next.js framework smells"]
+
+
+def test_framework_phases_apply_to_workspace_package_frameworks(tmp_path: Path):
+    _write(tmp_path, "package.json", '{"workspaces": ["apps/*"]}\n')
+    _write(tmp_path, "apps/api/package.json", '{"dependencies": {"express": "5"}}\n')
+    assert _applicable_labels(tmp_path) == ["Express framework smells"]
+
+
+def test_no_framework_phase_applies_without_frameworks(tmp_path: Path):
+    _write(tmp_path, "package.json", '{"dependencies": {"zod": "4"}}\n')
+    assert _applicable_labels(tmp_path) == []
+
+
+def test_framework_summary_single_package(tmp_path: Path):
+    _write(
+        tmp_path,
+        "package.json",
+        '{"dependencies": {"next": "15"}, "devDependencies": {"vite": "6"}}\n',
+    )
+    assert framework_summary_lines(tmp_path, _FakeLang()) == [
+        "Frameworks: nextjs, vite"
+    ]
+
+
+def test_framework_summary_none_detected(tmp_path: Path):
+    _write(tmp_path, "package.json", '{"dependencies": {"zod": "4"}}\n')
+    assert framework_summary_lines(tmp_path, _FakeLang()) == [
+        "Frameworks: none detected"
+    ]
+
+
+def test_framework_summary_per_workspace_package(tmp_path: Path):
+    _write(tmp_path, "package.json", '{"workspaces": ["apps/*", "packages/*"]}\n')
+    _write(tmp_path, "apps/web/package.json", '{"dependencies": {"next": "15"}}\n')
+    _write(tmp_path, "apps/api/package.json", '{"dependencies": {"hono": "4"}}\n')
+    _write(tmp_path, "packages/util/package.json", '{"name": "util"}\n')
+    assert sorted(framework_summary_lines(tmp_path, _FakeLang())) == [
+        "Frameworks in apps/api: hono",
+        "Frameworks in apps/web: nextjs",
+    ]
+
+
+def _env_leaks(tmp_path: Path, content: str) -> list[tuple[str, int]]:
+    _write(tmp_path, "package.json", '{"dependencies": {"next": "15"}}\n')
+    _write(tmp_path, "app/providers.tsx", content)
+    issues, _ = _nextjs_phase().run(tmp_path, _FakeLang())
+    return sorted(
+        (i["id"].rsplit("::", 1)[1], i["detail"]["line"])
+        for i in issues
+        if "env_leak" in i["id"]
+    )
+
+
+def test_env_leak_plain_read_in_client_still_fires(tmp_path: Path):
+    content = (
+        "'use client'\n"
+        "export const secret = process.env.SECRET\n"
+        "export function f() {\n"
+        "  if (typeof window !== 'undefined') console.log('hi')\n"
+        "  return process.env.OTHER\n"
+        "}\n"
+    )
+    assert _env_leaks(tmp_path, content) == [("OTHER", 5), ("SECRET", 2)]
+
+
+@needs_treesitter
+def test_env_leak_skips_typeof_window_guards(tmp_path: Path):
+    content = (
+        "'use client'\n"
+        "function getBaseUrl() {\n"
+        "  if (typeof window !== 'undefined') return ''\n"
+        "  return `http://localhost:${process.env.PORT ?? 3000}`\n"
+        "}\n"
+        "function b() {\n"
+        "  if (typeof window === 'undefined') {\n"
+        "    return process.env['DB_URL']\n"
+        "  }\n"
+        "  return '/api'\n"
+        "}\n"
+        "function c() {\n"
+        "  if ('undefined' != typeof window) {\n"
+        "    return '/api'\n"
+        "  } else {\n"
+        "    return process.env.API_HOST\n"
+        "  }\n"
+        "}\n"
+        "const d = typeof window === 'undefined' ? process.env.TOKEN : ''\n"
+        "function e() {\n"
+        "  if (typeof window !== 'undefined') {\n"
+        "    throw new Error('server only')\n"
+        "  }\n"
+        "  return process.env.KEY\n"
+        "}\n"
+    )
+    assert _env_leaks(tmp_path, content) == []
+
+
+@needs_treesitter
+def test_env_leak_in_browser_branch_still_fires(tmp_path: Path):
+    content = (
+        "'use client'\n"
+        "function a() {\n"
+        "  if (typeof window !== 'undefined') {\n"
+        "    return process.env.BROWSER_SIDE\n"
+        "  }\n"
+        "  return ''\n"
+        "}\n"
+        "function b() {\n"
+        "  if (typeof window === 'undefined') return ''\n"
+        "  return process.env.AFTER_SERVER_RETURN\n"
+        "}\n"
+        "function c() {\n"
+        "  if (typeof window !== 'undefined') log()\n"
+        "  return process.env.NO_EXIT\n"
+        "}\n"
+        "const d = typeof window !== 'undefined' ? process.env.TERNARY : ''\n"
+    )
+    assert _env_leaks(tmp_path, content) == [
+        ("AFTER_SERVER_RETURN", 10),
+        ("BROWSER_SIDE", 4),
+        ("NO_EXIT", 14),
+        ("TERNARY", 16),
+    ]

@@ -1,0 +1,949 @@
+"""Tests for desloppify_ts.zones — zone classification, policies, and filtering."""
+
+from pathlib import Path
+
+import pytest
+
+from desloppify_ts.engine.policy.zones import (
+    COMMON_ZONE_RULES,
+    EXCLUDED_ZONE_VALUES,
+    EXCLUDED_ZONES,
+    REVIEW_COVERAGE_EXCLUDED_ZONES,
+    REVIEW_SELECTION_EXCLUDED_ZONES,
+    ZONE_POLICIES,
+    FileZoneMap,
+    Zone,
+    ZoneRule,
+    _match_pattern,
+    classify_file,
+    filter_entries,
+    has_generated_header,
+    is_override_pattern,
+    matching_override,
+    normalize_zone,
+    zone_in,
+)
+
+# ── _match_pattern() ─────────────────────────────────────────
+
+
+class TestMatchPattern:
+    """Tests for the _match_pattern helper."""
+
+    def test_directory_pattern_matches(self):
+        """'/tests/' matches a file inside a tests directory."""
+        assert _match_pattern("src/tests/foo.py", "/tests/") is True
+
+    def test_directory_pattern_at_root(self):
+        """'/tests/' matches a file at the root-level tests dir."""
+        assert _match_pattern("tests/foo.py", "/tests/") is True
+
+    def test_directory_pattern_no_false_positive(self):
+        """'/tests/' does NOT match 'attestation.py' (substring only)."""
+        assert _match_pattern("attestation.py", "/tests/") is False
+
+    def test_directory_pattern_nested(self):
+        """'/vendor/' matches a deeply nested vendor directory."""
+        assert _match_pattern("lib/vendor/pkg/file.js", "/vendor/") is True
+
+    def test_directory_pattern_must_be_component(self):
+        """'/test/' does not match 'testimony/foo.py' — needs directory boundary."""
+        assert _match_pattern("testimony/foo.py", "/test/") is False
+
+    def test_anchored_pattern_matches_path_prefix(self):
+        """'^tools/' matches only at the project root."""
+        assert _match_pattern("tools/a.ts", "^tools/")
+        assert not _match_pattern("src/tools/a.ts", "^tools/")
+        assert not _match_pattern("devtools/a.ts", "^tools/")
+
+    def test_glob_pattern_matches_basename(self):
+        """'*.config.ts' globs the basename, anchored at both ends."""
+        assert _match_pattern("a/vitest.integration.config.ts", "*.config.ts")
+        assert not _match_pattern("a/config.ts", "*.config.ts")
+        assert not _match_pattern("a/x.config.tsx", "*.config.ts")
+        assert not _match_pattern("x.config.ts/a.js", "*.config.ts")
+
+    def test_suffix_extension_pattern(self):
+        """'.test.' matches 'foo.test.ts' via contains on basename."""
+        assert _match_pattern("src/foo.test.ts", ".test.") is True
+
+    def test_suffix_extension_pattern_tsx(self):
+        """'.test.' matches 'Component.test.tsx'."""
+        assert _match_pattern("components/Component.test.tsx", ".test.") is True
+
+    def test_suffix_extension_pattern_no_match(self):
+        """'.test.' does NOT match 'test_utils.py' (no '.test.' substring)."""
+        assert _match_pattern("test_utils.py", ".test.") is False
+
+    def test_dot_extension_pattern(self):
+        """'.d.ts' matches 'types.d.ts' via contains on basename."""
+        assert _match_pattern("src/types.d.ts", ".d.ts") is True
+
+    def test_dot_extension_no_match(self):
+        """'.d.ts' does NOT match 'data.ts'."""
+        assert _match_pattern("src/data.ts", ".d.ts") is False
+
+    def test_prefix_pattern_matches(self):
+        """'test_' matches 'test_foo.py' — basename starts with prefix."""
+        assert _match_pattern("test_foo.py", "test_") is True
+
+    def test_prefix_pattern_with_directory(self):
+        """'test_' matches 'src/test_bar.py'."""
+        assert _match_pattern("src/test_bar.py", "test_") is True
+
+    def test_prefix_pattern_no_match(self):
+        """'test_' does NOT match 'contest_results.py' — no prefix match."""
+        assert _match_pattern("contest_results.py", "test_") is False
+
+    def test_suffix_underscore_pattern(self):
+        """'_test.py' matches 'foo_test.py' — basename ends with suffix."""
+        assert _match_pattern("foo_test.py", "_test.py") is True
+
+    def test_suffix_underscore_pattern_with_dir(self):
+        """'_test.py' matches 'src/bar_test.py'."""
+        assert _match_pattern("src/bar_test.py", "_test.py") is True
+
+    def test_suffix_underscore_no_match(self):
+        """'_test.py' does NOT match 'test_foo.py'."""
+        assert _match_pattern("test_foo.py", "_test.py") is False
+
+    def test_suffix_pb2(self):
+        """'_pb2.py' matches 'message_pb2.py'."""
+        assert _match_pattern("protos/message_pb2.py", "_pb2.py") is True
+
+    def test_exact_basename_match(self):
+        """'config.py' matches 'src/config.py' — exact basename."""
+        assert _match_pattern("src/config.py", "config.py") is True
+
+    def test_exact_basename_no_match(self):
+        """'config.py' does NOT match 'src/myconfig.py'."""
+        assert _match_pattern("src/myconfig.py", "config.py") is False
+
+    def test_exact_basename_conftest(self):
+        """'conftest.py' matches 'tests/conftest.py'."""
+        assert _match_pattern("tests/conftest.py", "conftest.py") is True
+
+    def test_exact_basename_setup(self):
+        """'setup.py' matches 'setup.py' at root."""
+        assert _match_pattern("setup.py", "setup.py") is True
+
+    @pytest.mark.parametrize(
+        ("path", "pattern"),
+        [
+            ("project/tsconfig.json", "tsconfig"),
+            ("tsconfig.build.json", "tsconfig"),
+            ("vite.config.ts", "vite.config"),
+            ("packages/a/vite.config.mts", "vite.config"),
+            ("eslint.config.mjs", "eslint"),
+            (".eslintrc.cjs", "eslint"),
+            (".prettierrc.js", "prettier"),
+            ("vitest.setup.ts", "vitest.setup."),
+            ("src/setupTests.ts", "setupTests."),
+        ],
+    )
+    def test_fallback_tool_name_on_basename(self, path, pattern):
+        assert _match_pattern(path, pattern) is True
+
+    @pytest.mark.parametrize(
+        ("path", "pattern"),
+        [
+            ("src/app.ts", "tsconfig"),
+            # Directories and other words in the name don't count
+            ("src/lib/eslint-rules/rule.ts", "eslint"),
+            ("src/tsconfig-paths/resolve.ts", "tsconfig"),
+            ("src/lib/prettier-utils.ts", "prettier"),
+            ("src/myeslint.config.ts", "eslint"),
+        ],
+    )
+    def test_fallback_no_substring_match(self, path, pattern):
+        assert _match_pattern(path, pattern) is False
+
+
+# ── classify_file() ──────────────────────────────────────────
+
+
+class TestClassifyFile:
+    """Tests for the classify_file function."""
+
+    def test_vendor_directory(self):
+        """File in vendor/ is classified as VENDOR."""
+        assert classify_file("lib/vendor/pkg.py", COMMON_ZONE_RULES) == Zone.VENDOR
+
+    def test_third_party_directory(self):
+        """File in third_party/ is classified as VENDOR."""
+        assert classify_file("third_party/lib.py", COMMON_ZONE_RULES) == Zone.VENDOR
+
+    def test_vendored_directory(self):
+        """File in vendored/ is classified as VENDOR."""
+        assert classify_file("vendored/dep.py", COMMON_ZONE_RULES) == Zone.VENDOR
+
+    def test_generated_directory(self):
+        """File in generated/ is classified as GENERATED."""
+        assert (
+            classify_file("src/generated/types.py", COMMON_ZONE_RULES) == Zone.GENERATED
+        )
+
+    def test_dunder_generated_directory(self):
+        """File in __generated__/ is classified as GENERATED."""
+        assert (
+            classify_file("__generated__/schema.py", COMMON_ZONE_RULES)
+            == Zone.GENERATED
+        )
+
+    def test_tests_directory(self):
+        """File in tests/ is classified as TEST."""
+        assert classify_file("tests/test_foo.py", COMMON_ZONE_RULES) == Zone.TEST
+
+    def test_test_directory(self):
+        """File in test/ is classified as TEST."""
+        assert classify_file("test/test_bar.py", COMMON_ZONE_RULES) == Zone.TEST
+
+    def test_fixtures_directory(self):
+        """File in fixtures/ is classified as TEST."""
+        assert classify_file("fixtures/data.json", COMMON_ZONE_RULES) == Zone.TEST
+
+    def test_scripts_directory(self):
+        """File in scripts/ is classified as SCRIPT."""
+        assert classify_file("scripts/deploy.sh", COMMON_ZONE_RULES) == Zone.SCRIPT
+
+    def test_bin_directory(self):
+        """File in bin/ is classified as SCRIPT."""
+        assert classify_file("bin/run.py", COMMON_ZONE_RULES) == Zone.SCRIPT
+
+    def test_examples_directory(self):
+        """Example apps are classified as SCRIPT."""
+        for path in (
+            "examples/next-app/src/app.ts",
+            "example/index.ts",
+            "packages/client/examples/basic.ts",
+        ):
+            assert classify_file(path, COMMON_ZONE_RULES) == Zone.SCRIPT, path
+
+    def test_examples_name_outside_directory_is_production(self):
+        """Only an examples/ directory counts, not a file or a longer name."""
+        for path in (
+            "src/examples.ts",
+            "src/example.ts",
+            "src/example-data/index.ts",
+            "src/my-examples/index.ts",
+        ):
+            assert classify_file(path, COMMON_ZONE_RULES) == Zone.PRODUCTION, path
+
+    def test_examples_tests_and_configs_keep_their_zone(self):
+        """Earlier rules win inside examples/."""
+        from desloppify_ts.languages.typescript._zones import TS_ZONE_RULES
+
+        assert classify_file("examples/app/src/a.test.ts", TS_ZONE_RULES) == Zone.TEST
+        assert (
+            classify_file("examples/app/vite.config.ts", TS_ZONE_RULES) == Zone.CONFIG
+        )
+        assert classify_file("examples/app/src/a.ts", TS_ZONE_RULES) == Zone.SCRIPT
+
+    def test_tools_dir_is_script(self):
+        """Dev tooling under tools/ is not production code."""
+        from desloppify_ts.languages.typescript._zones import TS_ZONE_RULES
+
+        for path in (
+            "tools/dev-dashboard/server.mjs",
+            "tools/dev-dashboard/public/app.mjs",
+        ):
+            assert classify_file(path, TS_ZONE_RULES) == Zone.SCRIPT, path
+        for path in (
+            "src/agent/tools/search.ts",
+            "packages/web/src/tools/gen.ts",
+            "src/devtools/panel.ts",
+            "src/tooling.ts",
+            "devtools/x.ts",
+        ):
+            assert classify_file(path, TS_ZONE_RULES) == Zone.PRODUCTION, path
+
+    def test_any_config_basename_is_config(self):
+        """``*.config.{ts,mts,cts,js,mjs,cjs}`` is config, whatever the tool."""
+        from desloppify_ts.languages.typescript._zones import TS_ZONE_RULES
+
+        for path in (
+            "vitest.integration.config.ts",
+            "capacitor.config.ts",
+            "packages/client/tsdown.config.ts",
+            "docs/source.config.mts",
+            "x.config.cts",
+            "x.config.js",
+            "x.config.mjs",
+            "x.config.cjs",
+        ):
+            assert classify_file(path, TS_ZONE_RULES) == Zone.CONFIG, path
+        for path in (
+            "src/lib/email/config.ts",
+            "src/components/device/device-config.ts",
+            "src/app.config.service.ts",
+            "src/app/app.config.ts",
+            "src/app/app.config.server.ts",
+            "src/config.tsx",
+        ):
+            assert classify_file(path, TS_ZONE_RULES) == Zone.PRODUCTION, path
+
+    def test_capacitor_web_copies_are_generated(self):
+        """``cap sync`` copies the web build into the native projects."""
+        from desloppify_ts.languages.typescript._zones import TS_ZONE_RULES
+
+        for path in (
+            "ios/App/App/public/native-bridge.js",
+            "android/app/src/main/assets/public/sw.js",
+            "apps/mobile/ios/App/App/public/assets/index.js",
+        ):
+            assert classify_file(path, TS_ZONE_RULES) == Zone.GENERATED, path
+        assert classify_file("public/sw.js", TS_ZONE_RULES) == Zone.PRODUCTION
+
+    def test_tool_config_names_match_the_file_not_its_directory(self):
+        from desloppify_ts.languages.typescript._zones import TS_ZONE_RULES
+
+        for path in (
+            "src/lib/eslint-rules/rule.ts",
+            "src/lib/eslint-rules/index.ts",
+            "src/tsconfig-paths/resolve.ts",
+            "src/lib/prettier-utils.ts",
+        ):
+            assert classify_file(path, TS_ZONE_RULES) == Zone.PRODUCTION, path
+        for path in ("eslint.config.mjs", ".eslintrc.cjs", ".prettierrc.js"):
+            assert classify_file(path, TS_ZONE_RULES) == Zone.CONFIG, path
+        for path in ("vitest.setup.ts", "jest.setup.js", "src/setupTests.ts"):
+            assert classify_file(path, TS_ZONE_RULES) == Zone.TEST, path
+
+    def test_production_default(self):
+        """File not matching any rule defaults to PRODUCTION."""
+        assert classify_file("src/app.py", COMMON_ZONE_RULES) == Zone.PRODUCTION
+
+    def test_production_unknown_path(self):
+        """Completely unrecognized path defaults to PRODUCTION."""
+        assert (
+            classify_file("lib/utils/helpers.py", COMMON_ZONE_RULES) == Zone.PRODUCTION
+        )
+
+    def test_first_matching_rule_wins(self):
+        """VENDOR comes before TEST in COMMON_ZONE_RULES, so vendor wins."""
+        # A file in vendor/tests/ should be VENDOR (first match)
+        assert classify_file("vendor/tests/test_x.py", COMMON_ZONE_RULES) == Zone.VENDOR
+
+    def test_override_takes_priority(self):
+        """Override value takes priority over rule-based classification."""
+        overrides = {"src/app.py": "test"}
+        assert classify_file("src/app.py", COMMON_ZONE_RULES, overrides) == Zone.TEST
+
+    def test_override_on_vendor_file(self):
+        """Override can reclassify a vendor file as production."""
+        overrides = {"vendor/special.py": "production"}
+        assert (
+            classify_file("vendor/special.py", COMMON_ZONE_RULES, overrides)
+            == Zone.PRODUCTION
+        )
+
+    def test_override_invalid_zone_falls_through(self):
+        """Invalid zone value in override falls through to rule matching."""
+        overrides = {"scripts/run.py": "invalid_zone"}
+        assert (
+            classify_file("scripts/run.py", COMMON_ZONE_RULES, overrides) == Zone.SCRIPT
+        )
+
+    def test_override_missing_key_falls_through(self):
+        """Override dict present but file not in it falls through to rules."""
+        overrides = {"other.py": "test"}
+        assert (
+            classify_file("src/app.py", COMMON_ZONE_RULES, overrides) == Zone.PRODUCTION
+        )
+
+    def test_override_none(self):
+        """overrides=None is handled gracefully."""
+        assert classify_file("src/app.py", COMMON_ZONE_RULES, None) == Zone.PRODUCTION
+
+    def test_empty_rules(self):
+        """Empty rules list defaults everything to PRODUCTION."""
+        assert classify_file("tests/test_foo.py", []) == Zone.PRODUCTION
+
+    def test_custom_rules(self):
+        """Custom rules correctly classify files."""
+        rules = [ZoneRule(Zone.CONFIG, ["config.py", ".cfg"])]
+        assert classify_file("src/config.py", rules) == Zone.CONFIG
+        assert classify_file("setup.cfg", rules) == Zone.CONFIG
+        assert classify_file("src/main.py", rules) == Zone.PRODUCTION
+
+
+# ── FileZoneMap ──────────────────────────────────────────────
+
+
+class TestFileZoneMap:
+    """Tests for the FileZoneMap class."""
+
+    @pytest.fixture
+    def sample_files(self):
+        """A set of files spanning multiple zones."""
+        return [
+            "src/app.py",
+            "src/utils.py",
+            "tests/test_app.py",
+            "tests/test_utils.py",
+            "scripts/deploy.sh",
+            "vendor/lib.py",
+            "generated/types.py",
+        ]
+
+    @pytest.fixture
+    def zone_map(self, sample_files):
+        """FileZoneMap built from sample files and common rules."""
+        return FileZoneMap(sample_files, COMMON_ZONE_RULES)
+
+    def test_get_production_file(self, zone_map):
+        """Production file returns Zone.PRODUCTION."""
+        assert zone_map.get("src/app.py") == Zone.PRODUCTION
+
+    def test_get_test_file(self, zone_map):
+        """Test file returns Zone.TEST."""
+        assert zone_map.get("tests/test_app.py") == Zone.TEST
+
+    def test_get_script_file(self, zone_map):
+        """Script file returns Zone.SCRIPT."""
+        assert zone_map.get("scripts/deploy.sh") == Zone.SCRIPT
+
+    def test_get_vendor_file(self, zone_map):
+        """Vendor file returns Zone.VENDOR."""
+        assert zone_map.get("vendor/lib.py") == Zone.VENDOR
+
+    def test_get_generated_file(self, zone_map):
+        """Generated file returns Zone.GENERATED."""
+        assert zone_map.get("generated/types.py") == Zone.GENERATED
+
+    def test_get_unknown_file_defaults_production(self, zone_map):
+        """File not in the map returns PRODUCTION."""
+        assert zone_map.get("unknown/file.py") == Zone.PRODUCTION
+
+    def test_exclude_zones(self, zone_map, sample_files):
+        """exclude() removes files in specified zones."""
+        result = zone_map.exclude(sample_files, Zone.TEST, Zone.VENDOR)
+        assert "tests/test_app.py" not in result
+        assert "tests/test_utils.py" not in result
+        assert "vendor/lib.py" not in result
+        assert "src/app.py" in result
+        assert "scripts/deploy.sh" in result
+
+    def test_exclude_no_zones(self, zone_map, sample_files):
+        """exclude() with no zones returns all files."""
+        result = zone_map.exclude(sample_files)
+        assert len(result) == len(sample_files)
+
+    def test_include_only_zones(self, zone_map, sample_files):
+        """include_only() returns files in specified zones."""
+        result = zone_map.include_only(sample_files, Zone.TEST)
+        assert len(result) == 2
+        assert "tests/test_app.py" in result
+        assert "tests/test_utils.py" in result
+
+    def test_include_only_multiple_zones(self, zone_map, sample_files):
+        """include_only() works with multiple zones."""
+        result = zone_map.include_only(sample_files, Zone.PRODUCTION, Zone.SCRIPT)
+        assert "src/app.py" in result
+        assert "src/utils.py" in result
+        assert "scripts/deploy.sh" in result
+        assert len(result) == 3
+
+    def test_include_only_empty_result(self, zone_map, sample_files):
+        """include_only() with zone having no files returns empty."""
+        result = zone_map.include_only(sample_files, Zone.CONFIG)
+        assert result == []
+
+    def test_counts(self, zone_map):
+        """counts() returns correct per-zone tallies."""
+        c = zone_map.counts()
+        assert c["production"] == 2
+        assert c["test"] == 2
+        assert c["script"] == 1
+        assert c["vendor"] == 1
+        assert c["generated"] == 1
+
+    def test_production_count(self, zone_map):
+        """production_count() returns total minus non-production (SCRIPT is not excluded)."""
+        # 7 files - 4 non-production (2 test + 1 vendor + 1 generated) = 3
+        # (SCRIPT is NOT in EXCLUDED_ZONES so it counts toward production_count)
+        assert zone_map.production_count() == 3
+
+    def test_non_production_count(self, zone_map):
+        """non_production_count() returns count of excluded-zone files."""
+        # test(2) + vendor(1) + generated(1) = 4 (script is NOT in EXCLUDED_ZONES)
+        assert zone_map.non_production_count() == 4
+
+    def test_all_files(self, zone_map, sample_files):
+        """all_files() returns the full file list."""
+        result = zone_map.all_files()
+        assert set(result) == set(sample_files)
+
+    def test_items(self, zone_map, sample_files):
+        """items() returns (path, zone) tuples for all files."""
+        result = zone_map.items()
+        assert len(result) == len(sample_files)
+        result_dict = dict(result)
+        assert result_dict["src/app.py"] == Zone.PRODUCTION
+        assert result_dict["tests/test_app.py"] == Zone.TEST
+
+    def test_rel_fn(self):
+        """rel_fn is used to convert paths before classification."""
+        files = ["/project/tests/test_foo.py", "/project/src/main.py"]
+
+        def strip_prefix(p):
+            return p.replace("/project/", "")
+
+        zm = FileZoneMap(files, COMMON_ZONE_RULES, rel_fn=strip_prefix)
+        assert zm.get("/project/tests/test_foo.py") == Zone.TEST
+        assert zm.get("/project/src/main.py") == Zone.PRODUCTION
+        assert zm.get("tests/test_foo.py") == Zone.TEST
+        assert zm.get("src/main.py") == Zone.PRODUCTION
+
+    def test_overrides(self):
+        """Overrides are passed through to classify_file."""
+        files = ["src/special.py"]
+        overrides = {"src/special.py": "test"}
+        zm = FileZoneMap(files, COMMON_ZONE_RULES, overrides=overrides)
+        assert zm.get("src/special.py") == Zone.TEST
+
+    def test_empty_file_list(self):
+        """FileZoneMap with no files works correctly."""
+        zm = FileZoneMap([], COMMON_ZONE_RULES)
+        assert zm.all_files() == []
+        assert zm.counts() == {}
+        assert zm.production_count() == 0
+        assert zm.non_production_count() == 0
+
+    def test_exclude_with_unknown_files(self, zone_map):
+        """exclude() handles files not in the map (defaulting to PRODUCTION)."""
+        files = ["src/app.py", "unknown.py"]
+        result = zone_map.exclude(files, Zone.PRODUCTION)
+        # Both are PRODUCTION (one explicitly, one by default), so both excluded
+        assert result == []
+
+    def test_include_only_with_unknown_files(self, zone_map):
+        """include_only() handles files not in the map (defaulting to PRODUCTION)."""
+        files = ["src/app.py", "unknown.py"]
+        result = zone_map.include_only(files, Zone.PRODUCTION)
+        assert len(result) == 2
+
+
+class TestGeneratedHeader:
+    """A leading generated-file comment puts a file in the generated zone."""
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "// @generated\nexport const a = 1;\n",
+            "/**\n * This file is @generated by codegen.\n */\nexport {};\n",
+            "#!/usr/bin/env node\n// Auto-generated by @tanstack/intent setup\nrun();\n",
+            "// This file is auto-generated by @hey-api/openapi-ts\nexport * from './x';\n",
+            "\ufeff// Code generated by protoc-gen-ts. DO NOT EDIT.\nexport {};\n",
+        ],
+    )
+    def test_generated_headers(self, text):
+        assert has_generated_header(text) is True
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "export const a = 1;\n// @generated\n",
+            "const sidebar = { type: 'autogenerated' };\n",
+            "// Do not edit the order of these imports\nimport './a';\n",
+            "/* License: MIT */\nimport x from 'y';\n/* @generated */\n",
+            "",
+        ],
+    )
+    def test_non_generated(self, text):
+        assert has_generated_header(text) is False
+
+    def test_header_moves_file_to_generated_zone(self, tmp_path):
+        (tmp_path / "src").mkdir()
+        (tmp_path / "src" / "client.ts").write_text("// @generated\nexport {};\n")
+        (tmp_path / "src" / "app.ts").write_text("export {};\n")
+        (tmp_path / "src" / "app.test.ts").write_text("// auto-generated\n")
+        files = [
+            str(tmp_path / "src" / n) for n in ("client.ts", "app.ts", "app.test.ts")
+        ]
+        zone_map = FileZoneMap(
+            files,
+            COMMON_ZONE_RULES,
+            rel_fn=lambda p: Path(p).relative_to(tmp_path).as_posix(),
+        )
+        assert zone_map.get(files[0]) == Zone.GENERATED
+        assert zone_map.get(files[1]) == Zone.PRODUCTION
+        assert zone_map.get(files[2]) == Zone.GENERATED
+
+    def test_override_beats_header(self, tmp_path):
+        target = tmp_path / "client.ts"
+        target.write_text("// @generated\nexport {};\n")
+        zone_map = FileZoneMap(
+            [str(target)],
+            COMMON_ZONE_RULES,
+            rel_fn=lambda p: "client.ts",
+            overrides={"client.ts": "production"},
+        )
+        assert zone_map.get(str(target)) == Zone.PRODUCTION
+
+    def test_generated_zone_skips_cohesion_and_signature(self):
+        skipped = ZONE_POLICIES[Zone.GENERATED].skip_detectors
+        assert {"responsibility_cohesion", "signature"} <= skipped
+
+
+class TestDirectoryZones:
+    """Directory-level issues (flat_dirs, naming) get the directory's zone."""
+
+    @pytest.fixture
+    def zone_map(self):
+        return FileZoneMap(
+            [
+                "src/app.ts",
+                "src/core/a.ts",
+                "src/core/tests/a.ts",
+                "src/widgets/a.test.ts",
+                "src/widgets/b.test.ts",
+                "packages/bench/run.ts",
+                "test-d/types.ts",
+                "vendor/lib/x.ts",
+            ],
+            COMMON_ZONE_RULES
+            + [ZoneRule(Zone.TEST, [".test.", "/bench/", "/test-d/"])],
+        )
+
+    def test_directory_pattern(self, zone_map):
+        assert zone_map.get("src/core/tests") == Zone.TEST
+        assert zone_map.get("packages/bench") == Zone.TEST
+        assert zone_map.get("test-d") == Zone.TEST
+        assert zone_map.get("vendor/lib") == Zone.VENDOR
+
+    def test_anchored_directory_pattern(self):
+        zone_map = FileZoneMap(
+            ["tools/dash/a.ts", "tools/dash/a.test.ts", "src/agent/tools/b.ts"],
+            [ZoneRule(Zone.TEST, [".test."])] + COMMON_ZONE_RULES,
+        )
+        assert zone_map.get("tools") == Zone.SCRIPT
+        assert zone_map.get("tools/dash") == Zone.SCRIPT
+        assert zone_map.get("src/agent/tools") == Zone.PRODUCTION
+
+    def test_directory_of_one_zone(self, zone_map):
+        assert zone_map.get("src/widgets") == Zone.TEST
+        assert zone_map.get("src/widgets/") == Zone.TEST
+
+    def test_mixed_directory_is_production(self, zone_map):
+        assert zone_map.get("src/core") == Zone.PRODUCTION
+        assert zone_map.get("src") == Zone.PRODUCTION
+
+    def test_unknown_path_follows_the_rules(self, zone_map):
+        assert zone_map.get("elsewhere/tests") == Zone.TEST
+        assert zone_map.get("elsewhere/docs") == Zone.PRODUCTION
+
+    def test_absolute_paths_terminate(self):
+        zone_map = FileZoneMap(["/app/tests/a.ts"], COMMON_ZONE_RULES)
+        assert zone_map.get("/app/tests") == Zone.TEST
+
+
+# ── Zone / EXCLUDED_ZONES / EXCLUDED_ZONE_VALUES ────────────
+
+
+class TestZoneEnumAndConstants:
+    """Tests for Zone enum and related constants."""
+
+    def test_zone_values(self):
+        """All expected zone values exist."""
+        assert Zone.PRODUCTION.value == "production"
+        assert Zone.TEST.value == "test"
+        assert Zone.CONFIG.value == "config"
+        assert Zone.GENERATED.value == "generated"
+        assert Zone.SCRIPT.value == "script"
+        assert Zone.VENDOR.value == "vendor"
+
+    def test_zone_is_str(self):
+        """Zone is a str enum."""
+        assert isinstance(Zone.PRODUCTION, str)
+
+    def test_excluded_zones(self):
+        """EXCLUDED_ZONES contains the correct zones."""
+        assert EXCLUDED_ZONES == {Zone.TEST, Zone.CONFIG, Zone.GENERATED, Zone.VENDOR}
+        # SCRIPT and PRODUCTION are NOT excluded
+        assert Zone.SCRIPT not in EXCLUDED_ZONES
+        assert Zone.PRODUCTION not in EXCLUDED_ZONES
+
+    def test_excluded_zone_values(self):
+        """EXCLUDED_ZONE_VALUES contains string values of excluded zones."""
+        assert EXCLUDED_ZONE_VALUES == {"test", "config", "generated", "vendor"}
+
+    def test_review_exclusion_sets_are_enum_backed(self):
+        assert REVIEW_SELECTION_EXCLUDED_ZONES == {
+            Zone.TEST,
+            Zone.GENERATED,
+            Zone.VENDOR,
+        }
+        assert REVIEW_COVERAGE_EXCLUDED_ZONES == {
+            Zone.TEST,
+            Zone.GENERATED,
+            Zone.VENDOR,
+            Zone.CONFIG,
+            Zone.SCRIPT,
+        }
+
+    def test_normalize_zone_supports_enum_and_value_objects(self):
+        class _ZoneLike:
+            def __init__(self, value):
+                self.value = value
+
+        assert normalize_zone(Zone.TEST) == Zone.TEST
+        assert normalize_zone("vendor") == Zone.VENDOR
+        assert normalize_zone(_ZoneLike("generated")) == Zone.GENERATED
+        assert normalize_zone("unknown-zone") is None
+
+    def test_zone_in_works_for_duck_typed_zone_values(self):
+        class _ZoneLike:
+            def __init__(self, value):
+                self.value = value
+
+        assert zone_in(_ZoneLike("test"), REVIEW_SELECTION_EXCLUDED_ZONES)
+        assert not zone_in(_ZoneLike("config"), REVIEW_SELECTION_EXCLUDED_ZONES)
+
+
+# ── ZONE_POLICIES ────────────────────────────────────────────
+
+
+class TestZonePolicies:
+    """Tests for zone policy definitions."""
+
+    def test_production_policy_is_permissive(self):
+        """PRODUCTION policy has no skips or downgrades."""
+        policy = ZONE_POLICIES[Zone.PRODUCTION]
+        assert policy.skip_detectors == set()
+        assert policy.downgrade_detectors == set()
+        assert policy.exclude_from_score is False
+
+    def test_test_zone_skips(self):
+        """TEST zone skips expected detectors."""
+        policy = ZONE_POLICIES[Zone.TEST]
+        expected_skips = {
+            "boilerplate_duplication",
+            "dupes",
+            "single_use",
+            "orphaned",
+            "coupling",
+            "facade",
+            "dict_keys",
+            "test_coverage",
+            "security",
+            "private_imports",
+            "signature",
+            "structural",
+            "naming",
+        }
+        assert policy.skip_detectors == expected_skips
+
+    def test_test_zone_downgrades(self):
+        """TEST zone downgrades the smells it still reports."""
+        policy = ZONE_POLICIES[Zone.TEST]
+        assert policy.downgrade_detectors == {"smells"}
+
+    def test_test_zone_excluded_from_score(self):
+        """TEST zone is excluded from scoring."""
+        assert ZONE_POLICIES[Zone.TEST].exclude_from_score is True
+
+    def test_config_zone_skips(self):
+        """CONFIG zone skips a broad set of detectors."""
+        policy = ZONE_POLICIES[Zone.CONFIG]
+        expected_skips = {
+            "boilerplate_duplication",
+            "smells",
+            "structural",
+            "dupes",
+            "naming",
+            "single_use",
+            "orphaned",
+            "coupling",
+            "facade",
+            "dict_keys",
+            "test_coverage",
+            "security",
+        }
+        assert policy.skip_detectors == expected_skips
+
+    def test_config_zone_excluded_from_score(self):
+        """CONFIG zone is excluded from scoring."""
+        assert ZONE_POLICIES[Zone.CONFIG].exclude_from_score is True
+
+    def test_generated_zone_skips_most(self):
+        """GENERATED zone skips nearly all detectors."""
+        policy = ZONE_POLICIES[Zone.GENERATED]
+        assert "test_coverage" in policy.skip_detectors
+        assert "unused" in policy.skip_detectors
+        assert "smells" in policy.skip_detectors
+        assert "react" in policy.skip_detectors
+        assert "naming" in policy.skip_detectors
+        assert "cycles" in policy.skip_detectors
+
+    def test_generated_zone_excluded_from_score(self):
+        """GENERATED zone is excluded from scoring."""
+        assert ZONE_POLICIES[Zone.GENERATED].exclude_from_score is True
+
+    def test_vendor_zone_matches_generated(self):
+        """VENDOR zone has the same skip set as GENERATED."""
+        vendor = ZONE_POLICIES[Zone.VENDOR]
+        generated = ZONE_POLICIES[Zone.GENERATED]
+        assert vendor.skip_detectors == generated.skip_detectors
+        assert vendor.exclude_from_score is True
+
+    def test_script_zone_skips(self):
+        """SCRIPT zone skips logs, coupling, single_use, orphaned, facade, test_coverage."""
+        policy = ZONE_POLICIES[Zone.SCRIPT]
+        assert policy.skip_detectors == {
+            "logs",
+            "coupling",
+            "single_use",
+            "orphaned",
+            "facade",
+            "test_coverage",
+        }
+
+    def test_script_zone_downgrades_structural(self):
+        """SCRIPT zone downgrades structural."""
+        assert ZONE_POLICIES[Zone.SCRIPT].downgrade_detectors == {"structural"}
+
+    def test_script_zone_not_excluded_from_score(self):
+        """SCRIPT zone is NOT excluded from scoring."""
+        assert ZONE_POLICIES[Zone.SCRIPT].exclude_from_score is False
+
+    def test_all_non_production_zones_skip_test_coverage(self):
+        """test_coverage is in skip_detectors for every zone but PRODUCTION."""
+        for zone in [Zone.TEST, Zone.CONFIG, Zone.GENERATED, Zone.VENDOR, Zone.SCRIPT]:
+            policy = ZONE_POLICIES[zone]
+            assert "test_coverage" in policy.skip_detectors, (
+                f"{zone.value} zone should skip test_coverage"
+            )
+
+    def test_production_does_not_skip_test_coverage(self):
+        """PRODUCTION zone does NOT skip test_coverage."""
+        assert "test_coverage" not in ZONE_POLICIES[Zone.PRODUCTION].skip_detectors
+
+    def test_config_files_not_orphaned_or_untested(self):
+        """Tool configs nothing imports are neither orphaned nor untested."""
+        from desloppify_ts.languages.typescript._zones import TS_ZONE_RULES
+
+        files = ["capacitor.config.ts", "vitest.integration.config.ts", "src/a.ts"]
+        zone_map = FileZoneMap(files, TS_ZONE_RULES)
+        entries = [{"file": f} for f in files]
+        for detector in ("orphaned", "test_coverage"):
+            kept = filter_entries(zone_map, entries, detector)
+            assert [e["file"] for e in kept] == ["src/a.ts"], detector
+        assert zone_map.include_only(files, Zone.PRODUCTION, Zone.SCRIPT) == [
+            "src/a.ts"
+        ]
+
+    def test_every_zone_has_policy(self):
+        """Every Zone enum value has a corresponding policy."""
+        for zone in Zone:
+            assert zone in ZONE_POLICIES, f"Missing policy for {zone.value}"
+
+
+# ── adjust_potential() ───────────────────────────────────────
+
+
+# ── Directory and glob overrides ─────────────────────────────
+
+
+class TestPatternOverrides:
+    @pytest.mark.parametrize(
+        ("pattern", "path", "expected"),
+        [
+            ("www/**", "www/src/pages/index.tsx", True),
+            ("www/**", "www", True),
+            ("www/**", "wwwx/a.ts", False),
+            ("www/**", "src/www/a.ts", False),
+            ("**/*.gen.ts", "a.gen.ts", True),
+            ("**/*.gen.ts", "x/y/a.gen.ts", True),
+            ("src/*.ts", "src/a.ts", True),
+            ("src/*.ts", "src/a/b.ts", False),
+            ("src/?.ts", "src/a.ts", True),
+            ("src/[!a]*.ts", "src/b.ts", True),
+            ("src/[!a]*.ts", "src/a.ts", False),
+            ("app/[[]slug]/**", "app/[slug]/page.tsx", True),
+            ("app/[[]slug]/**", "app/s/page.tsx", False),
+            ("**", "any/where.ts", True),
+        ],
+    )
+    def test_glob_matching(self, pattern, path, expected):
+        assert (matching_override(path, {pattern: "test"}) == pattern) is expected
+
+    def test_brackets_alone_are_a_literal_file(self):
+        assert is_override_pattern("app/[slug]/page.tsx") is False
+        overrides = {"app/[slug]/page.tsx": "test"}
+        assert matching_override("app/s/page.tsx", overrides) is None
+        assert (
+            classify_file("app/[slug]/page.tsx", COMMON_ZONE_RULES, overrides)
+            == Zone.TEST
+        )
+
+    def test_precedence(self):
+        overrides = {
+            "**/*.ts": "config",
+            "www/**": "vendor",
+            "www/docs/**": "test",
+            "www/docs/keep.ts": "production",
+        }
+        assert (
+            classify_file("www/docs/keep.ts", COMMON_ZONE_RULES, overrides)
+            == Zone.PRODUCTION
+        )
+        assert (
+            classify_file("www/docs/other.ts", COMMON_ZONE_RULES, overrides)
+            == Zone.TEST
+        )
+        assert (
+            classify_file("www/blog/post.ts", COMMON_ZONE_RULES, overrides)
+            == Zone.VENDOR
+        )
+        assert classify_file("src/app.ts", COMMON_ZONE_RULES, overrides) == Zone.CONFIG
+        assert (
+            classify_file("src/app.js", COMMON_ZONE_RULES, overrides) == Zone.PRODUCTION
+        )
+
+    def test_pattern_beats_builtin_rules(self):
+        overrides = {"www/**": "production"}
+        assert (
+            classify_file("www/tests/a.ts", COMMON_ZONE_RULES, overrides)
+            == Zone.PRODUCTION
+        )
+        assert (
+            classify_file("www/scripts/a.ts", COMMON_ZONE_RULES, overrides)
+            == Zone.PRODUCTION
+        )
+
+    def test_pattern_override_beats_generated_header(self, tmp_path):
+        target = tmp_path / "www" / "client.ts"
+        target.parent.mkdir()
+        target.write_text("// @generated\nexport {};\n")
+        zone_map = FileZoneMap(
+            [str(target)],
+            COMMON_ZONE_RULES,
+            rel_fn=lambda p: Path(p).relative_to(tmp_path).as_posix(),
+            overrides={"www/**": "production"},
+        )
+        assert zone_map.get(str(target)) == Zone.PRODUCTION
+
+    def test_pattern_covers_new_files_and_their_directory(self):
+        overrides = {"www/**": "vendor"}
+        files = ["www/a.ts", "www/later/added.ts", "src/app.ts"]
+        zone_map = FileZoneMap(files, COMMON_ZONE_RULES, overrides=overrides)
+        assert zone_map.get("www/later/added.ts") == Zone.VENDOR
+        assert zone_map.get("www/later") == Zone.VENDOR
+        assert zone_map.get("src/app.ts") == Zone.PRODUCTION
+        # Unscanned files (CSS, Markdown) carrying issues honor overrides too.
+        assert zone_map.get("www/src/custom.css") == Zone.VENDOR
+        assert zone_map.get("docs/intro.md") == Zone.PRODUCTION
+
+    def test_unscanned_files_follow_path_rules(self):
+        from desloppify_ts.languages.typescript._zones import TS_ZONE_RULES
+
+        zone_map = FileZoneMap(["tools/dash/server.mjs", "src/app.ts"], TS_ZONE_RULES)
+        assert zone_map.get("tools/dash/public/styles.css") == Zone.SCRIPT
+        assert zone_map.get("src/vendor/lib.css") == Zone.VENDOR
+        assert zone_map.get("src/app/globals.css") == Zone.PRODUCTION
+        # An override still wins over the rules.
+        zone_map = FileZoneMap(
+            ["src/app.ts"], TS_ZONE_RULES, overrides={"tools/**": "production"}
+        )
+        assert zone_map.get("tools/dash/public/styles.css") == Zone.PRODUCTION

@@ -1,0 +1,104 @@
+"""Framework spec contracts (detection + scanners + tool integrations)."""
+
+from __future__ import annotations
+
+from collections.abc import Callable
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+from desloppify_ts.engine.detectors.orphaned import EntryConventions
+from desloppify_ts.languages._framework.base.types import LangRuntimeContract
+from desloppify_ts.state_io import Issue
+
+FrameworkEvidence = dict[str, Any]
+
+
+@dataclass(frozen=True)
+class DetectionConfig:
+    """Deterministic framework presence detection hints for an ecosystem."""
+
+    dependencies: tuple[str, ...] = ()
+    dev_dependencies: tuple[str, ...] = ()
+    config_files: tuple[str, ...] = ()
+    marker_files: tuple[str, ...] = ()
+    marker_dirs: tuple[str, ...] = ()
+    script_pattern: str | None = None
+    # A dev-dependency hit doesn't count when one of these is also listed:
+    # it is there as their peer (vitest needs vite).
+    dev_dependency_peer_of: tuple[str, ...] = ()
+
+    # Markers are valuable for routing context, but default to "context only"
+    # so frameworks don't light up purely from directory shape.
+    marker_dirs_imply_presence: bool = False
+
+
+@dataclass(frozen=True)
+class ScannerRule:
+    """A single scanner rule within a FrameworkSpec."""
+
+    id: str
+    requires: tuple[str, ...] = ()
+    scan: (
+        Callable[[Path, LangRuntimeContract], tuple[list[dict[str, Any]], int]] | None
+    ) = None
+    issue_factory: Callable[[dict[str, Any]], Issue] | None = None
+    log_message: Callable[[int], str] | None = None
+
+
+@dataclass(frozen=True)
+class ToolIntegration:
+    """Framework tool integration (ToolSpec-like + phase semantics)."""
+
+    id: str  # detector id (e.g. "next_lint")
+    label: str
+    cmd: str
+    fmt: str
+    tier: int
+    slow: bool = False
+    confidence: str = "medium"
+    cmd_resolver: Callable[[Path], str | None] | None = None
+
+
+@dataclass(frozen=True)
+class FrameworkSpec:
+    """A framework "horizontal layer" spec, analogous to tree-sitter specs."""
+
+    id: str
+    label: str
+    ecosystem: str
+    detection: DetectionConfig
+
+    excludes: tuple[str, ...] = ()
+    scanners: tuple[ScannerRule, ...] = ()
+    tools: tuple[ToolIntegration, ...] = ()
+    # One set of conventions, or several (a framework's Vite plugins each add their own).
+    entry_conventions: EntryConventions | tuple[EntryConventions, ...] | None = None
+    # Class decorators of the framework's DI container: a class it wires from
+    # metadata is imported once by design.
+    injected_class_decorators: frozenset[str] = frozenset()
+    # Env-var prefixes the framework's bundler inlines into client code.
+    public_env_prefixes: tuple[str, ...] = ()
+    # Client objects whose calls are data-layer access (``supabase.from(...)``).
+    data_clients: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class EcosystemFrameworkDetection:
+    """Framework presence detection result for a scan path within an ecosystem."""
+
+    ecosystem: str
+    package_root: Path
+    package_json_relpath: str | None
+    present: dict[str, FrameworkEvidence]
+
+
+__all__ = [
+    "DetectionConfig",
+    "EcosystemFrameworkDetection",
+    "EntryConventions",
+    "FrameworkEvidence",
+    "FrameworkSpec",
+    "ScannerRule",
+    "ToolIntegration",
+]

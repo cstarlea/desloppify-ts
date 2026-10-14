@@ -1,0 +1,433 @@
+"""Source-file discovery, exclusions, and scan-scoped content caching."""
+
+from __future__ import annotations
+
+import os
+import shutil
+import subprocess  # nosec B404
+from collections.abc import Iterator
+from contextlib import contextmanager
+from dataclasses import dataclass
+from pathlib import Path
+
+from desloppify_ts.base.discovery.file_paths import matches_exclusion
+from desloppify_ts.base.discovery.file_paths import (
+    normalize_path_separators as _normalize_path_separators,
+)
+from desloppify_ts.base.discovery.file_paths import (
+    safe_relpath as _safe_relpath,
+)
+from desloppify_ts.base.discovery.paths import get_project_root
+from desloppify_ts.base.discovery.sfc import SFC_SUFFIXES
+from desloppify_ts.base.runtime_state import (
+    FileTextReadResult,
+    RuntimeContext,
+    SourceFileCache,
+    resolve_runtime_context,
+)
+
+# Directories that are never useful to scan — always pruned during traversal.
+DEFAULT_EXCLUSIONS = frozenset(
+    {
+        "node_modules",
+        ".git",
+        "__pycache__",
+        ".venv",
+        ".venv*",
+        "venv",
+        ".env",
+        "dist",
+        "build",
+        ".next",
+        ".nuxt",
+        ".output",
+        ".tox",
+        ".mypy_cache",
+        ".pytest_cache",
+        ".ruff_cache",
+        ".eggs",
+        "*.egg-info",
+        ".svn",
+        ".hg",
+    }
+)
+
+
+@dataclass(frozen=True)
+class SourceDiscoveryOptions:
+    """Options bundle for source-file discovery and cache lookups."""
+
+    exclusions: tuple[str, ...] | None = None
+    extra_exclusions: tuple[str, ...] = ()
+    project_root: Path | None = None
+    source_file_cache: SourceFileCache | None = None
+
+
+def set_exclusions(
+    patterns: list[str],
+    *,
+    runtime: RuntimeContext | None = None,
+) -> None:
+    """Set global exclusion patterns (called once from CLI at startup)."""
+    resolved_runtime = resolve_runtime_context(runtime)
+    resolved_runtime.exclusions = tuple(patterns)
+    resolved_runtime.source_file_cache.clear()
+
+
+def get_exclusions(*, runtime: RuntimeContext | None = None) -> tuple[str, ...]:
+    """Return current extra exclusion patterns."""
+    return resolve_runtime_context(runtime).exclusions
+
+
+def enable_file_cache(*, runtime: RuntimeContext | None = None) -> None:
+    """Enable scan-scoped file content cache."""
+    resolved_runtime = resolve_runtime_context(runtime)
+    resolved_runtime.file_text_cache.enable()
+    resolved_runtime.cache_enabled = True
+
+
+def disable_file_cache(*, runtime: RuntimeContext | None = None) -> None:
+    """Disable file content cache and free memory."""
+    resolved_runtime = resolve_runtime_context(runtime)
+    resolved_runtime.file_text_cache.disable()
+    resolved_runtime.cache_enabled = False
+
+
+@contextmanager
+def file_cache_scope(*, runtime: RuntimeContext | None = None) -> Iterator[None]:
+    """Temporarily enable file cache within a context, with nested safety."""
+    resolved_runtime = resolve_runtime_context(runtime)
+    was_enabled = resolved_runtime.cache_enabled
+    if not was_enabled:
+        enable_file_cache(runtime=resolved_runtime)
+    try:
+        yield
+    finally:
+        if not was_enabled:
+            disable_file_cache(runtime=resolved_runtime)
+
+
+def is_file_cache_enabled(*, runtime: RuntimeContext | None = None) -> bool:
+    """Return whether scan-scoped file cache is currently enabled."""
+    return resolve_runtime_context(runtime).cache_enabled
+
+
+def read_file_text(
+    filepath: str, *, runtime: RuntimeContext | None = None
+) -> str | None:
+    """Read a file as text, with optional caching.
+
+    Relative paths (as the source finders return) are relative to the project
+    root, whatever the process cwd is.
+    """
+    resolved_runtime = resolve_runtime_context(runtime)
+    return resolved_runtime.file_text_cache.read(
+        filepath, root=get_project_root(runtime=resolved_runtime)
+    )
+
+
+def read_file_text_result(
+    filepath: str,
+    *,
+    runtime: RuntimeContext | None = None,
+) -> FileTextReadResult:
+    """Read a file as text and include read-status metadata."""
+    resolved_runtime = resolve_runtime_context(runtime)
+    return resolved_runtime.file_text_cache.read_result(
+        filepath, root=get_project_root(runtime=resolved_runtime)
+    )
+
+
+def clear_source_file_cache_for_tests(*, runtime: RuntimeContext | None = None) -> None:
+    resolve_runtime_context(runtime).source_file_cache.clear()
+
+
+def collect_exclude_dirs(
+    scan_root: Path,
+    *,
+    extra_exclusions: tuple[str, ...] | None = None,
+    runtime: RuntimeContext | None = None,
+) -> list[str]:
+    """All exclusion directories as absolute paths, for passing to external tools.
+
+    Combines DEFAULT_EXCLUSIONS (non-glob entries) + get_exclusions() (runtime/config),
+    resolves each against *scan_root*. Filters out glob patterns (``*`` in name)
+    since most CLI tools want plain directory paths.
+    """
+    resolved_exclusions = (
+        extra_exclusions
+        if extra_exclusions is not None
+        else get_exclusions(runtime=runtime)
+    )
+    patterns = set()
+    for pat in DEFAULT_EXCLUSIONS:
+        if "*" not in pat:
+            patterns.add(pat)
+    patterns.update(p for p in resolved_exclusions if p and "*" not in p)
+    return [str(scan_root / p) for p in sorted(patterns) if p]
+
+
+def _is_excluded_dir(name: str, rel_path: str, extra: tuple[str, ...]) -> bool:
+    in_default_exclusions = name in DEFAULT_EXCLUSIONS or name.endswith(".egg-info")
+    is_virtualenv_dir = name.startswith(".venv") or name.startswith("venv")
+    matches_extra_exclusion = bool(
+        extra
+        and any(
+            matches_exclusion(rel_path, exclusion)
+            or exclusion == name
+            or exclusion == name + "/**"
+            or exclusion == name + "/*"
+            for exclusion in extra
+        )
+    )
+    return in_default_exclusions or is_virtualenv_dir or matches_extra_exclusion
+
+
+# The assets an Istanbul HTML coverage report (vitest, jest, c8, nyc) writes
+# next to its pages. They are generated, not source.
+_ISTANBUL_HTML_ASSETS = frozenset({"prettify.js", "sorter.js", "block-navigation.js"})
+
+
+_GIT_LS_FILES_TIMEOUT = 60
+
+
+@dataclass(frozen=True)
+class _GitListing:
+    """Paths git does not ignore under a scan root, root-relative with ``/``.
+
+    A submodule or nested repository is listed as one entry for its
+    directory; its contents are walked unfiltered.
+    """
+
+    entries: frozenset[str]
+    dirs: frozenset[str]
+
+    def keeps_dir(self, rel_dir: str) -> bool:
+        return rel_dir in self.dirs or rel_dir in self.entries
+
+    def is_opaque(self, rel_dir: str) -> bool:
+        """Whether *rel_dir* (``""`` or ending in ``/``) lies in a listed directory."""
+        parts = rel_dir.rstrip("/").split("/")
+        return any("/".join(parts[: i + 1]) in self.entries for i in range(len(parts)))
+
+
+def _git_listing(root: Path) -> _GitListing | None:
+    """List tracked and untracked, unignored files under *root* in one git call.
+
+    Returns ``None`` when *root* is not in a git work tree, git is missing or
+    fails, or git lists nothing (the root itself is ignored); callers then
+    walk the tree unfiltered.
+    """
+    git_path = shutil.which("git")
+    if not git_path or not root.is_dir():
+        return None
+    command = [git_path, "-C", str(root), "ls-files", "-z"]
+    command += ["--cached", "--others", "--exclude-standard"]
+    try:
+        result = subprocess.run(  # nosec B603
+            command, capture_output=True, timeout=_GIT_LS_FILES_TIMEOUT, check=False
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if result.returncode != 0:
+        return None
+    entries: set[str] = set()
+    dirs: set[str] = set()
+    for raw in result.stdout.split(b"\0"):
+        if not raw:
+            continue
+        entry = os.fsdecode(raw).rstrip("/")
+        entries.add(entry)
+        parent = os.path.dirname(entry)
+        while parent and parent not in dirs:
+            dirs.add(parent)
+            parent = os.path.dirname(parent)
+    if not entries:
+        return None
+    return _GitListing(frozenset(entries), frozenset(dirs))
+
+
+def _find_source_files_cached(
+    path: str,
+    extensions: tuple[str, ...],
+    options: SourceDiscoveryOptions | None = None,
+    *,
+    runtime: RuntimeContext | None = None,
+) -> tuple[str, ...]:
+    """Cached file discovery using os.walk with traversal-time pruning.
+
+    Inside a git work tree, files git ignores (``.gitignore``,
+    ``.git/info/exclude``, the global excludes file) are left out.
+    """
+    resolved_runtime = resolve_runtime_context(runtime)
+    resolved_options = options or SourceDiscoveryOptions()
+    resolved_project_root = (
+        resolved_options.project_root.resolve()
+        if resolved_options.project_root is not None
+        else get_project_root(runtime=resolved_runtime)
+    )
+    cache = resolved_options.source_file_cache or resolved_runtime.source_file_cache
+    cache_key = (
+        path,
+        extensions,
+        resolved_options.exclusions,
+        resolved_options.extra_exclusions,
+        str(resolved_project_root),
+    )
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
+
+    root = Path(path)
+    if not root.is_absolute():
+        root = resolved_project_root / root
+    all_exclusions = (
+        resolved_options.exclusions or ()
+    ) + resolved_options.extra_exclusions
+    ext_set = set(extensions)
+    files: list[str] = []
+    listing = _git_listing(root)
+    for dirpath, dirnames, filenames in os.walk(root):
+        if _ISTANBUL_HTML_ASSETS.issubset(filenames):
+            dirnames[:] = []
+            continue
+        rel_dir = _normalize_path_separators(
+            _safe_relpath(dirpath, resolved_project_root)
+        )
+        dirnames[:] = sorted(
+            d
+            for d in dirnames
+            if not _is_excluded_dir(d, rel_dir + "/" + d, all_exclusions)
+        )
+        listed: frozenset[str] | None = None
+        git_dir = ""
+        if listing is not None:
+            git_dir = _normalize_path_separators(os.path.relpath(dirpath, root))
+            git_dir = "" if git_dir == "." else git_dir + "/"
+            if not listing.is_opaque(git_dir):
+                listed = listing.entries
+                dirnames[:] = [d for d in dirnames if listing.keeps_dir(git_dir + d)]
+        for fname in filenames:
+            if listed is not None and git_dir + fname not in listed:
+                continue
+            if any(fname.endswith(ext) for ext in ext_set):
+                full = os.path.join(dirpath, fname)
+                rel_file = _normalize_path_separators(
+                    _safe_relpath(full, resolved_project_root)
+                )
+                if all_exclusions and any(
+                    matches_exclusion(rel_file, ex) for ex in all_exclusions
+                ):
+                    continue
+                files.append(rel_file)
+    result = tuple(sorted(files))
+    cache.put(cache_key, result)
+    return result
+
+
+def find_source_files(
+    path: str | Path,
+    extensions: list[str],
+    options: SourceDiscoveryOptions | None = None,
+    *,
+    runtime: RuntimeContext | None = None,
+) -> list[str]:
+    """Find all files with given extensions under a path, excluding patterns."""
+    resolved_runtime = resolve_runtime_context(runtime)
+    resolved_options = options or SourceDiscoveryOptions()
+    resolved_project_root = get_project_root(
+        project_root=resolved_options.project_root,
+        runtime=resolved_runtime,
+    )
+    resolved_extra_exclusions = (
+        resolved_options.extra_exclusions
+        if resolved_options.extra_exclusions
+        else get_exclusions(runtime=resolved_runtime)
+    )
+    return list(
+        _find_source_files_cached(
+            str(path),
+            tuple(extensions),
+            SourceDiscoveryOptions(
+                exclusions=resolved_options.exclusions,
+                extra_exclusions=resolved_extra_exclusions,
+                project_root=resolved_project_root,
+                source_file_cache=resolved_options.source_file_cache,
+            ),
+            runtime=resolved_runtime,
+        )
+    )
+
+
+TS_SOURCE_EXTENSIONS = (".ts", ".tsx", ".mts", ".cts")
+JS_SOURCE_EXTENSIONS = (".js", ".jsx", ".mjs", ".cjs")
+SOURCE_EXTENSIONS = TS_SOURCE_EXTENSIONS + JS_SOURCE_EXTENSIONS
+TS_DECLARATION_SUFFIXES = (".d.ts", ".d.mts", ".d.cts")
+MINIFIED_SUFFIXES = (".min.js", ".min.mjs", ".min.cjs")
+_NOT_SOURCE_SUFFIXES = TS_DECLARATION_SUFFIXES + MINIFIED_SUFFIXES
+
+
+def _sources(
+    path: str | Path, extensions: tuple[str, ...], runtime: RuntimeContext | None
+) -> list[str]:
+    if runtime is None:
+        files = find_source_files(path, list(extensions))
+    else:
+        files = find_source_files(path, list(extensions), runtime=runtime)
+    return [f for f in files if not f.endswith(_NOT_SOURCE_SUFFIXES)]
+
+
+def find_ts_and_js_files(
+    path: str | Path,
+    *,
+    runtime: RuntimeContext | None = None,
+) -> list[str]:
+    """Find TypeScript and JavaScript sources.
+
+    Ambient declaration files (``.d.ts``, ``.d.mts``, ``.d.cts``) and
+    minified bundles (``.min.js``) are not sources and are left out.
+    """
+    return _sources(path, SOURCE_EXTENSIONS, runtime)
+
+
+def find_component_files(
+    path: str | Path, *, runtime: RuntimeContext | None = None
+) -> list[str]:
+    """Find single-file components (``.vue``, ``.svelte``, ``.astro``); see ``sfc``."""
+    return _sources(path, SFC_SUFFIXES, runtime)
+
+
+def find_tsx_and_jsx_files(
+    path: str | Path, *, runtime: RuntimeContext | None = None
+) -> list[str]:
+    """Find JSX component sources (``.tsx``, ``.jsx``)."""
+    return _sources(path, (".tsx", ".jsx"), runtime)
+
+
+def find_py_files(
+    path: str | Path, *, runtime: RuntimeContext | None = None
+) -> list[str]:
+    if runtime is None:
+        return find_source_files(path, [".py"])
+    return find_source_files(path, [".py"], runtime=runtime)
+
+
+__all__ = [
+    "DEFAULT_EXCLUSIONS",
+    "SourceDiscoveryOptions",
+    "collect_exclude_dirs",
+    "set_exclusions",
+    "get_exclusions",
+    "enable_file_cache",
+    "disable_file_cache",
+    "file_cache_scope",
+    "is_file_cache_enabled",
+    "read_file_text",
+    "read_file_text_result",
+    "clear_source_file_cache_for_tests",
+    "find_source_files",
+    "find_ts_and_js_files",
+    "find_component_files",
+    "find_tsx_and_jsx_files",
+    "find_py_files",
+]

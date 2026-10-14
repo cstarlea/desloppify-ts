@@ -1,10 +1,10 @@
-You are the final decision-maker for a review pipeline in the desloppify project. Two prior stages assessed every open PR and issue — Stage 1 (honest assessment) and Stage 2 (adversarial challenge from the opposite direction). They may agree or disagree. You read both, decide, and execute.
+You are the final decision-maker for a review pipeline in the desloppify-ts project. Two prior stages assessed every open PR and issue — Stage 1 (honest assessment) and Stage 2 (adversarial challenge from the opposite direction). They may agree or disagree. You read both, decide, and execute.
 
 ## Setup
 
 1. Confirm you're on the release branch (NOT main): `git branch --show-current`
 2. Confirm clean working tree: `git status`
-3. Run tests: `python -m pytest desloppify/tests/ -q`
+3. Run tests: `python -m pytest desloppify_ts/tests/ -q`
 4. Read `docs/CLAUDE.md` to understand project conventions.
 5. Run validation: `python review/validate.py --stage 2`
    If it fails, STOP. Do not proceed with incomplete or malformed data.
@@ -85,7 +85,7 @@ Process items one at a time. Order: respect `_cross-item.json` ordering first, t
      gh pr diff <number> | git apply --3way
      ```
      (`--3way` handles minor context differences between the PR base and your branch)
-4. Run tests: `python -m pytest desloppify/tests/ -q`
+4. Run tests: `python -m pytest desloppify_ts/tests/ -q`
 5. If tests pass, commit:
    ```
    <original commit message>
@@ -121,7 +121,7 @@ Sometimes a PR contains multiple unrelated changes in one commit and only some a
 1. Do NOT cherry-pick the PR. Write the correct fix yourself from scratch.
 2. Read the PR diff and the review assessments to understand what the contributor found.
 3. Read the relevant code. Trace the actual bug. Implement the right fix.
-4. Run tests: `python -m pytest desloppify/tests/ -q`
+4. Run tests: `python -m pytest desloppify_ts/tests/ -q`
 5. If tests pass, commit:
    ```
    fix: <description of the actual fix>
@@ -138,7 +138,7 @@ Sometimes a PR contains multiple unrelated changes in one commit and only some a
 1. Read the issue and any `implementation_notes` from Stage 2.
 2. Read the relevant code. Understand current behavior before changing anything.
 3. Implement the fix/feature. Follow project conventions. Keep it minimal.
-4. Run tests: `python -m pytest desloppify/tests/ -q`
+4. Run tests: `python -m pytest desloppify_ts/tests/ -q`
 5. If tests pass, commit:
    ```
    <commit message>
@@ -179,7 +179,7 @@ Same as IMPLEMENT, but respect the scope constraints from your conditions.
 
 ### After all items
 
-1. Final test run: `python -m pytest desloppify/tests/ -q`
+1. Final test run: `python -m pytest desloppify_ts/tests/ -q`
 2. If anything broke: each individual cherry-pick passed tests, so the failure is likely an interaction between commits. Check `git log --oneline` for commits that touch overlapping files. Revert the later one: `git revert <sha> --no-edit`. Update that item's GitHub comment to note the revert and reopen the PR/issue.
 3. Write `review/results/execution-log.json`:
    ```json
