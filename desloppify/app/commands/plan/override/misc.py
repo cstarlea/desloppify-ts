@@ -10,6 +10,7 @@ from desloppify.app.commands.helpers.state import require_issue_inventory, state
 from desloppify.app.commands.helpers.transition_messages import emit_transition_message
 from desloppify.app.commands.plan.shared.patterns import resolve_ids_from_patterns
 from desloppify.base.config import target_strict_score_from_config
+from desloppify.base.exception_sets import CommandError
 from desloppify.base.output.terminal import colorize
 from desloppify.engine._plan.refresh_lifecycle import (
     invalidate_postflight_scan,
@@ -177,8 +178,7 @@ def cmd_plan_focus(args: argparse.Namespace) -> None:
     try:
         set_focus(plan, cluster_name)
     except ValueError as ex:
-        print(colorize(f"  {ex}", "red"))
-        return
+        raise CommandError(str(ex), exit_code=2) from ex
     append_log_entry(
         plan, "focus", cluster_name=cluster_name, actor="user", detail={"action": "set"}
     )
@@ -241,12 +241,10 @@ def cmd_plan_scan_gate(args: argparse.Namespace) -> None:
         return
 
     if not note or len(note.strip()) < 50:
-        print(
-            colorize(
-                "  --skip requires --note with at least 50 chars explaining why.", "red"
-            )
+        raise CommandError(
+            "--skip requires --note with at least 50 chars explaining why.",
+            exit_code=2,
         )
-        return
 
     plan["scan_gate_skipped"] = True
     append_log_entry(

@@ -344,17 +344,18 @@ def test_cluster_reorder_item_position_and_whole_cluster_paths(
     out_whole = capsys.readouterr().out
     assert "Moved cluster(s) alpha, beta" in out_whole
 
-    cluster_reorder_mod._cmd_cluster_reorder(
-        argparse.Namespace(
-            cluster_names="alpha,beta",
-            cluster_name="",
-            position="top",
-            target=None,
-            item_pattern="i1",
+    with pytest.raises(CommandError) as refused:
+        cluster_reorder_mod._cmd_cluster_reorder(
+            argparse.Namespace(
+                cluster_names="alpha,beta",
+                cluster_name="",
+                position="top",
+                target=None,
+                item_pattern="i1",
+            )
         )
-    )
-    out_item = capsys.readouterr().out
-    assert "--item requires exactly one cluster name" in out_item
+    assert refused.value.exit_code == 2
+    assert "--item requires exactly one cluster name" in refused.value.message
 
 
 def test_cluster_dispatch_suggest_close_matches_supports_hash_and_slug(

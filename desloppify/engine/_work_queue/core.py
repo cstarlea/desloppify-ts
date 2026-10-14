@@ -5,7 +5,7 @@ from __future__ import annotations
 from desloppify.engine._state.schema import StateModel
 from desloppify.engine._work_queue.context import QueueContext
 from desloppify.engine._work_queue.finalize import finalize_queue
-from desloppify.engine._work_queue.helpers import ATTEST_EXAMPLE
+from desloppify.engine._work_queue.helpers import ATTEST_EXAMPLE, SKIP_ATTEST_EXAMPLE
 from desloppify.engine._work_queue.inputs import resolve_queue_inputs
 from desloppify.engine._work_queue.models import (
     QueueBuildOptions,
@@ -61,6 +61,7 @@ __all__ = [
     "QueueBuildOptions",
     "QueueContext",
     "QueueVisibility",
+    "SKIP_ATTEST_EXAMPLE",
     "WorkQueueResult",
     "_build_work_queue_with_visibility",
     "build_work_queue",

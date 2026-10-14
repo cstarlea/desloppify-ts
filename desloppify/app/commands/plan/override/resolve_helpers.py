@@ -46,33 +46,6 @@ def check_cluster_guard(patterns: list[str], plan: dict, state: dict) -> bool:
     return False
 
 
-def print_cluster_guard(cluster_name: str, issue_ids: list[str], state: dict) -> None:
-    issues = state.get("work_items") or state.get("issues", {})
-    print(
-        colorize(
-            f"\n  Cluster '{cluster_name}' has {len(issue_ids)} item(s) — mark them done individually first:\n",
-            "yellow",
-        )
-    )
-    for issue_id in issue_ids:
-        issue = issues.get(issue_id, {})
-        summary = issue.get("summary", "(no summary)")[:80]
-        detector = issue.get("detector", "?")
-        print(f"    {issue_id}  [{detector}]  {summary}")
-    print(
-        colorize(
-            "\n  Use: desloppify plan resolve <id> --status fixed --note '...' --attest '...'",
-            "dim",
-        )
-    )
-    print(
-        colorize(
-            "  Or mark each resolved: desloppify plan resolve <id> --note '...' --confirm\n",
-            "dim",
-        )
-    )
-
-
 def _is_plan_only_synthetic_id(pattern: str) -> bool:
     """Return whether a synthetic ID has no state-backed work item."""
     return is_synthetic_id(pattern) and not pattern.startswith(STRATEGY_PREFIX)

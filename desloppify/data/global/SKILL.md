@@ -8,7 +8,7 @@ description: >
 ---
 
 <!-- desloppify-begin -->
-<!-- desloppify-skill-version: 9 -->
+<!-- desloppify-skill-version: 10 -->
 
 # Desloppify
 
@@ -88,7 +88,9 @@ desloppify next
 
 # 2. Fix the issue in code
 
-# 3. Resolve it (next shows the exact command including required attestation)
+# 3. Resolve it: next prints the exact command. --note needs 50+ characters;
+#    --confirm turns it into the attestation.
+desloppify plan resolve "<id>" --note "<what you did>" --confirm
 
 # 4. When you have a logical batch, commit and record
 git add <files> && git commit -m "desloppify: fix 3 deferred_import findings"
@@ -200,7 +202,7 @@ desloppify plan reorder <cluster> top       # move all cluster members at once
 desloppify plan reorder <a> <b> top        # mix clusters + findings in one reorder
 desloppify plan reorder <pat> before -t X  # position relative to another item/cluster
 desloppify plan cluster reorder a,b top    # reorder multiple clusters as one block
-desloppify plan resolve <pat>              # mark complete
+desloppify plan resolve <pat> --note "<what you did>" --confirm  # mark complete
 desloppify plan reopen <pat>               # reopen
 desloppify backlog                          # broader non-execution backlog
 ```
@@ -241,7 +243,8 @@ desloppify next --cluster <name>                  # drill into a cluster
 desloppify backlog --count 5                      # top 5 backlog items outside execution
 desloppify show <pattern>                         # filter by file/detector/ID
 desloppify show --status open                     # all open findings
-desloppify plan skip --permanent "<id>" --note "reason" --attest "..." # accept debt
+desloppify plan skip --permanent "<id>" --note "reason" \
+  --attest "I have reviewed this against the code and I am not gaming the score by skipping a real defect."  # accept debt
 desloppify exclude <path>                         # exclude a directory from scanning
 desloppify config show                            # show all config including excludes
 desloppify scan --path . --reset-subjective       # reset subjective baseline to 0

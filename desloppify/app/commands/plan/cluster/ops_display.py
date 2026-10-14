@@ -125,7 +125,7 @@ def _print_cluster_commands(cluster_name: str) -> None:
     print(colorize("  Commands:", "dim"))
     print(
         colorize(
-            f'    Resolve all:  desloppify plan resolve "{cluster_name}" --note "<what>" --attest "..."',
+            f'    Resolve all:  desloppify plan resolve "{cluster_name}" --note "<what you did>" --confirm',
             "dim",
         )
     )

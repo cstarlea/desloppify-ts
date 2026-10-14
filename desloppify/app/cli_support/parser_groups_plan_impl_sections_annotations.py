@@ -66,7 +66,10 @@ def _add_skip_subparsers(plan_sub) -> None:
         "--attest",
         type=str,
         default=None,
-        help="Attestation (required for --permanent and --false-positive)",
+        help=(
+            "Attestation, required for --permanent and --false-positive. Must "
+            "include 'not gaming' and either 'reviewed' or 'I have actually'."
+        ),
     )
     p_skip.add_argument(
         "--confirm",
@@ -124,16 +127,20 @@ def _add_resolve_subparser(plan_sub) -> None:
         help="Issue ID(s), detector, file path, glob, or cluster name",
     )
 
-    # plan resolve <patterns> --attest [--note]
+    # plan resolve <patterns> --note (--confirm | --attest)
     p_resolve = plan_sub.add_parser(
         "resolve",
         help="Mark issues as fixed (shows score movement + next step)",
         epilog="""\
+--note must be at least 50 characters. --confirm turns it into the attestation;
+--attest supplies your own instead.
+
 examples:
   desloppify plan resolve "unused::src/foo.tsx::React" \\
-    --attest "I have actually removed the import and I am not gaming the score."
-  desloppify plan resolve security --note "patched XSS" \\
-    --attest "I have actually ..."  """,
+    --note "removed the unused React import; the file uses the JSX runtime" --confirm
+  desloppify plan resolve security \\
+    --note "escaped user input in the search results template and the 404 page" \\
+    --attest "I have actually escaped the input and I am not gaming the score."  """,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     p_resolve.add_argument(
@@ -143,22 +150,25 @@ examples:
         help="Issue ID(s), detector, file path, glob, or cluster name",
     )
     p_resolve.add_argument(
-        "--note", type=str, default=None, help="Explanation of the fix"
+        "--note",
+        type=str,
+        default=None,
+        help="What you did, at least 50 characters (required)",
     )
     p_resolve.add_argument(
         "--attest",
         type=str,
         default=None,
         help=(
-            "Required anti-gaming attestation. Must include BOTH keywords "
-            "'I have actually' and 'not gaming'."
+            "Anti-gaming attestation, required unless --confirm is given. Must "
+            "include BOTH keywords 'I have actually' and 'not gaming'."
         ),
     )
     p_resolve.add_argument(
         "--confirm",
         action="store_true",
         default=False,
-        help="Auto-generate attestation from --note (requires --note)",
+        help="Use --note as the attestation instead of passing --attest",
     )
     p_resolve.add_argument(
         "--force-resolve",

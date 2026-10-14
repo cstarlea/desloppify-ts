@@ -99,7 +99,7 @@ def test_cluster_action_commands_are_parseable_semantic_fields() -> None:
     assert commands["skip"] == "desloppify plan skip manual/refactor-a"
     assert (
         commands["resolve_all"]
-        == 'desloppify plan resolve "manual/refactor-a" --note "<what>" --confirm'
+        == 'desloppify plan resolve "manual/refactor-a" --note "<what you did>" --confirm'
     )
 
 

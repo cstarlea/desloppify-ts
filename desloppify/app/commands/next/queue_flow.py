@@ -284,9 +284,12 @@ def _render_terminal_queue_view(
     print()
 
     if items and plan_data and show_execution_prompt:
+        done_command = (
+            next_nudges_mod.resolve_command_for(items[0]) or "desloppify plan resolve"
+        )
         print_user_message(
             "Start working on the task above. When done:"
-            " `desloppify plan resolve`. Full queue:"
+            f" `{done_command}`. Full queue:"
             " `desloppify plan show`."
         )
 
