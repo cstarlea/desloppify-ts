@@ -12,6 +12,8 @@ from desloppify.engine._plan.commit_tracking import (
     purge_uncommitted_ids,
     record_commit,
     suggest_commit_message,
+    uncommitted_source_counts,
+    uncommitted_source_note,
 )
 from desloppify.engine._plan.persistence import (
     PLAN_FILE,
@@ -95,5 +97,7 @@ __all__ = [
     "save_policy",
     "suggest_commit_message",
     "triage_clusters",
+    "uncommitted_source_counts",
+    "uncommitted_source_note",
     "validate_plan",
 ]

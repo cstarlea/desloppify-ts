@@ -47,8 +47,15 @@ def _commit_record_options(
     )
 
 
-def add_uncommitted_issues(plan: dict[str, Any], issue_ids: list[str]) -> int:
-    """Add issue IDs to the uncommitted list (deduplicates).  Returns count added."""
+def add_uncommitted_issues(
+    plan: dict[str, Any], issue_ids: list[str], *, autofix: bool = False
+) -> int:
+    """Add issue IDs to the uncommitted list (deduplicates).  Returns count added.
+
+    ``autofix`` records that `desloppify autofix` resolved them, so the
+    suggested commit message can tell autofix and manual work apart. A later
+    manual resolve of the same ID makes it manual.
+    """
     uncommitted: list[str] = plan.setdefault("uncommitted_issues", [])
     existing = set(uncommitted)
     added = 0
@@ -57,6 +64,13 @@ def add_uncommitted_issues(plan: dict[str, Any], issue_ids: list[str]) -> int:
             uncommitted.append(fid)
             existing.add(fid)
             added += 1
+    by_autofix: list[str] = plan.setdefault("uncommitted_autofix", [])
+    ids = set(issue_ids)
+    if autofix:
+        tracked = set(by_autofix)
+        by_autofix.extend(fid for fid in dict.fromkeys(issue_ids) if fid not in tracked)
+    else:
+        plan["uncommitted_autofix"] = [fid for fid in by_autofix if fid not in ids]
     return added
 
 
@@ -66,12 +80,33 @@ def purge_uncommitted_ids(plan: dict[str, Any], issue_ids: list[str]) -> int:
     uncommitted: list[str] = plan.get("uncommitted_issues", [])
     original = len(uncommitted)
     plan["uncommitted_issues"] = [fid for fid in uncommitted if fid not in to_remove]
+    plan["uncommitted_autofix"] = [
+        fid for fid in plan.get("uncommitted_autofix", []) if fid not in to_remove
+    ]
     return original - len(plan["uncommitted_issues"])
 
 
 def get_uncommitted_issues(plan: dict[str, Any]) -> list[str]:
     """Return the current uncommitted issue IDs."""
     return list(plan.get("uncommitted_issues", []))
+
+
+def uncommitted_source_counts(plan: dict[str, Any]) -> tuple[int, int]:
+    """Return ``(autofix, manual)`` counts of the uncommitted issues."""
+    uncommitted = plan.get("uncommitted_issues", [])
+    by_autofix = set(plan.get("uncommitted_autofix", []))
+    autofix = sum(1 for fid in uncommitted if fid in by_autofix)
+    return autofix, len(uncommitted) - autofix
+
+
+def uncommitted_source_note(plan: dict[str, Any]) -> str:
+    """Return " (N by autofix[, M manual])" when autofix resolved any, else ""."""
+    autofix, manual = uncommitted_source_counts(plan)
+    if not autofix:
+        return ""
+    if not manual:
+        return f" ({autofix} by autofix)"
+    return f" ({autofix} by autofix, {manual} manual)"
 
 
 def record_commit(
@@ -110,6 +145,9 @@ def record_commit(
     # Remove recorded IDs from uncommitted
     recorded_set = set(ids_to_record)
     plan["uncommitted_issues"] = [fid for fid in uncommitted if fid not in recorded_set]
+    plan["uncommitted_autofix"] = [
+        fid for fid in plan.get("uncommitted_autofix", []) if fid not in recorded_set
+    ]
 
     return record
 
@@ -230,8 +268,7 @@ def suggest_commit_message(
         if len(parts) >= 2:
             file_part = parts[1]
             slash_idx = file_part.rfind("/")
-            if slash_idx > 0:
-                dirs.add(file_part[: slash_idx + 1])
+            dirs.add(file_part[: slash_idx + 1] if slash_idx > 0 else "")
 
     summary_parts: list[str] = []
     if len(detectors) == 1:
@@ -240,15 +277,20 @@ def suggest_commit_message(
         summary_parts.append(
             f"{len(detectors)} detector{'s' if len(detectors) != 1 else ''}"
         )
-    if len(dirs) == 1:
-        summary_parts.append(f"in {next(iter(dirs))}")
+    if len(dirs) == 1 and (only_dir := next(iter(dirs))):
+        summary_parts.append(f"in {only_dir}")
 
+    autofix, manual = uncommitted_source_counts(plan)
+    if autofix and manual:
+        summary_parts.append(f"({autofix} autofix, {manual} manual)")
     summary = " ".join(summary_parts)
 
     return template.format(
-        status="autofix",
+        status="autofix" if not manual else "fix",
         count=len(uncommitted),
         summary=summary,
+        autofix_count=autofix,
+        manual_count=manual,
     )
 
 
@@ -273,4 +315,6 @@ __all__ = [
     "purge_uncommitted_ids",
     "record_commit",
     "suggest_commit_message",
+    "uncommitted_source_counts",
+    "uncommitted_source_note",
 ]

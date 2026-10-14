@@ -47,6 +47,7 @@ from desloppify.engine.plan_state import (
     commit_tracking_summary,
     load_plan,
     save_plan,
+    uncommitted_source_note,
 )
 
 logger = logging.getLogger(__name__)
@@ -151,7 +152,8 @@ def _print_commit_tracking(plan: dict) -> None:
     pr_num = cfg.get("commit_pr", 0)
     pr_str = f"  PR: #{pr_num}" if pr_num else ""
     print(
-        f"  Commit tracking:  {ct['uncommitted']} uncommitted, "
+        f"  Commit tracking:  {ct['uncommitted']} uncommitted"
+        f"{uncommitted_source_note(plan)}, "
         f"{ct['committed']} committed ({ct['total']} issues){pr_str}"
     )
 

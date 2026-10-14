@@ -8,7 +8,7 @@ description: >
 ---
 
 <!-- desloppify-begin -->
-<!-- desloppify-skill-version: 9 -->
+<!-- desloppify-skill-version: 10 -->
 
 # Desloppify
 
@@ -101,7 +101,7 @@ git push -u origin desloppify/code-health
 ```
 
 Score may temporarily drop after fixes — cascade effects are normal, keep going.
-If `next` suggests an auto-fixer, run `desloppify autofix <fixer> --dry-run` to preview, then apply. If a fixer says it is marked unsafe, fix those issues by hand rather than passing `--unsafe`.
+If `next` suggests an auto-fixer, run `desloppify autofix <fixer> --dry-run` to preview, then apply. If a fixer says it is marked unsafe, fix those issues by hand rather than passing `--unsafe`. Applying a fixer resolves its issues in the plan as well, so there is nothing to `plan resolve` afterwards; when `next` shows "Ready to scan", run `desloppify scan`.
 
 **When the queue is clear, go back to Phase 1.** New issues will surface, cascades will have resolved, priorities will have shifted. This is the cycle.
 
@@ -217,7 +217,7 @@ desloppify plan commit-log pr                   # preview PR body markdown
 desloppify config set commit_tracking_enabled false  # disable guidance
 ```
 
-After resolving findings as `fixed`, the tool shows uncommitted work, committed history, and a suggested commit message. After committing externally, run `record` to move findings from uncommitted to committed and auto-update the linked PR description.
+After resolving findings as `fixed`, by `plan resolve` or by `autofix`, the tool shows uncommitted work (saying how much of it autofix did), committed history, and a suggested commit message. After committing externally, run `record` to move findings from uncommitted to committed and auto-update the linked PR description.
 
 ### Agent directives
 

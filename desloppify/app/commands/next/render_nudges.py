@@ -21,6 +21,7 @@ from desloppify.engine._scoring.results.core import compute_health_breakdown
 from desloppify.engine._state.issue_semantics import is_assessment_request
 from desloppify.engine._work_queue.core import ATTEST_EXAMPLE
 from desloppify.engine._work_queue.helpers import is_auto_fix_item
+from desloppify.engine.plan_state import uncommitted_source_note
 from desloppify.intelligence.integrity import (
     unassessed_subjective_dimensions,
 )
@@ -49,6 +50,7 @@ def render_uncommitted_reminder(plan: dict | None) -> None:
         print(
             colorize(
                 f"\n  {count} resolved issue{'s' if count != 1 else ''} uncommitted"
+                f"{uncommitted_source_note(plan)}"
                 " — `desloppify plan commit-log` to review",
                 "dim",
             )

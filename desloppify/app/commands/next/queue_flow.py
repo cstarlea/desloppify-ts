@@ -15,6 +15,7 @@ from desloppify.base.discovery.file_paths import safe_write_text
 from desloppify.base.exception_sets import CommandError
 from desloppify.base.output.terminal import colorize
 from desloppify.base.output.user_message import print_user_message
+from desloppify.engine._plan.constants import WORKFLOW_RUN_SCAN_ID
 from desloppify.engine._state.filtering import path_scoped_issues
 from desloppify.engine._work_queue.context import queue_context
 from desloppify.engine._work_queue.core import QueueBuildOptions
@@ -284,6 +285,12 @@ def _render_terminal_queue_view(
     print()
 
     if items and plan_data and show_execution_prompt:
+        if items[0].get("id") == WORKFLOW_RUN_SCAN_ID:
+            print_user_message(
+                "Run `desloppify scan` now to refresh the queue; there is"
+                " nothing to resolve for this step."
+            )
+            return
         print_user_message(
             "Start working on the task above. When done:"
             " `desloppify plan resolve`. Full queue:"

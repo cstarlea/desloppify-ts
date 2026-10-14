@@ -273,6 +273,7 @@ class PlanModel(TypedDict, total=False):
     subjective_defer_meta: dict[str, Any]
     commit_log: list[CommitRecord]
     uncommitted_issues: list[str]
+    uncommitted_autofix: list[str]  # the uncommitted_issues autofix resolved
     commit_tracking_branch: str | None
     completed_clusters: NotRequired[list[dict[str, Any]]]  # legacy snapshot key
     quarantined_entries: NotRequired[list[QuarantinedPlanEntry]]  # set aside on load
@@ -299,6 +300,7 @@ def empty_plan() -> PlanModel:
         "epic_triage_meta": {},
         "commit_log": [],
         "uncommitted_issues": [],
+        "uncommitted_autofix": [],
         "commit_tracking_branch": None,
     }
 
