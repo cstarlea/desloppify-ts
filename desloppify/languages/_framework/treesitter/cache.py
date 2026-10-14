@@ -32,9 +32,10 @@ class ParseTreeCache:
         self._trees = {}
 
     def get_or_parse(
-        self, filepath: str, parser, grammar: str
+        self, filepath: str, parser, grammar: str, *, store: bool = True
     ) -> tuple[bytes, object] | None:
-        """Read file and parse, returning (source_bytes, tree). Uses cache if enabled."""
+        """Read file and parse, returning (source_bytes, tree). Uses cache if
+        enabled; ``store=False`` reuses a cached tree but doesn't keep a new one."""
         key = (filepath, grammar)
         if self._enabled and key in self._trees:
             return self._trees[key]
@@ -46,7 +47,7 @@ class ParseTreeCache:
             return None
 
         tree = parser.parse(source)
-        if self._enabled:
+        if self._enabled and store:
             self._trees[key] = (source, tree)
         return source, tree
 
@@ -69,13 +70,12 @@ def get_or_parse_tree(
     parser,
     grammar: str,
     *,
+    store: bool = True,
     runtime: RuntimeContext | None = None,
 ) -> tuple[bytes, object] | None:
     """Parse a file using the runtime-owned tree cache."""
     return current_parse_tree_cache(runtime=runtime).get_or_parse(
-        filepath,
-        parser,
-        grammar,
+        filepath, parser, grammar, store=store
     )
 
 

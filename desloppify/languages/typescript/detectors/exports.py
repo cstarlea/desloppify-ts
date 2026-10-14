@@ -23,6 +23,7 @@ from desloppify.languages.typescript.detectors.exports_fallback import (
 from desloppify.languages.typescript.detectors.knip_adapter import (
     detect_with_knip_result,
 )
+from desloppify.languages.typescript.presets import shadcn_ui_dirs
 
 _EXPORT_STATEMENT_RE = re.compile(r"^\s*export\b", re.MULTILINE)
 _KNIP_REMEDIATION = {
@@ -73,6 +74,15 @@ def drop_public_api(path: Path, entries: list[dict]) -> list[dict]:
     return [entry for entry in entries if not _published(entry, public)]
 
 
+def drop_vendored_ui(entries: list[dict]) -> list[dict]:
+    """Drop exports of a shadcn/ui kit directory: vendored library API, kept
+    whole whether or not the project uses every part yet."""
+    prefixes = tuple(f"{d}/" for d in shadcn_ui_dirs())
+    if not prefixes:
+        return entries
+    return [e for e in entries if not e["file"].startswith(prefixes)]
+
+
 def detect_dead_exports_result(
     path: Path, *, cache: dict[str, Any] | None = None, zone_map=None
 ) -> tuple[list[dict], int, DetectorCoverageStatus | None]:
@@ -116,9 +126,9 @@ def detect_dead_exports_result(
             return [], 0, coverage
         for entry in fallback:
             entry["source"] = "fallback"
-        fallback = drop_public_api(path, fallback)
+        fallback = drop_vendored_ui(drop_public_api(path, fallback))
         return fallback, max(len(fallback), _count_exports(path)), coverage
-    entries = drop_public_api(path, entries)
+    entries = drop_vendored_ui(drop_public_api(path, entries))
     return entries, max(len(entries), _count_exports(path)), None
 
 

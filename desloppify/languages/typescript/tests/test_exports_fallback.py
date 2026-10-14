@@ -205,3 +205,152 @@ def test_exports_detector_falls_back_without_knip(project, monkeypatch):
     assert coverage.reason == "knip_not_installed"
     assert "npm i -D knip" in coverage.remediation
     assert "conservative" in coverage.summary
+
+
+def _zoned_dead(root: Path, scan_path: Path) -> set[tuple[str, str]]:
+    """Dead exports for a scan of *scan_path*, with the zone map scan builds."""
+    from desloppify.base.discovery.file_paths import rel
+    from desloppify.engine.policy.zones import FileZoneMap
+    from desloppify.languages.framework import get_lang, make_lang_run
+
+    lang = make_lang_run(get_lang("typescript"))
+    zone_map = FileZoneMap(lang.file_finder(scan_path), lang.zone_rules, rel_fn=rel)
+    found = detect_dead_exports_fallback(scan_path, zone_map)
+    assert found is not None
+    return {(e["file"], e["name"]) for e in found}
+
+
+_BRAND = (
+    "export const BRAND_NAME = 'Example';\n"
+    "export const BRAND_ORIGIN = 'https://example.test';\n"
+    "export const UNUSED_BRAND = 'nobody';\n"
+)
+
+
+@needs_treesitter
+@pytest.mark.parametrize(
+    ("importer", "text"),
+    [
+        (
+            "capacitor.config.ts",
+            "import { BRAND_ORIGIN } from './src/lib/brand';\n"
+            "export default { server: { url: BRAND_ORIGIN } };\n",
+        ),
+        (
+            "test/brand.test.ts",
+            "import { BRAND_ORIGIN } from '../src/lib/brand';\nBRAND_ORIGIN;\n",
+        ),
+        (
+            "scripts/seed.ts",
+            "import { BRAND_ORIGIN } from '@/lib/brand';\nBRAND_ORIGIN;\n",
+        ),
+        (
+            "e2e/support.ts",
+            "export { BRAND_ORIGIN as origin } from '../src/lib/brand';\n",
+        ),
+    ],
+    ids=["root-config", "test-dir", "alias-from-scripts", "reexport-from-e2e"],
+)
+def test_importers_outside_the_scan_path_count(project, importer, text):
+    _write(
+        project,
+        {
+            "tsconfig.json": json.dumps(
+                {"compilerOptions": {"baseUrl": ".", "paths": {"@/*": ["./src/*"]}}}
+            ),
+            "src/main.ts": "import { BRAND_NAME } from './lib/brand';\nBRAND_NAME;\n",
+            "src/lib/brand.ts": _BRAND,
+            "scripts/unused.ts": "export const notScanned = 1;\n",
+            importer: text,
+        },
+    )
+    assert _zoned_dead(project, project / "src") == {
+        ("src/lib/brand.ts", "UNUSED_BRAND")
+    }
+
+
+@needs_treesitter
+def test_files_outside_the_scan_path_stay_out_of_the_parse_cache(project):
+    from desloppify.languages._framework.treesitter.cache import (
+        current_parse_tree_cache,
+        disable_parse_cache,
+        enable_parse_cache,
+    )
+
+    _write(
+        project,
+        {
+            "src/main.ts": "import { BRAND_NAME } from './lib/brand';\nBRAND_NAME;\n",
+            "src/lib/brand.ts": _BRAND,
+            "test/brand.test.ts": (
+                "import { BRAND_ORIGIN } from '../src/lib/brand';\nBRAND_ORIGIN;\n"
+            ),
+        },
+    )
+    enable_parse_cache()
+    try:
+        assert _zoned_dead(project, project / "src") == {
+            ("src/lib/brand.ts", "UNUSED_BRAND")
+        }
+        cached = {
+            Path(p).relative_to(project).as_posix()
+            for p, _grammar in current_parse_tree_cache()._trees
+        }
+    finally:
+        disable_parse_cache()
+    assert cached == {"src/lib/brand.ts", "src/main.ts"}
+
+
+@needs_treesitter
+def test_config_globs_name_loaded_modules_only(project):
+    _write(
+        project,
+        {
+            "vitest.config.ts": (
+                "export default { test: { projects: ['./packages/*'],\n"
+                "  coverage: { include: ['./packages/**/*.ts'] } } };\n"
+            ),
+            "tailwind.config.ts": (
+                "export default { content: ['./packages/**/*.{ts,tsx}'] };\n"
+            ),
+            "drizzle.config.ts": (
+                "export default { schema: './packages/a/src/db/*.ts' };\n"
+            ),
+            "packages/a/src/main.ts": (
+                "import { used } from './lib';\nimport { users } from './db/users';\n"
+                "used; users;\n"
+            ),
+            "packages/a/src/lib.ts": "export const used = 1;\nexport const DEAD = 2;\n",
+            "packages/a/src/db/users.ts": (
+                "export const users = 1;\nexport const userIndex = 2;\n"
+            ),
+        },
+    )
+    assert _zoned_dead(project, project / "packages") == {
+        ("packages/a/src/lib.ts", "DEAD")
+    }
+
+
+@needs_treesitter
+def test_shadcn_ui_kit_exports_are_library_api(project, monkeypatch):
+    _write(
+        project,
+        {
+            "components.json": json.dumps({"aliases": {"ui": "@/components/ui"}}),
+            "src/main.ts": (
+                "import { Button } from './components/ui/button';\n"
+                "import { used } from './lib';\nButton; used;\n"
+            ),
+            "src/components/ui/button.tsx": (
+                "export const Button = 1;\nexport const buttonVariants = 2;\n"
+            ),
+            "src/lib.ts": "export const used = 1;\nexport const DEAD = 2;\n",
+        },
+    )
+    monkeypatch.setattr(
+        exports_mod,
+        "detect_with_knip_result",
+        lambda *_a, **_k: (None, "knip_not_installed"),
+    )
+    entries, _total, _coverage = exports_mod.detect_dead_exports_result(project)
+    assert [(e["file"], e["name"]) for e in entries] == [("src/lib.ts", "DEAD")]

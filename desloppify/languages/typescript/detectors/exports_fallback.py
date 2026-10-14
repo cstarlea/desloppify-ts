@@ -11,6 +11,11 @@ files outside the production zone are never candidates, and their exports
 count as used. Default exports and declarations inside ``declare module``
 are left alone.
 
+Only exports of files under the scan path are reported, but importers come
+from the whole project (minus the usual exclusions): root configs,
+``scripts/`` and ``test/`` use ``src/`` exports too. Files outside the scan
+path are never candidates either, and their exports count as used.
+
 Use within the defining file doesn't count, as with Knip. Needs tree-sitter;
 without it the detector returns None.
 """
@@ -21,7 +26,6 @@ import logging
 import re
 from collections.abc import Iterable
 from dataclasses import dataclass, field
-from fnmatch import fnmatch
 from pathlib import Path
 
 import desloppify.languages.typescript.detectors.deps as deps_mod
@@ -73,6 +77,12 @@ _IMPORT_TYPE_RE = re.compile(rb"""\bimport\(\s*['"]([^'"]+)['"]\s*\)""")
 # Relative paths named in config files (``schema: './src/db/schema.ts'``).
 _CONFIG_PATH_RE = re.compile(r"""['"](\.{1,2}/[^'"\s]+)['"]""")
 _DOCUMENT_EXTENSIONS = [".mdx"]
+# Config keys whose globs name files a tool reads or watches, not modules it
+# loads: Tailwind's ``content``, test and coverage ``include``/``exclude``,
+# vitest's ``projects`` and watch triggers.
+_FILE_GLOB_KEYS = frozenset(
+    {"content", "include", "exclude", "projects", "workspace", "forceRerunTriggers"}
+)
 
 
 @dataclass
@@ -105,10 +115,18 @@ class _Scan:
     def __init__(self, path: Path, zone_map) -> None:
         self.path = path
         self.zone_map = zone_map
-        self.resolver = project_resolver(get_project_root())
-        modules = [*find_ts_and_js_files(path), *find_component_files(path)]
-        self.modules = sorted({resolve_path(f) for f in modules})
+        root = get_project_root()
+        self.resolver = project_resolver(root)
+        self.modules = _modules(path)
+        self.scanned = set(self.modules)
+        # Importers: the scan path plus the rest of the project.
+        self.project_modules = sorted(self.scanned | set(_modules(root)))
         self.usage = _Usage()
+
+    def parse(self, filepath: str):
+        # Files outside the scan path are read once here; keep their trees
+        # out of the scan's parse cache.
+        return parsed_file(filepath, store=filepath in self.scanned)
 
     def resolve(self, specifier: str, from_file: str) -> str | None:
         try:
@@ -129,7 +147,7 @@ class _Scan:
 
     def collect_module(self, filepath: str) -> bool:
         """Record what *filepath* uses; False when it can't be parsed."""
-        parsed = parsed_file(filepath)
+        parsed = self.parse(filepath)
         if parsed is None:
             return False
         for info in imports(parsed):
@@ -148,8 +166,10 @@ class _Scan:
                 target = self.resolve(info.source, filepath)
                 if target is None:
                     self._note_unresolved(info.source, filepath)
-                else:
+                elif filepath in self.scanned:
                     self.usage.reached.add(target)
+                else:
+                    self._outside_reexport(info, target)
         runtime_imports = self._calls(parsed, filepath)
         if b"import(" in parsed.source:
             for match in _IMPORT_TYPE_RE.finditer(parsed.source):
@@ -161,6 +181,17 @@ class _Scan:
                     self._note_unresolved(specifier, filepath)
                 self.usage.whole(target)
         return True
+
+    def _outside_reexport(self, info, target: str) -> None:
+        """Exports of files outside the scan path count as used, so what they
+        re-export does too (``exposed_names`` follows chains from here)."""
+        if info.star:
+            self.usage.whole(target)
+            return
+        self.usage.reached.add(target)
+        self.usage.seeds.update(
+            (target, b.name) for b in info.bindings if b.name is not None
+        )
 
     def _calls(self, parsed, filepath: str) -> set[int]:
         """Record module loads made by calls; return the start offsets of the
@@ -211,7 +242,7 @@ class _Scan:
         """``import.meta.glob`` / ``import(`./x/${y}`)``: every module it matches."""
         root, paths = self.resolver.tsconfigs.for_file(filepath)
         for target in deps_mod._pattern_targets(
-            ref, filepath, paths, root, self.resolver.project_root, self.modules
+            ref, filepath, paths, root, self.resolver.project_root, self.project_modules
         ):
             self.usage.whole(target)
 
@@ -230,21 +261,27 @@ class _Scan:
         except OSError:
             return
         base = Path(filepath).parent
-        parsed = parsed_file(filepath)
+        parsed = self.parse(filepath)
         sources = (
             {info.source for info in imports(parsed)}
             | {info.source for info in exports(parsed) if info.source}
             if parsed is not None
             else set()
         )
+        file_globs = _file_globs(parsed) if parsed is not None else set()
         for match in _CONFIG_PATH_RE.finditer(text):
             value = match.group(1)
             if value in sources:
                 continue  # an import, already counted by name
             if any(c in value for c in "*?{"):
-                pattern = str((base / value).resolve(strict=False))
-                for module in self.modules:
-                    if fnmatch(module, pattern):
+                if value in file_globs:
+                    continue
+                # ``*`` stays within one directory, ``**`` spans any number.
+                pattern = deps_mod._glob_regex(
+                    str((base / value).resolve(strict=False))
+                )
+                for module in self.project_modules:
+                    if pattern.match(module):
                         self.usage.whole(module)
                 continue
             self.usage.whole(self.resolve(value, filepath))
@@ -262,6 +299,32 @@ class _Scan:
             ):
                 entries.add(module)
         return {resolve_path(e) for e in entries}
+
+
+def _file_globs(parsed) -> set[str]:
+    """Glob strings under a ``_FILE_GLOB_KEYS`` key (``content: ['./src/**']``)."""
+    found: set[str] = set()
+    for node in descendants(parsed.root, {"string"}):
+        value = string_value(parsed, node)
+        if not any(c in value for c in "*?{"):
+            continue
+        parent = node.parent
+        while parent is not None and parent.type == "array":
+            parent = parent.parent
+        if parent is None or parent.type != "pair":
+            continue
+        key = parent.child_by_field_name("key")
+        if key is None:
+            continue
+        name = string_value(parsed, key) if key.type == "string" else parsed.text(key)
+        if name in _FILE_GLOB_KEYS:
+            found.add(value)
+    return found
+
+
+def _modules(path: Path) -> list[str]:
+    found = [*find_ts_and_js_files(path), *find_component_files(path)]
+    return sorted({resolve_path(f) for f in found})
 
 
 def _destructured_names(parsed, call) -> list[str] | None:
@@ -383,14 +446,20 @@ def detect_dead_exports_fallback(path: Path, zone_map=None) -> list[dict] | None
     if not scan.modules:
         return []
     parsed_any = False
-    for module in scan.modules:
-        parsed_any |= scan.collect_module(module)
+    for module in scan.project_modules:
+        parsed = scan.collect_module(module)
+        parsed_any |= parsed and module in scan.scanned
         if scan.zone(module) == Zone.CONFIG:
             scan.collect_config(module)
     if not parsed_any:
         return None
-    for document in find_source_files(path, _DOCUMENT_EXTENSIONS):
-        scan.collect_document(resolve_path(document))
+    documents = {
+        resolve_path(d)
+        for base in (path, get_project_root())
+        for d in find_source_files(base, _DOCUMENT_EXTENSIONS)
+    }
+    for document in sorted(documents):
+        scan.collect_document(document)
 
     entries = scan.entry_files()
     candidates = [
@@ -403,7 +472,10 @@ def detect_dead_exports_fallback(path: Path, zone_map=None) -> list[dict] | None
         and module in scan.usage.reached
         and not any(_could_name(spec, module) for spec in scan.usage.unresolved)
     ]
-    seeds = scan.usage.seeds | {(entry, ALL_NAMES) for entry in entries}
+    # Uses of files outside the scan path matter only through their re-exports,
+    # which ``_outside_reexport`` already seeded; don't parse them again.
+    seeds = {seed for seed in scan.usage.seeds if seed[0] in scan.scanned}
+    seeds |= {(entry, ALL_NAMES) for entry in entries}
     seeds |= {(m, ALL_NAMES) for m in scan.modules if scan.zone(m) != Zone.PRODUCTION}
     used = exposed_names(seeds, scan.resolve)
     wholly_used = {path for path, name in seeds if name == ALL_NAMES}

@@ -115,17 +115,18 @@ def parse_text(text: str, path: str | Path) -> ParsedSource | None:
     return ParsedSource(source, parser.parse(source))
 
 
-def parsed_file(path: str | Path) -> ParsedSource | None:
+def parsed_file(path: str | Path, *, store: bool = True) -> ParsedSource | None:
     """Parse a file on disk (relative paths are under the project root), once per scan.
 
     The tree covers the file's exact bytes. None without tree-sitter or when
-    the file can't be read.
+    the file can't be read. ``store=False`` keeps a fresh tree out of the scan
+    cache, for files read once that no other detector looks at.
     """
     grammar = grammar_for(path)
     parser = get_parser(grammar)
     if parser is None:
         return None
-    cached = get_or_parse_tree(resolve_path(str(path)), parser, grammar)
+    cached = get_or_parse_tree(resolve_path(str(path)), parser, grammar, store=store)
     if cached is None:
         return None
     source, tree = cached

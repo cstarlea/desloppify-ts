@@ -97,7 +97,7 @@ An area is reported when it uses `threshold` (default 2) or more patterns of a f
 
 ## shadcn/ui
 
-When the project root has a shadcn/ui `components.json`, the UI kit directory it names (`aliases.ui`, by default `@/components/ui`, resolved against `src/` or the root) is vendored code. The `naming` detector skips it, and so do boundary candidates.
+When the project root has a shadcn/ui `components.json`, the UI kit directory it names (`aliases.ui`, by default `@/components/ui`, resolved against `src/` or the root) is vendored code. The `naming` detector skips it, and so do boundary candidates. Its exports are library API, so `exports` doesn't report them as dead.
 
 ## Other TypeScript settings
 
