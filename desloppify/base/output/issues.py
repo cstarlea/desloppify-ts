@@ -126,14 +126,18 @@ def _append_footer(
         lines.append("## Ready to Fix\n")
         lines.append("When done:\n")
         lines.append("```bash")
-        lines.append(f'desloppify plan resolve "{issue_id}"')
+        lines.append(
+            f'desloppify plan resolve "{issue_id}" --note "<what you did>" --confirm'
+        )
         lines.append("```\n")
         return
 
     lines.append("## Status: Needs Investigation\n")
     lines.append("Investigate the files above, then resolve with a note:\n")
     lines.append("```bash")
-    lines.append(f'desloppify plan resolve "{issue_id}" --note "description of fix"')
+    lines.append(
+        f'desloppify plan resolve "{issue_id}" --note "<what you did>" --confirm'
+    )
     lines.append("```\n")
     lines.append("Or save detailed analysis first:\n")
     lines.append("```bash")

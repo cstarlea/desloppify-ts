@@ -6,7 +6,7 @@ import argparse
 
 import desloppify.intelligence.narrative.core as narrative_mod
 from desloppify.app.commands.helpers.attestation import (
-    show_note_length_requirement,
+    note_length_refusal,
     validate_note_length,
 )
 from desloppify.app.commands.helpers.guardrails import require_triage_current_or_exit
@@ -14,6 +14,7 @@ from desloppify.app.commands.helpers.lang import resolve_lang
 from desloppify.app.commands.helpers.queue_progress import show_score_with_plan_context
 from desloppify.app.commands.helpers.state import state_path
 from desloppify.app.commands.helpers.state_persistence import save_state_or_exit
+from desloppify.base.exception_sets import CommandError
 from desloppify.base.output.terminal import colorize
 from desloppify.engine._state.resolution import coerce_assessment_score
 from desloppify.state_io import load_state
@@ -38,25 +39,22 @@ from .selection import (
 )
 
 
-def _validate_fixed_note(args: argparse.Namespace) -> bool:
+def _validate_fixed_note(args: argparse.Namespace) -> None:
     if args.status != "fixed":
-        return True
+        return
     note = getattr(args, "note", None)
-    if validate_note_length(note):
-        return True
-    show_note_length_requirement(note)
-    return False
+    if not validate_note_length(note):
+        raise CommandError(note_length_refusal(note), exit_code=2)
 
 
 def _load_state_with_guards(
     args: argparse.Namespace,
     *,
     attestation: str | None,
-) -> tuple[str, dict, object] | None:
+) -> tuple[str, dict, object]:
     """Validate inputs, apply guardrails, and load state for resolve."""
     _validate_resolve_inputs(args, attestation)
-    if not _validate_fixed_note(args):
-        return None
+    _validate_fixed_note(args)
 
     state_file = state_path(args)
     state = load_state(state_file)
@@ -117,10 +115,9 @@ def _resolve_ids_with_snapshots(
 def cmd_resolve(args: argparse.Namespace) -> None:
     """Resolve issue(s) matching one or more patterns."""
     attestation = getattr(args, "attest", None)
-    loaded = _load_state_with_guards(args, attestation=attestation)
-    if loaded is None:
-        return
-    state_file, state, plan_access = loaded
+    state_file, state, plan_access = _load_state_with_guards(
+        args, attestation=attestation
+    )
     prev, prev_subjective_scores, all_resolved = _resolve_ids_with_snapshots(
         state,
         args,

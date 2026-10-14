@@ -19,7 +19,7 @@ from desloppify.base.output.user_message import print_user_message
 from desloppify.engine._scoring.results.core import compute_health_breakdown
 from desloppify.engine._scoring.subjective.core import DISPLAY_NAMES
 from desloppify.engine._state.schema import StateModel
-from desloppify.engine._work_queue.core import ATTEST_EXAMPLE
+from desloppify.engine._work_queue.core import ATTEST_EXAMPLE, SKIP_ATTEST_EXAMPLE
 from desloppify.engine.plan_state import load_plan
 from desloppify.engine.planning import scorecard_projection as scorecard_projection_mod
 
@@ -200,7 +200,7 @@ def _print_stats_summary(
     print()
 
 
-_WORKFLOW_GUIDE = build_workflow_guide(ATTEST_EXAMPLE)
+_WORKFLOW_GUIDE = build_workflow_guide(ATTEST_EXAMPLE, SKIP_ATTEST_EXAMPLE)
 
 
 def _print_workflow_guide() -> None:

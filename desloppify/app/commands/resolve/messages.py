@@ -21,7 +21,7 @@ _NEXT_TASK_INSTRUCTIONS = (
     "4. Once you're happy with it, commit and push:\n"
     "   `git add -A && git commit -m '<describe the fix>' && git push`\n"
     "5. Record the commit: `desloppify plan commit-log record`\n"
-    "6. Mark it resolved: `desloppify resolve <pattern> --fixed --attest '<what you did>'`"
+    "6. Mark it resolved: `desloppify plan resolve <pattern> --note '<what you did>' --confirm`"
 )
 
 
@@ -55,7 +55,7 @@ def _hermes_reset_and_instruct(
                 f"3. Execute the fix and verify it works\n"
                 f"4. Commit: `git add -A && git commit -m '<describe the fix>' && git push`\n"
                 f"5. Record: `desloppify plan commit-log record`\n"
-                f"6. Resolve: `desloppify resolve <pattern> --fixed --attest '<what you did>'`\n"
+                f"6. Resolve: `desloppify plan resolve <pattern> --note '<what you did>' --confirm`\n"
                 f"\nKeep going until the cluster is finished."
             )
         else:

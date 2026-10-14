@@ -127,7 +127,7 @@ def require_triage_current_or_exit(
     bypass: bool = False,
     attest: str = "",
 ) -> None:
-    """Gate: exit(1) if triage is stale and not bypassed. Name signals the exit."""
+    """Gate: exit(2) if triage is stale and not bypassed. Name signals the exit."""
     result = triage_guardrail_status(plan=plan, state=state)
     if not result.is_stale:
         return
@@ -160,9 +160,9 @@ def require_triage_current_or_exit(
             " behind the current objective backlog.",
             "",
             "  Finish current objective work first; triage will activate after the backlog clears.",
-            '  To bypass: --force-resolve --attest "I understand the plan may be stale..."',
+            "  To bypass: add --force-resolve to the plan resolve command.",
         ]
-        raise CommandError("\n".join(lines))
+        raise CommandError("\n".join(lines), exit_code=2)
 
     lines = [
         f"BLOCKED: {len(new_ids) or 'some'} new review work item(s) have not been triaged."
@@ -182,10 +182,8 @@ def require_triage_current_or_exit(
     lines.append("")
     lines.append("  View new execution items:  desloppify plan queue --sort recent")
     lines.append("  View broader backlog:      desloppify backlog")
-    lines.append(
-        '  To bypass: --force-resolve --attest "I understand the plan may be stale..."'
-    )
-    raise CommandError("\n".join(lines))
+    lines.append("  To bypass: add --force-resolve to the plan resolve command.")
+    raise CommandError("\n".join(lines), exit_code=2)
 
 
 def _matched_open_targets(state: dict, patterns: list[str]) -> list[dict]:

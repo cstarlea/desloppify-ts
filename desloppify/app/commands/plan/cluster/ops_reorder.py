@@ -8,6 +8,7 @@ from desloppify.app.commands.helpers.command_runtime import command_runtime
 from desloppify.app.commands.plan.reorder_handlers import resolve_target
 from desloppify.app.commands.plan.shared.cluster_membership import cluster_issue_ids
 from desloppify.app.commands.plan.shared.patterns import resolve_ids_from_patterns
+from desloppify.base.exception_sets import CommandError
 from desloppify.base.output.terminal import colorize
 from desloppify.engine.plan_ops import (
     append_log_entry,
@@ -188,8 +189,7 @@ def _reorder_within_cluster(
 ) -> None:
     """Reorder items within a single cluster."""
     if len(cluster_names) != 1:
-        print(colorize("  --item requires exactly one cluster name.", "red"))
-        return
+        raise CommandError("--item requires exactly one cluster name.", exit_code=2)
     cluster_name = cluster_names[0]
     context = _resolve_item_reorder_context(
         args,

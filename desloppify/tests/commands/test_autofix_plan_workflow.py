@@ -1,10 +1,10 @@
 """scan → next → autofix → next → manual resolve, at the state level.
 
-Regression tests for a field test where `autofix` resolved a whole cluster in
-state but left the living plan alone: `next` then showed the emptied cluster
-as "N remaining" beside "Focus: 0/N items remaining" and "N stale tracked",
-the scan step's footer said to `plan resolve`, and commit tracking ignored
-the autofix work and labelled a later manual fix "autofix".
+Regression tests: autofix resolved a whole cluster in state but left the
+living plan alone, so `next` showed the emptied cluster as "N remaining"
+beside "Focus: 0/N items remaining" and "N stale tracked", the scan step's
+footer said to `plan resolve`, and commit tracking ignored the autofix work
+and labelled a later manual fix "autofix".
 """
 
 from __future__ import annotations

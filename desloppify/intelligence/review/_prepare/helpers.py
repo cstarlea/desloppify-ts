@@ -16,7 +16,7 @@ HOLISTIC_WORKFLOW = [
     "Rovo Dev: desloppify review --run-batches --runner rovodev --parallel --scan-after-import",
     "Cloud/external: run `desloppify review --external-start --external-runner claude`, follow the session template, then run the printed `--external-submit` command",
     "Fallback path: `desloppify review --import issues.json` (issues only). Use manual override only for emergency/provisional imports.",
-    "AFTER importing: run `desloppify show review --status open` to see the work queue, then fix each issue in code and `desloppify plan resolve <id>`",
+    'AFTER importing: run `desloppify show review --status open` to see the work queue, then fix each issue in code and `desloppify plan resolve <id> --note "<what you did>" --confirm`',
 ]
 
 

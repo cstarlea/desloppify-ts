@@ -122,7 +122,7 @@ def _render_cluster_sample(members: list[dict]) -> None:
 def cluster_action_commands(cluster_name: str) -> dict[str, str]:
     """Return semantic cluster action commands independent of terminal labels."""
     return {
-        "resolve_all": f'desloppify plan resolve "{cluster_name}" --note "<what>" --confirm',
+        "resolve_all": f'desloppify plan resolve "{cluster_name}" --note "<what you did>" --confirm',
         "drill_in": f"desloppify next --cluster {cluster_name} --count 10",
         "skip": f"desloppify plan skip {cluster_name}",
     }

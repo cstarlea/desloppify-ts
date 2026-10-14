@@ -5,7 +5,7 @@ from __future__ import annotations
 from textwrap import dedent
 
 
-def build_workflow_guide(attest_example: str) -> str:
+def build_workflow_guide(attest_example: str, skip_attest_example: str) -> str:
     """Render the scan workflow guide with current attestation text."""
     return dedent(
         f"""
@@ -40,9 +40,9 @@ def build_workflow_guide(attest_example: str) -> str:
         - **Tackle**: T1/T2 (high impact), auto-fixable, security issues
         - **Consider skipping**: T4 low-confidence, test/config zone issues (lower impact)
         - **Wontfix**: Intentional patterns, false positives →
-          `desloppify plan skip --permanent "<id>" --note "<why>" --attest "{attest_example}"`
+          `desloppify plan skip --permanent "<id>" --note "<why>" --attest "{skip_attest_example}"`
         - **Batch wontfix**: Multiple intentional patterns →
-          `desloppify plan skip --permanent "<detector>::*::<category>" --note "<why>" --attest "{attest_example}"`
+          `desloppify plan skip --permanent "<detector>::*::<category>" --note "<why>" --attest "{skip_attest_example}"`
 
         ### Understanding Scores
         - **Overall**: 25% mechanical + 75% subjective. Lenient — wontfix doesn't count against you.

@@ -13,9 +13,12 @@ from __future__ import annotations
 
 import argparse
 
+import pytest
+
 import desloppify.app.commands.plan.override.misc as misc_mod
 import desloppify.app.commands.plan.override.resolve_cmd as resolve_mod
 import desloppify.app.commands.plan.override.resolve_workflow as resolve_workflow_mod
+from desloppify.base.exception_sets import CommandError
 from desloppify.engine._plan.constants import (
     WORKFLOW_CREATE_PLAN_ID,
     WORKFLOW_SCORE_CHECKPOINT_ID,
@@ -85,6 +88,13 @@ def _args(**overrides) -> argparse.Namespace:
     return argparse.Namespace(**defaults)
 
 
+def _assert_refused(command, args: argparse.Namespace) -> None:
+    """A refused resolve exits 2 through CommandError."""
+    with pytest.raises(CommandError) as exc_info:
+        command(args)
+    assert exc_info.value.exit_code == 2
+
+
 def _scan_gate_args(**overrides) -> argparse.Namespace:
     defaults = {
         "skip": False,
@@ -138,7 +148,7 @@ class TestTriageGateBlocksWorkflow:
         plan = _plan_with_workflow_item(triage_complete=False)
         _mock_plan_io(monkeypatch, plan)
 
-        resolve_mod.cmd_plan_resolve(_args())
+        _assert_refused(resolve_mod.cmd_plan_resolve, _args())
 
         out = capsys.readouterr().out
         assert "triage not complete" in out
@@ -154,7 +164,7 @@ class TestTriageGateBlocksWorkflow:
         }
         _mock_plan_io(monkeypatch, plan)
 
-        resolve_mod.cmd_plan_resolve(_args())
+        _assert_refused(resolve_mod.cmd_plan_resolve, _args())
 
         out = capsys.readouterr().out
         assert "triage not complete" in out
@@ -171,7 +181,7 @@ class TestTriageGateBlocksWorkflow:
         }
         _mock_plan_io(monkeypatch, plan)
 
-        resolve_mod.cmd_plan_resolve(_args())
+        _assert_refused(resolve_mod.cmd_plan_resolve, _args())
 
         out = capsys.readouterr().out
         assert "triage not complete" in out
@@ -189,7 +199,7 @@ class TestTriageGateBlocksWorkflow:
         }
         _mock_plan_io(monkeypatch, plan)
 
-        resolve_mod.cmd_plan_resolve(_args())
+        _assert_refused(resolve_mod.cmd_plan_resolve, _args())
 
         out = capsys.readouterr().out
         assert "triage not complete" in out
@@ -199,12 +209,13 @@ class TestTriageGateBlocksWorkflow:
         plan = _plan_with_workflow_item(triage_complete=False)
         _mock_plan_io(monkeypatch, plan)
 
-        resolve_mod.cmd_plan_resolve(
+        _assert_refused(
+            resolve_mod.cmd_plan_resolve,
             _args(
                 force_resolve=True,
                 note="too short",
                 confirm=True,
-            )
+            ),
         )
 
         out = capsys.readouterr().out
@@ -268,7 +279,7 @@ class TestScanGateBlocksWorkflow:
         _mock_plan_io(monkeypatch, plan)
         _mock_state(monkeypatch, state)
 
-        resolve_mod.cmd_plan_resolve(_args())
+        _assert_refused(resolve_mod.cmd_plan_resolve, _args())
 
         out = capsys.readouterr().out
         assert "no scan has run this cycle" in out
@@ -353,7 +364,9 @@ class TestScanGateBlocksWorkflow:
         _mock_plan_io(monkeypatch, plan)
         _mock_state(monkeypatch, state)
 
-        resolve_mod.cmd_plan_resolve(_args(patterns=[WORKFLOW_CREATE_PLAN_ID]))
+        _assert_refused(
+            resolve_mod.cmd_plan_resolve, _args(patterns=[WORKFLOW_CREATE_PLAN_ID])
+        )
 
         out = capsys.readouterr().out
         assert "no scan has run this cycle" in out
@@ -419,10 +432,11 @@ class TestScanGateCommand:
         _mock_plan_io(monkeypatch, plan)
         _mock_state(monkeypatch, state)
 
-        misc_mod.cmd_plan_scan_gate(_scan_gate_args(skip=True, note="too short"))
+        with pytest.raises(CommandError) as exc_info:
+            misc_mod.cmd_plan_scan_gate(_scan_gate_args(skip=True, note="too short"))
 
-        out = capsys.readouterr().out
-        assert "50 chars" in out
+        assert exc_info.value.exit_code == 2
+        assert "50 chars" in exc_info.value.message
 
     def test_skip_with_long_note_succeeds(self, monkeypatch, capsys):
         plan = _plan_with_workflow_item(
@@ -483,7 +497,7 @@ class TestBothGatesInteraction:
         _mock_plan_io(monkeypatch, plan)
         _mock_state(monkeypatch, state)
 
-        resolve_mod.cmd_plan_resolve(_args())
+        _assert_refused(resolve_mod.cmd_plan_resolve, _args())
 
         out = capsys.readouterr().out
         assert "triage not complete" in out

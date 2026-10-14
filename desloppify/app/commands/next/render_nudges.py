@@ -19,7 +19,7 @@ from desloppify.base.output.terminal import colorize, log
 from desloppify.base.output.user_message import print_user_message
 from desloppify.engine._scoring.results.core import compute_health_breakdown
 from desloppify.engine._state.issue_semantics import is_assessment_request
-from desloppify.engine._work_queue.core import ATTEST_EXAMPLE
+from desloppify.engine._work_queue.core import SKIP_ATTEST_EXAMPLE
 from desloppify.engine._work_queue.helpers import is_auto_fix_item
 from desloppify.engine.plan_state import uncommitted_source_note
 from desloppify.intelligence.integrity import (
@@ -27,6 +27,7 @@ from desloppify.intelligence.integrity import (
 )
 
 from .render_support import (
+    cluster_action_commands,
     is_auto_fix_command,
     scorecard_subjective,
     subjective_coverage_breakdown,
@@ -57,6 +58,18 @@ def render_uncommitted_reminder(plan: dict | None) -> None:
         )
     except (ImportError, OSError, ValueError, KeyError, TypeError) as exc:
         log(f"  uncommitted reminder skipped: {exc}")
+
+
+def resolve_command_for(item: dict) -> str | None:
+    """The `plan resolve` command that works for a queue item, if it has one."""
+    kind = item.get("kind", "issue")
+    if kind == "cluster":
+        return cluster_action_commands(item["id"])["resolve_all"]
+    if kind == "issue":
+        return (
+            f'desloppify plan resolve "{item["id"]}" --note "<what you did>" --confirm'
+        )
+    return None
 
 
 def render_single_item_resolution_hint(items: list[dict]) -> None:
@@ -98,12 +111,10 @@ def render_single_item_resolution_hint(items: list[dict]) -> None:
     else:
         print(colorize("\n  Resolve with:", "dim"))
 
-    print(
-        f'    desloppify plan resolve "{item["id"]}" --note "<what you did>" --confirm'
-    )
+    print(f"    {resolve_command_for(item)}")
     print(
         f'    desloppify plan skip --permanent "{item["id"]}" --note "<why>" '
-        f'--attest "{ATTEST_EXAMPLE}"'
+        f'--attest "{SKIP_ATTEST_EXAMPLE}"'
     )
 
 

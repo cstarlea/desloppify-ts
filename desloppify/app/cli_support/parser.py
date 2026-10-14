@@ -68,7 +68,7 @@ examples:
   desloppify backlog --count 10          # top 10 backlog items
   desloppify show src/components/Modal.tsx
   desloppify plan resolve "unused::src/foo.tsx::React" \\
-    --note "removed import" --attest "I have actually ..."
+    --note "removed the unused React import; the file uses the JSX runtime" --confirm
   desloppify review --run-batches --parallel --scan-after-import
 """
 
